@@ -502,7 +502,7 @@
                       },
                                                                                         {
                                                 "module": "05a-sheet-viewer",
-                                                "status": "implementation_done",
+                                                "status": "verified",
                                                 "implementation": {
                                                     "requiredSeparateAgent": true,
                                                     "agent": "GPT-5 Codex (no fast tier)",
@@ -543,16 +543,42 @@
                                                 },
                                                 "verification": {
                                                     "requiredSeparateAgent": true,
-                                                    "agent": null,
-                                                    "completedAt": null,
-                                                    "result": null,
-                                                    "acceptanceCriteria": [],
-                                                    "e2eEvidence": [],
-                                                    "specializedEvidence": [],
-                                                    "persistenceEvidence": [],
-                                                    "consoleStatus": null,
+                                                    "agent": "GPT-5.4 Mini",
+                                                    "completedAt": "2026-06-21T13:25:08Z",
+                                                    "result": "PASS",
+                                                    "acceptanceCriteria": [
+                                                        "PASS: /sheet-practice?sheetId=... and /sheet-practice/[sheetId] both loaded the same viewer experience for the same imported sheet.",
+                                                        "PASS: A real imported PDF artifact rendered visibly to canvas with page navigation, zoom, scroll, resize, and reload coverage.",
+                                                        "PASS: A real imported image artifact rendered with non-zero decoded dimensions and remained visible through zoom, resize, and reload.",
+                                                        "PASS: Missing sheetId, unknown sheet, missing artifact, bad PDF, and bad image all produced clear error states.",
+                                                        "PASS: The viewer UI stayed behind service/hook boundaries and did not directly call Dexie/raw storage/PDF parser/image decode internals.",
+                                                        "PASS: Object URL creation and revocation were exercised through the viewer service boundary.",
+                                                        "PASS: No 05e/05b/05c/05d/parent integration behavior was claimed or verified here.",
+                                                        "PASS: Browser console and pageerror output stayed clean during the tested flows."
+                                                    ],
+                                                    "e2eEvidence": [
+                                                        "tests/e2e/sheet-viewer.spec.ts: imported a real two-page PDF fixture, opened it from Sheet Library, verified Page 1 of 2 / Page 2 of 2, zoomed, scrolled, resized from desktop to mobile and back, reloaded, and returned to Sheet Library.",
+                                                        "tests/e2e/sheet-viewer.spec.ts: imported a real PNG fixture, verified naturalWidth/naturalHeight were 2x2, checked visible rendering, zoom, resize, and reload behavior.",
+                                                        "tests/e2e/sheet-viewer.spec.ts: exercised /sheet-practice, /sheet-practice?sheetId=unknown-sheet, /sheet-practice/unknown-sheet, missing-artifact, bad PDF, and bad image error states.",
+                                                        "npm run test:e2e -> 8 chromium tests passed with no console or page errors captured in the sheet-viewer flows."
+                                                    ],
+                                                    "specializedEvidence": [
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date, audited 481 packages, found 0 vulnerabilities.",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm audit -> found 0 vulnerabilities.",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS.",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS.",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 13 test files passed, 46 tests passed.",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes.",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 8 chromium tests passed."
+                                                    ],
+                                                    "persistenceEvidence": [
+                                                        "The PDF viewer remained usable after page.reload() and still rendered Page 1 of 2 after returning to /sheet-practice?sheetId=... and /sheet-practice/[sheetId].",
+                                                        "The image viewer remained visible after page.reload() on the imported PNG artifact.",
+                                                        "The viewer returned to the Sheet Library route after the tested library link flow."
+                                                    ],
+                                                    "consoleStatus": "PASS; no console.error or pageerror entries were captured during the tested viewer flows.",
                                                     "issues": [],
-                                                    "commitHash": null
+                                                    "commitHash": "dc2276bfbef585a08365a49946ba42df4df01b04"
                                                 }
                                             },
                       {
