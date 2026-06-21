@@ -83,7 +83,7 @@
         "value":  [
                       {
                           "module":  "01-app-shell-home",
-                          "status":  "implementation_done",
+                          "status":  "verified",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
@@ -124,26 +124,44 @@
                                              },
                           "verification":  {
                                                "requiredSeparateAgent":  true,
-                                               "agent":  null,
-                                               "completedAt":  null,
-                                               "result":  null,
+                                               "agent":  "GPT-5.4 Mini",
+                                               "completedAt":  "2026-06-21T16:32:00Z",
+                                               "result":  "PASS",
                                                "acceptanceCriteria":  [
-
+                                                                      "PASS: Home opens with the main v0 practice entries visible.",
+                                                                      "PASS: Desktop and iPad landscape widths show sidebar navigation.",
+                                                                      "PASS: Narrow mobile width shows bottom navigation.",
+                                                                      "PASS: Current page navigation item is highlighted.",
+                                                                      "PASS: Quick Metronome and Settings navigation entries work.",
+                                                                      "PASS: Continue Practice, Recent Sheets, and Recent Recordings render empty states with no saved data.",
+                                                                      "PASS: Today Practice Summary shows zero values with no history.",
+                                                                      "PASS: The global status indicator area exists without faking playback or recording.",
+                                                                      "PASS: No enabled Home control claims functionality that is not implemented."
                                                                       ],
                                                "e2eEvidence":  [
-
+                                                                "Playwright browser test: tests/e2e/app-shell-home.spec.ts used real Chromium interaction at 1280x800, 1024x768, and 390x844.",
+                                                                "Clicked visible sidebar links for Quick Metronome, Sheet Library, Recordings, and Settings and verified route/page changes plus aria-current highlighting.",
+                                                                "Verified mobile bottom navigation visibility and tapped Quick Metronome, Recordings, and Settings links in the browser.",
+                                                                "Verified empty states on Home: Today Practice Summary zero values, no recent practice session, no sheets imported yet, no recordings yet, and no recording or playback active.",
+                                                                "Playwright run output: 1 chromium test passed."
                                                                ],
                                                "specializedEvidence":  [
-
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date, audited 481 packages, found 0 vulnerabilities.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm audit -> found 0 vulnerabilities.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 3 test files passed, 5 tests passed.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run playwright:install -> PASS; Chromium fallback download completed with the expected unsupported-OS warning."
                                                                        ],
                                                "persistenceEvidence":  [
-
+                                                                        "No persistence claim in this module; verified the Home dashboard renders empty/default state on fresh loads without seeded data."
                                                                        ],
-                                               "consoleStatus":  null,
+                                               "consoleStatus":  "PASS; no console.error or pageerror entries were captured during the tested browser flows.",
                                                "issues":  [
 
                                                           ],
-                                               "commitHash":  null
+                                               "commitHash":  "ecbb4b2"
                                            }
                       },
                       {
