@@ -1,5 +1,5 @@
-import { PreflightShell } from "@/components/preflight/preflight-shell";
+import { HomeDashboard } from "@/components/home/home-dashboard";
 
 export default function HomePage() {
-  return <PreflightShell />;
+  return <HomeDashboard />;
 }

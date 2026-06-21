@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 
+import { AppShell } from "@/components/app-shell/app-shell";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Metronome Practice",
-  description: "v0 preflight scaffold for the local-first guitar practice app"
+  description: "Local-first guitar practice app shell"
 };
 
 export default function RootLayout({
@@ -14,7 +16,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        <AppShell>{children}</AppShell>
+      </body>
     </html>
   );
 }
