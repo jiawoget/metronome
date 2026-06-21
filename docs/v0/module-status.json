@@ -124,7 +124,7 @@
                                              },
                           "verification":  {
                                                "requiredSeparateAgent":  true,
-                                               "agent":  "GPT-5",
+                                               "agent":  "GPT-5.4 Mini",
                                                "completedAt":  "2026-06-21T08:45:35Z",
                                                "result":  "PASS",
                                                "acceptanceCriteria":  [
@@ -165,7 +165,7 @@
                                                "issues":  [
 
                                                           ],
-                                               "commitHash":  null
+                                               "commitHash":  "2e6dac133e0131a3ec6cfc622d1b723e757bc11c"
                                            }
                       },
                       {
