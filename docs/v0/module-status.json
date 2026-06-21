@@ -269,22 +269,45 @@
                       },
                       {
                           "module":  "03-recordings-review",
-                          "status":  "contract_ready",
+                          "status":  "implementation_done",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
-                                                 "agent":  null,
-                                                 "completedAt":  null,
+                                                 "agent":  "GPT-5.5 High",
+                                                 "completedAt":  "2026-06-21T10:09:43Z",
                                                  "selfTests":  [
-
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 10 test files passed, 29 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed and prerendered /recordings",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 4 chromium tests passed covering app shell, quick metronome, and recordings review flows",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node local TCP check for 127.0.0.1:3101 -> PASS; port 3101 closed after Playwright webServer exit"
                                                                ],
                                                  "handoffNotes":  [
-
+                                                     "Assigned feature: 03-recordings-review.",
+                                                     "Coding model used: GPT-5.5 High.",
+                                                     "Implemented only the Recordings / Review v0 contract: unified recordings list, empty state, search, type filter, details, playback, waveform, error markers, delete, continue practice, and bad/missing audio state.",
+                                                     "Recordings UI calls recording history, artifact/waveform, playback, and continue-target services; UI does not directly call IndexedDB/Dexie, raw file APIs, audio element internals, or wavesurfer.js.",
+                                                     "Playback/waveform uses wavesurfer.js through RecordingWaveformPlaybackAdapter; artifact validation and simplified peaks are behind loadRecordingArtifactDetails.",
+                                                     "The history repository preserves the existing quick-metronome local data boundary and adds marker-aware delete semantics so quick, sheet, and error marker records can coexist in one persisted snapshot.",
+                                                     "E2E seeds real decodable WAV artifacts for quick and sheet recordings, checks decoded waveform peaks for quick, trusted peaks for sheet, playback event evidence, marker ordering, continue routes, delete persistence/artifact inaccessibility, and bad audio error handling.",
+                                                     "No recording creation, sheet import/viewer, automatic scoring, export, archive, tags, favorites, or v1 analysis behavior was implemented.",
+                                                     "Implementation commit hash is reported in the final handoff response because a git commit cannot contain its own final object hash without changing that hash."
                                                                   ],
                                                  "changedAreas":  [
-
+                                                     "src/app/recordings/page.tsx now renders the real Recordings Review experience instead of the placeholder latest-recording outlet",
+                                                     "src/components/recordings-review adds the client UI for empty state, unified list, search/type filtering, details, waveform, playback controls, marker list, delete confirmation, and continue practice",
+                                                     "src/lib/recordings-review adds pure history/filter/format helpers, local history repository, audio artifact validation/peak derivation, and wavesurfer playback adapter boundaries",
+                                                     "src/lib/quick-metronome/persistence.ts and src/lib/quick-metronome/types.ts preserve marker data and sheet-compatible session metadata when quick recordings are saved",
+                                                     "tests/unit/recordings-review-history.test.ts covers filtering, sorting, formatting, continue targets, marker ordering, trusted peaks, derived peaks, and missing audio errors",
+                                                     "tests/unit/recordings-review-repository.test.ts covers local history loading and delete persistence for metadata, artifact access, and linked error markers",
+                                                     "tests/e2e/recordings-review.spec.ts covers empty state, seeded real WAV recordings, search, quick/sheet filters, details, playback, waveform evidence, markers, continue routes, delete persistence, artifact removal, and bad audio",
+                                                     "tests/e2e/quick-metronome.spec.ts updates /recordings assertions for the implemented unified review page"
                                                                   ],
                                                  "knownRisks":  [
-
+                                                     "The v0 repository continues using the existing localStorage-backed quick recording boundary from 02; large or long recordings remain a future storage concern for Local Data rather than this review UI.",
+                                                     "wavesurfer.js is isolated behind an adapter and verified in Chromium E2E; broader browser/audio codec compatibility should be rechecked when additional recording formats are introduced.",
+                                                     "Sheet recordings are supported from seeded/persisted metadata for review and continue routing, but sheet recording creation remains out of scope until Sheet Practice recording work exists.",
+                                                     "Hydration is guarded so SSR does not read localStorage; users may briefly see the empty shell before local recordings hydrate."
                                                                 ],
                                                  "commitHash":  null
                                              },

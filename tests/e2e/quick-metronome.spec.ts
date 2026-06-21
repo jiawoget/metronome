@@ -147,8 +147,7 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   await page.getByRole("button", { name: "Stop Replay" }).click();
   await page.goto("/recordings");
   await expect(page.getByRole("heading", { name: "Recordings" })).toBeVisible();
-  await expect(page.getByTestId("demo-recording-banner")).toBeVisible();
-  await expect(page.getByText("Demo sample, not saved.")).toBeVisible();
+  await expect(page.getByTestId("recordings-empty-state")).toBeVisible();
   await page.goto("/quick-metronome");
 
   const bpmInput = page.getByRole("spinbutton", { name: "BPM" });
@@ -347,11 +346,12 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
 
   await page.goto("/recordings");
   await expect(page.getByRole("heading", { name: "Recordings" })).toBeVisible();
-  await expect(page.getByTestId("latest-recording")).toBeVisible();
+  await expect(page.getByTestId("recordings-list")).toBeVisible();
+  await expect(page.getByText("Quick metronome recording").first()).toBeVisible();
   await expect(page.getByText("No sheet linked.")).toBeVisible();
 
   await page.reload();
-  await expect(page.getByTestId("latest-recording")).toBeVisible();
+  await expect(page.getByTestId("recordings-list")).toBeVisible();
   await expect(page.getByText("quick").first()).toBeVisible();
 
   expect(consoleErrors).toEqual([]);

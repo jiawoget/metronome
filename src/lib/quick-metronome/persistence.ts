@@ -9,7 +9,8 @@ const STORE_EVENT = "quick-metronome-recordings-change";
 
 const emptySnapshot: QuickMetronomeStoreSnapshot = {
   sessions: [],
-  recordings: []
+  recordings: [],
+  errorMarkers: []
 };
 let cachedRawValue: string | null = null;
 let cachedSnapshot: QuickMetronomeStoreSnapshot = emptySnapshot;
@@ -47,7 +48,8 @@ function readSnapshot(): QuickMetronomeStoreSnapshot {
     cachedRawValue = rawValue;
     cachedSnapshot = {
       sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
-      recordings: Array.isArray(parsed.recordings) ? parsed.recordings : []
+      recordings: Array.isArray(parsed.recordings) ? parsed.recordings : [],
+      errorMarkers: Array.isArray(parsed.errorMarkers) ? parsed.errorMarkers : []
     };
 
     return cachedSnapshot;
@@ -88,7 +90,7 @@ export const quickRecordingRepository = {
       ...snapshot.recordings.filter((item) => item.id !== recording.id)
     ];
 
-    writeSnapshot({ sessions, recordings });
+    writeSnapshot({ sessions, recordings, errorMarkers: snapshot.errorMarkers });
 
     return recording;
   },

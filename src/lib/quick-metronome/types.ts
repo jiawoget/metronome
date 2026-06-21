@@ -16,7 +16,7 @@ export type MetronomeSettings = {
 
 export type PracticeSession = {
   id: string;
-  sourceType: "quick";
+  sourceType: "quick" | "sheet";
   startedAt: string;
   endedAt: string | null;
   settings: MetronomeSettings;
@@ -58,6 +58,7 @@ export type RecordingArtifact = {
 export type QuickMetronomeStoreSnapshot = {
   sessions: PracticeSession[];
   recordings: QuickRecording[];
+  errorMarkers: unknown[];
 };
 
 export const DEFAULT_METRONOME_SETTINGS: MetronomeSettings = {
