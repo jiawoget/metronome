@@ -9,7 +9,7 @@ import {
   Square,
   Timer
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { formatPracticeDuration, type PracticeSession, type SheetRecordingMetadata } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
@@ -34,14 +34,13 @@ import {
   type Subdivision
 } from "@/lib/quick-metronome/types";
 import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
+import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
 import type { PracticeSessionService } from "@/services/practice-session";
 import { Button } from "@/components/ui/button";
 import {
   createSheetPracticeControlInitialState,
   formatUnsupportedTimeSignatureMessage
 } from "@/components/sheet-practice/controls/practice-control-state";
-
-type TransportState = "stopped" | "counting" | "playing";
 
 export const SHEET_RECORDING_HARNESS_EVENT = "sheet-practice-controls:set-recording-harness-active";
 
@@ -101,18 +100,13 @@ export function SheetPracticeControls({
   );
   const metronomeService = useMemo(() => createMetronomeService(), [createMetronomeService]);
   const [settings, setSettings] = useState<MetronomeSettings>(initialState.settings);
-  const [transportState, setTransportState] = useState<TransportState>("stopped");
   const [recordingHarnessActive, setRecordingHarnessActive] = useState(false);
-  const [countdownRemaining, setCountdownRemaining] = useState(0);
   const [lastTick, setLastTick] = useState<MetronomeTick | null>(null);
   const [session, setSession] = useState<PracticeSession | null>(null);
   const [recordings, setRecordings] = useState<SheetRecordingMetadata[]>([]);
   const [message, setMessage] = useState("Ready. Viewing the sheet has not started practice.");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const countdownTimeoutRef = useRef<number | null>(null);
 
-  const isPlaying = transportState === "playing";
-  const isCounting = transportState === "counting";
   const unsupportedTimeSignatureMessage = initialState.unsupportedTimeSignature
     ? formatUnsupportedTimeSignatureMessage(initialState.unsupportedTimeSignature)
     : null;
@@ -136,10 +130,6 @@ export function SheetPracticeControls({
   }, [metronomeService]);
 
   useEffect(() => {
-    metronomeService.update(settings);
-  }, [metronomeService, settings]);
-
-  useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void refreshSession();
     }, 0);
@@ -152,16 +142,6 @@ export function SheetPracticeControls({
       unsubscribe();
     };
   }, [refreshSession, sessionService]);
-
-  useEffect(() => {
-    return () => {
-      if (countdownTimeoutRef.current !== null) {
-        window.clearTimeout(countdownTimeoutRef.current);
-      }
-
-      metronomeService.stop();
-    };
-  }, [metronomeService]);
 
   function updateSettings(nextSettings: Partial<MetronomeSettings>) {
     setSettings((currentSettings) => ({
@@ -178,6 +158,83 @@ export function SheetPracticeControls({
     settings.bpm,
     (nextBpm) => updateSettings({ bpm: nextBpm })
   );
+
+  const ensureMetronomeSession = useCallback(
+    () =>
+      sessionService.ensureSheetSession({
+        sheetId,
+        trigger: "metronome",
+        bpm: settings.bpm,
+        timeSignature: settings.timeSignature
+      }),
+    [sessionService, settings.bpm, settings.timeSignature, sheetId]
+  );
+  const handleCountdownStarted = useCallback(() => {
+    setMessage("Countdown running.");
+  }, []);
+  const handleStartBlocked = useCallback(() => {
+    setMessage("No valid sheet context. Metronome was stopped.");
+  }, []);
+  const handleStarted = useCallback(
+    (nextSession: PracticeSession | null) => {
+      setSession(nextSession);
+      setMessage(recordingHarnessActive ? "Metronome playing; recording harness stays active." : "Metronome playing.");
+    },
+    [recordingHarnessActive]
+  );
+  const handleStartFailed = useCallback(
+    async (error: unknown, nextSession: PracticeSession | null) => {
+      if (
+        nextSession &&
+        !recordingHarnessActive &&
+        nextSession.recordingCount === 0 &&
+        nextSession.latestRecordingId === null
+      ) {
+        const endedSession = await sessionService.endPracticeSession(nextSession.id);
+
+        setSession(endedSession);
+      }
+
+      setErrorMessage(error instanceof Error ? error.message : "Metronome playback failed.");
+    },
+    [recordingHarnessActive, sessionService]
+  );
+  const handleStopped = useCallback(async () => {
+    if (session) {
+      const nextSession = recordingHarnessActive
+        ? await sessionService.updateSheetSessionDuration(session.id)
+        : await sessionService.endPracticeSession(session.id);
+
+      setSession(nextSession);
+    }
+
+    setMessage(
+      recordingHarnessActive
+        ? "Metronome stopped; recording harness stays active."
+        : "Metronome stopped."
+    );
+  }, [recordingHarnessActive, session, sessionService]);
+  const {
+    transportState,
+    countdownRemaining,
+    isPlaying,
+    isCounting,
+    startMetronome,
+    stopMetronome
+  } = useMetronomeTransport({
+    settings,
+    metronomeService,
+    beforeStart: ensureMetronomeSession,
+    onCountdownStarted: handleCountdownStarted,
+    onStartBlocked: handleStartBlocked,
+    onStarted: handleStarted,
+    onStartFailed: handleStartFailed,
+    onStopped: handleStopped
+  });
+  const handleStartMetronome = useCallback(() => {
+    setErrorMessage(null);
+    void startMetronome();
+  }, [startMetronome]);
 
   useEffect(() => {
     const harnessWindow = window as Window & {
@@ -215,90 +272,6 @@ export function SheetPracticeControls({
       window.removeEventListener(SHEET_RECORDING_HARNESS_EVENT, handleRecordingHarnessEvent);
     };
   }, [session, sessionService, transportState]);
-
-  async function startMetronome() {
-    setErrorMessage(null);
-
-    if (settings.countdownBeats > 0) {
-      setTransportState("counting");
-      setCountdownRemaining(settings.countdownBeats);
-      setMessage("Countdown running.");
-      runCountdown(settings.countdownBeats);
-      return;
-    }
-
-    await startPlaybackNow();
-  }
-
-  function runCountdown(remainingBeats: number) {
-    if (countdownTimeoutRef.current !== null) {
-      window.clearTimeout(countdownTimeoutRef.current);
-    }
-
-    if (remainingBeats <= 0) {
-      void startPlaybackNow();
-      return;
-    }
-
-    setCountdownRemaining(remainingBeats);
-    countdownTimeoutRef.current = window.setTimeout(() => {
-      runCountdown(remainingBeats - 1);
-    }, 60_000 / settings.bpm);
-  }
-
-  async function startPlaybackNow() {
-    try {
-      const nextSession = await sessionService.ensureSheetSession({
-        sheetId,
-        trigger: "metronome",
-        bpm: settings.bpm,
-        timeSignature: settings.timeSignature
-      });
-
-      if (!nextSession) {
-        metronomeService.stop();
-        setTransportState("stopped");
-        setMessage("No valid sheet context. Metronome was stopped.");
-        return;
-      }
-
-      await metronomeService.start(settings);
-      setSession(nextSession);
-      setTransportState("playing");
-      setCountdownRemaining(0);
-      setMessage(recordingHarnessActive ? "Metronome playing; recording harness stays active." : "Metronome playing.");
-    } catch (error) {
-      metronomeService.stop();
-      setTransportState("stopped");
-      setCountdownRemaining(0);
-      setErrorMessage(error instanceof Error ? error.message : "Metronome playback failed.");
-    }
-  }
-
-  async function stopMetronome() {
-    if (countdownTimeoutRef.current !== null) {
-      window.clearTimeout(countdownTimeoutRef.current);
-      countdownTimeoutRef.current = null;
-    }
-
-    metronomeService.stop();
-    setTransportState("stopped");
-    setCountdownRemaining(0);
-
-    if (session) {
-      const nextSession = recordingHarnessActive
-        ? await sessionService.updateSheetSessionDuration(session.id)
-        : await sessionService.endPracticeSession(session.id);
-
-      setSession(nextSession);
-    }
-
-    setMessage(
-      recordingHarnessActive
-        ? "Metronome stopped; recording harness stays active."
-        : "Metronome stopped."
-    );
-  }
 
   return (
     <section
@@ -421,7 +394,7 @@ export function SheetPracticeControls({
 
         <div className="flex min-w-0 flex-col justify-between gap-3 rounded-md border border-border bg-background p-3">
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" onClick={startMetronome} disabled={isPlaying || isCounting} aria-label="Start metronome">
+            <Button type="button" onClick={handleStartMetronome} disabled={isPlaying || isCounting} aria-label="Start metronome">
               <Play className="h-4 w-4" aria-hidden="true" />
               Play
             </Button>

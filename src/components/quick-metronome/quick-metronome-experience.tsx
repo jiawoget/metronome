@@ -12,7 +12,7 @@ import {
   Square,
   Timer
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { LatestQuickRecording } from "@/components/quick-metronome/latest-quick-recording";
 import { Button } from "@/components/ui/button";
@@ -44,8 +44,8 @@ import {
   type Subdivision
 } from "@/lib/quick-metronome/types";
 import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
+import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
 
-type TransportState = "stopped" | "counting" | "playing";
 type RecordingState = "idle" | "recording" | "saving";
 
 const subdivisionLabels: Record<Subdivision, string> = {
@@ -65,16 +65,13 @@ export function QuickMetronomeExperience() {
   const metronomeService = useMemo(() => new BrowserMetronomeService(), []);
   const recordingService = useMemo(() => new BrowserRecordingService(), []);
   const [settings, setSettings] = useState<MetronomeSettings>(DEFAULT_METRONOME_SETTINGS);
-  const [transportState, setTransportState] = useState<TransportState>("stopped");
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [currentSession, setCurrentSession] = useState<PracticeSession | null>(null);
-  const [countdownRemaining, setCountdownRemaining] = useState(0);
   const [lastTick, setLastTick] = useState<MetronomeTick | null>(null);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [message, setMessage] = useState("Ready.");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [recordingVersion, setRecordingVersion] = useState(0);
-  const countdownTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const unsubscribe = metronomeService.onTick((tick) => {
@@ -86,24 +83,7 @@ export function QuickMetronomeExperience() {
     };
   }, [metronomeService]);
 
-  useEffect(() => {
-    metronomeService.update(settings);
-  }, [metronomeService, settings]);
-
-  useEffect(() => {
-    return () => {
-      if (countdownTimeoutRef.current !== null) {
-        window.clearTimeout(countdownTimeoutRef.current);
-      }
-
-      metronomeService.stop();
-    };
-  }, [metronomeService]);
-
-  const isPlaying = transportState === "playing";
-  const isCounting = transportState === "counting";
   const isRecording = recordingState === "recording";
-  const arePreRunSettingsLocked = isPlaying || isCounting;
 
   function updateSettings(nextSettings: Partial<MetronomeSettings>) {
     setSettings((currentSettings) => ({
@@ -121,59 +101,38 @@ export function QuickMetronomeExperience() {
     (nextBpm) => updateSettings({ bpm: nextBpm })
   );
 
-  async function startMetronome() {
-    setErrorMessage(null);
-
-    if (settings.countdownBeats > 0) {
-      setTransportState("counting");
-      setCountdownRemaining(settings.countdownBeats);
-      setMessage("Countdown running.");
-      runCountdown(settings.countdownBeats);
-      return;
-    }
-
-    await startPlaybackNow();
-  }
-
-  function runCountdown(remainingBeats: number) {
-    if (countdownTimeoutRef.current !== null) {
-      window.clearTimeout(countdownTimeoutRef.current);
-    }
-
-    if (remainingBeats <= 0) {
-      void startPlaybackNow();
-      return;
-    }
-
-    setCountdownRemaining(remainingBeats);
-    countdownTimeoutRef.current = window.setTimeout(() => {
-      runCountdown(remainingBeats - 1);
-    }, 60_000 / settings.bpm);
-  }
-
-  async function startPlaybackNow() {
-    try {
-      await metronomeService.start(settings);
-      setTransportState("playing");
-      setCountdownRemaining(0);
-      setMessage("Metronome playing.");
-    } catch (error) {
-      setTransportState("stopped");
-      setErrorMessage(error instanceof Error ? error.message : "Metronome playback failed.");
-    }
-  }
-
-  function stopMetronome() {
-    if (countdownTimeoutRef.current !== null) {
-      window.clearTimeout(countdownTimeoutRef.current);
-      countdownTimeoutRef.current = null;
-    }
-
-    metronomeService.stop();
-    setTransportState("stopped");
-    setCountdownRemaining(0);
+  const handleCountdownStarted = useCallback(() => {
+    setMessage("Countdown running.");
+  }, []);
+  const handleStarted = useCallback(() => {
+    setMessage("Metronome playing.");
+  }, []);
+  const handleStartFailed = useCallback((error: unknown) => {
+    setErrorMessage(error instanceof Error ? error.message : "Metronome playback failed.");
+  }, []);
+  const handleStopped = useCallback(() => {
     setMessage(isRecording ? "Metronome stopped; recording is still active." : "Metronome stopped.");
-  }
+  }, [isRecording]);
+  const {
+    transportState,
+    countdownRemaining,
+    isPlaying,
+    isCounting,
+    startMetronome,
+    stopMetronome
+  } = useMetronomeTransport({
+    settings,
+    metronomeService,
+    onCountdownStarted: handleCountdownStarted,
+    onStarted: handleStarted,
+    onStartFailed: handleStartFailed,
+    onStopped: handleStopped
+  });
+  const arePreRunSettingsLocked = isPlaying || isCounting;
+  const handleStartMetronome = useCallback(() => {
+    setErrorMessage(null);
+    void startMetronome();
+  }, [startMetronome]);
 
   async function startRecording() {
     setErrorMessage(null);
@@ -405,7 +364,7 @@ export function QuickMetronomeExperience() {
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
-                  onClick={startMetronome}
+                  onClick={handleStartMetronome}
                   disabled={isPlaying || isCounting}
                   aria-label="Start metronome"
                 >
@@ -415,7 +374,7 @@ export function QuickMetronomeExperience() {
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={stopMetronome}
+                  onClick={() => void stopMetronome()}
                   disabled={transportState === "stopped"}
                   aria-label="Stop metronome"
                 >

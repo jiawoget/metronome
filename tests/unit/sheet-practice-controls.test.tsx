@@ -8,6 +8,7 @@ import {
   formatUnsupportedTimeSignatureMessage
 } from "@/components/sheet-practice/controls/practice-control-state";
 import { SheetPracticeControls } from "@/components/sheet-practice/controls/sheet-practice-controls";
+import type { PracticeSession } from "@/domain/practice";
 import type { PracticeSessionService } from "@/services/practice-session";
 import {
   BrowserMetronomeService,
@@ -60,6 +61,23 @@ function createIdleSessionService() {
     | "listRecordingMetadata"
     | "subscribe"
   >;
+}
+
+function createSheetSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
+  return {
+    id: "session-alpha",
+    sourceType: "sheet",
+    sheetId: "sheet-alpha",
+    startedAt: "2026-06-21T12:00:00.000Z",
+    endedAt: null,
+    durationMs: 0,
+    bpm: 72,
+    timeSignature: "4/4",
+    recordingCount: 0,
+    latestRecordingId: null,
+    updatedAt: "2026-06-21T12:00:00.000Z",
+    ...overrides
+  };
 }
 
 describe("sheet practice controls state", () => {
@@ -186,6 +204,25 @@ describe("SheetPracticeControls failure handling", () => {
     };
   }
 
+  function createRejectingMetronomeService() {
+    let playing = false;
+
+    return {
+      service: {
+        onTick: vi.fn(() => () => false),
+        update: vi.fn(),
+        start: vi.fn(async () => {
+          playing = true;
+          throw new Error("Tone unavailable");
+        }),
+        stop: vi.fn(() => {
+          playing = false;
+        })
+      },
+      isPlaying: () => playing
+    };
+  }
+
   it("does not leave metronome playback running when session creation rejects", async () => {
     const user = userEvent.setup();
     const sessionService = createRejectingSessionService();
@@ -215,6 +252,79 @@ describe("SheetPracticeControls failure handling", () => {
     });
     expect(metronome.service.start).not.toHaveBeenCalled();
     expect(metronome.service.stop).toHaveBeenCalled();
+    expect(metronome.isPlaying()).toBe(false);
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+  });
+
+  it("ends a metronome-only session when Tone start rejects after session creation", async () => {
+    const user = userEvent.setup();
+    const session = createSheetSession();
+    const endedSession = { ...session, endedAt: "2026-06-21T12:00:01.000Z", durationMs: 1_000 };
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => session),
+      endPracticeSession: vi.fn(async () => endedSession)
+    };
+    const metronome = createRejectingMetronomeService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createMetronomeService={() => metronome.service}
+        sessionService={sessionService}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Tone unavailable")).toBeVisible();
+    });
+    expect(sessionService.ensureSheetSession).toHaveBeenCalled();
+    expect(metronome.service.start).toHaveBeenCalled();
+    expect(metronome.service.stop).toHaveBeenCalled();
+    expect(sessionService.endPracticeSession).toHaveBeenCalledWith("session-alpha");
+    expect(metronome.isPlaying()).toBe(false);
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    expect(screen.getByTestId("sheet-session-id")).toHaveTextContent("session-alpha");
+  });
+
+  it("does not end an existing recording-linked session when Tone start rejects", async () => {
+    const user = userEvent.setup();
+    const session = createSheetSession({
+      recordingCount: 1,
+      latestRecordingId: "recording-alpha"
+    });
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => session),
+      endPracticeSession: vi.fn(async () => session)
+    };
+    const metronome = createRejectingMetronomeService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createMetronomeService={() => metronome.service}
+        sessionService={sessionService}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Tone unavailable")).toBeVisible();
+    });
+    expect(sessionService.ensureSheetSession).toHaveBeenCalled();
+    expect(metronome.service.start).toHaveBeenCalled();
+    expect(metronome.service.stop).toHaveBeenCalled();
+    expect(sessionService.endPracticeSession).not.toHaveBeenCalled();
     expect(metronome.isPlaying()).toBe(false);
     expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
   });
