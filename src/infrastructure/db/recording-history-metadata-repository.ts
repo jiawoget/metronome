@@ -1,5 +1,6 @@
 import {
   parseSheetRecordingMetadata,
+  validatePracticeSession,
   validateSheetRecordingMetadata,
   type PracticeSession,
   type SheetRecordingMetadata
@@ -36,6 +37,19 @@ function toSheetRecordingMetadata(recording: ReviewRecording): SheetRecordingMet
 
 function toReviewRecording(recording: SheetRecordingMetadata, session: PracticeSession): ReviewRecording {
   const validRecording = validateSheetRecordingMetadata(recording);
+  const validSession = validatePracticeSession(session);
+
+  if (validSession.sourceType !== "sheet" || !validSession.sheetId) {
+    throw new Error("Sheet recording metadata requires a sheet practice session.");
+  }
+
+  if (validRecording.sessionId !== validSession.id) {
+    throw new Error("Sheet recording metadata sessionId must match the session id.");
+  }
+
+  if (validRecording.sheetId !== validSession.sheetId) {
+    throw new Error("Sheet recording metadata sheetId must match the session sheetId.");
+  }
 
   return {
     id: validRecording.id,
@@ -51,8 +65,8 @@ function toReviewRecording(recording: SheetRecordingMetadata, session: PracticeS
     mimeType: "metadata/session",
     audioDataUrl: null,
     settings: {
-      bpm: validRecording.bpm ?? session.bpm ?? 96,
-      timeSignature: validRecording.timeSignature ?? session.timeSignature ?? "4/4"
+      bpm: validRecording.bpm ?? validSession.bpm ?? 96,
+      timeSignature: validRecording.timeSignature ?? validSession.timeSignature ?? "4/4"
     }
   };
 }
@@ -81,7 +95,7 @@ export const recordingHistoryMetadataRepository: PracticeRecordingMetadataReposi
 
     recordingHistoryRepository.saveSnapshot({
       sessions: [
-        session,
+        validatePracticeSession(session),
         ...snapshot.sessions.filter((item) => !isObjectWithId(item) || item.id !== session.id)
       ],
       recordings: [

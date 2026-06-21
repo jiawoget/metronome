@@ -236,6 +236,51 @@ describe("practice session service", () => {
     ).toThrow();
     expect(() =>
       validatePracticeSession({
+        id: "bad-non-iso",
+        sourceType: "sheet",
+        sheetId: "sheet-alpha",
+        startedAt: "2026-06-21 12:00:00",
+        endedAt: null,
+        durationMs: 0,
+        bpm: 96,
+        timeSignature: "4/4",
+        recordingCount: 0,
+        latestRecordingId: null,
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      })
+    ).toThrow();
+    expect(() =>
+      validatePracticeSession({
+        id: "bad-impossible-date",
+        sourceType: "sheet",
+        sheetId: "sheet-alpha",
+        startedAt: "2026-02-30T12:00:00.000Z",
+        endedAt: null,
+        durationMs: 0,
+        bpm: 96,
+        timeSignature: "4/4",
+        recordingCount: 0,
+        latestRecordingId: null,
+        updatedAt: "2026-02-30T12:00:00.000Z"
+      })
+    ).toThrow();
+    expect(() =>
+      validatePracticeSession({
+        id: "bad-timezone",
+        sourceType: "sheet",
+        sheetId: "sheet-alpha",
+        startedAt: "2026-06-21T12:00:00.000+99:99",
+        endedAt: null,
+        durationMs: 0,
+        bpm: 96,
+        timeSignature: "4/4",
+        recordingCount: 0,
+        latestRecordingId: null,
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      })
+    ).toThrow();
+    expect(() =>
+      validatePracticeSession({
         id: "bad-date",
         sourceType: "sheet",
         sheetId: "sheet-alpha",

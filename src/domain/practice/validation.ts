@@ -2,8 +2,8 @@ import { z } from "zod";
 
 import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice/types";
 
-const isoDateSchema = z.string().refine((value) => Number.isFinite(Date.parse(value)), {
-  message: "Expected a valid ISO date."
+const isoDateSchema = z.iso.datetime({ offset: true }).refine((value) => new Date(value).toISOString() === value, {
+  message: "Expected a strict ISO datetime with a real calendar date."
 });
 
 const practiceTimeSignatureSchema = z.enum(["2/4", "3/4", "4/4", "6/8"]);

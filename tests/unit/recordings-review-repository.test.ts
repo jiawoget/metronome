@@ -6,6 +6,7 @@ import {
 } from "@/lib/recordings-review/repository";
 import { recordingHistoryMetadataRepository } from "@/infrastructure/db/recording-history-metadata-repository";
 import type { RecordingReviewSnapshot } from "@/lib/recordings-review/types";
+import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
 
 const snapshot: RecordingReviewSnapshot = {
   sessions: [{ id: "session-1" }],
@@ -64,32 +65,7 @@ describe("recording history repository", () => {
   });
 
   it("stores 05e sheet recording metadata in the shared recording history boundary", async () => {
-    await recordingHistoryMetadataRepository.saveRecordingMetadata(
-      {
-        id: "sheet-metadata-1",
-        type: "sheet",
-        sessionId: "session-sheet-1",
-        sheetId: "sheet-alpha",
-        sheetName: "Alpha Sheet",
-        createdAt: "2026-06-21T12:00:00.000Z",
-        durationMs: 12_000,
-        bpm: 96,
-        timeSignature: "4/4"
-      },
-      {
-        id: "session-sheet-1",
-        sourceType: "sheet",
-        sheetId: "sheet-alpha",
-        startedAt: "2026-06-21T11:59:50.000Z",
-        endedAt: null,
-        durationMs: 12_000,
-        bpm: 96,
-        timeSignature: "4/4",
-        recordingCount: 1,
-        latestRecordingId: "sheet-metadata-1",
-        updatedAt: "2026-06-21T12:00:00.000Z"
-      }
-    );
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(createSheetRecording(), createSheetSession());
 
     const snapshot = recordingHistoryRepository.getSnapshot();
     const reviewRecording = recordingHistoryRepository.getRecording("sheet-metadata-1");
@@ -125,4 +101,63 @@ describe("recording history repository", () => {
       }
     ]);
   });
+
+  it("rejects mismatched 05e sheet recording linkage before saving to shared history", async () => {
+    await expect(
+      recordingHistoryMetadataRepository.saveRecordingMetadata(
+        {
+          ...createSheetRecording(),
+          sessionId: "other-session"
+        },
+        createSheetSession()
+      )
+    ).rejects.toThrow("sessionId must match");
+    await expect(
+      recordingHistoryMetadataRepository.saveRecordingMetadata(
+        {
+          ...createSheetRecording(),
+          sheetId: "other-sheet"
+        },
+        createSheetSession()
+      )
+    ).rejects.toThrow("sheetId must match");
+    await expect(
+      recordingHistoryMetadataRepository.saveRecordingMetadata(createSheetRecording(), {
+        ...createSheetSession(),
+        sourceType: "quick",
+        sheetId: null
+      })
+    ).rejects.toThrow("requires a sheet practice session");
+    expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
+  });
 });
+
+function createSheetRecording(): SheetRecordingMetadata {
+  return {
+    id: "sheet-metadata-1",
+    type: "sheet",
+    sessionId: "session-sheet-1",
+    sheetId: "sheet-alpha",
+    sheetName: "Alpha Sheet",
+    createdAt: "2026-06-21T12:00:00.000Z",
+    durationMs: 12_000,
+    bpm: 96,
+    timeSignature: "4/4"
+  };
+}
+
+function createSheetSession(): PracticeSession {
+  return {
+    id: "session-sheet-1",
+    sourceType: "sheet",
+    sheetId: "sheet-alpha",
+    startedAt: "2026-06-21T11:59:50.000Z",
+    endedAt: null,
+    durationMs: 12_000,
+    bpm: 96,
+    timeSignature: "4/4",
+    recordingCount: 1,
+    latestRecordingId: "sheet-metadata-1",
+    updatedAt: "2026-06-21T12:00:00.000Z"
+  };
+}
