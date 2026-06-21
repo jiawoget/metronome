@@ -15,16 +15,10 @@ const signalExitCodes = {
   SIGTERM: 143
 };
 
-let cleanupDone = false;
 let parentSignal = null;
 let forceExitTimer = null;
 
 function cleanup() {
-  if (cleanupDone) {
-    return;
-  }
-
-  cleanupDone = true;
   stabilizeNextEnv();
 }
 
