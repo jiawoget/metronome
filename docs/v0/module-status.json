@@ -1,7 +1,7 @@
 ﻿[
     {
         "module":  "00-preflight",
-        "status":  "implementation_done",
+        "status":  "verified",
         "implementation":  {
                                "requiredSeparateAgent":  true,
                                "agent":  "GPT-5.5 High",
@@ -47,26 +47,36 @@
                            },
         "verification":  {
                              "requiredSeparateAgent":  true,
-                             "agent":  null,
-                             "completedAt":  null,
-                             "result":  null,
+                             "agent":  "GPT-5.4 Mini",
+                             "completedAt":  "2026-06-21T08:06:36Z",
+                             "result":  "PASS",
                              "acceptanceCriteria":  [
-
+                                                    "npm install completed on Node v24.17.0 / npm 11.17.0 with no EBADENGINE, deprecated, or install warning output and 0 vulnerabilities.",
+                                                    "npm audit reported 0 vulnerabilities.",
+                                                    "npm run lint passed.",
+                                                    "npm run typecheck passed.",
+                                                    "npm run test:unit passed.",
+                                                    "npm run build passed.",
+                                                    "npm run playwright:install completed successfully.",
+                                                    "npm run test:e2e passed with desktop and mobile resize coverage and no console errors.",
+                                                    "No real product feature or false completion claim was present in the preflight shell."
                                                     ],
                              "e2eEvidence":  [
-
+                                             "tests/e2e/preflight-smoke.spec.ts: desktop viewport 1280x800, mobile viewport 390x844, heading/body visibility checks, and console/pageerror capture.",
+                                             "npm run test:e2e -> 1 chromium smoke test passed."
                                              ],
                              "specializedEvidence":  [
-
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date, audited 481 packages in 1s; found 0 vulnerabilities; no warning or deprecation output.",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm audit -> found 0 vulnerabilities.",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run playwright:install -> Playwright OS fallback warning only; chromium install completed."
                                                      ],
                              "persistenceEvidence":  [
-
+                                                     "Not applicable: preflight does not claim persistence."
                                                      ],
-                             "consoleStatus":  null,
+                             "consoleStatus":  "PASS; Playwright smoke test captured no console errors or page errors.",
                              "issues":  [
-
                                         ],
-                             "commitHash":  null
+                             "commitHash":  "0ed8b9744c1aa12daa89b52beac09319fc93732f"
                          }
     },
     {
