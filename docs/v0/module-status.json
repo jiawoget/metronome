@@ -1,22 +1,47 @@
 ﻿[
     {
         "module":  "00-preflight",
-        "status":  "contract_ready",
+        "status":  "implementation_done",
         "implementation":  {
                                "requiredSeparateAgent":  true,
-                               "agent":  null,
-                               "completedAt":  null,
+                               "agent":  "GPT-5.5 High",
+                               "completedAt":  "2026-06-21T07:59:25Z",
                                "selfTests":  [
-
+                                                 "source /home/stonepia/.nvm/nvm.sh && node -v && npm -v -> PASS; v24.17.0 / npm 11.17.0 after removing Node v23.3.0",
+                                                 "source /home/stonepia/.nvm/nvm.sh && npm install -> PASS; up to date, audited 481 packages, found 0 vulnerabilities; no ExperimentalWarning, EBADENGINE, deprecated, or peer warning output",
+                                                 "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm audit -> PASS; found 0 vulnerabilities",
+                                                 "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm ls jsdom canvas whatwg-encoding prebuild-install vitest vite next postcss eslint-visitor-keys --all -> PASS; jsdom@29.1.1, vitest@4.1.9, vite@8.0.16, next@16.2.9 with postcss@8.5.15; canvas/whatwg-encoding/prebuild-install absent",
+                                                 "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                 "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                 "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 1 test file passed, 1 test passed",
+                                                 "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js 16.2.9 production build completed",
+                                                 "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run playwright:install -> PASS; chromium install command completed using Playwright ubuntu24.04 fallback build warning for this OS",
+                                                 "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 1 chromium smoke test passed"
                                              ],
                                "handoffNotes":  [
-
+                                                  "Assigned feature: 00-preflight.",
+                                                  "Coding model used: GPT-5.5 High.",
+                                                  "Implemented only preflight engineering foundation: package manifest, framework configuration, strict TypeScript, Tailwind styling, shadcn/ui-compatible primitives, minimal smoke shell, unit smoke test, and Playwright smoke test.",
+                                                  "Fixed verification dependency issues by pinning the project to Node 24/npm 11, removing obsolete local Node v23.3.0, upgrading direct dependencies to current compatible releases, and regenerating package-lock.json.",
+                                                  "Resolved Vitest/Vite audit findings with vitest@4.1.9 and vite@8.0.16; resolved jsdom/canvas deprecated chain with jsdom@29.1.1 and react-pdf@10.4.1/PDF.js updates; resolved Next internal PostCSS audit by overriding Next's postcss dependency to ^8.5.15.",
+                                                  "Updated Tailwind/PostCSS config for Tailwind CSS 4 and updated Next/Playwright configuration so production build and E2E smoke tests run without HMR console noise.",
+                                                  "The visible UI is intentionally a placeholder for install/build/browser smoke checks and states that product modules are unavailable; no metronome, recording, sheet, reference, settings, or v1 behavior was implemented.",
+                                                  "Implementation commit hash is reported in the final handoff response because a git commit cannot contain its own final object hash without changing that hash."
                                                 ],
                                "changedAreas":  [
-
+                                                  "package.json scripts and dependency declarations for Next.js, React, TypeScript, Tailwind, shadcn-compatible primitives, lucide-react, Zustand, Zod, Dexie, Tone.js, wavesurfer.js, react-pdf/PDF.js, Vitest, and Playwright",
+                                                  "Next.js app scaffold under src/app with a minimal preflight shell page",
+                                                  "shadcn/ui-compatible utility and primitive components under src/components/ui and src/lib",
+                                                  "Architecture boundary placeholders under src/domain, src/services, src/infrastructure, src/stores, src/hooks, src/test/helpers, and test-fixtures",
+                                                  "Vitest smoke unit test under tests/unit",
+                                                  "Playwright smoke e2e test under tests/e2e covering render, desktop/mobile resize, and console error capture",
+                                                  "Tooling config files: tsconfig, next config, Tailwind/PostCSS, ESLint, Prettier, Vitest, Playwright, .gitignore, .npmrc, .nvmrc, and README setup notes"
                                                 ],
                                "knownRisks":  [
-
+                                                 "The project now requires Node >=24.0.0 and npm >=11.17.0 with engine-strict=true; Node 23 is intentionally unsupported because current Vitest/Vite/jsdom toolchain releases do not support that odd Node line.",
+                                                 "Playwright reports this OS is not officially supported and uses its ubuntu24.04 fallback Chromium build; chromium install and E2E both completed successfully in this environment.",
+                                                 "Next.js 16/Turbopack build required unsandboxed execution here because sandboxed execution blocked an internal port bind; the unsandboxed build completed successfully.",
+                                                 "Pre-existing unrelated line-ending-only changes remain in Design Notes/tech_design.md and docs/v1/module-status.json; they were not modified for this feature."
                                               ],
                                "commitHash":  null
                            },
