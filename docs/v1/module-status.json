@@ -1,0 +1,71 @@
+﻿[
+    {
+        "module":  "design-style",
+        "status":  "roadmap_ready"
+    },
+    {
+        "value":  [
+                      {
+                          "module":  "01-app-shell-home",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "02-quick-metronome",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "03-recordings-review",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "04-sheet-library",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "05-sheet-practice",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "05a-sheet-viewer",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "05e-session-integration",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "05b-practice-controls",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "05c-sheet-recording-review",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "05d-error-markers",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "06-reference-system",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "07-settings-local-data",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "08-practice-session",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "09-audio-analysis",
+                          "status":  "roadmap_ready"
+                      },
+                      {
+                          "module":  "10-sync-cloud",
+                          "status":  "roadmap_ready"
+                      }
+                  ],
+        "Count":  15
+    }
+]

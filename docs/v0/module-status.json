@@ -1,0 +1,637 @@
+﻿[
+    {
+        "module":  "00-preflight",
+        "status":  "contract_ready",
+        "implementation":  {
+                               "requiredSeparateAgent":  true,
+                               "agent":  null,
+                               "completedAt":  null,
+                               "selfTests":  [
+
+                                             ],
+                               "handoffNotes":  [
+
+                                                ],
+                               "changedAreas":  [
+
+                                                ],
+                               "knownRisks":  [
+
+                                              ],
+                               "commitHash":  null
+                           },
+        "verification":  {
+                             "requiredSeparateAgent":  true,
+                             "agent":  null,
+                             "completedAt":  null,
+                             "result":  null,
+                             "acceptanceCriteria":  [
+
+                                                    ],
+                             "e2eEvidence":  [
+
+                                             ],
+                             "specializedEvidence":  [
+
+                                                     ],
+                             "persistenceEvidence":  [
+
+                                                     ],
+                             "consoleStatus":  null,
+                             "issues":  [
+
+                                        ],
+                             "commitHash":  null
+                         }
+    },
+    {
+        "value":  [
+                      {
+                          "module":  "01-app-shell-home",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "02-quick-metronome",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "03-recordings-review",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "04-sheet-library",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "05-sheet-practice",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "05a-sheet-viewer",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "05e-session-integration",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "05b-practice-controls",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "05c-sheet-recording-review",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "05d-error-markers",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "06-reference-system",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "07-settings-local-data",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      },
+                      {
+                          "module":  "08-practice-session",
+                          "status":  "contract_ready",
+                          "implementation":  {
+                                                 "requiredSeparateAgent":  true,
+                                                 "agent":  null,
+                                                 "completedAt":  null,
+                                                 "selfTests":  [
+
+                                                               ],
+                                                 "handoffNotes":  [
+
+                                                                  ],
+                                                 "changedAreas":  [
+
+                                                                  ],
+                                                 "knownRisks":  [
+
+                                                                ],
+                                                 "commitHash":  null
+                                             },
+                          "verification":  {
+                                               "requiredSeparateAgent":  true,
+                                               "agent":  null,
+                                               "completedAt":  null,
+                                               "result":  null,
+                                               "acceptanceCriteria":  [
+
+                                                                      ],
+                                               "e2eEvidence":  [
+
+                                                               ],
+                                               "specializedEvidence":  [
+
+                                                                       ],
+                                               "persistenceEvidence":  [
+
+                                                                       ],
+                                               "consoleStatus":  null,
+                                               "issues":  [
+
+                                                          ],
+                                               "commitHash":  null
+                                           }
+                      }
+                  ],
+        "Count":  13
+    }
+]
