@@ -26,7 +26,7 @@ const baseSheet: SheetListItem = {
   lastPracticedAt: null,
   artifactStatus: {
     readable: true,
-    label: "PDF artifact readable"
+    label: "PDF artifact parsed: 1 page"
   }
 };
 

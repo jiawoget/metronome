@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { ImportedSheet, SheetArtifact } from "@/domain/sheet";
-import { createSheetLibraryService, type SheetImportAdapter, type SheetLibraryRepository } from "@/services/sheet-library";
+import type { ImportedSheet, SheetArtifact, SheetArtifactStatus } from "@/domain/sheet";
+import {
+  createSheetLibraryService,
+  type SheetImportAdapter,
+  type SheetLibraryRepository
+} from "@/services/sheet-library";
 
 function createMemoryRepository(): SheetLibraryRepository {
   const sheets = new Map<string, ImportedSheet>();
@@ -25,10 +29,19 @@ function createMemoryRepository(): SheetLibraryRepository {
   };
 }
 
-function createAdapter(result: Awaited<ReturnType<SheetImportAdapter["analyzeFiles"]>>): SheetImportAdapter {
+function createAdapter(
+  result: Awaited<ReturnType<SheetImportAdapter["analyzeFiles"]>>,
+  artifactStatus: SheetArtifactStatus = {
+    readable: true,
+    label: "PDF artifact parsed: 1 page"
+  }
+): SheetImportAdapter {
   return {
     async analyzeFiles() {
       return result;
+    },
+    async inspectArtifact() {
+      return artifactStatus;
     }
   };
 }
@@ -90,7 +103,7 @@ describe("sheet library service", () => {
       pageCount: 1,
       artifactStatus: {
         readable: true,
-        label: "PDF artifact readable"
+        label: "PDF artifact parsed: 1 page"
       }
     });
     expect(await service.getArtifact("sheet-pdf")).toMatchObject({
@@ -100,31 +113,38 @@ describe("sheet library service", () => {
   });
 
   it("imports image metadata and deletes metadata plus artifact together", async () => {
+    const repository = createMemoryRepository();
     const service = createSheetLibraryService({
-      repository: createMemoryRepository(),
-      importAdapter: createAdapter({
-        ok: true,
-        preview: {
-          kind: "image",
-          pageCount: 1,
-          imageCount: 1,
-          imageDimensions: [{ width: 2, height: 2 }],
-          mimeTypes: ["image/png"],
-          sizeBytes: imageFile.size,
-          originalFileNames: [imageFile.name],
-          files: [
-            {
-              name: imageFile.name,
-              mimeType: imageFile.type,
-              sizeBytes: imageFile.size,
-              pageNumber: 1,
-              blob: imageFile,
-              width: 2,
-              height: 2
-            }
-          ]
+      repository,
+      importAdapter: createAdapter(
+        {
+          ok: true,
+          preview: {
+            kind: "image",
+            pageCount: 1,
+            imageCount: 1,
+            imageDimensions: [{ width: 2, height: 2 }],
+            mimeTypes: ["image/png"],
+            sizeBytes: imageFile.size,
+            originalFileNames: [imageFile.name],
+            files: [
+              {
+                name: imageFile.name,
+                mimeType: imageFile.type,
+                sizeBytes: imageFile.size,
+                pageNumber: 1,
+                blob: imageFile,
+                width: 2,
+                height: 2
+              }
+            ]
+          }
+        },
+        {
+          readable: true,
+          label: "Image artifact decoded: 2 x 2"
         }
-      }),
+      ),
       createId: () => "sheet-image"
     });
 
@@ -141,6 +161,7 @@ describe("sheet library service", () => {
 
     expect(await service.listSheets()).toEqual([]);
     expect(await service.getArtifact("sheet-image")).toBeNull();
+    expect(await repository.getArtifact("sheet-image")).toBeNull();
   });
 
   it("returns import errors without creating fake sheet rows", async () => {
@@ -167,5 +188,56 @@ describe("sheet library service", () => {
       message: "Unsupported file type. Upload one PDF or one or more PNG/JPG image files."
     });
     expect(await service.listSheets()).toEqual([]);
+  });
+
+  it("uses artifact inspection status from the adapter instead of blob size alone", async () => {
+    const service = createSheetLibraryService({
+      repository: createMemoryRepository(),
+      importAdapter: createAdapter(
+        {
+          ok: true,
+          preview: {
+            kind: "pdf",
+            pageCount: 1,
+            imageCount: 0,
+            imageDimensions: [],
+            mimeTypes: ["application/pdf"],
+            sizeBytes: pdfFile.size,
+            originalFileNames: [pdfFile.name],
+            files: [
+              {
+                name: pdfFile.name,
+                mimeType: pdfFile.type,
+                sizeBytes: pdfFile.size,
+                pageNumber: 1,
+                blob: pdfFile,
+                width: null,
+                height: null
+              }
+            ]
+          }
+        },
+        {
+          readable: false,
+          label: "PDF artifact page count mismatch"
+        }
+      ),
+      createId: () => "sheet-inspected"
+    });
+
+    await service.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Inspected PDF",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    expect((await service.listSheets())[0].artifactStatus).toEqual({
+      readable: false,
+      label: "PDF artifact page count mismatch"
+    });
   });
 });

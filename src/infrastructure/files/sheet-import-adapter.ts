@@ -1,4 +1,4 @@
-import type { SheetArtifactFile } from "@/domain/sheet";
+import type { ImportedSheet, SheetArtifact, SheetArtifactFile, SheetArtifactStatus } from "@/domain/sheet";
 import type { SheetImportAdapter, SheetImportResult } from "@/services/sheet-library";
 
 const PDF_MIME_TYPES = new Set(["application/pdf"]);
@@ -25,9 +25,9 @@ function unsupportedResult() {
   } satisfies SheetImportResult;
 }
 
-async function readPdfPageCount(file: File) {
+async function readPdfPageCount(blob: Blob) {
   const pdfjs = await import("pdfjs-dist/legacy/webpack.mjs");
-  const data = new Uint8Array(await file.arrayBuffer());
+  const data = new Uint8Array(await blob.arrayBuffer());
   const loadingTask = pdfjs.getDocument({
     data,
     disableFontFace: true,
@@ -42,9 +42,9 @@ async function readPdfPageCount(file: File) {
   }
 }
 
-async function decodeImage(file: File) {
+async function decodeImage(blob: Blob) {
   if (typeof createImageBitmap === "function") {
-    const bitmap = await createImageBitmap(file);
+    const bitmap = await createImageBitmap(blob);
 
     try {
       return {
@@ -58,7 +58,7 @@ async function decodeImage(file: File) {
 
   return new Promise<{ width: number; height: number }>((resolve, reject) => {
     const image = new Image();
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(blob);
 
     image.onload = () => {
       URL.revokeObjectURL(url);
@@ -85,6 +85,78 @@ function toArtifactFile(file: File, index: number, dimensions?: { width: number;
     width: dimensions?.width ?? null,
     height: dimensions?.height ?? null
   };
+}
+
+function inaccessibleArtifactStatus(): SheetArtifactStatus {
+  return {
+    readable: false,
+    label: "Artifact inaccessible"
+  };
+}
+
+async function inspectPdfArtifact(sheet: ImportedSheet, artifact: SheetArtifact) {
+  const file = artifact.files[0];
+
+  if (!file || file.blob.size === 0) {
+    return inaccessibleArtifactStatus();
+  }
+
+  try {
+    const pageCount = await readPdfPageCount(file.blob);
+
+    if (pageCount !== sheet.pageCount) {
+      return {
+        readable: false,
+        label: "PDF artifact page count mismatch"
+      };
+    }
+
+    return {
+      readable: true,
+      label: `PDF artifact parsed: ${pageCount} page${pageCount === 1 ? "" : "s"}`
+    };
+  } catch {
+    return {
+      readable: false,
+      label: "PDF artifact inaccessible"
+    };
+  }
+}
+
+async function inspectImageArtifact(sheet: ImportedSheet, artifact: SheetArtifact) {
+  if (artifact.files.length !== sheet.imageCount || artifact.files.some((file) => file.blob.size === 0)) {
+    return inaccessibleArtifactStatus();
+  }
+
+  try {
+    const dimensions = await Promise.all(artifact.files.map((file) => decodeImage(file.blob)));
+    const dimensionsMatch = dimensions.every((dimension, index) => {
+      const expected = sheet.imageDimensions[index];
+
+      return !!expected && expected.width === dimension.width && expected.height === dimension.height;
+    });
+
+    if (!dimensionsMatch) {
+      return {
+        readable: false,
+        label: "Image artifact dimensions mismatch"
+      };
+    }
+
+    const firstDimension = dimensions[0];
+
+    return {
+      readable: true,
+      label: firstDimension
+        ? `Image artifact decoded: ${firstDimension.width} x ${firstDimension.height}`
+        : "Image artifact decoded"
+    };
+  } catch {
+    return {
+      readable: false,
+      label: "Image artifact inaccessible"
+    };
+  }
 }
 
 export const browserSheetImportAdapter: SheetImportAdapter = {
@@ -157,5 +229,24 @@ export const browserSheetImportAdapter: SheetImportAdapter = {
     }
 
     return unsupportedResult();
+  },
+
+  async inspectArtifact(sheet, artifact) {
+    if (!artifact || artifact.files.length === 0) {
+      return inaccessibleArtifactStatus();
+    }
+
+    if (artifact.kind !== sheet.kind || artifact.sheetId !== sheet.id) {
+      return {
+        readable: false,
+        label: "Artifact metadata mismatch"
+      };
+    }
+
+    if (sheet.kind === "pdf") {
+      return inspectPdfArtifact(sheet, artifact);
+    }
+
+    return inspectImageArtifact(sheet, artifact);
   }
 };

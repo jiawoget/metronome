@@ -1,6 +1,7 @@
 import type {
   ImportedSheet,
   SheetArtifact,
+  SheetArtifactStatus,
   SheetImageDimensions,
   SheetKind,
   SheetListItem,
@@ -42,6 +43,7 @@ export type SheetLibraryRepository = {
 
 export type SheetImportAdapter = {
   analyzeFiles: (files: File[]) => Promise<SheetImportResult>;
+  inspectArtifact: (sheet: ImportedSheet, artifact: SheetArtifact | null) => Promise<SheetArtifactStatus>;
 };
 
 export type SheetLibraryService = {

@@ -21,7 +21,7 @@ test("app shell home navigation works on desktop and mobile without console erro
   await expect(page.getByText(/No recent practice session yet/i)).toBeVisible();
   await expect(page.getByText(/No sheets imported yet/i)).toBeVisible();
   await expect(page.getByRole("link", { name: "Import Sheet" })).toBeVisible();
-  await expect(page.getByText(/Import workflow is not enabled yet/i)).toBeVisible();
+  await expect(page.getByText(/Opens the Sheet Library import flow/i)).toBeVisible();
   await expect(page.getByText(/Quick takes appear after recording/i)).toBeVisible();
   await expect(page.getByText(/No recording or playback active/i).first()).toBeVisible();
 

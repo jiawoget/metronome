@@ -22,6 +22,40 @@ async function clearSheetDatabase(page: Page) {
   await page.reload();
 }
 
+async function getSheetPersistence(page: Page, sheetId: string) {
+  return page.evaluate(
+    ({ databaseName, id }) =>
+      new Promise<{ sheetExists: boolean; artifactExists: boolean; artifactBlobSizes: number[] }>(
+        (resolve, reject) => {
+          const openRequest = indexedDB.open(databaseName);
+
+          openRequest.onerror = () => reject(openRequest.error);
+          openRequest.onsuccess = () => {
+            const database = openRequest.result;
+            const transaction = database.transaction(["sheets", "artifacts"], "readonly");
+            const sheetRequest = transaction.objectStore("sheets").get(id);
+            const artifactRequest = transaction.objectStore("artifacts").get(id);
+
+            transaction.oncomplete = () => {
+              const artifact = artifactRequest.result as
+                | { files?: Array<{ blob?: Blob }> }
+                | undefined;
+
+              database.close();
+              resolve({
+                sheetExists: !!sheetRequest.result,
+                artifactExists: !!artifact,
+                artifactBlobSizes: artifact?.files?.map((file) => file.blob?.size ?? 0) ?? []
+              });
+            };
+            transaction.onerror = () => reject(transaction.error);
+          };
+        }
+      ),
+    { databaseName: dbName, id: sheetId }
+  );
+}
+
 test("sheet library imports real PDF and image fixtures, persists, filters, opens, and deletes", async ({
   page
 }) => {
@@ -53,13 +87,21 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
   await expect(page.getByRole("heading", { name: "Autumn Etude" })).toBeVisible();
   const autumnSheet = page.getByRole("heading", { name: "Autumn Etude" }).locator("../..");
   await expect(autumnSheet.getByText("Exercise", { exact: true })).toBeVisible();
-  await expect(page.getByText("1 page")).toBeVisible();
-  await expect(page.getByText("PDF artifact readable")).toBeVisible();
+  await expect(autumnSheet.getByText("1 page", { exact: true })).toBeVisible();
+  await expect(page.getByText("PDF artifact parsed: 1 page")).toBeVisible();
   await expect(page.getByText("Not practiced yet")).toBeVisible();
+  const practiceHref = await page.getByRole("link", { name: "Open Sheet Practice" }).getAttribute("href");
+  const pdfSheetId = new URL(practiceHref ?? "", "http://127.0.0.1").searchParams.get("sheetId");
+
+  expect(pdfSheetId).toMatch(/^sheet_/);
+  await expect.poll(() => getSheetPersistence(page, pdfSheetId ?? "")).toMatchObject({
+    sheetExists: true,
+    artifactExists: true
+  });
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Autumn Etude" })).toBeVisible();
-  await expect(page.getByText("PDF artifact readable")).toBeVisible();
+  await expect(page.getByText("PDF artifact parsed: 1 page")).toBeVisible();
 
   await page.getByLabel("Search").fill("6/8");
   await expect(page.getByRole("heading", { name: "Autumn Etude" })).toBeVisible();
@@ -78,6 +120,11 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
   await page.goto("/sheet-library");
   await page.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByRole("heading", { name: "Autumn Etude" })).toHaveCount(0);
+  await expect.poll(() => getSheetPersistence(page, pdfSheetId ?? "")).toEqual({
+    sheetExists: false,
+    artifactExists: false,
+    artifactBlobSizes: []
+  });
   await page.reload();
   await expect(page.getByRole("heading", { name: "Autumn Etude" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "No sheets imported yet" })).toBeVisible();
@@ -93,10 +140,10 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
   await page.getByLabel("Time signature").fill("4/4");
   await page.getByRole("button", { name: "Save Imported Sheet" }).click();
   await expect(page.getByRole("heading", { name: "Pixel Scale" })).toBeVisible();
-  await expect(page.getByText("Image artifact readable")).toBeVisible();
+  await expect(page.getByText("Image artifact decoded: 2 x 2")).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "Pixel Scale" })).toBeVisible();
-  await expect(page.getByText("Image artifact readable")).toBeVisible();
+  await expect(page.getByText("Image artifact decoded: 2 x 2")).toBeVisible();
 
   await page
     .getByLabel("File")

@@ -129,7 +129,7 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
           </CardHeader>
           <CardContent>
             <p className="text-sm leading-6 text-muted-foreground">
-              No sheets imported yet. The Sheet Library route is ready for its module implementation.
+              No sheets imported yet. Open Sheet Library to import PDF or image practice sheets.
             </p>
             <Button asChild variant="secondary" className="mt-4 w-full">
               <Link href="/sheet-library">Open Sheet Library</Link>
@@ -141,7 +141,7 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
               </Link>
             </Button>
             <p className="mt-3 text-xs leading-5 text-muted-foreground">
-              Import workflow is not enabled yet; this opens the Sheet Library shell.
+              Opens the Sheet Library import flow for PDF and image sheets.
             </p>
           </CardContent>
         </Card>

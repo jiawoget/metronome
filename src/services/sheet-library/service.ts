@@ -2,7 +2,6 @@ import {
   validateSheetMetadata,
   type ImportedSheet,
   type SheetArtifact,
-  type SheetArtifactStatus,
   type SheetListItem
 } from "@/domain/sheet";
 import type {
@@ -27,36 +26,6 @@ function createSheetId() {
   return `sheet_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
-function getArtifactStatus(sheet: ImportedSheet, artifact: SheetArtifact | null): SheetArtifactStatus {
-  if (!artifact || artifact.files.length === 0) {
-    return {
-      readable: false,
-      label: "Artifact inaccessible"
-    };
-  }
-
-  if (artifact.kind !== sheet.kind || artifact.sheetId !== sheet.id) {
-    return {
-      readable: false,
-      label: "Artifact metadata mismatch"
-    };
-  }
-
-  const readableFiles = artifact.files.every((file) => file.blob.size > 0 && file.sizeBytes > 0);
-
-  if (!readableFiles) {
-    return {
-      readable: false,
-      label: "Artifact inaccessible"
-    };
-  }
-
-  return {
-    readable: true,
-    label: sheet.kind === "pdf" ? "PDF artifact readable" : "Image artifact readable"
-  };
-}
-
 export function createSheetLibraryService({
   repository,
   importAdapter,
@@ -65,10 +34,11 @@ export function createSheetLibraryService({
 }: SheetLibraryServiceOptions): SheetLibraryService {
   async function toListItem(sheet: ImportedSheet): Promise<SheetListItem> {
     const artifact = await repository.getArtifact(sheet.id);
+    const artifactStatus = await importAdapter.inspectArtifact(sheet, artifact);
 
     return {
       ...sheet,
-      artifactStatus: getArtifactStatus(sheet, artifact)
+      artifactStatus
     };
   }
 
@@ -126,10 +96,7 @@ export function createSheetLibraryService({
 
       return {
         ok: true,
-        sheet: {
-          ...sheet,
-          artifactStatus: getArtifactStatus(sheet, artifact)
-        }
+        sheet: await toListItem(sheet)
       };
     },
 
