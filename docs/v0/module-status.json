@@ -315,30 +315,46 @@
                                                                 ],
                                                  "commitHash":  null
                                              },
-                          "verification":  {
-                                               "requiredSeparateAgent":  true,
-                                               "agent":  null,
-                                               "completedAt":  null,
-                                               "result":  null,
-                                               "acceptanceCriteria":  [
+	                          "verification":  {
+	                                               "requiredSeparateAgent":  true,
+	                                               "agent":  "GPT-5.4 Mini",
+	                                               "completedAt":  "2026-06-21T10:23:17Z",
+	                                               "result":  "PASS",
+	                                               "acceptanceCriteria":  [
+	                                                                      "PASS: Open Recordings shows the empty state when no recordings are saved.",
+	                                                                      "PASS: Saved recordings appear in one unified list with search and quick/sheet filters.",
+	                                                                      "PASS: Recording details show metadata, linked sheet name, error markers, and continue practice routes.",
+	                                                                      "PASS: Playback uses real decodable artifacts and did not swallow playback rejection.",
+	                                                                      "PASS: Waveform evidence came from decoded audio or trusted peaks only after audio validation.",
+	                                                                      "PASS: Delete removed metadata, reload kept it gone, and the artifact was no longer accessible.",
+	                                                                      "PASS: Bad or missing audio showed clear errors and trustedPeaks did not mask failure.",
+	                                                                      "PASS: Decoded duration mismatch surfaced as a visible warning.",
+	                                                                      "PASS: Browser console and pageerror stayed clean across the tested flows."
+	                                                                      ],
+	                                               "e2eEvidence":  [
+	                                                               "Playwright browser run: tests/e2e/recordings-review.spec.ts exercised the empty state, seeded real WAV recordings, search, quick and sheet filters, details, decoded waveform evidence, playback, continue practice routing, delete persistence, bad audio handling, trustedPeaks validation, and duration mismatch warning.",
+	                                                               "Playwright browser run also completed the related app-shell and quick-metronome coverage in the same test invocation, and the recordings review spec observed no swallowed playback rejection."
+	                                                               ],
+	                                               "specializedEvidence":  [
+	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date, audited 481 packages, found 0 vulnerabilities.",
+	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm audit -> found 0 vulnerabilities.",
+	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS.",
+	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS.",
+	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 10 test files passed, 33 tests passed.",
+	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed and prerendered /recordings.",
+	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 4 chromium tests passed."
+	                                                                       ],
+	                                               "persistenceEvidence":  [
+	                                                                       "Deleted recording disappeared from the list, remained absent after page reload, and localStorage no longer contained the recording record or its linked error markers.",
+	                                                                       "Continue Practice routed quick recordings to /quick-metronome and sheet recordings to /sheet-practice?recordingId=...&sheetId=...."
+	                                                                       ],
+	                                               "consoleStatus":  "PASS; the tested flows captured no console.error entries and no pageerror events.",
+	                                               "issues":  [
 
-                                                                      ],
-                                               "e2eEvidence":  [
-
-                                                               ],
-                                               "specializedEvidence":  [
-
-                                                                       ],
-                                               "persistenceEvidence":  [
-
-                                                                       ],
-                                               "consoleStatus":  null,
-                                               "issues":  [
-
-                                                          ],
-                                               "commitHash":  null
-                                           }
-                      },
+	                                                          ],
+	                                               "commitHash":  null
+	                                           }
+	                      },
                       {
                           "module":  "04-sheet-library",
                           "status":  "contract_ready",
