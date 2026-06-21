@@ -183,6 +183,10 @@ export function createPracticeSessionService({
       return repository.getRecentSession();
     },
 
+    getRecentSheetSession(sheetId) {
+      return repository.getRecentSheetSession(sheetId);
+    },
+
     async getContinuePracticeTarget() {
       const recentSession = await repository.getRecentSession();
 

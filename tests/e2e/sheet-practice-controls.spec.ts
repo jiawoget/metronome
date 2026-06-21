@@ -214,6 +214,12 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await page.getByRole("button", { name: "Start metronome" }).click();
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
   await expect(page.getByText("Metronome playing.")).toBeVisible();
+  await expect(page.getByText(/locked while the metronome is running/i)).toBeVisible();
+  await expect(page.getByLabel("Time signature")).toBeDisabled();
+  await expect(page.getByLabel("Subdivision")).toBeDisabled();
+  await expect(page.getByLabel("Countdown")).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Every beat" })).toBeDisabled();
+  await expect(page.getByRole("spinbutton", { name: "BPM" })).toBeEnabled();
   await expect(page.getByTestId("sheet-session-source")).toContainText("sheet");
   await page.waitForFunction(() => {
     const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
@@ -292,6 +298,22 @@ test("sheet practice controls drive shared metronome timing, session activity, a
       })
     )
     .toBe(traceCountAfterStop);
+
+  await page.getByLabel("Countdown").selectOption("4");
+  await page.getByRole("button", { name: "Start metronome" }).click();
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Counting");
+  await expect(page.getByText(/locked while the metronome is running/i)).toBeVisible();
+  await expect(page.getByLabel("Time signature")).toBeDisabled();
+  await expect(page.getByLabel("Subdivision")).toBeDisabled();
+  await expect(page.getByLabel("Countdown")).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Every beat" })).toBeDisabled();
+  await expect(bpmInput).toBeEnabled();
+  await bpmInput.fill("91");
+  await bpmInput.press("Enter");
+  await expect(bpmInput).toHaveValue("91");
+  await page.getByRole("button", { name: "Stop metronome" }).click();
+  await expect(page.getByLabel("Countdown")).toBeEnabled();
+  await page.getByLabel("Countdown").selectOption("0");
 
   await bpmInput.fill("120");
   await bpmInput.press("Enter");

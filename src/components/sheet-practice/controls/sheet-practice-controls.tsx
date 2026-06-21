@@ -52,9 +52,15 @@ type SheetPracticeSessionService = Pick<
   | "updateSheetSessionDuration"
   | "endPracticeSession"
   | "getRecentSession"
+  | "getRecentSheetSession"
   | "listRecordingMetadata"
   | "subscribe"
 >;
+
+type SheetMetronomeStartContext = {
+  session: PracticeSession;
+  ownsMetronomeOnlySession: boolean;
+};
 
 type SheetPracticeControlsProps = {
   sheetId: string;
@@ -159,16 +165,24 @@ export function SheetPracticeControls({
     (nextBpm) => updateSettings({ bpm: nextBpm })
   );
 
-  const ensureMetronomeSession = useCallback(
-    () =>
-      sessionService.ensureSheetSession({
+  const ensureMetronomeSession = useCallback(async (): Promise<SheetMetronomeStartContext | null> => {
+    const existingSheetSession = await sessionService.getRecentSheetSession(sheetId);
+    const nextSession = await sessionService.ensureSheetSession({
         sheetId,
         trigger: "metronome",
         bpm: settings.bpm,
         timeSignature: settings.timeSignature
-      }),
-    [sessionService, settings.bpm, settings.timeSignature, sheetId]
-  );
+      });
+
+    if (!nextSession) {
+      return null;
+    }
+
+    return {
+      session: nextSession,
+      ownsMetronomeOnlySession: existingSheetSession === null
+    };
+  }, [sessionService, settings.bpm, settings.timeSignature, sheetId]);
   const handleCountdownStarted = useCallback(() => {
     setMessage("Countdown running.");
   }, []);
@@ -176,28 +190,25 @@ export function SheetPracticeControls({
     setMessage("No valid sheet context. Metronome was stopped.");
   }, []);
   const handleStarted = useCallback(
-    (nextSession: PracticeSession | null) => {
-      setSession(nextSession);
+    (context: SheetMetronomeStartContext | null) => {
+      setSession(context?.session ?? null);
       setMessage(recordingHarnessActive ? "Metronome playing; recording harness stays active." : "Metronome playing.");
     },
     [recordingHarnessActive]
   );
   const handleStartFailed = useCallback(
-    async (error: unknown, nextSession: PracticeSession | null) => {
-      if (
-        nextSession &&
-        !recordingHarnessActive &&
-        nextSession.recordingCount === 0 &&
-        nextSession.latestRecordingId === null
-      ) {
-        const endedSession = await sessionService.endPracticeSession(nextSession.id);
+    async (error: unknown, context: SheetMetronomeStartContext | null) => {
+      if (context?.ownsMetronomeOnlySession) {
+        const endedSession = await sessionService.endPracticeSession(context.session.id);
 
         setSession(endedSession);
+      } else if (context?.session) {
+        setSession(context.session);
       }
 
       setErrorMessage(error instanceof Error ? error.message : "Metronome playback failed.");
     },
-    [recordingHarnessActive, sessionService]
+    [sessionService]
   );
   const handleStopped = useCallback(async () => {
     if (session) {
@@ -235,6 +246,7 @@ export function SheetPracticeControls({
     setErrorMessage(null);
     void startMetronome();
   }, [startMetronome]);
+  const arePreRunSettingsLocked = isPlaying || isCounting;
 
   useEffect(() => {
     const harnessWindow = window as Window & {
@@ -347,6 +359,7 @@ export function SheetPracticeControls({
             <LabeledSelect
               label="Time signature"
               value={settings.timeSignature}
+              disabled={arePreRunSettingsLocked}
               onChange={(value) => updateSettings({ timeSignature: parseTimeSignature(value) })}
               options={TIME_SIGNATURES.map((timeSignature) => ({
                 value: timeSignature,
@@ -356,6 +369,7 @@ export function SheetPracticeControls({
             <LabeledSelect
               label="Subdivision"
               value={settings.subdivision}
+              disabled={arePreRunSettingsLocked}
               onChange={(value) => updateSettings({ subdivision: parseSubdivision(value) })}
               options={SUBDIVISIONS.map((subdivision) => ({
                 value: subdivision,
@@ -365,6 +379,7 @@ export function SheetPracticeControls({
             <LabeledSelect
               label="Countdown"
               value={String(settings.countdownBeats)}
+              disabled={arePreRunSettingsLocked}
               onChange={(value) => updateSettings({ countdownBeats: parseCountdownBeats(value) })}
               options={COUNTDOWN_OPTIONS.map((beats) => ({
                 value: String(beats),
@@ -372,6 +387,12 @@ export function SheetPracticeControls({
               }))}
             />
           </div>
+
+          {arePreRunSettingsLocked ? (
+            <p role="status" className="text-sm leading-6 text-muted-foreground md:col-span-2">
+              Meter, subdivision, accent, and countdown are locked while the metronome is running. Stop playback to change them.
+            </p>
+          ) : null}
 
           <div className="md:col-span-2">
             <p className="text-sm font-medium">Accent</p>
@@ -382,6 +403,7 @@ export function SheetPracticeControls({
                   type="button"
                   variant={settings.accent === accentMode ? "default" : "secondary"}
                   aria-pressed={settings.accent === accentMode}
+                  disabled={arePreRunSettingsLocked}
                   onClick={() => updateSettings({ accent: parseAccentMode(accentMode) })}
                 >
                   <Circle className="h-4 w-4" aria-hidden="true" />
@@ -444,12 +466,14 @@ function LabeledSelect({
   label,
   value,
   onChange,
-  options
+  options,
+  disabled = false
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
+  disabled?: boolean;
 }) {
   const id = `sheet-${label.toLowerCase().replaceAll(" ", "-")}`;
 
@@ -462,6 +486,7 @@ function LabeledSelect({
         id={id}
         aria-label={label}
         value={value}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >

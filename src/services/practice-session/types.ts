@@ -54,6 +54,7 @@ export type PracticeSessionService = {
   endPracticeSession: (sessionId: string) => Promise<PracticeSession | null>;
   createSheetRecordingMetadata: (input: SheetRecordingMetadataInput) => Promise<SheetRecordingMetadata | null>;
   getRecentSession: () => Promise<PracticeSession | null>;
+  getRecentSheetSession: (sheetId: string) => Promise<PracticeSession | null>;
   getContinuePracticeTarget: () => Promise<ContinuePracticeTarget | null>;
   listRecordingMetadata: () => Promise<SheetRecordingMetadata[]>;
   clear: () => Promise<void>;

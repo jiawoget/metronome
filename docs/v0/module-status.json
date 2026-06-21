@@ -731,7 +731,7 @@
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High (no fast tier)",
-                                                 "completedAt":  "2026-06-21T14:57:06Z",
+                                                 "completedAt":  "2026-06-21T15:05:36Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
@@ -754,7 +754,15 @@
                                                      "Second strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 16 test files passed, 68 tests passed",
                                                      "Second strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS",
                                                      "Second strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 10 chromium tests passed",
-                                                     "Second strict review fix cleanup: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free after sandbox EPERM required unsandboxed one-shot check"
+                                                     "Second strict review fix cleanup: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free after sandbox EPERM required unsandboxed one-shot check",
+                                                     "Third strict review fix targeted: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/sheet-practice-controls.test.tsx tests/unit/quick-metronome-transport.test.tsx -> PASS; 2 test files passed, 12 tests passed",
+                                                     "Third strict review fix targeted: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-practice-controls.spec.ts tests/e2e/sheet-practice-session.spec.ts tests/e2e/quick-metronome.spec.ts -> PASS; 4 chromium tests passed",
+                                                     "Third strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                     "Third strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                     "Third strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 16 test files passed, 69 tests passed",
+                                                     "Third strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS",
+                                                     "Third strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 10 chromium tests passed",
+                                                     "Third strict review fix cleanup: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free after sandbox EPERM required unsandboxed one-shot check"
                                                                ],
                                                  "handoffNotes":  [
                                                      "Assigned feature: 05b-practice-controls.",
@@ -773,18 +781,21 @@
                                                      "Strict review fix: shared BPM draft commit/step behavior was extracted into useMetronomeBpmDraft and reused by Quick Metronome and Sheet Practice controls.",
                                                      "Second strict review fix: shared transport/countdown/start/stop/update/cleanup behavior was extracted into useMetronomeTransport and reused by Quick Metronome and Sheet Practice controls.",
                                                      "Second strict review fix: if a sheet session is ensured but Tone startup rejects, Sheet Practice stops playback state and ends only metronome-only sessions; recording-linked sessions are deliberately left intact.",
+                                                     "Third strict review fix: Sheet Practice metronome start now records explicit ownership by checking for an existing sheet session before ensureSheetSession; Tone-start failure only rolls back a session created by this metronome start, so existing sessions and active recording sessions without saved metadata are preserved.",
+                                                     "Third strict review fix: Sheet Practice now locks meter, subdivision, countdown, and accent while running or counting down, while leaving BPM editable; browser coverage exercises both running and countdown lock states.",
                                                      "Implementation commit hash is reported in the final handoff response because this status commit cannot contain its own final object hash."
                                                                   ],
                                                  "changedAreas":  [
                                                      "src/components/sheet-practice/controls adds SheetPracticeControls and default initialization helper for BPM/time signature fallback",
                                                      "src/lib/quick-metronome/use-bpm-draft.ts adds a shared BPM draft hook reused by Quick Metronome and Sheet Practice controls",
                                                      "src/lib/quick-metronome/use-metronome-transport.ts adds shared transport, countdown, start/stop, update, cleanup, and pre-start/failure hook behavior",
+                                                     "src/services/practice-session exposes getRecentSheetSession through the existing 05e service boundary so 05b can determine metronome-start ownership without creating a parallel session path",
                                                      "src/components/quick-metronome/quick-metronome-experience.tsx now reuses the shared BPM draft hook",
                                                      "src/components/quick-metronome/quick-metronome-experience.tsx now reuses the shared metronome transport hook while keeping quick recording messaging local",
                                                      "src/components/sheet-practice/viewer/sheet-viewer-experience.tsx composes the bottom controls for valid loaded sheets and removes the temporary visible 05e metronome trigger harness from the Sheet Practice workspace",
                                                      "tests/unit/quick-metronome-transport.test.tsx covers shared metronome transport start/stop, countdown, pre-start context, and failure cleanup",
-                                                     "tests/unit/sheet-practice-controls.test.tsx covers sheet default initialization, explicit unsupported meter fallback, session failure cleanup including Tone-start rejection after session ensure, and shared metronome trace accent/subdivision evidence",
-                                                     "tests/e2e/sheet-practice-controls.spec.ts covers 72 BPM sheet defaults, real metronome play/stop, BPM change timing, Downbeat/Every beat/Off accent patterns, subdivision density, session trigger, metronome-only no recording, injected recording independence harness, stop trace cleanup, desktop/mobile resize, and console errors",
+                                                     "tests/unit/sheet-practice-controls.test.tsx covers sheet default initialization, explicit unsupported meter fallback, ownership-based session failure cleanup including Tone-start rejection after session ensure, non-owned existing sessions, active recording sessions without saved metadata, and shared metronome trace accent/subdivision evidence",
+                                                     "tests/e2e/sheet-practice-controls.spec.ts covers 72 BPM sheet defaults, real metronome play/stop, BPM change timing, running/countdown lock behavior with BPM still editable, Downbeat/Every beat/Off accent patterns, subdivision density, session trigger, metronome-only no recording, injected recording independence harness, stop trace cleanup, desktop/mobile resize, and console errors",
                                                      "tests/e2e/sheet-practice-session.spec.ts now exercises 05e session persistence and injected independence harness behavior through real 05b controls instead of fake visible trigger buttons"
                                                                   ],
                                                  "knownRisks":  [
