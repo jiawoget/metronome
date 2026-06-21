@@ -47,3 +47,8 @@ export type SheetViewerErrorState = {
 };
 
 export type SheetViewerLoadState = SheetViewerReadyState | SheetViewerErrorState;
+
+export type SheetViewerObjectUrls = {
+  sheetId: string;
+  urls: string[];
+};

@@ -3,7 +3,8 @@ import type {
   SheetViewerAdapter,
   SheetViewerErrorCode,
   SheetViewerLibraryReader,
-  SheetViewerLoadState
+  SheetViewerLoadState,
+  SheetViewerObjectUrls
 } from "@/services/sheet-viewer/types";
 
 type SheetViewerServiceOptions = {
@@ -13,6 +14,8 @@ type SheetViewerServiceOptions = {
 
 export type SheetViewerService = {
   loadSheet: (sheetId: string | null | undefined) => Promise<SheetViewerLoadState>;
+  createArtifactObjectUrls: (artifact: SheetArtifact) => SheetViewerObjectUrls;
+  revokeArtifactObjectUrls: (objectUrls: SheetViewerObjectUrls) => void;
 };
 
 function errorState(code: SheetViewerErrorCode, title: string, message: string): SheetViewerLoadState {
@@ -33,6 +36,17 @@ export function createSheetViewerService({
   viewerAdapter
 }: SheetViewerServiceOptions): SheetViewerService {
   return {
+    createArtifactObjectUrls(artifact) {
+      return {
+        sheetId: artifact.sheetId,
+        urls: artifact.files.map((file) => viewerAdapter.createFileUrl(file.blob))
+      };
+    },
+
+    revokeArtifactObjectUrls(objectUrls) {
+      objectUrls.urls.forEach((url) => viewerAdapter.revokeFileUrl(url));
+    },
+
     async loadSheet(sheetId) {
       const normalizedSheetId = sheetId?.trim();
 

@@ -52,6 +52,10 @@ async function importSheet(page: Page, fixtureName: string, name: string) {
   return { sheetId: sheetId ?? "", link };
 }
 
+function getSheetPracticePath(sheetId: string) {
+  return `/sheet-practice/${encodeURIComponent(sheetId)}`;
+}
+
 async function seedSheets(page: Page, optionsList: SeedSheetOptions[]) {
   const seeds = await Promise.all(
     optionsList.map(async (options) => ({
@@ -200,7 +204,7 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   });
 
   await clearSheetDatabase(page);
-  const { link } = await importSheet(page, "two-page-sheet.pdf", "Viewer Two Page PDF");
+  const { link, sheetId } = await importSheet(page, "two-page-sheet.pdf", "Viewer Two Page PDF");
 
   await link.click();
   await expect(page).toHaveURL(/\/sheet-practice\?sheetId=sheet_/);
@@ -234,6 +238,12 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   await expectPdfCanvasRendered(page);
 
   await page.reload();
+  await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+  await expectPdfCanvasRendered(page);
+
+  await page.goto(getSheetPracticePath(sheetId));
+  await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
   await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
   await expectPdfCanvasRendered(page);
@@ -343,6 +353,9 @@ test("sheet viewer shows clear states for missing id, unknown sheet, missing art
   await expect(page.getByRole("heading", { name: "No sheet selected" })).toBeVisible();
 
   await page.goto("/sheet-practice?sheetId=unknown-sheet");
+  await expect(page.getByRole("heading", { name: "Sheet not found" })).toBeVisible();
+
+  await page.goto("/sheet-practice/unknown-sheet");
   await expect(page.getByRole("heading", { name: "Sheet not found" })).toBeVisible();
 
   await page.goto("/sheet-practice?sheetId=sheet-missing-artifact");

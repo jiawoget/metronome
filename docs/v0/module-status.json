@@ -500,65 +500,61 @@
                                                "commitHash":  null
                                            }
                       },
-                                            {
-                          "module": "05a-sheet-viewer",
-                          "status": "implementation_done",
-                          "implementation": {
-                              "requiredSeparateAgent": true,
-                              "agent": "GPT-5 Codex (no fast tier)",
-                              "completedAt": "2026-06-21T13:13:14.207Z",
-                              "selfTests": [
-                                  "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
-                                  "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
-                                  "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 13 test files passed, 45 tests passed",
-                                  "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice as dynamic route",
-                                  "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-viewer.spec.ts -> PASS; 3 chromium tests passed for PDF, image, and error flows",
-                                  "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 8 chromium tests passed"
-                              ],
-                              "handoffNotes": [
-                                  "Assigned feature: 05a-sheet-viewer.",
-                                  "Coding model used: GPT-5 Codex, no fast tier.",
-                                  "Implemented only the Sheet Viewer contract scope: selected sheetId loading, metadata/artifact read, PDF rendering, image rendering, page display/navigation, zoom, scroll, loading and error states.",
-                                  "Sheet Practice now renders the 05a viewer shell and shows a missing-sheetId recovery state on /sheet-practice; metronome controls, session integration, recording, markers, reference playback, and parent Sheet Practice integration remain unimplemented.",
-                                  "UI reads metadata/artifacts through sheet library/viewer service boundaries and does not call Dexie, raw storage, PDF parser internals, or image decoding internals directly.",
-                                  "PDF rendering uses react-pdf in a client-only dynamic renderer with react-pdf bundled PDF.js worker version; viewer adapter separately validates PDF artifacts before render.",
-                                  "Image rendering uses validated imported artifact blobs converted to browser object URLs through the viewer adapter.",
-                                  "Added real two-page PDF fixture for page navigation and reused real PNG/bad artifact fixtures for render and error coverage.",
-                                  "Implementation commit hash is reported in the final handoff response because the status commit cannot contain its own final object hash."
-                              ],
-                              "changedAreas": [
-                                  "src/app/sheet-practice/page.tsx now routes searchParams.sheetId into the 05a viewer component",
-                                  "src/components/sheet-practice/viewer adds SheetViewerExperience and client-only PdfSheetRenderer",
-                                  "src/services/sheet-viewer adds viewer load state, error mapping, page label, and zoom helpers",
-                                  "src/infrastructure/sheet-viewer adds browser PDF/image artifact inspection plus blob URL adapter/service wiring",
-                                  "src/services/sheet-library and src/infrastructure/files add getSheet read API for viewer metadata loading through service boundaries",
-                                  "tests/unit/sheet-viewer-service.test.ts and sheet-library service updates cover viewer state transitions and read APIs",
-                                  "tests/e2e/sheet-viewer.spec.ts covers real PDF/image rendering, page navigation, zoom, scroll, resize, reload, missing sheetId, unknown sheet, missing artifact, bad PDF, and bad image",
-                                  "tests/e2e/app-shell-home.spec.ts and tests/e2e/sheet-library.spec.ts update previous shell assertions to the new 05a viewer behavior",
-                                  "test-fixtures/sheets/two-page-sheet.pdf and README add real PDF navigation fixture"
-                              ],
-                              "knownRisks": [
-                                  "The top-level /sheet-practice route intentionally shows a no-sheet-selected state until later parent integration wires Continue Practice/session context.",
-                                  "PDF artifact validation and react-pdf rendering both parse the PDF, which is acceptable for v0 fixtures but may need optimization for very large sheets.",
-                                  "The react-pdf worker path intentionally targets react-pdf bundled pdfjs-dist version to avoid API/worker version mismatch; dependency upgrades should keep this aligned.",
-                                  "Browser object URLs are revoked on viewer state changes/unmount; verification should still inspect long-session memory behavior later if very large image sheets are introduced."
-                              ],
-                              "commitHash": null
-                          },
-                          "verification": {
-                              "requiredSeparateAgent": true,
-                              "agent": null,
-                              "completedAt": null,
-                              "result": null,
-                              "acceptanceCriteria": [],
-                              "e2eEvidence": [],
-                              "specializedEvidence": [],
-                              "persistenceEvidence": [],
-                              "consoleStatus": null,
-                              "issues": [],
-                              "commitHash": null
-                          }
-                      },
+                                                                                        {
+                                                "module": "05a-sheet-viewer",
+                                                "status": "implementation_done",
+                                                "implementation": {
+                                                    "requiredSeparateAgent": true,
+                                                    "agent": "GPT-5 Codex (no fast tier)",
+                                                    "completedAt": "2026-06-21T13:21:21.696Z",
+                                                    "selfTests": [
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/sheet-viewer-service.test.ts -> PASS; 1 test file passed, 5 tests passed",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-viewer.spec.ts -> PASS; 3 chromium tests passed including query route, path route, PDF/image rendering, reload, and error flows",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 13 test files passed, 46 tests passed",
+                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 8 chromium tests passed"
+                                                    ],
+                                                    "handoffNotes": [
+                                                        "Assigned feature: 05a-sheet-viewer review-fix pass.",
+                                                        "Coding model used: GPT-5 Codex, no fast tier.",
+                                                        "Addressed GPT-5.5 medium review finding: added /sheet-practice/[sheetId] path-style route that loads the same 05a viewer shell while preserving the existing /sheet-practice?sheetId=... query route for Sheet Library and Recordings compatibility.",
+                                                        "Addressed low review finding: moved artifact object URL creation/revocation behind the SheetViewerService and browser hook boundary; SheetViewerExperience no longer imports or calls browserSheetViewerAdapter directly.",
+                                                        "Kept scope limited to 05a sheet viewer behavior; did not implement 05e session integration, 05b controls, 05c recording review, 05d markers, or parent Sheet Practice integration.",
+                                                        "Maintained real PDF and image rendering coverage with browser E2E; PDF test now verifies both query route and path route against a real imported two-page PDF artifact.",
+                                                        "Implementation commit hash is reported in the final handoff response because the status commit cannot contain its own final object hash."
+                                                    ],
+                                                    "changedAreas": [
+                                                        "src/app/sheet-practice/[sheetId]/page.tsx adds path-style route support for selected sheetId",
+                                                        "src/services/sheet-viewer/service.ts and types.ts expose object URL lifecycle methods through the viewer service boundary",
+                                                        "src/infrastructure/sheet-viewer/use-browser-sheet-viewer-object-urls.ts adds browser hook for artifact object URL lifecycle using the service",
+                                                        "src/components/sheet-practice/viewer/sheet-viewer-experience.tsx now consumes the browser hook/service and no longer imports the infrastructure adapter directly",
+                                                        "tests/unit/sheet-viewer-service.test.ts covers service-owned object URL creation and revocation",
+                                                        "tests/e2e/sheet-viewer.spec.ts covers /sheet-practice/[sheetId] loading the real PDF viewer and unknown path-style sheetId error handling"
+                                                    ],
+                                                    "knownRisks": [
+                                                        "The top-level /sheet-practice route intentionally remains a no-sheet-selected state until later parent integration wires Continue Practice/session context.",
+                                                        "Both /sheet-practice?sheetId=... and /sheet-practice/[sheetId] are supported; later parent integration should choose one canonical navigation style without breaking existing query links.",
+                                                        "The react-pdf worker path still intentionally targets react-pdf bundled pdfjs-dist version to avoid API/worker version mismatch during PDF render.",
+                                                        "Browser object URLs are now owned by a browser hook/service boundary and revoked on viewer state changes/unmount; long-session memory behavior for very large image sheets can be revisited later."
+                                                    ],
+                                                    "commitHash": null
+                                                },
+                                                "verification": {
+                                                    "requiredSeparateAgent": true,
+                                                    "agent": null,
+                                                    "completedAt": null,
+                                                    "result": null,
+                                                    "acceptanceCriteria": [],
+                                                    "e2eEvidence": [],
+                                                    "specializedEvidence": [],
+                                                    "persistenceEvidence": [],
+                                                    "consoleStatus": null,
+                                                    "issues": [],
+                                                    "commitHash": null
+                                                }
+                                            },
                       {
                           "module":  "05e-session-integration",
                           "status":  "contract_ready",

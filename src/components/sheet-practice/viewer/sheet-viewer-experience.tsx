@@ -6,8 +6,8 @@ import { AlertTriangle, ChevronLeft, ChevronRight, FileImage, FileText, Minus, P
 import { useEffect, useMemo, useState } from "react";
 
 import type { SheetArtifactFile } from "@/domain/sheet";
-import { browserSheetViewerAdapter } from "@/infrastructure/sheet-viewer/browser-sheet-viewer-adapter";
 import { browserSheetViewerService } from "@/infrastructure/sheet-viewer/browser-sheet-viewer-service";
+import { useBrowserSheetViewerObjectUrls } from "@/infrastructure/sheet-viewer/use-browser-sheet-viewer-object-urls";
 import {
   formatSheetViewerPageLabel,
   stepSheetViewerZoom,
@@ -25,11 +25,6 @@ const PdfSheetRenderer = dynamic(
 
 type SheetViewerExperienceProps = {
   sheetId: string | null;
-};
-
-type ObjectUrlState = {
-  sheetId: string;
-  urls: string[];
 };
 
 function useSheetViewer(sheetId: string | null) {
@@ -60,40 +55,6 @@ function useSheetViewer(sheetId: string | null) {
   }
 
   return state.value;
-}
-
-function useArtifactObjectUrls(state: SheetViewerLoadState | { status: "loading" }) {
-  const [objectUrls, setObjectUrls] = useState<ObjectUrlState | null>(null);
-
-  useEffect(() => {
-    if (state.status !== "ready") {
-      return;
-    }
-
-    const nextUrls = state.artifact.files.map((file) => browserSheetViewerAdapter.createFileUrl(file.blob));
-    const nextState = {
-      sheetId: state.sheet.id,
-      urls: nextUrls
-    };
-    let isActive = true;
-
-    queueMicrotask(() => {
-      if (isActive) {
-        setObjectUrls(nextState);
-      }
-    });
-
-    return () => {
-      isActive = false;
-      nextUrls.forEach((url) => browserSheetViewerAdapter.revokeFileUrl(url));
-    };
-  }, [state]);
-
-  if (state.status !== "ready" || objectUrls?.sheetId !== state.sheet.id) {
-    return null;
-  }
-
-  return objectUrls;
 }
 
 function getPageFile(files: SheetArtifactFile[], pageNumber: number) {
@@ -196,7 +157,7 @@ function SheetViewerToolbar({
 }
 
 function SheetViewerReady({ state }: { state: Extract<SheetViewerLoadState, { status: "ready" }> }) {
-  const objectUrls = useArtifactObjectUrls(state);
+  const objectUrls = useBrowserSheetViewerObjectUrls(state);
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(1);
   const [renderError, setRenderError] = useState<string | null>(null);

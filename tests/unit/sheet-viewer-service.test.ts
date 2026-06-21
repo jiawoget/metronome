@@ -137,6 +137,37 @@ describe("sheet viewer service", () => {
     });
   });
 
+  it("creates and revokes artifact object URLs through the viewer service boundary", () => {
+    const createdBlobSizes: number[] = [];
+    const revokedUrls: string[] = [];
+    const service = createSheetViewerService({
+      sheetLibrary: createReader(),
+      viewerAdapter: {
+        ...createAdapter(),
+        createFileUrl(blob) {
+          createdBlobSizes.push(blob.size);
+
+          return `blob:sheet-${createdBlobSizes.length}`;
+        },
+        revokeFileUrl(url) {
+          revokedUrls.push(url);
+        }
+      }
+    });
+
+    const objectUrls = service.createArtifactObjectUrls(pdfArtifact);
+
+    expect(objectUrls).toEqual({
+      sheetId: "sheet-pdf",
+      urls: ["blob:sheet-1"]
+    });
+    expect(createdBlobSizes).toEqual([pdfArtifact.files[0].blob.size]);
+
+    service.revokeArtifactObjectUrls(objectUrls);
+
+    expect(revokedUrls).toEqual(["blob:sheet-1"]);
+  });
+
   it("rejects artifact mismatches and bad PDF or image adapter results", async () => {
     const mismatchArtifact: SheetArtifact = {
       ...pdfArtifact,
