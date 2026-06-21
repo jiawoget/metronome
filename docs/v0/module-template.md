@@ -48,6 +48,14 @@ Describe what this module may depend on and what it must not call directly.
 
 List other modules this module depends on.
 
+## File Ownership
+
+List the files or directories this module may create or edit.
+
+List files or directories it must not touch.
+
+Reference `docs/v0/project-structure.md`.
+
 ## Acceptance Criteria
 
 List verifiable criteria. Each item should be testable.

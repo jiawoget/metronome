@@ -121,6 +121,7 @@ It must not directly couple UI to Tone.js, MediaRecorder, wavesurfer, Dexie, PDF
 - `docs/v0/00-overview.md`.
 - `docs/v0/agent-implementation-rules.md`.
 - `docs/v0/design-style-guide.md`.
+- `docs/v0/project-structure.md`.
 - `docs/v0/01-app-shell-home.md` for initial shell expectations.
 
 ## Acceptance Criteria

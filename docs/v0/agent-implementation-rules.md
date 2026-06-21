@@ -414,6 +414,18 @@ D:\Projects\metronome\Design Notes\design_pictures\overall_style_design.png
 
 Verification agents must include visual/style and resize checks for UI features.
 
+## Project Structure Rule
+
+All implementation and verification agents must read:
+
+```text
+docs/v0/project-structure.md
+```
+
+Coding agents must keep edits inside the assigned feature ownership area and explicitly allowed shared files.
+
+Verification agents must check that changed files match the assigned feature ownership map. A feature must fail verification if it implements adjacent feature behavior or changes unrelated ownership areas without an approved contract update.
+
 ## Scope Rules
 
 When v0 and v1 conflict, v0 wins.
