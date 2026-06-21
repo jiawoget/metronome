@@ -1,5 +1,6 @@
 "use client";
 
+import { createGlobalPracticeSessionRepository } from "@/infrastructure/db/global-practice-session-repository";
 import { practiceSessionRepository } from "@/infrastructure/db/practice-session-repository";
 import { recordingHistoryMetadataRepository } from "@/infrastructure/db/recording-history-metadata-repository";
 import { browserSheetLibraryService } from "@/infrastructure/files/sheet-library-service";
@@ -32,7 +33,7 @@ const sheetGateway: PracticeSessionSheetGateway = {
 };
 
 export const browserPracticeSessionService = createPracticeSessionService({
-  repository: practiceSessionRepository,
+  repository: createGlobalPracticeSessionRepository(practiceSessionRepository),
   recordingRepository: recordingHistoryMetadataRepository,
   sheetGateway
 });

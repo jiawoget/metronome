@@ -1,10 +1,15 @@
-import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
+import {
+  parseSheetRecordingMetadata,
+  validateSheetRecordingMetadata,
+  type PracticeSession,
+  type SheetRecordingMetadata
+} from "@/domain/practice";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import type { PracticeRecordingMetadataRepository } from "@/services/practice-session";
 
 function toSheetRecordingMetadata(recording: ReviewRecording): SheetRecordingMetadata {
-  return {
+  const metadata = parseSheetRecordingMetadata({
     id: recording.id,
     type: "sheet",
     sessionId: recording.sessionId,
@@ -20,26 +25,34 @@ function toSheetRecordingMetadata(recording: ReviewRecording): SheetRecordingMet
       recording.settings.timeSignature === "6/8"
         ? recording.settings.timeSignature
         : null
-  };
+  });
+
+  if (!metadata) {
+    throw new Error("Invalid sheet recording metadata in recording history.");
+  }
+
+  return metadata;
 }
 
 function toReviewRecording(recording: SheetRecordingMetadata, session: PracticeSession): ReviewRecording {
+  const validRecording = validateSheetRecordingMetadata(recording);
+
   return {
-    id: recording.id,
+    id: validRecording.id,
     type: "sheet",
     origin: "user",
     name: "Sheet practice metadata",
-    sessionId: recording.sessionId,
-    sheetId: recording.sheetId,
-    sheetName: recording.sheetName,
-    createdAt: recording.createdAt,
-    durationMs: recording.durationMs,
+    sessionId: validRecording.sessionId,
+    sheetId: validRecording.sheetId,
+    sheetName: validRecording.sheetName,
+    createdAt: validRecording.createdAt,
+    durationMs: validRecording.durationMs,
     sizeBytes: 0,
     mimeType: "metadata/session",
     audioDataUrl: null,
     settings: {
-      bpm: recording.bpm ?? session.bpm ?? 96,
-      timeSignature: recording.timeSignature ?? session.timeSignature ?? "4/4"
+      bpm: validRecording.bpm ?? session.bpm ?? 96,
+      timeSignature: validRecording.timeSignature ?? session.timeSignature ?? "4/4"
     }
   };
 }

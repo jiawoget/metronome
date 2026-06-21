@@ -74,7 +74,7 @@ describe("sheet library domain helpers", () => {
   });
 
   it("builds Sheet Practice route targets and page count labels", () => {
-    expect(getSheetPracticeHref("sheet 1")).toBe("/sheet-practice?sheetId=sheet%201");
+    expect(getSheetPracticeHref("sheet 1")).toBe("/sheet-practice/sheet%201");
     expect(formatPageCount(baseSheet)).toBe("1 page");
     expect(formatPageCount({ ...baseSheet, pageCount: null })).toBe("Unknown pages");
     expect(formatPageCount({ ...baseSheet, kind: "image", pageCount: 2, imageCount: 2 })).toBe(

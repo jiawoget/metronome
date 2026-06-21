@@ -1,6 +1,11 @@
 import Dexie, { type Table } from "dexie";
 
-import { sortSessionsByRecentActivity, type PracticeSession } from "@/domain/practice";
+import {
+  parsePracticeSession,
+  sortSessionsByRecentActivity,
+  validatePracticeSession,
+  type PracticeSession
+} from "@/domain/practice";
 import type { PracticeSessionRepository } from "@/services/practice-session";
 
 export const PRACTICE_SESSION_DB_NAME = "metronome-practice-v0-practice-sessions";
@@ -41,27 +46,31 @@ function dispatchPracticeSessionChange() {
   }
 }
 
+function isPracticeSession(session: PracticeSession | null): session is PracticeSession {
+  return session !== null;
+}
+
 export const practiceSessionRepository: PracticeSessionRepository = {
   async listSessions() {
-    return sortSessionsByRecentActivity(await getDatabase().sessions.toArray());
+    return sortSessionsByRecentActivity((await getDatabase().sessions.toArray()).map(parsePracticeSession).filter(isPracticeSession));
   },
 
   async getSession(sessionId) {
-    return (await getDatabase().sessions.get(sessionId)) ?? null;
+    return parsePracticeSession((await getDatabase().sessions.get(sessionId)) ?? null);
   },
 
   async getRecentSession() {
-    return sortSessionsByRecentActivity(await getDatabase().sessions.toArray())[0] ?? null;
+    return sortSessionsByRecentActivity((await getDatabase().sessions.toArray()).map(parsePracticeSession).filter(isPracticeSession))[0] ?? null;
   },
 
   async getRecentSheetSession(sheetId) {
     const sessions = await getDatabase().sessions.where("sheetId").equals(sheetId).toArray();
 
-    return sortSessionsByRecentActivity(sessions)[0] ?? null;
+    return sortSessionsByRecentActivity(sessions.map(parsePracticeSession).filter(isPracticeSession))[0] ?? null;
   },
 
   async saveSession(session) {
-    await getDatabase().sessions.put(session);
+    await getDatabase().sessions.put(validatePracticeSession(session));
     dispatchPracticeSessionChange();
   },
 

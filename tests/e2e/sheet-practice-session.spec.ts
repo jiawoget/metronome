@@ -41,7 +41,7 @@ async function importSheet(page: Page) {
 
   const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
   const href = await link.getAttribute("href");
-  const sheetId = new URL(href ?? "", "http://127.0.0.1").searchParams.get("sheetId");
+  const sheetId = new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
 
   expect(sheetId).toBeTruthy();
 
@@ -143,6 +143,33 @@ async function getSheetLastPracticedAt(page: Page, sheetId: string) {
   );
 }
 
+async function seedQuickSession(page: Page) {
+  await page.evaluate((storageKey) => {
+    const startedAt = new Date(Date.now() - 60_000).toISOString();
+    const endedAt = new Date(Date.now() - 30_000).toISOString();
+
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        sessions: [
+          {
+            id: "quick-session-e2e",
+            sourceType: "quick",
+            startedAt,
+            endedAt,
+            settings: {
+              bpm: 120,
+              timeSignature: "4/4"
+            }
+          }
+        ],
+        recordings: [],
+        errorMarkers: []
+      })
+    );
+  }, recordingHistoryStorageKey);
+}
+
 async function deleteSheetRecord(page: Page, sheetId: string) {
   await page.evaluate(
     ({ databaseName, id }: { databaseName: string; id: string }) =>
@@ -189,6 +216,12 @@ test("sheet practice session starts only on activity, persists, links metadata, 
   await expect(page.getByRole("heading", { name: "Sheet Practice Session" })).toBeVisible();
   await expect(page.getByTestId("sheet-session-id")).toHaveText("none");
   expect(await getPracticeSnapshot(page)).toEqual({ sessions: [], recordings: [] });
+
+  await seedQuickSession(page);
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "Continue Practice" })).toHaveAttribute("href", "/quick-metronome");
+  await page.goto(`/sheet-practice/${sheetId}`);
+  await expect(page.getByRole("heading", { name: "Session Contract Sheet" })).toBeVisible();
 
   await page.getByRole("button", { name: "Start metronome trigger" }).click();
   await expect(page.getByTestId("sheet-session-source")).toHaveText("sheet");

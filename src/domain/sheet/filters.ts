@@ -7,10 +7,6 @@ import {
 
 export type SheetCategoryFilter = "all" | SheetCategory;
 
-export function getSheetPracticeHref(sheetId: string) {
-  return `/sheet-practice?sheetId=${encodeURIComponent(sheetId)}`;
-}
-
 export function formatPageCount(sheet: Pick<ImportedSheet, "kind" | "pageCount" | "imageCount">) {
   if (sheet.kind === "pdf") {
     return sheet.pageCount === 1 ? "1 page" : `${sheet.pageCount ?? "Unknown"} pages`;

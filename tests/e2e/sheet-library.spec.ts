@@ -91,7 +91,7 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
   await expect(page.getByText("PDF artifact parsed: 1 page")).toBeVisible();
   await expect(page.getByText("Not practiced yet")).toBeVisible();
   const practiceHref = await page.getByRole("link", { name: "Open Sheet Practice" }).getAttribute("href");
-  const pdfSheetId = new URL(practiceHref ?? "", "http://127.0.0.1").searchParams.get("sheetId");
+  const pdfSheetId = new URL(practiceHref ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
 
   expect(pdfSheetId).toMatch(/^sheet_/);
   await expect.poll(() => getSheetPersistence(page, pdfSheetId ?? "")).toMatchObject({
@@ -114,7 +114,7 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
   await expect(page.getByRole("heading", { name: "Autumn Etude" })).toBeVisible();
 
   await page.getByRole("link", { name: "Open Sheet Practice" }).click();
-  await expect(page).toHaveURL(/\/sheet-practice\?sheetId=sheet_/);
+  await expect(page).toHaveURL(/\/sheet-practice\/sheet_/);
   await expect(page.getByRole("heading", { name: "Autumn Etude" })).toBeVisible();
   await expect(page.getByText("Page 1 of 1")).toBeVisible();
 

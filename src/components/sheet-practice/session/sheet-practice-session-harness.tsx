@@ -3,17 +3,13 @@
 import { Mic, Music2, Radio, Square } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
+import { formatPracticeDuration, type PracticeSession, type SheetRecordingMetadata } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import { Button } from "@/components/ui/button";
 
 type SheetPracticeSessionHarnessProps = {
   sheetId: string;
 };
-
-function formatDuration(durationMs: number) {
-  return `${Math.max(0, Math.round(durationMs / 1000))}s`;
-}
 
 export function SheetPracticeSessionHarness({ sheetId }: SheetPracticeSessionHarnessProps) {
   const [session, setSession] = useState<PracticeSession | null>(null);
@@ -63,7 +59,9 @@ export function SheetPracticeSessionHarness({ sheetId }: SheetPracticeSessionHar
 
   async function stopMetronomeTrigger() {
     if (session) {
-      const nextSession = await browserPracticeSessionService.updateSheetSessionDuration(session.id);
+      const nextSession = recordingActive
+        ? await browserPracticeSessionService.updateSheetSessionDuration(session.id)
+        : await browserPracticeSessionService.endPracticeSession(session.id);
 
       setSession(nextSession);
     }
@@ -106,6 +104,15 @@ export function SheetPracticeSessionHarness({ sheetId }: SheetPracticeSessionHar
     }
 
     await refresh();
+
+    if (!metronomeActive) {
+      const recentSession = await browserPracticeSessionService.getRecentSession();
+
+      if (recentSession?.sourceType === "sheet" && recentSession.sheetId === sheetId) {
+        setSession(await browserPracticeSessionService.endPracticeSession(recentSession.id));
+      }
+    }
+
     setMessage(metronomeActive ? "Recording metadata saved; metronome stays active." : "Recording metadata saved.");
   }
 
@@ -165,7 +172,7 @@ export function SheetPracticeSessionHarness({ sheetId }: SheetPracticeSessionHar
         <div className="rounded-md border border-border bg-muted px-3 py-2">
           <p className="text-xs font-medium text-muted-foreground">Duration</p>
           <p data-testid="sheet-session-duration" className="mt-1 font-medium">
-            {session ? formatDuration(session.durationMs) : "0s"}
+            {session ? formatPracticeDuration(session.durationMs) : "0:00"}
           </p>
         </div>
       </div>

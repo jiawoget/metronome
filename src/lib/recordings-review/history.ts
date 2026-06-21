@@ -1,4 +1,5 @@
 import { formatDuration, formatRecordingDate } from "@/lib/recordings-review/format";
+import { getSheetPracticeQueryHref } from "@/domain/sheet/routes";
 import type {
   RecordingErrorMarker,
   RecordingReviewType,
@@ -30,13 +31,10 @@ export function sortErrorMarkers(markers: RecordingErrorMarker[]) {
 
 export function getContinuePracticeHref(recording: ReviewRecording) {
   if (recording.type === "sheet") {
-    const params = new URLSearchParams({ recordingId: recording.id });
-
-    if (recording.sheetId) {
-      params.set("sheetId", recording.sheetId);
-    }
-
-    return `/sheet-practice?${params.toString()}`;
+    return getSheetPracticeQueryHref({
+      recordingId: recording.id,
+      sheetId: recording.sheetId
+    });
   }
 
   return `/quick-metronome?recordingId=${encodeURIComponent(recording.id)}`;

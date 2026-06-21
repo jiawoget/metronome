@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { applyPracticeTrigger, type PracticeSession, type SheetRecordingMetadata } from "@/domain/practice";
+import {
+  applyPracticeTrigger,
+  validatePracticeSession,
+  validateSheetRecordingMetadata,
+  type PracticeSession,
+  type SheetRecordingMetadata
+} from "@/domain/practice";
+import { createGlobalPracticeSessionRepository } from "@/infrastructure/db/global-practice-session-repository";
+import { RECORDINGS_STORAGE_KEY } from "@/lib/recordings-review/repository";
 import {
   createPracticeSessionService,
   type PracticeRecordingMetadataRepository,
@@ -25,7 +33,7 @@ function createMemorySessionRepository(): PracticeSessionRepository {
       return (await listSessions()).find((session) => session.sheetId === sheetId) ?? null;
     },
     async saveSession(session) {
-      sessions.set(session.id, session);
+      sessions.set(session.id, validatePracticeSession(session));
     },
     async clear() {
       sessions.clear();
@@ -44,7 +52,7 @@ function createMemoryRecordingRepository(): PracticeRecordingMetadataRepository 
       return (await listRecordingMetadata()).filter((recording) => recording.sessionId === sessionId);
     },
     async saveRecordingMetadata(recording) {
-      recordings.set(recording.id, recording);
+      recordings.set(recording.id, validateSheetRecordingMetadata(recording));
     },
     async clear() {
       recordings.clear();
@@ -80,6 +88,7 @@ describe("practice session service", () => {
 
   beforeEach(() => {
     nowMs = Date.parse("2026-06-21T12:00:00.000Z");
+    window.localStorage.clear();
   });
 
   function createService() {
@@ -144,6 +153,20 @@ describe("practice session service", () => {
     });
   });
 
+  it("persists endedAt when metronome-only activity stops", async () => {
+    const { service } = createService();
+
+    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    nowMs += 5_000;
+    const ended = await service.endPracticeSession(session?.id ?? "");
+
+    expect(ended).toMatchObject({
+      id: "session-1",
+      endedAt: "2026-06-21T12:00:05.000Z",
+      durationMs: 5_000
+    });
+  });
+
   it("creates sheet recording metadata linked to sessionId and sheetId without artifacts", async () => {
     const { service, repository } = createService();
 
@@ -173,6 +196,12 @@ describe("practice session service", () => {
       latestRecordingId: "recording-2",
       durationMs: 12_500
     });
+
+    nowMs += 1_000;
+    await expect(service.endPracticeSession(session?.id ?? "")).resolves.toMatchObject({
+      endedAt: "2026-06-21T12:00:13.500Z",
+      durationMs: 13_500
+    });
   });
 
   it("does not return Continue Practice for a stale sheet session after the sheet is deleted", async () => {
@@ -187,6 +216,128 @@ describe("practice session service", () => {
     validSheetIds.delete("sheet-alpha");
 
     await expect(service.getContinuePracticeTarget()).resolves.toBeNull();
+  });
+
+  it("rejects invalid session and recording metadata at validation boundaries", () => {
+    expect(() =>
+      validatePracticeSession({
+        id: "bad-quick",
+        sourceType: "quick",
+        sheetId: "sheet-alpha",
+        startedAt: "2026-06-21T12:00:00.000Z",
+        endedAt: null,
+        durationMs: 0,
+        bpm: 96,
+        timeSignature: "4/4",
+        recordingCount: 0,
+        latestRecordingId: null,
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      })
+    ).toThrow();
+    expect(() =>
+      validatePracticeSession({
+        id: "bad-date",
+        sourceType: "sheet",
+        sheetId: "sheet-alpha",
+        startedAt: "not-a-date",
+        endedAt: null,
+        durationMs: -1,
+        bpm: 96,
+        timeSignature: "4/4",
+        recordingCount: 0,
+        latestRecordingId: null,
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      })
+    ).toThrow();
+    expect(() =>
+      validateSheetRecordingMetadata({
+        id: "bad-recording",
+        type: "sheet",
+        sessionId: "session-1",
+        sheetId: "",
+        sheetName: "Alpha Sheet",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: 0,
+        bpm: 96,
+        timeSignature: "4/4"
+      })
+    ).toThrow();
+  });
+
+  it("calculates global recent session across existing quick history and sheet sessions", async () => {
+    const sheetRepository = createMemorySessionRepository();
+    const recordingRepository = createMemoryRecordingRepository();
+    const { gateway } = createSheetGateway();
+    const globalRepository = createGlobalPracticeSessionRepository(sheetRepository);
+    const service = createPracticeSessionService({
+      repository: globalRepository,
+      recordingRepository,
+      sheetGateway: gateway,
+      now: () => new Date(nowMs),
+      createId: (prefix) => `${prefix}-global`
+    });
+
+    await sheetRepository.saveSession({
+      id: "sheet-session",
+      sourceType: "sheet",
+      sheetId: "sheet-alpha",
+      startedAt: "2026-06-21T12:00:00.000Z",
+      endedAt: "2026-06-21T12:01:00.000Z",
+      durationMs: 60_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T12:01:00.000Z"
+    });
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [
+          {
+            id: "quick-session",
+            sourceType: "quick",
+            startedAt: "2026-06-21T12:05:00.000Z",
+            endedAt: "2026-06-21T12:06:00.000Z",
+            settings: {
+              bpm: 120,
+              timeSignature: "4/4"
+            }
+          }
+        ],
+        recordings: [],
+        errorMarkers: []
+      })
+    );
+
+    await expect(service.getContinuePracticeTarget()).resolves.toEqual({
+      sourceType: "quick",
+      href: "/quick-metronome",
+      label: "Continue Quick Practice",
+      sessionId: "quick-session"
+    });
+
+    await sheetRepository.saveSession({
+      id: "sheet-session",
+      sourceType: "sheet",
+      sheetId: "sheet-alpha",
+      startedAt: "2026-06-21T12:00:00.000Z",
+      endedAt: "2026-06-21T12:10:00.000Z",
+      durationMs: 600_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T12:10:00.000Z"
+    });
+
+    await expect(service.getContinuePracticeTarget()).resolves.toEqual({
+      sourceType: "sheet",
+      href: "/sheet-practice/sheet-alpha",
+      label: "Continue Sheet Practice",
+      sessionId: "sheet-session",
+      sheetId: "sheet-alpha"
+    });
   });
 
   it("keeps metronome, recording, and future reference trigger states independent", () => {

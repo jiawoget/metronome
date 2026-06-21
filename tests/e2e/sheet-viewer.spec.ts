@@ -45,7 +45,7 @@ async function importSheet(page: Page, fixtureName: string, name: string) {
 
   const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
   const href = await link.getAttribute("href");
-  const sheetId = new URL(href ?? "", "http://127.0.0.1").searchParams.get("sheetId");
+  const sheetId = new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
 
   expect(sheetId).toBeTruthy();
 
@@ -207,7 +207,7 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   const { link, sheetId } = await importSheet(page, "two-page-sheet.pdf", "Viewer Two Page PDF");
 
   await link.click();
-  await expect(page).toHaveURL(/\/sheet-practice\?sheetId=sheet_/);
+  await expect(page).toHaveURL(/\/sheet-practice\/sheet_/);
   await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
   let canvas = await expectPdfCanvasRendered(page);

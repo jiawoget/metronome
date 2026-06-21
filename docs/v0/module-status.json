@@ -587,7 +587,7 @@
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5 Codex (no fast tier)",
-                                                 "completedAt":  "2026-06-21T13:46:56Z",
+                                                 "completedAt":  "2026-06-21T14:01:05Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
@@ -604,7 +604,17 @@
                                                      "Review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS",
                                                      "Review fix targeted: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-practice-session.spec.ts -> PASS; 1 chromium test passed",
                                                      "Review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 9 chromium tests passed",
-                                                     "Review fix cleanup: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free"
+                                                     "Review fix cleanup: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free",
+                                                     "Strict review fix targeted: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/practice-session-service.test.ts tests/unit/sheet-library-domain.test.ts tests/unit/recordings-review-history.test.ts -> PASS; 3 test files passed, 24 tests passed",
+                                                     "Strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                     "Strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                     "Strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 14 test files passed, 56 tests passed",
+                                                     "Strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS",
+                                                     "Strict review fix targeted: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-practice-session.spec.ts -> PASS; 1 chromium test passed",
+                                                     "Strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> FAIL; 8 chromium tests passed, unrelated existing quick-metronome frequency assertion failed at 480.7692307692308 Hz vs expected < 480",
+                                                     "Strict review fix full retry: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> FAIL; same unrelated quick-metronome frequency assertion, 8 chromium tests passed",
+                                                     "Strict review fix full serial: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- --workers=1 -> FAIL; same unrelated quick-metronome frequency assertion, 8 chromium tests passed",
+                                                     "Strict review fix cleanup: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free"
                                                                ],
                                                  "handoffNotes":  [
                                                      "Assigned feature: 05e-session-integration.",
@@ -618,6 +628,11 @@
                                                      "Review fix: Continue Practice now validates that the recent sheet session's sheet still exists before returning a Sheet Practice target, so stale sessions after sheet deletion are ignored.",
                                                      "Review fix: 05e sheet recording metadata now writes through the existing Recordings Review history boundary instead of a disconnected Dexie recordings table; the session Dexie schema migrates to sessions-only storage.",
                                                      "Review fix: metadata-only sheet recordings are visible through the shared /recordings history with no audio artifact, preserving the 05e no-audio constraint while giving 05c/03 one canonical metadata path.",
+                                                     "Strict review fix: Home Continue Practice now uses a global practice-session repository adapter that includes existing Quick Metronome sessions from the shared recording history snapshot and sheet sessions from Dexie, with recency sorting across both.",
+                                                     "Strict review fix: stopping the final active 05e trigger now persists endedAt and duration through an explicit endPracticeSession service operation.",
+                                                     "Strict review fix: PracticeSession and SheetRecordingMetadata now have Zod schemas applied at save/load/metadata bridge boundaries to reject invalid sourceType/sheetId/date/duration combinations.",
+                                                     "Strict review fix: Sheet Practice route construction is centralized in domain/sheet routes and reused by Home Continue, Sheet Library, and Recordings Review while preserving query route compatibility for recordingId links.",
+                                                     "Strict review fix: Sheet Practice harness duration display now reuses the shared practice duration formatter instead of a local formatter.",
                                                      "Implementation commit hash is reported in the final handoff response because this status commit cannot contain its own final object hash."
                                                                   ],
                                                  "changedAreas":  [
@@ -629,7 +644,11 @@
                                                      "src/components/sheet-practice/viewer/sheet-viewer-experience.tsx composes the 05e harness only for a valid loaded sheet",
                                                      "src/hooks/use-practice-session-dashboard.ts and src/components/home/home-dashboard.tsx wire the recent Continue Practice target",
                                                      "src/infrastructure/db/recording-history-metadata-repository.ts bridges 05e sheet recording metadata into the existing recordings-review local history repository",
+                                                     "src/infrastructure/db/global-practice-session-repository.ts adapts existing quick sessions and sheet sessions into one recent-session calculation",
                                                      "src/infrastructure/db/practice-session-repository.ts removes the isolated recordings object store through a Dexie v2 sessions-only migration",
+                                                     "src/domain/practice/validation.ts adds Zod validation for practice sessions and sheet recording metadata",
+                                                     "src/domain/sheet/routes.ts centralizes canonical Sheet Practice path and query route construction",
+                                                     "src/domain/practice/format.ts provides shared practice duration formatting",
                                                      "tests/unit/practice-session-service.test.ts covers 05e session rules and trigger independence",
                                                      "tests/unit/recordings-review-repository.test.ts covers 05e sheet metadata visibility through the shared recording history boundary",
                                                      "tests/e2e/sheet-practice-session.spec.ts covers real browser sheet import, no-session-on-view, metronome-only, recording metadata, independence, reload persistence, Continue Practice, last practiced, and unknown sheet guard"
@@ -641,6 +660,7 @@
                                                      "Home summary uses the currently loaded recent session for 05e continuity and is not a full 08-practice-session history aggregation implementation.",
                                                      "Metadata-only sheet recordings appear in Recordings Review but cannot play until 05c supplies real recording artifacts; the current artifact panel correctly reports the missing audio artifact.",
                                                      "Existing clients with the initial 05e Dexie recordings object store migrate to a sessions-only practice-session DB; new sheet metadata is canonicalized through the Recordings Review history boundary.",
+                                                     "Full E2E is currently blocked by an unrelated existing 02 Quick Metronome synthetic frequency assertion that repeatedly measured 480.7692307692308 Hz against a strict <480 Hz expectation; the 05e targeted E2E and the other 8 browser tests passed.",
                                                      "The local port cleanup check needed unsandboxed execution because sandboxed Node port binding returned EPERM; the unsandboxed one-shot bind check confirmed port 3101 was free."
                                                                 ],
                                                  "commitHash":  null

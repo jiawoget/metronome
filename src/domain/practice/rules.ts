@@ -4,6 +4,7 @@ import type {
   PracticeSession,
   PracticeTransportState
 } from "@/domain/practice/types";
+import { getSheetPracticeHref } from "@/domain/sheet/routes";
 
 export function calculatePracticeDurationMs(session: Pick<PracticeSession, "startedAt" | "endedAt">, now = new Date()) {
   const startedAtMs = Date.parse(session.startedAt);
@@ -45,7 +46,7 @@ export function getContinuePracticeTarget(session: PracticeSession | null): Cont
 
   return {
     sourceType: "sheet",
-    href: `/sheet-practice/${encodeURIComponent(session.sheetId)}`,
+    href: getSheetPracticeHref(session.sheetId),
     label: "Continue Sheet Practice",
     sessionId: session.id,
     sheetId: session.sheetId
