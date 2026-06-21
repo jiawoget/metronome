@@ -71,6 +71,14 @@ function writeSnapshot(snapshot: QuickMetronomeStoreSnapshot) {
   window.dispatchEvent(new Event(STORE_EVENT));
 }
 
+function createRecordingId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `recording_${crypto.randomUUID()}`;
+  }
+
+  return `recording_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
 export const quickRecordingRepository = {
   getSnapshot() {
     return readSnapshot();
@@ -84,15 +92,18 @@ export const quickRecordingRepository = {
 
   saveQuickRecording(session: PracticeSession, recording: QuickRecording) {
     const snapshot = readSnapshot();
+    const recordingToSave = snapshot.recordings.some((item) => item.id === recording.id)
+      ? { ...recording, id: createRecordingId() }
+      : recording;
     const sessions = [session, ...snapshot.sessions.filter((item) => item.id !== session.id)];
     const recordings = [
-      recording,
-      ...snapshot.recordings.filter((item) => item.id !== recording.id)
+      recordingToSave,
+      ...snapshot.recordings.filter((item) => item.id !== recordingToSave.id)
     ];
 
     writeSnapshot({ sessions, recordings, errorMarkers: snapshot.errorMarkers });
 
-    return recording;
+    return recordingToSave;
   },
 
   clear() {

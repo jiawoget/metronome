@@ -32,6 +32,33 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     window.addEventListener("unhandledrejection", (event) => {
       e2eWindow.__recordingsPlaybackRejections?.push(String(event.reason));
     });
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: async () => {
+          const audioWindow = window as Window &
+            typeof globalThis & { webkitAudioContext?: typeof AudioContext };
+          const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+
+          if (!AudioContextConstructor) {
+            throw new Error("Web Audio is not available in this browser.");
+          }
+
+          const audioContext = new AudioContextConstructor();
+          const destination = audioContext.createMediaStreamDestination();
+          const oscillator = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+
+          oscillator.frequency.value = 440;
+          gain.gain.value = 0.2;
+          oscillator.connect(gain);
+          gain.connect(destination);
+          oscillator.start();
+
+          return destination.stream;
+        }
+      }
+    });
   });
 
   await page.goto("/recordings");
@@ -307,6 +334,7 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await expect(page.getByTestId("recording-details").getByText("4/4")).toBeVisible();
   await expect(page.getByTestId("derived-waveform")).toHaveAttribute("data-waveform-source", "decoded-audio");
   await expect(page.getByTestId("derived-waveform")).toHaveAttribute("data-peak-count", "48");
+  await expect(page.getByTestId("recording-duration-warning")).toBeHidden();
   await expect(page.getByTestId("error-marker-list")).toContainText("0:01");
   await expect(page.getByTestId("error-marker-list")).toContainText("Early entrance");
   await expect(page.getByTestId("error-marker-list")).toContainText("Late accent");
@@ -327,6 +355,65 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
 
   await page.getByRole("link", { name: "Continue Practice" }).click();
   await expect(page).toHaveURL(/\/quick-metronome\?recordingId=quick-alpha/);
+  await page.getByRole("button", { name: "Start recording" }).click();
+  await expect(page.getByText("Recording without metronome.")).toBeVisible();
+  await page.waitForTimeout(700);
+  await page.getByRole("button", { name: "Stop recording" }).click();
+  await expect(page.getByText(/^Recording saved/)).toBeVisible();
+
+  const continuedRecordingEvidence = await page.evaluate(() => {
+    const rawValue = window.localStorage.getItem("metronome-practice:v0:quick-recordings");
+    const parsed = rawValue ? JSON.parse(rawValue) : null;
+    const original = parsed.recordings.find((recording: { id: string }) => recording.id === "quick-alpha");
+    const continued = parsed.recordings.find(
+      (recording: { id: string; type: string; origin: string }) =>
+        recording.id !== "quick-alpha" && recording.type === "quick" && recording.origin === "user"
+    );
+
+    return {
+      original: original
+        ? {
+            id: original.id,
+            durationMs: original.durationMs,
+            audioDataUrl: original.audioDataUrl,
+            decodedDurationMs: original.artifactAnalysis?.decodedDurationMs ?? null
+          }
+        : null,
+      continued: continued
+        ? {
+            id: continued.id,
+            durationMs: continued.durationMs,
+            sessionId: continued.sessionId,
+            decodedDurationMs: continued.artifactAnalysis?.decodedDurationMs ?? null,
+            isSilent: continued.artifactAnalysis?.isSilent ?? null
+          }
+        : null
+    };
+  });
+
+  expect(continuedRecordingEvidence.original).toEqual({
+    id: "quick-alpha",
+    durationMs: 1_000,
+    audioDataUrl: expect.stringMatching(/^data:audio\/wav;base64,/),
+    decodedDurationMs: 1_000
+  });
+  expect(continuedRecordingEvidence.continued?.id).not.toBe("quick-alpha");
+  expect(continuedRecordingEvidence.continued?.sessionId).not.toBe("session-quick-1");
+  expect(continuedRecordingEvidence.continued?.decodedDurationMs).toBeGreaterThan(600);
+  expect(
+    Math.abs(
+      (continuedRecordingEvidence.continued?.durationMs ?? 0) -
+        (continuedRecordingEvidence.continued?.decodedDurationMs ?? 0)
+    )
+  ).toBeLessThanOrEqual(1);
+  expect(continuedRecordingEvidence.continued?.isSilent).toBe(false);
+
+  await page.goto("/recordings");
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Alpha");
+  await expect(page.getByTestId("recording-row-quick-alpha")).toBeVisible();
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Quick metronome");
+  await page.getByTestId(`recording-row-${continuedRecordingEvidence.continued?.id}`).click();
+  await expect(page.getByTestId("recording-duration-warning")).toBeHidden();
 
   await page.goto("/recordings");
   await page.getByRole("textbox", { name: "Search recordings" }).fill("");
@@ -336,6 +423,7 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await page.getByTestId("recording-row-sheet-beta").click();
   await expect(page.getByTestId("recording-details").getByText("Moonlight Etude")).toBeVisible();
   await expect(page.getByTestId("derived-waveform")).toHaveAttribute("data-waveform-source", "trusted-peaks");
+  await expect(page.getByTestId("recording-duration-warning")).toBeHidden();
   await page.getByRole("button", { name: "Play Recording" }).click();
   await expect(page.getByTestId("recording-playback-status")).toBeVisible();
   await page.waitForFunction(() => {

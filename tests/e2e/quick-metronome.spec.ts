@@ -275,6 +275,7 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   expect(latestRecording.sheetId).toBeNull();
   expect(latestRecording.sizeBytes).toBeGreaterThan(1_000);
   expect(latestRecording.artifactAnalysis.decodedDurationMs).toBeGreaterThan(600);
+  expect(Math.abs(latestRecording.durationMs - latestRecording.artifactAnalysis.decodedDurationMs)).toBeLessThanOrEqual(1);
   expect(latestRecording.artifactAnalysis.rmsAmplitude).toBeGreaterThan(0.02);
   expect(latestRecording.artifactAnalysis.peakAmplitude).toBeGreaterThan(0.05);
   expect(latestRecording.artifactAnalysis.estimatedFrequencyHz).toBeGreaterThan(400);

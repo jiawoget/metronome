@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
+import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
 import { createQuickPracticeSession, createQuickRecording } from "@/lib/quick-metronome/session";
 import { DEFAULT_METRONOME_SETTINGS, type RecordingArtifact } from "@/lib/quick-metronome/types";
 
@@ -45,11 +46,51 @@ describe("quick metronome session and recording metadata", () => {
     expect(recording.sessionId).toBe(session.id);
     expect(recording.sheetId).toBeNull();
     expect(recording.createdAt).toBe("2026-06-21T08:01:00.000Z");
-    expect(recording.durationMs).toBe(1_245);
+    expect(recording.durationMs).toBe(1_230);
     expect(recording.sizeBytes).toBe(15);
     expect(recording.audioDataUrl).toContain("data:audio/webm");
     expect(recording.artifactAnalysis?.estimatedFrequencyHz).toBe(440);
     expect(recording.artifactAnalysis?.isSilent).toBe(false);
+  });
+
+  it("does not overwrite an existing recording when saving a continued take with a reused id", () => {
+    quickRecordingRepository.clear();
+    const session = createQuickPracticeSession(DEFAULT_METRONOME_SETTINGS);
+    const artifact: RecordingArtifact = {
+      blob: new Blob(["synthetic audio"]),
+      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
+      durationMs: 1_245.4,
+      mimeType: "audio/webm",
+      sizeBytes: 15,
+      analysis: {
+        decodedDurationMs: 1_230,
+        sampleRate: 48_000,
+        peakAmplitude: 0.2,
+        rmsAmplitude: 0.12,
+        estimatedFrequencyHz: 440,
+        isSilent: false
+      }
+    };
+    const recording = createQuickRecording({ artifact, session, settings: DEFAULT_METRONOME_SETTINGS });
+    const firstSave = quickRecordingRepository.saveQuickRecording(session, recording);
+    const continuedSave = quickRecordingRepository.saveQuickRecording(session, {
+      ...recording,
+      audioDataUrl: "data:audio/webm;base64,bmV3LXRha2U=",
+      artifactAnalysis: {
+        ...recording.artifactAnalysis!,
+        decodedDurationMs: 900
+      },
+      durationMs: 900
+    });
+    const snapshot = quickRecordingRepository.getSnapshot();
+
+    expect(firstSave.id).toBe(recording.id);
+    expect(continuedSave.id).not.toBe(recording.id);
+    expect(snapshot.recordings).toHaveLength(2);
+    expect(snapshot.recordings.find((item) => item.id === recording.id)?.audioDataUrl).toBe(
+      recording.audioDataUrl
+    );
+    expect(snapshot.recordings.find((item) => item.id === continuedSave.id)?.durationMs).toBe(900);
   });
 
   it("provides a clearly marked playable demo recording without claiming it is a user take", () => {

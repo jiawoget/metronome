@@ -269,15 +269,15 @@
                       },
                       {
                           "module":  "03-recordings-review",
-	                          "status":  "verified",
+	                          "status":  "implementation_done",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
-                                                 "completedAt":  "2026-06-21T10:18:01Z",
+                                                 "completedAt":  "2026-06-21T10:38:18Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 10 test files passed, 33 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 10 test files passed, 34 tests passed",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed and prerendered /recordings",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 4 chromium tests passed covering app shell, quick metronome, and recordings review flows, including recordings review quick and sheet playback without swallowing playback rejection",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node local TCP check for 127.0.0.1:3101 -> PASS; port 3101 closed after Playwright webServer exit"
@@ -291,8 +291,11 @@
                                                      "Review fix pass: loadRecordingArtifactDetails now always validates and decodes audioDataUrl before returning playback-ready details; trustedPeaks are used only for waveform rendering after the real artifact decodes.",
                                                      "Review fix pass: decoded duration is compared with metadata duration using tolerance and mismatch is surfaced in the details UI as a warning instead of silently accepting stale metadata.",
                                                      "Review fix pass: recordings E2E no longer monkey-patches HTMLMediaElement.play to swallow rejection; it records unhandled playback rejections, verifies none occur, browser-decodes quick and sheet WAV artifacts, and exercises sheet playback.",
+                                                     "QA fix pass: Continue Practice now remains context-only for quick recordings; saving a later quick take creates a new recording entry and a new session instead of overwriting the source recording artifact.",
+                                                     "QA fix pass: quick recording metadata duration now uses decoded artifact duration when available, so newly saved takes align saved duration with the actual playable artifact.",
+                                                     "QA fix pass: quick recording persistence defensively assigns a fresh recording id if a caller tries to save a new take with an existing recording id, preserving the original recording and artifact.",
                                                      "The history repository preserves the existing quick-metronome local data boundary and adds marker-aware delete semantics so quick, sheet, and error marker records can coexist in one persisted snapshot.",
-                                                     "E2E seeds real decodable WAV artifacts for quick and sheet recordings, checks decoded waveform peaks for quick, trusted peaks for sheet only after artifact validation, playback event evidence, marker ordering, continue routes, delete persistence/artifact inaccessibility, bad audio, trustedPeaks with missing/bad audio, and duration mismatch warning handling.",
+                                                     "E2E seeds real decodable WAV artifacts for quick and sheet recordings, checks decoded waveform peaks for quick, trusted peaks for sheet only after artifact validation, playback event evidence, marker ordering, continue routes, Continue Practice followed by another quick recording, delete persistence/artifact inaccessibility, bad audio, trustedPeaks with missing/bad audio, and duration mismatch warning handling.",
                                                      "No recording creation, sheet import/viewer, automatic scoring, export, archive, tags, favorites, or v1 analysis behavior was implemented.",
                                                      "Implementation commit hash is reported in the final handoff response because a git commit cannot contain its own final object hash without changing that hash."
                                                                   ],
@@ -302,9 +305,12 @@
                                                      "src/components/recordings-review adds decoded-vs-metadata duration mismatch warning display in recording details",
                                                      "src/lib/recordings-review adds pure history/filter/format helpers, local history repository, audio artifact validation/peak derivation, duration tolerance handling, and wavesurfer playback adapter boundaries",
                                                      "src/lib/quick-metronome/persistence.ts and src/lib/quick-metronome/types.ts preserve marker data and sheet-compatible session metadata when quick recordings are saved",
+                                                     "src/lib/quick-metronome/persistence.ts now prevents accidental overwrite when a continued take is saved with an existing recording id",
+                                                     "src/lib/quick-metronome/session.ts now stores quick recording duration from decoded artifact analysis when available",
                                                      "tests/unit/recordings-review-history.test.ts covers filtering, sorting, formatting, continue targets, marker ordering, trusted peaks after decode, trustedPeaks with missing/bad audio, derived peaks, missing audio errors, and duration mismatch warnings",
                                                      "tests/unit/recordings-review-repository.test.ts covers local history loading and delete persistence for metadata, artifact access, and linked error markers",
-                                                     "tests/e2e/recordings-review.spec.ts covers empty state, seeded real WAV recordings, browser decode duration/energy evidence, search, quick/sheet filters, details, quick and sheet playback without swallowed rejection, waveform evidence, markers, continue routes, delete persistence, artifact removal, bad audio, trustedPeaks with missing/bad audio, and duration mismatch warning",
+                                                     "tests/e2e/recordings-review.spec.ts covers empty state, seeded real WAV recordings, browser decode duration/energy evidence, search, quick/sheet filters, details, quick and sheet playback without swallowed rejection, waveform evidence, markers, continue routes, continuing a seeded quick recording then recording again without overwriting the original, delete persistence, artifact removal, bad audio, trustedPeaks with missing/bad audio, and duration mismatch warning",
+                                                     "tests/unit/quick-metronome-session.test.ts covers decoded-duration quick metadata and duplicate-id save protection for continued takes",
                                                      "tests/e2e/quick-metronome.spec.ts updates /recordings assertions for the implemented unified review page"
                                                                   ],
                                                  "knownRisks":  [

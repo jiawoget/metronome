@@ -34,6 +34,8 @@ export function createQuickRecording({
   settings: MetronomeSettings;
   createdAt?: Date;
 }) {
+  const durationMs = artifact.analysis?.decodedDurationMs ?? artifact.durationMs;
+
   return {
     id: createId("recording"),
     type: "quick",
@@ -41,7 +43,7 @@ export function createQuickRecording({
     sessionId: session.id,
     sheetId: null,
     createdAt: createdAt.toISOString(),
-    durationMs: Math.max(0, Math.round(artifact.durationMs)),
+    durationMs: Math.max(0, Math.round(durationMs)),
     sizeBytes: artifact.sizeBytes,
     mimeType: artifact.mimeType,
     audioDataUrl: artifact.dataUrl,
