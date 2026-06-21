@@ -83,42 +83,42 @@
         "value":  [
                       {
                           "module":  "01-app-shell-home",
-                          "status":  "verified",
+                          "status":  "implementation_done",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
-                                                 "completedAt":  "2026-06-21T08:22:07Z",
+                                                 "completedAt":  "2026-06-21T08:41:09Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 3 test files passed, 5 tests passed",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; initial sandboxed full-chain build hit Turbopack internal process/port binding restriction, required unsandboxed retry, then Next.js production build completed and prerendered /, /quick-metronome, /sheet-library, /sheet-practice, /recordings, and /settings",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 1 chromium test passed covering desktop sidebar, 1024px sidebar, mobile bottom navigation, click navigation, route highlight, empty states, and console/pageerror capture"
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 4 test files passed, 6 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed and prerendered /, /quick-metronome, /sheet-library, /sheet-practice, /recordings, /settings, and /_not-found",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 1 chromium test passed covering desktop sidebar, 1024px sidebar, mobile bottom navigation, Import Sheet route shell, Sheet Practice route/page change and current nav highlight on desktop/mobile, diagnostics hide/restore, empty states, and console/pageerror capture"
                                                                ],
                                                  "handoffNotes":  [
                                                      "Assigned feature: 01-app-shell-home.",
                                                      "Coding model used: GPT-5.5 High.",
-                                                     "Implemented the shared AppShell in the root layout with desktop/iPad sidebar navigation, mobile bottom navigation, current route aria-current highlighting, and idle global status placeholders.",
-                                                     "Implemented Home as a practice dashboard with Quick Metronome entry, empty Continue Practice state, zero Today Practice Summary, empty Recent Sheets, empty Recent Recordings, and Settings entry.",
-                                                     "Added top-level route shells for Quick Metronome, Sheet Library, Sheet Practice, Recordings, and Settings. Each shell is reachable through UI navigation and explicitly states that feature workflows are assigned to later modules.",
-                                                     "No real metronome playback, recording, sheet import, playback, populated history, v1 analytics, goals, or fake data were implemented.",
+                                                     "Fix pass for review findings on the previously verified 01-app-shell-home module; status is returned to implementation_done for independent verification.",
+                                                     "Added a Home Import Sheet entry that navigates to the Sheet Library route shell and explicitly states that import workflow is not enabled yet.",
+                                                     "Clarified the Sheet Library shell copy so import intent lands on a clear empty route shell without claiming real import support.",
+                                                     "Made AppShell diagnostics/devtools affordance recoverable: hiding devtools for the session leaves a visible restore entry, and the in-memory state also resets on reload.",
+                                                     "Expanded E2E coverage for Sheet Practice on desktop sidebar and mobile bottom navigation, including route/page change and current nav highlight.",
+                                                     "Expanded E2E and unit coverage for Import Sheet and diagnostics hide/restore regressions.",
+                                                     "No real metronome playback, recording, sheet import, playback, populated history, v1 analytics, goals, diagnostics tooling, or fake data were implemented.",
                                                      "Implementation commit hash is reported in the final handoff response because a git commit cannot contain its own final object hash without changing that hash."
                                                                   ],
                                                  "changedAreas":  [
-                                                     "src/app/layout.tsx now wraps pages in the shared AppShell",
-                                                     "src/app/page.tsx now renders the HomeDashboard",
-                                                     "src/app/quick-metronome, src/app/sheet-library, src/app/sheet-practice, src/app/recordings, and src/app/settings route shells",
-                                                     "src/components/app-shell for responsive navigation, route shell layout, current route highlight, and global status placeholders",
-                                                     "src/components/home for empty/default Home dashboard rendering",
-                                                     "src/lib/navigation.ts for top-level v0 navigation config and active-route helper",
-                                                     "tests/unit navigation and Home dashboard coverage",
-                                                     "tests/e2e/app-shell-home.spec.ts browser navigation and responsive app shell coverage",
-                                                     "playwright.config.ts test port made configurable with default 3101 to avoid collision with existing port 3000 services"
+                                                     "src/components/home/home-dashboard.tsx adds the Import Sheet entry and import-disabled Home copy",
+                                                     "src/app/sheet-library/page.tsx clarifies the Sheet Library route shell as the landing place for disabled import intent",
+                                                     "src/components/app-shell/app-shell.tsx adds recoverable diagnostics/devtools hide and restore UI",
+                                                     "tests/unit/home-dashboard.test.tsx covers Import Sheet entry and disabled-workflow copy",
+                                                     "tests/unit/app-shell.test.tsx covers diagnostics hide and restore behavior",
+                                                     "tests/e2e/app-shell-home.spec.ts covers Import Sheet, Sheet Practice desktop/mobile navigation and highlighting, and diagnostics hide/restore"
                                                                   ],
                                                  "knownRisks":  [
-                                                     "Playwright's configured test server default port moved from 3000 to 3101 because 127.0.0.1:3000 was already occupied by an external process in this environment; E2E passed on 3101 and can be overridden with E2E_PORT.",
-                                                     "Next/Turbopack production build can fail inside this sandbox when its CSS pipeline attempts internal process/port binding; the same build passed with approved unsandboxed execution.",
-                                                     "Global status and dashboard data are intentionally static empty placeholders for this module until later persistence, session, recording, and playback modules provide real data sources."
+                                                     "Playwright's configured test server uses default port 3101 and can be overridden with E2E_PORT; this run's webServer exited cleanly after E2E.",
+                                                     "Diagnostics/devtools are intentionally only a lightweight application-shell affordance in this module, not a completed diagnostics feature.",
+                                                     "Global status and dashboard data remain intentionally static empty placeholders for this module until later persistence, session, recording, and playback modules provide real data sources."
                                                                 ],
                                                  "commitHash":  null
                                              },

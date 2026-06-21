@@ -15,6 +15,7 @@ describe("HomeDashboard", () => {
     expect(screen.getAllByText("0")).toHaveLength(3);
     expect(screen.getByText(/No recent practice session yet/i)).toBeVisible();
     expect(screen.getByText(/No sheets imported yet/i)).toBeVisible();
+    expect(screen.getByText(/Import workflow is not enabled yet/i)).toBeVisible();
     expect(screen.getByText(/No recordings yet/i)).toBeVisible();
     expect(screen.getByText(/No recording or playback active/i)).toBeVisible();
   });
@@ -27,6 +28,7 @@ describe("HomeDashboard", () => {
       "/quick-metronome"
     );
     expect(screen.getByRole("link", { name: "Open Sheet Library" })).toHaveAttribute("href", "/sheet-library");
+    expect(screen.getByRole("link", { name: "Import Sheet" })).toHaveAttribute("href", "/sheet-library");
     expect(screen.getByRole("link", { name: "Open Recordings" })).toHaveAttribute("href", "/recordings");
     expect(screen.getByRole("link", { name: "Open Settings" })).toHaveAttribute("href", "/settings");
   });

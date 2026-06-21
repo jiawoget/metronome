@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { EyeOff, RotateCcw } from "lucide-react";
 import type { ReactNode } from "react";
+import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { topLevelNavItems } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const [areDiagnosticsHidden, setAreDiagnosticsHidden] = useState(false);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -51,13 +55,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-          <div
-            aria-label="Global status"
-            className="mt-5 rounded-md border border-border bg-background px-3 py-3 text-sm"
-          >
-            <p className="font-medium">Global Status</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">No recording or playback active.</p>
-          </div>
+          <DiagnosticsPanel
+            hidden={areDiagnosticsHidden}
+            onHide={() => setAreDiagnosticsHidden(true)}
+            onRestore={() => setAreDiagnosticsHidden(false)}
+          />
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -69,9 +71,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </span>
                 <span className="text-sm font-semibold">Metronome Practice</span>
               </Link>
-              <div aria-label="Global status" className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs">
-                Idle
-              </div>
+              <MobileDiagnostics
+                hidden={areDiagnosticsHidden}
+                onHide={() => setAreDiagnosticsHidden(true)}
+                onRestore={() => setAreDiagnosticsHidden(false)}
+              />
             </div>
           </header>
 
@@ -108,6 +112,104 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </div>
       </nav>
+    </div>
+  );
+}
+
+function DiagnosticsPanel({
+  hidden,
+  onHide,
+  onRestore
+}: {
+  hidden: boolean;
+  onHide: () => void;
+  onRestore: () => void;
+}) {
+  if (hidden) {
+    return (
+      <div
+        aria-label="Diagnostics hidden"
+        data-testid="diagnostics-restore"
+        className="mt-5 rounded-md border border-dashed border-border bg-background px-3 py-3 text-sm"
+      >
+        <p className="font-medium">Diagnostics hidden</p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          Devtools are hidden for this session. Restore them whenever needed.
+        </p>
+        <Button type="button" variant="secondary" className="mt-3 w-full" onClick={onRestore}>
+          <RotateCcw className="h-4 w-4" aria-hidden="true" />
+          Restore diagnostics
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      aria-label="Global status diagnostics"
+      data-testid="diagnostics-panel"
+      className="mt-5 rounded-md border border-border bg-background px-3 py-3 text-sm"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-medium">Diagnostics</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">No recording or playback active.</p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Hide devtools for this session"
+          className="h-8 w-8 shrink-0"
+          onClick={onHide}
+        >
+          <EyeOff className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function MobileDiagnostics({
+  hidden,
+  onHide,
+  onRestore
+}: {
+  hidden: boolean;
+  onHide: () => void;
+  onRestore: () => void;
+}) {
+  if (hidden) {
+    return (
+      <Button
+        type="button"
+        variant="secondary"
+        className="h-9 px-2.5 text-xs"
+        aria-label="Restore diagnostics"
+        onClick={onRestore}
+      >
+        <RotateCcw className="h-4 w-4" aria-hidden="true" />
+        Diagnostics
+      </Button>
+    );
+  }
+
+  return (
+    <div
+      aria-label="Global status diagnostics"
+      className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs"
+    >
+      <span>Idle</span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label="Hide devtools for this session"
+        className="h-7 w-7"
+        onClick={onHide}
+      >
+        <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
+      </Button>
     </div>
   );
 }

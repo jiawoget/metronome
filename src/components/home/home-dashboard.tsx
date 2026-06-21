@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  FileUp,
   Gauge,
   LibraryBig,
   Mic2,
@@ -133,6 +134,15 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
             <Button asChild variant="secondary" className="mt-4 w-full">
               <Link href="/sheet-library">Open Sheet Library</Link>
             </Button>
+            <Button asChild variant="secondary" className="mt-3 w-full">
+              <Link href="/sheet-library" aria-label="Import Sheet">
+                <FileUp className="h-4 w-4" aria-hidden="true" />
+                Import Sheet
+              </Link>
+            </Button>
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+              Import workflow is not enabled yet; this opens the Sheet Library shell.
+            </p>
           </CardContent>
         </Card>
 

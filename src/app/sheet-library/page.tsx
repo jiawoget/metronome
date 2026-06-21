@@ -7,12 +7,12 @@ export default function SheetLibraryPage() {
     <RouteShell
       title="Sheet Library"
       eyebrow="Top-level module"
-      description="Sheet library entry route. Import, search, thumbnails, and file persistence are assigned to the Sheet Library module."
+      description="Sheet library entry route. Home can send future import intent here, but import, search, thumbnails, and file persistence are assigned to the Sheet Library module."
       icon={LibraryBig}
       details={[
         "Route is reachable from Home and navigation.",
         "No sheets are imported or listed by this shell.",
-        "Import actions are intentionally not enabled yet.",
+        "Import Sheet entry lands here, but the import workflow is not enabled yet.",
         "Future implementation owns sheet persistence."
       ]}
     />
