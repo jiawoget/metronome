@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { derivePeaksFromSamples, loadRecordingArtifactDetails } from "@/lib/recordings-review/artifact-service";
+import {
+  derivePeaksFromSamples,
+  getDurationWarning,
+  loadRecordingArtifactDetails
+} from "@/lib/recordings-review/artifact-service";
 import { formatDuration, formatTimestamp } from "@/lib/recordings-review/format";
 import {
   filterRecordings,
@@ -92,18 +96,75 @@ describe("recordings review history helpers", () => {
 });
 
 describe("recordings review artifact helpers", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function installAudioContextMock({
+    durationSeconds = 1,
+    samples = new Float32Array([0, 0.25, -0.5, 1]),
+    reject = false
+  }: {
+    durationSeconds?: number;
+    samples?: Float32Array;
+    reject?: boolean;
+  } = {}) {
+    class MockAudioContext {
+      async decodeAudioData() {
+        if (reject) {
+          throw new Error("decode failed");
+        }
+
+        return {
+          duration: durationSeconds,
+          sampleRate: 8_000,
+          getChannelData: () => samples
+        };
+      }
+
+      close() {
+        return Promise.resolve();
+      }
+    }
+
+    vi.stubGlobal("AudioContext", MockAudioContext);
+    Object.defineProperty(window, "AudioContext", {
+      configurable: true,
+      value: MockAudioContext
+    });
+  }
+
   it("derives normalized peaks from decoded samples", () => {
     const peaks = derivePeaksFromSamples(new Float32Array([0, 0.5, -1, 0.25]), 2);
 
     expect(peaks).toEqual([0.5, 1]);
   });
 
-  it("accepts trusted peaks tied to a recording artifact", async () => {
+  it("accepts trusted peaks only after the sheet artifact decodes", async () => {
+    installAudioContextMock({ durationSeconds: 125 });
+
     const details = await loadRecordingArtifactDetails(sheetRecording);
 
     expect(details.recordingId).toBe("sheet-1");
     expect(details.source).toBe("trusted-peaks");
     expect(details.peaks).toEqual([0.2, 0.8, 0.4]);
+    expect(details.decodedDurationMs).toBe(125_000);
+    expect(details.durationWarning).toBeNull();
+  });
+
+  it("rejects trusted peaks with missing audio", async () => {
+    await expect(
+      loadRecordingArtifactDetails({
+        ...sheetRecording,
+        audioDataUrl: null
+      })
+    ).rejects.toThrow("no accessible audio artifact");
+  });
+
+  it("rejects trusted peaks when the audio cannot be decoded", async () => {
+    installAudioContextMock({ reject: true });
+
+    await expect(loadRecordingArtifactDetails(sheetRecording)).rejects.toThrow("cannot be decoded");
   });
 
   it("rejects missing audio without trusted peaks", async () => {
@@ -114,5 +175,25 @@ describe("recordings review artifact helpers", () => {
         trustedPeaks: undefined
       })
     ).rejects.toThrow("no accessible audio artifact");
+  });
+
+  it("surfaces duration mismatch beyond tolerance", async () => {
+    installAudioContextMock({ durationSeconds: 2 });
+
+    const details = await loadRecordingArtifactDetails({
+      ...quickRecording,
+      durationMs: 1_000,
+      trustedPeaks: undefined
+    });
+
+    expect(details.durationDifferenceMs).toBe(1_000);
+    expect(details.durationWarning).toContain("differs from saved metadata");
+  });
+
+  it("does not warn when decoded and metadata duration are within tolerance", () => {
+    expect(getDurationWarning({ decodedDurationMs: 1_200, metadataDurationMs: 1_000 })).toBeNull();
+    expect(getDurationWarning({ decodedDurationMs: 1_400, metadataDurationMs: 1_000 })).toContain(
+      "differs from saved metadata"
+    );
   });
 });

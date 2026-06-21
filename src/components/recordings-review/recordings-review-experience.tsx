@@ -408,6 +408,16 @@ function RecordingDetails({
             <p data-testid="waveform-source" className="text-xs font-medium text-muted-foreground">
               Waveform source: {artifactState.details.source === "decoded-audio" ? "decoded audio artifact" : "trusted peaks"}
             </p>
+            {artifactState.details.durationWarning ? (
+              <div
+                role="status"
+                data-testid="recording-duration-warning"
+                className="flex items-start gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-destructive"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{artifactState.details.durationWarning}</span>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

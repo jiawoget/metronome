@@ -273,13 +273,13 @@
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
-                                                 "completedAt":  "2026-06-21T10:09:43Z",
+                                                 "completedAt":  "2026-06-21T10:18:01Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 10 test files passed, 29 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 10 test files passed, 33 tests passed",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed and prerendered /recordings",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 4 chromium tests passed covering app shell, quick metronome, and recordings review flows",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 4 chromium tests passed covering app shell, quick metronome, and recordings review flows, including recordings review quick and sheet playback without swallowing playback rejection",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node local TCP check for 127.0.0.1:3101 -> PASS; port 3101 closed after Playwright webServer exit"
                                                                ],
                                                  "handoffNotes":  [
@@ -288,19 +288,23 @@
                                                      "Implemented only the Recordings / Review v0 contract: unified recordings list, empty state, search, type filter, details, playback, waveform, error markers, delete, continue practice, and bad/missing audio state.",
                                                      "Recordings UI calls recording history, artifact/waveform, playback, and continue-target services; UI does not directly call IndexedDB/Dexie, raw file APIs, audio element internals, or wavesurfer.js.",
                                                      "Playback/waveform uses wavesurfer.js through RecordingWaveformPlaybackAdapter; artifact validation and simplified peaks are behind loadRecordingArtifactDetails.",
+                                                     "Review fix pass: loadRecordingArtifactDetails now always validates and decodes audioDataUrl before returning playback-ready details; trustedPeaks are used only for waveform rendering after the real artifact decodes.",
+                                                     "Review fix pass: decoded duration is compared with metadata duration using tolerance and mismatch is surfaced in the details UI as a warning instead of silently accepting stale metadata.",
+                                                     "Review fix pass: recordings E2E no longer monkey-patches HTMLMediaElement.play to swallow rejection; it records unhandled playback rejections, verifies none occur, browser-decodes quick and sheet WAV artifacts, and exercises sheet playback.",
                                                      "The history repository preserves the existing quick-metronome local data boundary and adds marker-aware delete semantics so quick, sheet, and error marker records can coexist in one persisted snapshot.",
-                                                     "E2E seeds real decodable WAV artifacts for quick and sheet recordings, checks decoded waveform peaks for quick, trusted peaks for sheet, playback event evidence, marker ordering, continue routes, delete persistence/artifact inaccessibility, and bad audio error handling.",
+                                                     "E2E seeds real decodable WAV artifacts for quick and sheet recordings, checks decoded waveform peaks for quick, trusted peaks for sheet only after artifact validation, playback event evidence, marker ordering, continue routes, delete persistence/artifact inaccessibility, bad audio, trustedPeaks with missing/bad audio, and duration mismatch warning handling.",
                                                      "No recording creation, sheet import/viewer, automatic scoring, export, archive, tags, favorites, or v1 analysis behavior was implemented.",
                                                      "Implementation commit hash is reported in the final handoff response because a git commit cannot contain its own final object hash without changing that hash."
                                                                   ],
                                                  "changedAreas":  [
                                                      "src/app/recordings/page.tsx now renders the real Recordings Review experience instead of the placeholder latest-recording outlet",
                                                      "src/components/recordings-review adds the client UI for empty state, unified list, search/type filtering, details, waveform, playback controls, marker list, delete confirmation, and continue practice",
-                                                     "src/lib/recordings-review adds pure history/filter/format helpers, local history repository, audio artifact validation/peak derivation, and wavesurfer playback adapter boundaries",
+                                                     "src/components/recordings-review adds decoded-vs-metadata duration mismatch warning display in recording details",
+                                                     "src/lib/recordings-review adds pure history/filter/format helpers, local history repository, audio artifact validation/peak derivation, duration tolerance handling, and wavesurfer playback adapter boundaries",
                                                      "src/lib/quick-metronome/persistence.ts and src/lib/quick-metronome/types.ts preserve marker data and sheet-compatible session metadata when quick recordings are saved",
-                                                     "tests/unit/recordings-review-history.test.ts covers filtering, sorting, formatting, continue targets, marker ordering, trusted peaks, derived peaks, and missing audio errors",
+                                                     "tests/unit/recordings-review-history.test.ts covers filtering, sorting, formatting, continue targets, marker ordering, trusted peaks after decode, trustedPeaks with missing/bad audio, derived peaks, missing audio errors, and duration mismatch warnings",
                                                      "tests/unit/recordings-review-repository.test.ts covers local history loading and delete persistence for metadata, artifact access, and linked error markers",
-                                                     "tests/e2e/recordings-review.spec.ts covers empty state, seeded real WAV recordings, search, quick/sheet filters, details, playback, waveform evidence, markers, continue routes, delete persistence, artifact removal, and bad audio",
+                                                     "tests/e2e/recordings-review.spec.ts covers empty state, seeded real WAV recordings, browser decode duration/energy evidence, search, quick/sheet filters, details, quick and sheet playback without swallowed rejection, waveform evidence, markers, continue routes, delete persistence, artifact removal, bad audio, trustedPeaks with missing/bad audio, and duration mismatch warning",
                                                      "tests/e2e/quick-metronome.spec.ts updates /recordings assertions for the implemented unified review page"
                                                                   ],
                                                  "knownRisks":  [

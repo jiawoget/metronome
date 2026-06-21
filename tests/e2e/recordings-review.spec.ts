@@ -21,18 +21,17 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     }
     const e2eWindow = window as Window & {
       __recordingsPlaybackEvents?: unknown[];
+      __recordingsPlaybackRejections?: string[];
     };
 
     e2eWindow.__recordingsPlaybackEvents = [];
+    e2eWindow.__recordingsPlaybackRejections = [];
     window.addEventListener("recordings-review:playback", (event) => {
       e2eWindow.__recordingsPlaybackEvents?.push((event as CustomEvent).detail);
     });
-
-    const originalPlay = window.HTMLMediaElement.prototype.play;
-
-    window.HTMLMediaElement.prototype.play = function play() {
-      return originalPlay.call(this).catch(() => Promise.resolve());
-    };
+    window.addEventListener("unhandledrejection", (event) => {
+      e2eWindow.__recordingsPlaybackRejections?.push(String(event.reason));
+    });
   });
 
   await page.goto("/recordings");
@@ -88,6 +87,7 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
 
     const quickArtifact = createWavDataUrl(440, 1);
     const sheetArtifact = createWavDataUrl(330, 1.2);
+    const mismatchArtifact = createWavDataUrl(220, 1);
 
     window.localStorage.setItem(
       "metronome-practice:v0:quick-recordings",
@@ -165,6 +165,61 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
               bpm: 72,
               timeSignature: "4/4"
             }
+          },
+          {
+            id: "trusted-missing",
+            type: "sheet",
+            origin: "user",
+            name: "Trusted peaks missing artifact",
+            sessionId: "session-sheet-1",
+            sheetId: "sheet-42",
+            sheetName: "Moonlight Etude",
+            createdAt: "2026-06-21T12:00:00.000Z",
+            durationMs: 1_000,
+            sizeBytes: 0,
+            mimeType: "audio/wav",
+            audioDataUrl: null,
+            trustedPeaks: [0.1, 0.7, 0.2],
+            settings: {
+              bpm: 96,
+              timeSignature: "3/4"
+            }
+          },
+          {
+            id: "trusted-bad",
+            type: "sheet",
+            origin: "user",
+            name: "Trusted peaks bad artifact",
+            sessionId: "session-sheet-1",
+            sheetId: "sheet-42",
+            sheetName: "Moonlight Etude",
+            createdAt: "2026-06-21T13:00:00.000Z",
+            durationMs: 1_000,
+            sizeBytes: 12,
+            mimeType: "audio/wav",
+            audioDataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
+            trustedPeaks: [0.1, 0.7, 0.2],
+            settings: {
+              bpm: 96,
+              timeSignature: "3/4"
+            }
+          },
+          {
+            id: "mismatch-delta",
+            type: "quick",
+            origin: "user",
+            name: "Duration mismatch take",
+            sessionId: "session-quick-1",
+            sheetId: null,
+            createdAt: "2026-06-21T14:00:00.000Z",
+            durationMs: 4_000,
+            sizeBytes: mismatchArtifact.sizeBytes,
+            mimeType: "audio/wav",
+            audioDataUrl: mismatchArtifact.dataUrl,
+            settings: {
+              bpm: 88,
+              timeSignature: "4/4"
+            }
           }
         ],
         errorMarkers: [
@@ -188,7 +243,57 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await page.reload();
   await expect(page.getByTestId("recordings-list")).toBeVisible();
   await expect(page.getByText("Alpha quick take")).toBeVisible();
-  await expect(page.getByText("Moonlight Etude")).toBeVisible();
+  await expect(page.getByTestId("recording-row-sheet-beta")).toBeVisible();
+  const decodedArtifactEvidence = await page.evaluate(async () => {
+    async function decodeRecording(recordingId: string) {
+      const rawValue = window.localStorage.getItem("metronome-practice:v0:quick-recordings");
+      const parsed = rawValue ? JSON.parse(rawValue) : null;
+      const recording = parsed.recordings.find((item: { id: string }) => item.id === recordingId);
+      const audioWindow = window as Window &
+        typeof globalThis & { webkitAudioContext?: typeof AudioContext };
+      const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+
+      if (!AudioContextConstructor || !recording.audioDataUrl) {
+        throw new Error(`Cannot decode ${recordingId}.`);
+      }
+
+      const response = await fetch(recording.audioDataUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioContext = new AudioContextConstructor();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+      const samples = audioBuffer.getChannelData(0);
+      let peakAmplitude = 0;
+      let sumSquares = 0;
+
+      for (let index = 0; index < samples.length; index += 1) {
+        const sample = samples[index] ?? 0;
+        peakAmplitude = Math.max(peakAmplitude, Math.abs(sample));
+        sumSquares += sample * sample;
+      }
+
+      await audioContext.close();
+
+      return {
+        decodedDurationMs: audioBuffer.duration * 1_000,
+        peakAmplitude,
+        rmsAmplitude: Math.sqrt(sumSquares / Math.max(1, samples.length))
+      };
+    }
+
+    return {
+      quick: await decodeRecording("quick-alpha"),
+      sheet: await decodeRecording("sheet-beta")
+    };
+  });
+
+  expect(decodedArtifactEvidence.quick.decodedDurationMs).toBeGreaterThan(950);
+  expect(decodedArtifactEvidence.quick.decodedDurationMs).toBeLessThan(1_050);
+  expect(decodedArtifactEvidence.quick.peakAmplitude).toBeGreaterThan(0.2);
+  expect(decodedArtifactEvidence.quick.rmsAmplitude).toBeGreaterThan(0.1);
+  expect(decodedArtifactEvidence.sheet.decodedDurationMs).toBeGreaterThan(1_150);
+  expect(decodedArtifactEvidence.sheet.decodedDurationMs).toBeLessThan(1_250);
+  expect(decodedArtifactEvidence.sheet.peakAmplitude).toBeGreaterThan(0.2);
+  expect(decodedArtifactEvidence.sheet.rmsAmplitude).toBeGreaterThan(0.1);
 
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Alpha");
   await expect(page.getByTestId("recording-row-quick-alpha")).toBeVisible();
@@ -231,8 +336,29 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await page.getByTestId("recording-row-sheet-beta").click();
   await expect(page.getByTestId("recording-details").getByText("Moonlight Etude")).toBeVisible();
   await expect(page.getByTestId("derived-waveform")).toHaveAttribute("data-waveform-source", "trusted-peaks");
+  await page.getByRole("button", { name: "Play Recording" }).click();
+  await expect(page.getByTestId("recording-playback-status")).toBeVisible();
+  await page.waitForFunction(() => {
+    const e2eWindow = window as Window & {
+      __recordingsPlaybackEvents?: { recordingId: string; state: string }[];
+    };
+
+    return e2eWindow.__recordingsPlaybackEvents?.some(
+      (event) => event.recordingId === "sheet-beta" && event.state === "playing"
+    );
+  });
+  await page.getByRole("button", { name: "Pause Recording" }).click();
+  await expect(page.getByTestId("recording-playback-status")).toBeHidden();
   await page.getByRole("link", { name: "Continue Practice" }).click();
   await expect(page).toHaveURL(/\/sheet-practice\?recordingId=sheet-beta&sheetId=sheet-42/);
+
+  await page.goto("/recordings");
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Duration mismatch");
+  await page.getByLabel("Type filter").selectOption("all");
+  await page.getByTestId("recording-row-mismatch-delta").click();
+  await expect(page.getByTestId("recording-duration-warning")).toContainText(
+    "differs from saved metadata"
+  );
 
   await page.goto("/recordings");
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Alpha");
@@ -270,5 +396,26 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await expect(page.getByTestId("recording-artifact-error")).toContainText("cannot be decoded");
   await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
 
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Trusted peaks missing");
+  await page.getByTestId("recording-row-trusted-missing").click();
+  await expect(page.getByTestId("recording-artifact-error")).toContainText(
+    "no accessible audio artifact"
+  );
+  await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Trusted peaks bad");
+  await page.getByTestId("recording-row-trusted-bad").click();
+  await expect(page.getByTestId("recording-artifact-error")).toContainText("cannot be decoded");
+  await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
+
+  const playbackRejections = await page.evaluate(() => {
+    const e2eWindow = window as Window & {
+      __recordingsPlaybackRejections?: string[];
+    };
+
+    return e2eWindow.__recordingsPlaybackRejections ?? [];
+  });
+
+  expect(playbackRejections).toEqual([]);
   expect(consoleErrors).toEqual([]);
 });

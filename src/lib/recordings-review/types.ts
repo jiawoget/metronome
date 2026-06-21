@@ -37,6 +37,9 @@ export type RecordingReviewSnapshot = {
 export type RecordingArtifactDetails = {
   recordingId: string;
   decodedDurationMs: number;
+  metadataDurationMs: number;
+  durationDifferenceMs: number;
+  durationWarning: string | null;
   peaks: number[];
   source: "decoded-audio" | "trusted-peaks";
 };

@@ -10,6 +10,9 @@ export class RecordingArtifactError extends Error {
   }
 }
 
+const MIN_DURATION_TOLERANCE_MS = 250;
+const DURATION_TOLERANCE_RATIO = 0.1;
+
 function getAudioContextConstructor() {
   if (typeof window === "undefined") {
     return null;
@@ -19,6 +22,27 @@ function getAudioContextConstructor() {
     typeof globalThis & { webkitAudioContext?: typeof AudioContext };
 
   return audioWindow.AudioContext || audioWindow.webkitAudioContext || null;
+}
+
+export function getDurationWarning({
+  decodedDurationMs,
+  metadataDurationMs
+}: {
+  decodedDurationMs: number;
+  metadataDurationMs: number;
+}) {
+  const durationDifferenceMs = Math.abs(decodedDurationMs - metadataDurationMs);
+  const toleranceMs = Math.max(MIN_DURATION_TOLERANCE_MS, metadataDurationMs * DURATION_TOLERANCE_RATIO);
+
+  if (durationDifferenceMs <= toleranceMs) {
+    return null;
+  }
+
+  return `Decoded audio duration (${(decodedDurationMs / 1_000).toFixed(1)}s) differs from saved metadata (${(metadataDurationMs / 1_000).toFixed(1)}s).`;
+}
+
+export function normalizeTrustedPeaks(peaks: number[]) {
+  return peaks.map((peak) => Math.max(0, Math.min(1, peak)));
 }
 
 export function derivePeaksFromSamples(samples: Float32Array, peakCount = 48) {
@@ -71,30 +95,32 @@ async function decodeAudioDataUrl(audioDataUrl: string) {
 export async function loadRecordingArtifactDetails(
   recording: ReviewRecording
 ): Promise<RecordingArtifactDetails> {
-  if (recording.trustedPeaks && recording.trustedPeaks.length > 0) {
-    return {
-      recordingId: recording.id,
-      decodedDurationMs: recording.artifactAnalysis?.decodedDurationMs ?? recording.durationMs,
-      peaks: recording.trustedPeaks.map((peak) => Math.max(0, Math.min(1, peak))),
-      source: "trusted-peaks"
-    };
-  }
-
   if (!recording.audioDataUrl) {
     throw new RecordingArtifactError("This recording has no accessible audio artifact.");
   }
 
   const audioBuffer = await decodeAudioDataUrl(recording.audioDataUrl);
-  const peaks = derivePeaksFromSamples(audioBuffer.getChannelData(0));
+  const decodedPeaks = derivePeaksFromSamples(audioBuffer.getChannelData(0));
 
-  if (peaks.length === 0 || Math.max(...peaks) <= 0) {
+  if (decodedPeaks.length === 0 || Math.max(...decodedPeaks) <= 0) {
     throw new RecordingArtifactError("This recording artifact decoded as empty audio.");
   }
 
+  const decodedDurationMs = audioBuffer.duration * 1_000;
+  const trustedPeaks = recording.trustedPeaks;
+  const useTrustedPeaks = !!trustedPeaks && trustedPeaks.length > 0;
+  const durationWarning = getDurationWarning({
+    decodedDurationMs,
+    metadataDurationMs: recording.durationMs
+  });
+
   return {
     recordingId: recording.id,
-    decodedDurationMs: audioBuffer.duration * 1_000,
-    peaks,
-    source: "decoded-audio"
+    decodedDurationMs,
+    metadataDurationMs: recording.durationMs,
+    durationDifferenceMs: Math.abs(decodedDurationMs - recording.durationMs),
+    durationWarning,
+    peaks: useTrustedPeaks ? normalizeTrustedPeaks(trustedPeaks) : decodedPeaks,
+    source: useTrustedPeaks ? "trusted-peaks" : "decoded-audio"
   };
 }
