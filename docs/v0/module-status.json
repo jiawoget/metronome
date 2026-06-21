@@ -324,42 +324,43 @@
                                              },
 	                          "verification":  {
 	                                               "requiredSeparateAgent":  true,
-	                                               "agent":  "GPT-5.4 Mini",
-	                                               "completedAt":  "2026-06-21T10:23:17Z",
+	                                               "agent":  "GPT-5.4 mini",
+	                                               "completedAt":  "2026-06-21T10:46:25Z",
 	                                               "result":  "PASS",
 	                                               "acceptanceCriteria":  [
-	                                                                      "PASS: Open Recordings shows the empty state when no recordings are saved.",
+	                                                                      "PASS: Opening /recordings shows the empty state when no recordings are saved.",
 	                                                                      "PASS: Saved recordings appear in one unified list with search and quick/sheet filters.",
-	                                                                      "PASS: Recording details show metadata, linked sheet name, error markers, and continue practice routes.",
-	                                                                      "PASS: Playback uses real decodable artifacts and did not swallow playback rejection.",
-	                                                                      "PASS: Waveform evidence came from decoded audio or trusted peaks only after audio validation.",
-	                                                                      "PASS: Delete removed metadata, reload kept it gone, and the artifact was no longer accessible.",
-	                                                                      "PASS: Bad or missing audio showed clear errors and trustedPeaks did not mask failure.",
-	                                                                      "PASS: Decoded duration mismatch surfaced as a visible warning.",
+	                                                                      "PASS: Continue Practice for a quick recording routes to /quick-metronome and the continued take is created as a new recording id and session instead of overwriting the source take.",
+	                                                                      "PASS: The original quick recording metadata and audioDataUrl remained unchanged after recording again from Continue Practice.",
+	                                                                      "PASS: The continued quick recording duration matched its decoded artifact and the normal path did not show a duration mismatch warning.",
+	                                                                      "PASS: The seeded mismatch fixture still showed Decoded audio duration differs from saved metadata.",
+	                                                                      "PASS: Continue Practice for sheet recordings routed only to the /sheet-practice shell.",
 	                                                                      "PASS: Browser console and pageerror stayed clean across the tested flows."
 	                                                                      ],
 	                                               "e2eEvidence":  [
-	                                                               "Playwright browser run: tests/e2e/recordings-review.spec.ts exercised the empty state, seeded real WAV recordings, search, quick and sheet filters, details, decoded waveform evidence, playback, continue practice routing, delete persistence, bad audio handling, trustedPeaks validation, and duration mismatch warning.",
-	                                                               "Playwright browser run also completed the related app-shell and quick-metronome coverage in the same test invocation, and the recordings review spec observed no swallowed playback rejection."
+	                                                               "Playwright run: tests/e2e/recordings-review.spec.ts exercised the quick continue-practice round trip, verified the original quick-alpha snapshot stayed immutable, confirmed the continued take used a new id/session and appeared as a new list item, checked the normal-path duration warning stayed hidden, asserted the mismatch fixture warning still rendered, and confirmed sheet Continue Practice routed to the /sheet-practice shell.",
+	                                                               "The same Playwright invocation also completed the related app-shell and quick-metronome coverage with no swallowed playback rejection."
 	                                                               ],
 	                                               "specializedEvidence":  [
-	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date, audited 481 packages, found 0 vulnerabilities.",
+	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date, audited 481 packages in 1s, found 0 vulnerabilities.",
 	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm audit -> found 0 vulnerabilities.",
 	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS.",
 	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS.",
-	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 10 test files passed, 33 tests passed.",
+	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 10 test files passed, 34 tests passed.",
 	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed and prerendered /recordings.",
-	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 4 chromium tests passed."
+	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 4 chromium tests passed.",
+	                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && local port check after Playwright -> PASS; port 3101 was closed when Playwright exited."
 	                                                                       ],
 	                                               "persistenceEvidence":  [
-	                                                                       "Deleted recording disappeared from the list, remained absent after page reload, and localStorage no longer contained the recording record or its linked error markers.",
-	                                                                       "Continue Practice routed quick recordings to /quick-metronome and sheet recordings to /sheet-practice?recordingId=...&sheetId=...."
+	                                                                       "quick-alpha kept the same id, sessionId, audioDataUrl, durationMs, sizeBytes, mimeType, artifactAnalysis, and settings after Continue Practice and recording again.",
+	                                                                       "The continued quick take was saved as a separate recording with a different id and sessionId and appeared as a new list item after returning to /recordings.",
+	                                                                       "The mismatch fixture still surfaced the duration warning, while the normal continued take did not."
 	                                                                       ],
 	                                               "consoleStatus":  "PASS; the tested flows captured no console.error entries and no pageerror events.",
 	                                               "issues":  [
 
 	                                                          ],
-	                                               "commitHash":  "bca4102b1c7cb5fb62b31fefa430dba1a877b2b3"
+	                                               "commitHash":  "86c16e726ea59fe5b48ec213b71d1c9b1b985f67"
 	                                           }
 	                      },
                       {
