@@ -194,7 +194,7 @@ async function deleteSheetRecord(page: Page, sheetId: string) {
   );
 }
 
-test("sheet practice session starts only on activity, persists, links metadata, and drives continue", async ({
+test("sheet practice session starts only on activity, persists, keeps recording independent, and drives continue", async ({
   page
 }) => {
   const consoleErrors: string[] = [];
@@ -213,7 +213,7 @@ test("sheet practice session starts only on activity, persists, links metadata, 
 
   await link.click();
   await expect(page.getByRole("heading", { name: "Session Contract Sheet" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sheet Practice Session" })).toBeVisible();
+  await expect(page.getByTestId("sheet-practice-controls")).toBeVisible();
   await expect(page.getByTestId("sheet-session-id")).toHaveText("none");
   expect(await getPracticeSnapshot(page)).toEqual({ sessions: [], recordings: [] });
 
@@ -223,10 +223,10 @@ test("sheet practice session starts only on activity, persists, links metadata, 
   await page.goto(`/sheet-practice/${sheetId}`);
   await expect(page.getByRole("heading", { name: "Session Contract Sheet" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Start metronome trigger" }).click();
+  await page.getByRole("button", { name: "Start metronome" }).click();
   await expect(page.getByTestId("sheet-session-source")).toHaveText("sheet");
   await expect(page.getByTestId("sheet-session-sheet-id")).toHaveText(sheetId);
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("active");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
   await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
 
   let snapshot = await getPracticeSnapshot(page);
@@ -242,10 +242,10 @@ test("sheet practice session starts only on activity, persists, links metadata, 
 
   const sessionId = snapshot.sessions[0]?.id ?? "";
 
-  await page.getByRole("button", { name: "Stop metronome trigger" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("stopped");
+  await page.getByRole("button", { name: "Stop metronome" }).click();
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Practice Session" })).toBeVisible();
+  await expect(page.getByTestId("sheet-practice-controls")).toBeVisible();
   await expect(page.getByTestId("sheet-session-id")).toHaveText(sessionId);
 
   await page.goto("/");
@@ -256,41 +256,31 @@ test("sheet practice session starts only on activity, persists, links metadata, 
   await continueLink.click();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
 
-  await page.getByRole("button", { name: "Start recording trigger" }).click();
+  await page.getByRole("button", { name: "Start recording harness" }).click();
   await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("stopped");
-  await page.getByRole("button", { name: "Start metronome trigger" }).click();
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  await page.getByRole("button", { name: "Start metronome" }).click();
   await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("active");
-  await page.getByRole("button", { name: "Stop metronome trigger" }).click();
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
+  await page.getByRole("button", { name: "Stop metronome" }).click();
   await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("stopped");
-  await page.getByRole("button", { name: "Stop recording trigger" }).click();
-  await expect(page.getByTestId("sheet-recording-count")).toContainText("1");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  await page.getByRole("button", { name: "Stop recording harness" }).click();
+  await expect(page.getByTestId("sheet-recording-count")).toContainText("0");
 
-  await page.getByRole("button", { name: "Start metronome trigger" }).click();
-  await page.getByRole("button", { name: "Start recording trigger" }).click();
-  await page.getByRole("button", { name: "Stop recording trigger" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("active");
+  await page.getByRole("button", { name: "Start metronome" }).click();
+  await page.getByRole("button", { name: "Start recording harness" }).click();
+  await page.getByRole("button", { name: "Stop recording harness" }).click();
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
   await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
-  await page.getByRole("button", { name: "Stop metronome trigger" }).click();
+  await page.getByRole("button", { name: "Stop metronome" }).click();
 
   snapshot = await getPracticeSnapshot(page);
   expect(snapshot.sessions).toHaveLength(1);
   expect(snapshot.sessions[0]?.id).toBe(sessionId);
-  expect(snapshot.sessions[0]?.recordingCount).toBe(2);
-  expect(snapshot.recordings.map((recording) => recording.id)).toContain(snapshot.sessions[0]?.latestRecordingId);
-  expect(snapshot.recordings).toHaveLength(2);
-  expect(snapshot.recordings.every((recording) => recording.sessionId === sessionId && recording.sheetId === sheetId)).toBe(true);
-  expect(snapshot.recordings.every((recording) => recording.audioDataUrl === null)).toBe(true);
-
-  await page.goto("/recordings");
-  await expect(page.getByRole("heading", { name: "Recordings" })).toBeVisible();
-  await page.getByRole("textbox", { name: "Search recordings" }).fill("Session Contract Sheet");
-  await expect(page.getByTestId("recordings-list")).toBeVisible();
-  await expect(page.getByText("Sheet practice metadata").first()).toBeVisible();
-  await expect(page.getByText("Session Contract Sheet").first()).toBeVisible();
-  await expect(page.getByTestId("recording-artifact-error")).toContainText("no accessible audio artifact");
+  expect(snapshot.sessions[0]?.recordingCount).toBe(0);
+  expect(snapshot.sessions[0]?.latestRecordingId).toBeNull();
+  expect(snapshot.recordings).toEqual([]);
 
   await deleteSheetRecord(page, sheetId);
   await page.goto("/");
@@ -299,7 +289,7 @@ test("sheet practice session starts only on activity, persists, links metadata, 
 
   await page.goto("/sheet-practice/unknown-sheet");
   await expect(page.getByText("Sheet not found")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start metronome trigger" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Start metronome" })).toHaveCount(0);
   snapshot = await getPracticeSnapshot(page);
   expect(snapshot.sessions.some((session) => session.sheetId === "unknown-sheet")).toBe(false);
 

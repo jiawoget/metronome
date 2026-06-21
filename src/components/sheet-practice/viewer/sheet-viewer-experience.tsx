@@ -6,7 +6,7 @@ import { AlertTriangle, ChevronLeft, ChevronRight, FileImage, FileText, Minus, P
 import { useEffect, useMemo, useState } from "react";
 
 import type { SheetArtifactFile } from "@/domain/sheet";
-import { SheetPracticeSessionHarness } from "@/components/sheet-practice/session/sheet-practice-session-harness";
+import { SheetPracticeControls } from "@/components/sheet-practice/controls/sheet-practice-controls";
 import { browserSheetViewerService } from "@/infrastructure/sheet-viewer/browser-sheet-viewer-service";
 import { useBrowserSheetViewerObjectUrls } from "@/infrastructure/sheet-viewer/use-browser-sheet-viewer-object-urls";
 import {
@@ -191,11 +191,10 @@ function SheetViewerReady({ state }: { state: Extract<SheetViewerLoadState, { st
   const imageWidth = Math.round(imageBaseWidth * zoom);
 
   return (
-    <>
-      <SheetPracticeSessionHarness sheetId={state.sheet.id} />
+    <div className="mx-auto flex h-[calc(100vh-7rem)] min-h-[720px] w-full max-w-7xl flex-col gap-3">
       <section
         aria-labelledby="sheet-viewer-title"
-        className="mx-auto flex h-[calc(100vh-13rem)] min-h-[520px] w-full max-w-7xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-soft"
+        className="flex min-h-[360px] flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-soft"
       >
         <span id="sheet-viewer-title" className="sr-only">
           Sheet viewer
@@ -250,7 +249,13 @@ function SheetViewerReady({ state }: { state: Extract<SheetViewerLoadState, { st
           ) : null}
         </div>
       </section>
-    </>
+      <SheetPracticeControls
+        sheetId={state.sheet.id}
+        sheetName={state.sheet.name}
+        defaultBpm={state.sheet.bpm}
+        defaultTimeSignature={state.sheet.timeSignature}
+      />
+    </div>
   );
 }
 
