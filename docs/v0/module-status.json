@@ -583,22 +583,49 @@
                                             },
                       {
                           "module":  "05e-session-integration",
-                          "status":  "contract_ready",
+                          "status":  "implementation_done",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
-                                                 "agent":  null,
-                                                 "completedAt":  null,
+                                                 "agent":  "GPT-5 Codex (no fast tier)",
+                                                 "completedAt":  "2026-06-21T13:36:35Z",
                                                  "selfTests":  [
-
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/practice-session-service.test.ts tests/unit/sheet-library-service.test.ts tests/unit/home-dashboard.test.tsx -> PASS; 3 test files passed, 11 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 14 test files passed, 51 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-practice-session.spec.ts -> PASS; 1 chromium test passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 9 chromium tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free"
                                                                ],
                                                  "handoffNotes":  [
-
+                                                     "Assigned feature: 05e-session-integration.",
+                                                     "Coding model used: GPT-5 Codex, no fast tier.",
+                                                     "Implemented only the Sheet Practice session integration contract scope: sourceType sheet session creation/restoration, sheetId binding, basic duration, lastPracticedAt updates, recent/Continue Practice target, persistence, and invalid sheet guard.",
+                                                     "Added a clearly scoped 05e Sheet Practice session harness because 05b/05c UI controls are not implemented yet; it emits high-level metronome and recording triggers without pretending those submodules are complete.",
+                                                     "Recording trigger support creates only sheet recording metadata linked to sessionId and sheetId; it does not create recording audio artifacts or call MediaRecorder.",
+                                                     "Metronome and recording trigger states remain independent at the session metadata boundary: each can start or stop without forcing the other state to change.",
+                                                     "Sheet Practice UI talks to the practice-session service boundary and does not call Tone.js, MediaRecorder, Dexie, recording internals, or viewer/storage internals directly.",
+                                                     "Home Continue Practice now reads the recent practice-session target and routes sheet sessions to /sheet-practice/[sheetId].",
+                                                     "Implementation commit hash is reported in the final handoff response because this status commit cannot contain its own final object hash."
                                                                   ],
                                                  "changedAreas":  [
-
+                                                     "src/domain/practice adds sheet/quick practice session, sheet recording metadata, Continue Practice target, duration, and independent trigger rules",
+                                                     "src/services/practice-session adds the service/repository boundary for sheet session creation/restoration, duration updates, recording metadata linking, recent session, Continue Practice target, and clear/subscribe",
+                                                     "src/infrastructure/db adds the Dexie-backed browser practice-session repository and browser service composition",
+                                                     "src/services/sheet-library and src/infrastructure/files add a bounded lastPracticedAt update API used by 05e",
+                                                     "src/components/sheet-practice/session adds the minimal 05e session trigger harness for contract verification before 05b/05c UI exists",
+                                                     "src/components/sheet-practice/viewer/sheet-viewer-experience.tsx composes the 05e harness only for a valid loaded sheet",
+                                                     "src/hooks/use-practice-session-dashboard.ts and src/components/home/home-dashboard.tsx wire the recent Continue Practice target",
+                                                     "tests/unit/practice-session-service.test.ts covers 05e session rules and trigger independence",
+                                                     "tests/e2e/sheet-practice-session.spec.ts covers real browser sheet import, no-session-on-view, metronome-only, recording metadata, independence, reload persistence, Continue Practice, last practiced, and unknown sheet guard"
                                                                   ],
                                                  "knownRisks":  [
-
+                                                     "The Sheet Practice controls are intentionally a minimal 05e harness until 05b practice controls and 05c sheet recording UI are implemented; final parent integration must repeat these checks through real controls.",
+                                                     "The 05e recording path persists metadata only and deliberately has no audio artifact, waveform, replay, or MediaRecorder behavior.",
+                                                     "Practice duration is a basic elapsed-time calculation from session start to the latest trigger/update, not a precise play/pause event timeline.",
+                                                     "Home summary uses the currently loaded recent session for 05e continuity and is not a full 08-practice-session history aggregation implementation.",
+                                                     "The local port cleanup check needed unsandboxed execution because sandboxed Node port binding returned EPERM; the unsandboxed one-shot bind check confirmed port 3101 was free."
                                                                 ],
                                                  "commitHash":  null
                                              },

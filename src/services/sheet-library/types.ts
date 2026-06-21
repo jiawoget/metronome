@@ -38,6 +38,7 @@ export type SheetLibraryRepository = {
   listSheets: () => Promise<ImportedSheet[]>;
   getSheet: (sheetId: string) => Promise<ImportedSheet | null>;
   saveSheet: (sheet: ImportedSheet, artifact: SheetArtifact) => Promise<void>;
+  updateLastPracticedAt: (sheetId: string, practicedAt: string) => Promise<void>;
   getArtifact: (sheetId: string) => Promise<SheetArtifact | null>;
   deleteSheet: (sheetId: string) => Promise<void>;
 };
@@ -52,6 +53,7 @@ export type SheetLibraryService = {
   getSheet: (sheetId: string) => Promise<SheetListItem | null>;
   previewImport: (files: File[]) => Promise<SheetImportResult>;
   importSheet: (input: ImportSheetInput) => Promise<{ ok: true; sheet: SheetListItem } | { ok: false; message: string }>;
+  updateLastPracticedAt: (sheetId: string, practicedAt: string) => Promise<void>;
   deleteSheet: (sheetId: string) => Promise<void>;
   getArtifact: (sheetId: string) => Promise<SheetArtifact | null>;
 };

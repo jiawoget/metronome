@@ -22,6 +22,17 @@ function createMemoryRepository(): SheetLibraryRepository {
       sheets.set(sheet.id, sheet);
       artifacts.set(sheet.id, artifact);
     },
+    async updateLastPracticedAt(sheetId, practicedAt) {
+      const sheet = sheets.get(sheetId);
+
+      if (sheet) {
+        sheets.set(sheetId, {
+          ...sheet,
+          lastPracticedAt: practicedAt,
+          updatedAt: practicedAt
+        });
+      }
+    },
     async getArtifact(sheetId) {
       return artifacts.get(sheetId) ?? null;
     },

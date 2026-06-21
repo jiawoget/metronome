@@ -106,6 +106,10 @@ export function createSheetLibraryService({
       };
     },
 
+    updateLastPracticedAt(sheetId, practicedAt) {
+      return repository.updateLastPracticedAt(sheetId, practicedAt);
+    },
+
     deleteSheet(sheetId) {
       return repository.deleteSheet(sheetId);
     },

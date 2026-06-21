@@ -6,6 +6,7 @@ import { AlertTriangle, ChevronLeft, ChevronRight, FileImage, FileText, Minus, P
 import { useEffect, useMemo, useState } from "react";
 
 import type { SheetArtifactFile } from "@/domain/sheet";
+import { SheetPracticeSessionHarness } from "@/components/sheet-practice/session/sheet-practice-session-harness";
 import { browserSheetViewerService } from "@/infrastructure/sheet-viewer/browser-sheet-viewer-service";
 import { useBrowserSheetViewerObjectUrls } from "@/infrastructure/sheet-viewer/use-browser-sheet-viewer-object-urls";
 import {
@@ -190,63 +191,66 @@ function SheetViewerReady({ state }: { state: Extract<SheetViewerLoadState, { st
   const imageWidth = Math.round(imageBaseWidth * zoom);
 
   return (
-    <section
-      aria-labelledby="sheet-viewer-title"
-      className="mx-auto flex h-[calc(100vh-8rem)] min-h-[520px] w-full max-w-7xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-soft"
-    >
-      <span id="sheet-viewer-title" className="sr-only">
-        Sheet viewer
-      </span>
-      <SheetViewerToolbar
-        kind={state.sheet.kind}
-        sheetName={state.sheet.name}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        zoom={zoom}
-        onPrevious={() => setCurrentPage((page) => Math.max(1, page - 1))}
-        onNext={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-        onZoomOut={() => setZoom((current) => stepSheetViewerZoom(current, "out"))}
-        onZoomIn={() => setZoom((current) => stepSheetViewerZoom(current, "in"))}
-      />
-
-      <div
-        data-testid="sheet-viewer-scroll"
-        className="min-h-0 flex-1 overflow-auto bg-muted p-4 md:p-6"
+    <>
+      <SheetPracticeSessionHarness sheetId={state.sheet.id} />
+      <section
+        aria-labelledby="sheet-viewer-title"
+        className="mx-auto flex h-[calc(100vh-13rem)] min-h-[520px] w-full max-w-7xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-soft"
       >
-        <div className="mx-auto flex min-h-full w-fit min-w-full items-start justify-center">
-          {state.sheet.kind === "pdf" ? (
-            <PdfSheetRenderer
-              file={state.artifact.files[0]?.blob ?? pageUrl}
-              pageNumber={currentPage}
-              width={pdfWidth}
-              renderError={renderError}
-              onRenderReady={(numPages) => {
-                setRenderError(null);
-                if (numPages > 0 && currentPage > numPages) {
-                  setCurrentPage(numPages);
-                }
-              }}
-              onRenderError={(error) => setRenderError(`PDF cannot be rendered: ${error.message}`)}
-            />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={pageUrl}
-              alt={`${state.sheet.name} page ${currentPage}`}
-              width={imageWidth}
-              className="max-w-none rounded-md bg-white shadow-soft [image-rendering:auto]"
-              onError={() => setRenderError("Image cannot be rendered")}
-              onLoad={() => setRenderError(null)}
-            />
-          )}
+        <span id="sheet-viewer-title" className="sr-only">
+          Sheet viewer
+        </span>
+        <SheetViewerToolbar
+          kind={state.sheet.kind}
+          sheetName={state.sheet.name}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          zoom={zoom}
+          onPrevious={() => setCurrentPage((page) => Math.max(1, page - 1))}
+          onNext={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+          onZoomOut={() => setZoom((current) => stepSheetViewerZoom(current, "out"))}
+          onZoomIn={() => setZoom((current) => stepSheetViewerZoom(current, "in"))}
+        />
+
+        <div
+          data-testid="sheet-viewer-scroll"
+          className="min-h-0 flex-1 overflow-auto bg-muted p-4 md:p-6"
+        >
+          <div className="mx-auto flex min-h-full w-fit min-w-full items-start justify-center">
+            {state.sheet.kind === "pdf" ? (
+              <PdfSheetRenderer
+                file={state.artifact.files[0]?.blob ?? pageUrl}
+                pageNumber={currentPage}
+                width={pdfWidth}
+                renderError={renderError}
+                onRenderReady={(numPages) => {
+                  setRenderError(null);
+                  if (numPages > 0 && currentPage > numPages) {
+                    setCurrentPage(numPages);
+                  }
+                }}
+                onRenderError={(error) => setRenderError(`PDF cannot be rendered: ${error.message}`)}
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={pageUrl}
+                alt={`${state.sheet.name} page ${currentPage}`}
+                width={imageWidth}
+                className="max-w-none rounded-md bg-white shadow-soft [image-rendering:auto]"
+                onError={() => setRenderError("Image cannot be rendered")}
+                onLoad={() => setRenderError(null)}
+              />
+            )}
+          </div>
+          {renderError ? (
+            <p role="alert" className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {renderError}. Reimport the sheet from Sheet Library.
+            </p>
+          ) : null}
         </div>
-        {renderError ? (
-          <p role="alert" className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-            {renderError}. Reimport the sheet from Sheet Library.
-          </p>
-        ) : null}
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
 

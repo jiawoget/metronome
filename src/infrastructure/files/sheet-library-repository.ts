@@ -50,6 +50,20 @@ export const sheetLibraryRepository: SheetLibraryRepository = {
     });
   },
 
+  async updateLastPracticedAt(sheetId, practicedAt) {
+    const sheet = await getDatabase().sheets.get(sheetId);
+
+    if (!sheet) {
+      return;
+    }
+
+    await getDatabase().sheets.put({
+      ...sheet,
+      lastPracticedAt: practicedAt,
+      updatedAt: practicedAt
+    });
+  },
+
   async getArtifact(sheetId) {
     return (await getDatabase().artifacts.get(sheetId)) ?? null;
   },

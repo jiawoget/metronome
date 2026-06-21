@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ArrowRight,
   FileUp,
@@ -11,6 +13,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { usePracticeSessionDashboard, type PracticeSessionDashboardState } from "@/hooks/use-practice-session-dashboard";
 
 export type HomeDashboardData = {
   summary: {
@@ -19,6 +22,7 @@ export type HomeDashboardData = {
     recordingsToday: number;
   };
   recentSession: null;
+  continueTarget: null;
   recentSheets: [];
   recentRecordings: [];
 };
@@ -30,11 +34,15 @@ export const emptyHomeDashboardData: HomeDashboardData = {
     recordingsToday: 0
   },
   recentSession: null,
+  continueTarget: null,
   recentSheets: [],
   recentRecordings: []
 };
 
 export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDashboardData }) {
+  const liveData = usePracticeSessionDashboard();
+  const dashboardData: HomeDashboardData | PracticeSessionDashboardState = data === emptyHomeDashboardData ? liveData : data;
+
   return (
     <section aria-labelledby="home-title" className="mx-auto flex w-full max-w-6xl flex-col gap-5">
       <header className="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
@@ -80,18 +88,37 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
                 </p>
               </Link>
 
-              <div className="rounded-md border border-border bg-muted px-4 py-4">
-                <div className="flex items-start justify-between gap-3">
-                  <Music2 className="h-6 w-6 text-accent" aria-hidden="true" />
-                  <span className="rounded-md border border-border bg-card px-2 py-1 text-xs font-medium text-muted-foreground">
-                    Empty
-                  </span>
+              {dashboardData.continueTarget ? (
+                <Link
+                  href={dashboardData.continueTarget.href}
+                  aria-label="Continue Practice"
+                  className="group rounded-md border border-border bg-card px-4 py-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <Music2 className="h-6 w-6 text-accent" aria-hidden="true" />
+                    <ArrowRight className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                  </div>
+                  <h2 className="mt-5 text-lg font-semibold">Continue Practice</h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    {dashboardData.continueTarget.sourceType === "sheet"
+                      ? "Resume the most recent sheet practice session."
+                      : "Resume the most recent quick practice session."}
+                  </p>
+                </Link>
+              ) : (
+                <div className="rounded-md border border-border bg-muted px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <Music2 className="h-6 w-6 text-accent" aria-hidden="true" />
+                    <span className="rounded-md border border-border bg-card px-2 py-1 text-xs font-medium text-muted-foreground">
+                      Empty
+                    </span>
+                  </div>
+                  <h2 className="mt-5 text-lg font-semibold">Continue Practice</h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    No recent practice session yet. Resume controls will appear after session data exists.
+                  </p>
                 </div>
-                <h2 className="mt-5 text-lg font-semibold">Continue Practice</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  No recent practice session yet. Resume controls will appear after session data exists.
-                </p>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -104,15 +131,15 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
             <dl className="grid grid-cols-3 gap-3">
               <div className="rounded-md border border-border bg-muted px-3 py-3">
                 <dt className="text-xs font-medium text-muted-foreground">Minutes</dt>
-                <dd className="mt-2 text-2xl font-semibold">{data.summary.minutesToday}</dd>
+                <dd className="mt-2 text-2xl font-semibold">{dashboardData.summary.minutesToday}</dd>
               </div>
               <div className="rounded-md border border-border bg-muted px-3 py-3">
                 <dt className="text-xs font-medium text-muted-foreground">Sessions</dt>
-                <dd className="mt-2 text-2xl font-semibold">{data.summary.sessionsToday}</dd>
+                <dd className="mt-2 text-2xl font-semibold">{dashboardData.summary.sessionsToday}</dd>
               </div>
               <div className="rounded-md border border-border bg-muted px-3 py-3">
                 <dt className="text-xs font-medium text-muted-foreground">Recordings</dt>
-                <dd className="mt-2 text-2xl font-semibold">{data.summary.recordingsToday}</dd>
+                <dd className="mt-2 text-2xl font-semibold">{dashboardData.summary.recordingsToday}</dd>
               </div>
             </dl>
           </CardContent>
