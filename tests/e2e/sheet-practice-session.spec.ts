@@ -7,6 +7,7 @@ const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
 const sheetDbName = "metronome-practice-v0-sheet-library";
 const practiceDbName = "metronome-practice-v0-practice-sessions";
 const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
+const recordingHarnessEvent = "sheet-practice-controls:set-recording-harness-active";
 
 async function deleteDatabase(page: Page, databaseName: string) {
   await page.evaluate(
@@ -208,6 +209,14 @@ test("sheet practice session starts only on activity, persists, keeps recording 
     consoleErrors.push(error.message);
   });
 
+  await page.addInitScript(() => {
+    const e2eWindow = window as Window & {
+      __sheetPracticeControlsTestHarness?: boolean;
+    };
+
+    e2eWindow.__sheetPracticeControlsTestHarness = true;
+  });
+
   await clearDatabases(page);
   const { link, sheetId } = await importSheet(page);
 
@@ -256,7 +265,12 @@ test("sheet practice session starts only on activity, persists, keeps recording 
   await continueLink.click();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
 
-  await page.getByRole("button", { name: "Start recording harness" }).click();
+  await expect(page.getByRole("button", { name: "Start recording harness" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Stop recording harness" })).toHaveCount(0);
+
+  await page.evaluate((eventName) => {
+    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: true } }));
+  }, recordingHarnessEvent);
   await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
   await page.getByRole("button", { name: "Start metronome" }).click();
@@ -265,12 +279,16 @@ test("sheet practice session starts only on activity, persists, keeps recording 
   await page.getByRole("button", { name: "Stop metronome" }).click();
   await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
-  await page.getByRole("button", { name: "Stop recording harness" }).click();
+  await page.evaluate((eventName) => {
+    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: false } }));
+  }, recordingHarnessEvent);
   await expect(page.getByTestId("sheet-recording-count")).toContainText("0");
 
   await page.getByRole("button", { name: "Start metronome" }).click();
-  await page.getByRole("button", { name: "Start recording harness" }).click();
-  await page.getByRole("button", { name: "Stop recording harness" }).click();
+  await page.evaluate((eventName) => {
+    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: true } }));
+    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: false } }));
+  }, recordingHarnessEvent);
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
   await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
   await page.getByRole("button", { name: "Stop metronome" }).click();

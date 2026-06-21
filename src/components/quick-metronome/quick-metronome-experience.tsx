@@ -24,13 +24,11 @@ import {
   TIME_SIGNATURES,
   calculateTapTempo,
   clampBpm,
-  commitBpmDraft,
   getTickIntervalMs,
   parseAccentMode,
   parseCountdownBeats,
   parseSubdivision,
   parseTimeSignature,
-  stepBpm
 } from "@/lib/quick-metronome/control";
 import { BrowserMetronomeService, type MetronomeTick } from "@/lib/quick-metronome/metronome-service";
 import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
@@ -45,6 +43,7 @@ import {
   type PracticeSession,
   type Subdivision
 } from "@/lib/quick-metronome/types";
+import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
 
 type TransportState = "stopped" | "counting" | "playing";
 type RecordingState = "idle" | "recording" | "saving";
@@ -71,7 +70,6 @@ export function QuickMetronomeExperience() {
   const [currentSession, setCurrentSession] = useState<PracticeSession | null>(null);
   const [countdownRemaining, setCountdownRemaining] = useState(0);
   const [lastTick, setLastTick] = useState<MetronomeTick | null>(null);
-  const [bpmDraft, setBpmDraft] = useState(String(DEFAULT_METRONOME_SETTINGS.bpm));
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [message, setMessage] = useState("Ready.");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -118,20 +116,10 @@ export function QuickMetronomeExperience() {
     }));
   }
 
-  function commitBpmInput() {
-    const nextBpm = commitBpmDraft(bpmDraft, settings.bpm);
-
-    updateSettings({ bpm: nextBpm });
-    setBpmDraft(String(nextBpm));
-  }
-
-  function stepBpmInput(direction: -1 | 1) {
-    const committedDraftBpm = commitBpmDraft(bpmDraft, settings.bpm);
-    const nextBpm = stepBpm(committedDraftBpm, direction);
-
-    updateSettings({ bpm: nextBpm });
-    setBpmDraft(String(nextBpm));
-  }
+  const { bpmDraft, setBpmDraft, commitBpmInput, stepBpmInput } = useMetronomeBpmDraft(
+    settings.bpm,
+    (nextBpm) => updateSettings({ bpm: nextBpm })
+  );
 
   async function startMetronome() {
     setErrorMessage(null);

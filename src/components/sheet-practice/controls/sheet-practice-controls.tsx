@@ -4,7 +4,6 @@ import {
   ChevronDown,
   ChevronUp,
   Circle,
-  Mic,
   Play,
   Radio,
   Square,
@@ -20,13 +19,11 @@ import {
   SUBDIVISIONS,
   TIME_SIGNATURES,
   clampBpm,
-  commitBpmDraft,
   getTickIntervalMs,
   parseAccentMode,
   parseCountdownBeats,
   parseSubdivision,
-  parseTimeSignature,
-  stepBpm
+  parseTimeSignature
 } from "@/lib/quick-metronome/control";
 import { BrowserMetronomeService, type MetronomeTick } from "@/lib/quick-metronome/metronome-service";
 import {
@@ -36,16 +33,37 @@ import {
   type MetronomeSettings,
   type Subdivision
 } from "@/lib/quick-metronome/types";
+import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
+import type { PracticeSessionService } from "@/services/practice-session";
 import { Button } from "@/components/ui/button";
-import { createSheetPracticeMetronomeSettings } from "@/components/sheet-practice/controls/practice-control-state";
+import {
+  createSheetPracticeControlInitialState,
+  formatUnsupportedTimeSignatureMessage
+} from "@/components/sheet-practice/controls/practice-control-state";
 
 type TransportState = "stopped" | "counting" | "playing";
+
+export const SHEET_RECORDING_HARNESS_EVENT = "sheet-practice-controls:set-recording-harness-active";
+
+type SheetPracticeMetronomeService = Pick<BrowserMetronomeService, "onTick" | "update" | "start" | "stop">;
+
+type SheetPracticeSessionService = Pick<
+  PracticeSessionService,
+  | "ensureSheetSession"
+  | "updateSheetSessionDuration"
+  | "endPracticeSession"
+  | "getRecentSession"
+  | "listRecordingMetadata"
+  | "subscribe"
+>;
 
 type SheetPracticeControlsProps = {
   sheetId: string;
   sheetName: string;
   defaultBpm: number | null;
   defaultTimeSignature: string | null;
+  createMetronomeService?: () => SheetPracticeMetronomeService;
+  sessionService?: SheetPracticeSessionService;
 };
 
 const subdivisionLabels: Record<Subdivision, string> = {
@@ -61,23 +79,28 @@ const accentLabels: Record<AccentMode, string> = {
   off: "Off"
 };
 
+function createBrowserMetronomeService() {
+  return new BrowserMetronomeService();
+}
+
 export function SheetPracticeControls({
   sheetId,
   sheetName,
   defaultBpm,
-  defaultTimeSignature
+  defaultTimeSignature,
+  createMetronomeService = createBrowserMetronomeService,
+  sessionService = browserPracticeSessionService
 }: SheetPracticeControlsProps) {
-  const initialSettings = useMemo(
+  const initialState = useMemo(
     () =>
-      createSheetPracticeMetronomeSettings({
+      createSheetPracticeControlInitialState({
         bpm: defaultBpm,
         timeSignature: defaultTimeSignature
       }),
     [defaultBpm, defaultTimeSignature]
   );
-  const metronomeService = useMemo(() => new BrowserMetronomeService(), []);
-  const [settings, setSettings] = useState<MetronomeSettings>(initialSettings);
-  const [bpmDraft, setBpmDraft] = useState(String(initialSettings.bpm));
+  const metronomeService = useMemo(() => createMetronomeService(), [createMetronomeService]);
+  const [settings, setSettings] = useState<MetronomeSettings>(initialState.settings);
   const [transportState, setTransportState] = useState<TransportState>("stopped");
   const [recordingHarnessActive, setRecordingHarnessActive] = useState(false);
   const [countdownRemaining, setCountdownRemaining] = useState(0);
@@ -90,14 +113,17 @@ export function SheetPracticeControls({
 
   const isPlaying = transportState === "playing";
   const isCounting = transportState === "counting";
+  const unsupportedTimeSignatureMessage = initialState.unsupportedTimeSignature
+    ? formatUnsupportedTimeSignatureMessage(initialState.unsupportedTimeSignature)
+    : null;
 
   const refreshSession = useCallback(async () => {
-    const recentSession = await browserPracticeSessionService.getRecentSession();
-    const allRecordings = await browserPracticeSessionService.listRecordingMetadata();
+    const recentSession = await sessionService.getRecentSession();
+    const allRecordings = await sessionService.listRecordingMetadata();
 
     setSession(recentSession?.sourceType === "sheet" && recentSession.sheetId === sheetId ? recentSession : null);
     setRecordings(allRecordings.filter((recording) => recording.sheetId === sheetId));
-  }, [sheetId]);
+  }, [sessionService, sheetId]);
 
   useEffect(() => {
     const unsubscribe = metronomeService.onTick((tick) => {
@@ -117,7 +143,7 @@ export function SheetPracticeControls({
     const timeoutId = window.setTimeout(() => {
       void refreshSession();
     }, 0);
-    const unsubscribe = browserPracticeSessionService.subscribe(() => {
+    const unsubscribe = sessionService.subscribe(() => {
       void refreshSession();
     });
 
@@ -125,7 +151,7 @@ export function SheetPracticeControls({
       window.clearTimeout(timeoutId);
       unsubscribe();
     };
-  }, [refreshSession]);
+  }, [refreshSession, sessionService]);
 
   useEffect(() => {
     return () => {
@@ -148,20 +174,47 @@ export function SheetPracticeControls({
     }));
   }
 
-  function commitBpmInput() {
-    const nextBpm = commitBpmDraft(bpmDraft, settings.bpm);
+  const { bpmDraft, setBpmDraft, commitBpmInput, stepBpmInput } = useMetronomeBpmDraft(
+    settings.bpm,
+    (nextBpm) => updateSettings({ bpm: nextBpm })
+  );
 
-    updateSettings({ bpm: nextBpm });
-    setBpmDraft(String(nextBpm));
-  }
+  useEffect(() => {
+    const harnessWindow = window as Window & {
+      __sheetPracticeControlsTestHarness?: boolean;
+    };
 
-  function stepBpmInput(direction: -1 | 1) {
-    const committedDraftBpm = commitBpmDraft(bpmDraft, settings.bpm);
-    const nextBpm = stepBpm(committedDraftBpm, direction);
+    if (harnessWindow.__sheetPracticeControlsTestHarness !== true) {
+      return;
+    }
 
-    updateSettings({ bpm: nextBpm });
-    setBpmDraft(String(nextBpm));
-  }
+    const handleRecordingHarnessEvent = (event: Event) => {
+      const active = Boolean((event as CustomEvent<{ active?: boolean }>).detail?.active);
+
+      setRecordingHarnessActive(active);
+      setMessage(
+        active
+          ? transportState === "playing"
+            ? "Recording harness active while metronome plays."
+            : "Recording harness active."
+          : transportState === "playing"
+            ? "Recording harness stopped; metronome keeps playing."
+            : "Recording harness stopped."
+      );
+
+      if (!active && transportState !== "playing" && session) {
+        void sessionService.endPracticeSession(session.id).then((nextSession) => {
+          setSession(nextSession);
+        });
+      }
+    };
+
+    window.addEventListener(SHEET_RECORDING_HARNESS_EVENT, handleRecordingHarnessEvent);
+
+    return () => {
+      window.removeEventListener(SHEET_RECORDING_HARNESS_EVENT, handleRecordingHarnessEvent);
+    };
+  }, [session, sessionService, transportState]);
 
   async function startMetronome() {
     setErrorMessage(null);
@@ -195,8 +248,7 @@ export function SheetPracticeControls({
 
   async function startPlaybackNow() {
     try {
-      await metronomeService.start(settings);
-      const nextSession = await browserPracticeSessionService.ensureSheetSession({
+      const nextSession = await sessionService.ensureSheetSession({
         sheetId,
         trigger: "metronome",
         bpm: settings.bpm,
@@ -210,12 +262,15 @@ export function SheetPracticeControls({
         return;
       }
 
+      await metronomeService.start(settings);
       setSession(nextSession);
       setTransportState("playing");
       setCountdownRemaining(0);
       setMessage(recordingHarnessActive ? "Metronome playing; recording harness stays active." : "Metronome playing.");
     } catch (error) {
+      metronomeService.stop();
       setTransportState("stopped");
+      setCountdownRemaining(0);
       setErrorMessage(error instanceof Error ? error.message : "Metronome playback failed.");
     }
   }
@@ -232,8 +287,8 @@ export function SheetPracticeControls({
 
     if (session) {
       const nextSession = recordingHarnessActive
-        ? await browserPracticeSessionService.updateSheetSessionDuration(session.id)
-        : await browserPracticeSessionService.endPracticeSession(session.id);
+        ? await sessionService.updateSheetSessionDuration(session.id)
+        : await sessionService.endPracticeSession(session.id);
 
       setSession(nextSession);
     }
@@ -243,23 +298,6 @@ export function SheetPracticeControls({
         ? "Metronome stopped; recording harness stays active."
         : "Metronome stopped."
     );
-  }
-
-  async function startRecordingHarness() {
-    setRecordingHarnessActive(true);
-    setMessage(isPlaying ? "Recording harness active while metronome plays." : "Recording harness active.");
-  }
-
-  async function stopRecordingHarness() {
-    setRecordingHarnessActive(false);
-
-    if (!isPlaying && session) {
-      const nextSession = await browserPracticeSessionService.endPracticeSession(session.id);
-
-      setSession(nextSession);
-    }
-
-    setMessage(isPlaying ? "Recording harness stopped; metronome keeps playing." : "Recording harness stopped.");
   }
 
   return (
@@ -322,6 +360,15 @@ export function SheetPracticeControls({
               Tick interval {Math.round(getTickIntervalMs(settings))} ms.
             </p>
           </div>
+
+          {unsupportedTimeSignatureMessage ? (
+            <p
+              role="status"
+              className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 md:col-span-2"
+            >
+              {unsupportedTimeSignatureMessage}
+            </p>
+          ) : null}
 
           <div className="grid gap-3 sm:grid-cols-3">
             <LabeledSelect
@@ -388,26 +435,6 @@ export function SheetPracticeControls({
               <Square className="h-4 w-4" aria-hidden="true" />
               Stop
             </Button>
-            <Button
-              type="button"
-              variant={recordingHarnessActive ? "secondary" : "default"}
-              onClick={startRecordingHarness}
-              disabled={recordingHarnessActive}
-              aria-label="Start recording harness"
-            >
-              <Mic className="h-4 w-4" aria-hidden="true" />
-              Rec On
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={stopRecordingHarness}
-              disabled={!recordingHarnessActive}
-              aria-label="Stop recording harness"
-            >
-              <Square className="h-4 w-4" aria-hidden="true" />
-              Rec Off
-            </Button>
           </div>
 
           <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
@@ -433,7 +460,7 @@ export function SheetPracticeControls({
       <div className="flex flex-wrap items-center gap-3 border-t border-border px-3 py-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Timer className="h-3.5 w-3.5" aria-hidden="true" />
-          Defaults: {initialSettings.bpm} BPM, {initialSettings.timeSignature}
+          Defaults: {initialState.settings.bpm} BPM, {initialState.settings.timeSignature}
         </span>
       </div>
     </section>

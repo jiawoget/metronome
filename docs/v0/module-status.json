@@ -730,19 +730,27 @@
                           "status":  "implementation_done",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
-                                                 "agent":  "GPT-5 Codex (no fast tier)",
-                                                 "completedAt":  "2026-06-21T14:30:46Z",
+                                                 "agent":  "GPT-5.5 High (no fast tier)",
+                                                 "completedAt":  "2026-06-21T14:45:40Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 15 test files passed, 60 tests passed",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 10 chromium tests passed, including sheet-practice-controls timing/session/independence coverage",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free after sandbox EPERM required unsandboxed one-shot check"
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free after sandbox EPERM required unsandboxed one-shot check",
+                                                     "Strict review fix targeted: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/sheet-practice-controls.test.tsx tests/unit/quick-metronome-control.test.ts -> PASS; 2 test files passed, 11 tests passed",
+                                                     "Strict review fix targeted: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-practice-controls.spec.ts tests/e2e/sheet-practice-session.spec.ts tests/e2e/quick-metronome.spec.ts -> PASS; 4 chromium tests passed",
+                                                     "Strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                     "Strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                     "Strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 15 test files passed, 63 tests passed",
+                                                     "Strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS",
+                                                     "Strict review fix full: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 10 chromium tests passed",
+                                                     "Strict review fix cleanup: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free after sandbox EPERM required unsandboxed one-shot check"
                                                                ],
                                                  "handoffNotes":  [
                                                      "Assigned feature: 05b-practice-controls.",
-                                                     "Coding model used: GPT-5 Codex, no fast tier.",
+                                                     "Coding model used: GPT-5.5 High, no fast tier.",
                                                      "Implemented only the Sheet Practice controls contract: bottom practice controls, metronome play/stop, BPM/time signature/subdivision/accent/countdown settings, visible playing/stopped state, sheet default initialization, session activity trigger, and responsive desktop/mobile layout.",
                                                      "Reused the verified 02 Quick Metronome BrowserMetronomeService, Tone adapter boundary, settings helpers, and scheduled tick trace event; no new scheduler, oscillator, or metronome service was added.",
                                                      "Reused the verified 05e browserPracticeSessionService ensureSheetSession/update/end APIs for sheet session activity; no parallel session path was added.",
@@ -750,18 +758,26 @@
                                                      "Recording independence is covered through a small recording-active harness state inside the controls; it does not call MediaRecorder, Dexie recording writes, or sheet recording metadata creation.",
                                                      "Sheet Practice UI continues to stay behind service/hook boundaries and does not directly call Tone.js, Web Audio scheduler internals, MediaRecorder, Dexie, PDF internals, or image decoding internals.",
                                                      "Updated the previous 05e E2E browser path to use real 05b controls instead of the temporary session metronome trigger harness.",
+                                                     "Strict review fix: Sheet Practice now ensures/restores the sheet session before starting Tone playback and still calls metronome stop on every failure path; unit coverage injects a rejecting session service and proves Tone start is not called and stop cleanup runs.",
+                                                     "Strict review fix: visible fake Rec On/Rec Off production buttons were removed. Recording independence is now driven only by a test-injected harness event, with no recording UI/audio/metadata implemented for 05b.",
+                                                     "Strict review fix: unsupported sheet meters such as 5/4 now show an explicit recoverable fallback message instead of silently discarding sheet metadata.",
+                                                     "Strict review fix: browser timing coverage now selects Every beat and Off accents and verifies the changed accent trace patterns.",
+                                                     "Strict review fix: shared BPM draft commit/step behavior was extracted into useMetronomeBpmDraft and reused by Quick Metronome and Sheet Practice controls.",
                                                      "Implementation commit hash is reported in the final handoff response because this status commit cannot contain its own final object hash."
                                                                   ],
                                                  "changedAreas":  [
                                                      "src/components/sheet-practice/controls adds SheetPracticeControls and default initialization helper for BPM/time signature fallback",
+                                                     "src/lib/quick-metronome/use-bpm-draft.ts adds a shared BPM draft hook reused by Quick Metronome and Sheet Practice controls",
+                                                     "src/components/quick-metronome/quick-metronome-experience.tsx now reuses the shared BPM draft hook",
                                                      "src/components/sheet-practice/viewer/sheet-viewer-experience.tsx composes the bottom controls for valid loaded sheets and removes the temporary visible 05e metronome trigger harness from the Sheet Practice workspace",
-                                                     "tests/unit/sheet-practice-controls.test.ts covers sheet default initialization, fallback/clamp behavior, and shared metronome trace accent/subdivision evidence",
-                                                     "tests/e2e/sheet-practice-controls.spec.ts covers 72 BPM sheet defaults, real metronome play/stop, BPM change timing, accent cycle, subdivision density, session trigger, metronome-only no recording, recording independence harness, stop trace cleanup, desktop/mobile resize, and console errors",
-                                                     "tests/e2e/sheet-practice-session.spec.ts now exercises 05e session persistence and independence through real 05b controls instead of fake metronome trigger buttons"
+                                                     "tests/unit/sheet-practice-controls.test.tsx covers sheet default initialization, explicit unsupported meter fallback, session failure cleanup, and shared metronome trace accent/subdivision evidence",
+                                                     "tests/e2e/sheet-practice-controls.spec.ts covers 72 BPM sheet defaults, real metronome play/stop, BPM change timing, Downbeat/Every beat/Off accent patterns, subdivision density, session trigger, metronome-only no recording, injected recording independence harness, stop trace cleanup, desktop/mobile resize, and console errors",
+                                                     "tests/e2e/sheet-practice-session.spec.ts now exercises 05e session persistence and injected independence harness behavior through real 05b controls instead of fake visible trigger buttons"
                                                                   ],
                                                  "knownRisks":  [
-                                                     "The recording-active control is intentionally a 05b independence harness only; it does not create recording artifacts or metadata and must be replaced or composed with real 05c sheet recording UI later.",
+                                                     "The recording-active state is intentionally test-injected harness state only; production UI does not expose recording controls until 05c implements real sheet recording UI/audio/metadata.",
                                                      "The old 05e SheetPracticeSessionHarness component remains in the tree for historical contract context but is no longer composed in the active Sheet Practice viewer.",
+                                                     "The v0 metronome supports only 2/4, 3/4, 4/4, and 6/8; other imported sheet meters show an explicit fallback to 4/4 until the shared metronome contract supports more meters.",
                                                      "Mobile layout keeps controls usable through page scrolling; the full detailed controls panel is taller than a narrow viewport by design rather than compressing all settings into one screen.",
                                                      "Port cleanup was confirmed with an unsandboxed one-shot bind check because sandboxed Node port binding returned EPERM."
                                                                 ],

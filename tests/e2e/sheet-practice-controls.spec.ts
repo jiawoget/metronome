@@ -7,6 +7,7 @@ const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
 const sheetDbName = "metronome-practice-v0-sheet-library";
 const practiceDbName = "metronome-practice-v0-practice-sessions";
 const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
+const recordingHarnessEvent = "sheet-practice-controls:set-recording-harness-active";
 
 type MetronomeTrace = {
   tickIndex: number;
@@ -181,8 +182,12 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   });
 
   await page.addInitScript(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+      __sheetPracticeControlsTestHarness?: boolean;
+    };
 
+    e2eWindow.__sheetPracticeControlsTestHarness = true;
     e2eWindow.__sheetMetronomeTraces = [];
     window.addEventListener("quick-metronome:scheduled-tick", (event) => {
       e2eWindow.__sheetMetronomeTraces?.push((event as CustomEvent<MetronomeTrace>).detail);
@@ -201,6 +206,8 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await expect(page.getByText("Defaults: 72 BPM, 4/4")).toBeVisible();
   await expect(page.getByTestId("sheet-session-id")).toContainText("none");
   await expect(page.getByTestId("sheet-recording-count")).toContainText("0");
+  await expect(page.getByRole("button", { name: "Start recording harness" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Stop recording harness" })).toHaveCount(0);
   expect(await getPracticeSnapshot(page)).toEqual({ sessions: [], recordings: [] });
   await expectNoViewerOverlap(page);
 
@@ -315,9 +322,69 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   expect(average(eighthIntervals)).toBeLessThan(265);
 
   await page.getByRole("button", { name: "Stop metronome" }).click();
+  await page.getByRole("button", { name: "Every beat" }).click();
+  await expect(page.getByRole("button", { name: "Every beat" })).toHaveAttribute("aria-pressed", "true");
+  const countBeforeEveryBeat = await page.evaluate(() => {
+    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+
+    return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
+      (trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth"
+    ).length;
+  });
+  await page.getByRole("button", { name: "Start metronome" }).click();
+  await page.waitForFunction((previousCount) => {
+    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+
+    return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
+      (trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth"
+    ).length >= previousCount + 7;
+  }, countBeforeEveryBeat);
+
+  const everyBeatTraces = await page.evaluate(() => {
+    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+
+    return (e2eWindow.__sheetMetronomeTraces ?? [])
+      .filter((trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth")
+      .slice(-7);
+  });
+
+  expect(everyBeatTraces.map((trace) => trace.accented)).toEqual([true, false, true, false, true, false, true]);
+
+  await page.getByRole("button", { name: "Stop metronome" }).click();
+  await page.getByRole("button", { name: "Off" }).click();
+  await expect(page.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true");
+  const countBeforeOff = await page.evaluate(() => {
+    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+
+    return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
+      (trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth"
+    ).length;
+  });
+  await page.getByRole("button", { name: "Start metronome" }).click();
+  await page.waitForFunction((previousCount) => {
+    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+
+    return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
+      (trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth"
+    ).length >= previousCount + 4;
+  }, countBeforeOff);
+
+  const offTraces = await page.evaluate(() => {
+    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+
+    return (e2eWindow.__sheetMetronomeTraces ?? [])
+      .filter((trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth")
+      .slice(-4);
+  });
+
+  expect(offTraces.map((trace) => trace.accented)).toEqual([false, false, false, false]);
+
+  await page.getByRole("button", { name: "Stop metronome" }).click();
   await expect(page.getByTestId("sheet-recording-count")).toContainText("0");
 
-  await page.getByRole("button", { name: "Start recording harness" }).click();
+  await page.evaluate((eventName) => {
+    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: true } }));
+  }, recordingHarnessEvent);
   await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
   await page.getByRole("button", { name: "Start metronome" }).click();
   await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
@@ -325,11 +392,15 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await page.getByRole("button", { name: "Stop metronome" }).click();
   await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
-  await page.getByRole("button", { name: "Stop recording harness" }).click();
+  await page.evaluate((eventName) => {
+    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: false } }));
+  }, recordingHarnessEvent);
   await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
   await page.getByRole("button", { name: "Start metronome" }).click();
-  await page.getByRole("button", { name: "Start recording harness" }).click();
-  await page.getByRole("button", { name: "Stop recording harness" }).click();
+  await page.evaluate((eventName) => {
+    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: true } }));
+    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: false } }));
+  }, recordingHarnessEvent);
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
   await page.getByRole("button", { name: "Stop metronome" }).click();
 
