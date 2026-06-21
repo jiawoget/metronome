@@ -364,7 +364,7 @@
 	                      },
                       {
                           "module":  "04-sheet-library",
-                          "status":  "implementation_done",
+                          "status":  "verified",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
@@ -416,26 +416,43 @@
                                              },
                           "verification":  {
                                                "requiredSeparateAgent":  true,
-                                               "agent":  null,
-                                               "completedAt":  null,
-                                               "result":  null,
+                                               "agent":  "GPT-5.4 mini medium",
+                                               "completedAt":  "2026-06-21T12:10:29Z",
+                                               "result":  "PASS",
                                                "acceptanceCriteria":  [
-
+                                                                          "PASS: Opened /sheet-library and verified the empty state.",
+                                                                          "PASS: Imported a real PDF fixture and captured name, category, BPM, and time signature through visible controls.",
+                                                                          "PASS: The imported list row showed name, category, page count, BPM, time signature, and last practiced state.",
+                                                                          "PASS: Reload preserved the PDF metadata and the artifact remained parseable through PDF.js with the expected page count.",
+                                                                          "PASS: Search and category filtering matched visible metadata.",
+                                                                          "PASS: Open Sheet Practice navigation resolved to the route shell with a sheetId query parameter.",
+                                                                          "PASS: Deleted a sheet through the UI and confirmed it stayed gone after reload.",
+                                                                          "PASS: Deleted metadata and artifact were no longer accessible through IndexedDB.",
+                                                                          "PASS: Imported a real image fixture and confirmed the decoded dimensions persisted after reload.",
+                                                                          "PASS: Unsupported file, bad PDF, and bad image paths all showed clear errors.",
+                                                                          "PASS: Home Import Sheet copy pointed to the live Sheet Library import flow.",
+                                                                          "PASS: No console.error or pageerror entries were captured during the verified browser flows.",
+                                                                          "PASS: UI code stayed behind the sheet-library service boundary and did not directly call Dexie, raw storage, PDF parser internals, or image decoding internals."
                                                                       ],
                                                "e2eEvidence":  [
-
-                                                               ],
+                                                                  "npm run test:e2e -> PASS; 5 chromium tests passed, including tests/e2e/sheet-library.spec.ts:59 and tests/e2e/app-shell-home.spec.ts:3.",
+                                                                  "tests/e2e/sheet-library.spec.ts exercised real browser import, reload, search/filter, Sheet Practice route shell navigation, delete persistence, real image import, unsupported file, bad PDF, bad image, and console/pageerror capture."
+                                                              ],
                                                "specializedEvidence":  [
-
+                                                                           "Real PDF fixture was parsed by PDF.js after reload and reported 1 page.",
+                                                                           "Real PNG fixture was decoded after reload and reported 2 x 2 dimensions.",
+                                                                           "The delete path confirmed the sheet record and artifact record were absent from IndexedDB after removal."
                                                                        ],
                                                "persistenceEvidence":  [
-
+                                                                           "Reload after PDF import preserved the row and the PDF artifact remained readable.",
+                                                                           "Reload after image import preserved the row and decoded dimensions.",
+                                                                           "Reload after delete left the sheet absent and the IndexedDB records inaccessible."
                                                                        ],
-                                               "consoleStatus":  null,
+                                               "consoleStatus":  "PASS; no console.error entries and no pageerror events were captured during the verified flows.",
                                                "issues":  [
 
                                                           ],
-	                                               "commitHash":  "b2dca7ba31c44741ad510a45a5aa8321ef6765e1"
+	                                               "commitHash":  "a81eac0f718982824556b71e6c8d92b53002fcde"
 	                                           }
                       },
                       {
