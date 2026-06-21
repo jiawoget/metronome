@@ -76,7 +76,7 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
                 </div>
                 <h2 className="mt-5 text-lg font-semibold">Quick Metronome</h2>
                 <p className="mt-2 text-sm leading-6">
-                  Open the v0 metronome module entry. Playback is not implemented in this module.
+                  Start timed playback, record a quick take, and replay the latest quick recording.
                 </p>
               </Link>
 
@@ -155,7 +155,7 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
           </CardHeader>
           <CardContent>
             <p className="text-sm leading-6 text-muted-foreground">
-              No recordings yet. Recording capture and replay are assigned to later modules.
+              Quick takes appear after recording from the Quick Metronome.
             </p>
             <Button asChild variant="secondary" className="mt-4 w-full">
               <Link href="/recordings">Open Recordings</Link>

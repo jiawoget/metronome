@@ -23,6 +23,7 @@ const config = {
         "primary-foreground": "hsl(var(--primary-foreground))",
         accent: "hsl(var(--accent))",
         "accent-foreground": "hsl(var(--accent-foreground))",
+        destructive: "hsl(var(--destructive))",
         ring: "hsl(var(--ring))"
       },
       boxShadow: {

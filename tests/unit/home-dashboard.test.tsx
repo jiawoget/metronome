@@ -16,7 +16,7 @@ describe("HomeDashboard", () => {
     expect(screen.getByText(/No recent practice session yet/i)).toBeVisible();
     expect(screen.getByText(/No sheets imported yet/i)).toBeVisible();
     expect(screen.getByText(/Import workflow is not enabled yet/i)).toBeVisible();
-    expect(screen.getByText(/No recordings yet/i)).toBeVisible();
+    expect(screen.getByText(/Quick takes appear after recording/i)).toBeVisible();
     expect(screen.getByText(/No recording or playback active/i)).toBeVisible();
   });
 
