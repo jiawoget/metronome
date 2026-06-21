@@ -364,22 +364,48 @@
 	                      },
                       {
                           "module":  "04-sheet-library",
-                          "status":  "contract_ready",
+                          "status":  "implementation_done",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
-                                                 "agent":  null,
-                                                 "completedAt":  null,
+                                                 "agent":  "GPT-5.5 High",
+                                                 "completedAt":  "2026-06-21T11:56:46Z",
                                                  "selfTests":  [
-
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 12 test files passed, 40 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed and prerendered /sheet-library",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 5 chromium tests passed including real PDF import, real image import, metadata form, list, search, category filter, Sheet Practice route shell, delete persistence, unsupported file, bad PDF, bad image, and console/pageerror capture",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node PDF.js fixture parse check -> PASS; real-sheet.pdf parsed as 1 page",
+                                                     "port 3101 release check outside sandbox -> PASS; temporary bind succeeded and closed"
                                                                ],
                                                  "handoffNotes":  [
-
+                                                     "Assigned feature: 04-sheet-library.",
+                                                     "Coding model used: GPT-5.5 High.",
+                                                     "Implemented only the Sheet Library contract scope: empty state, real PDF/image import, manual metadata, list display, search, fixed category filtering, Sheet Practice route-shell navigation, delete, unsupported file, bad PDF, and bad image states.",
+                                                     "UI calls the Sheet Library service boundary and does not call Dexie/IndexedDB, raw storage, PDF.js, or image decoding internals directly.",
+                                                     "PDF metadata extraction uses PDF.js through the sheet import adapter; browser image dimensions use browser decoding APIs through the same adapter.",
+                                                     "Sheet metadata and file artifacts are persisted in IndexedDB through a Dexie repository boundary, with Blob artifacts stored separately from sheet metadata and deleted together.",
+                                                     "E2E imports real fixtures from test-fixtures/sheets rather than creating fake imported rows.",
+                                                     "Opening a sheet routes to /sheet-practice?sheetId=... and intentionally leaves the existing Sheet Practice route shell in place; no Sheet Practice viewer behavior was implemented.",
+                                                     "Home still contains 01-app-shell-home copy saying import is not enabled; that file is outside 04 ownership and was not changed.",
+                                                     "Implementation commit hash is reported in the final handoff response because the status commit cannot contain its own final object hash."
                                                                   ],
                                                  "changedAreas":  [
-
+                                                     "src/app/sheet-library/page.tsx now renders the real Sheet Library experience",
+                                                     "src/components/sheet-library adds the import form, preview, empty state, list, search/filter controls, route link, and delete UI",
+                                                     "src/domain/sheet adds sheet types, metadata validation, search/filter helpers, page count formatting, and Sheet Practice route target generation",
+                                                     "src/services/sheet-library adds the service boundary for import, list, artifact status, delete, and repository/adapter contracts",
+                                                     "src/infrastructure/files adds the PDF.js/image decode import adapter and Dexie/IndexedDB sheet artifact repository",
+                                                     "src/types/pdfjs-webpack.d.ts adds typing for the PDF.js bundled worker entry",
+                                                     "test-fixtures/sheets adds real PDF/PNG fixtures plus unsupported, bad PDF, and bad image fixtures",
+                                                     "tests/unit adds Sheet Library domain and service coverage",
+                                                     "tests/e2e/sheet-library.spec.ts adds real browser import, persistence, search/filter, route shell, delete, and error-state coverage"
                                                                   ],
                                                  "knownRisks":  [
-
+                                                     "PDF rendering/viewing is not implemented here by contract; this module only parses import metadata and persists the artifact for later Sheet Practice viewer work.",
+                                                     "The Home dashboard import-disabled copy is stale after this module but belongs to 01-app-shell-home ownership; Sheet Library itself is functional.",
+                                                     "Playwright targeted E2E initially needed unsandboxed execution when Turbopack internal port binding was blocked by the sandbox; the final full npm run test:e2e passed and port 3101 was confirmed free afterward.",
+                                                     "PDF.js uses the package-provided legacy webpack worker entry so browser metadata extraction depends on the bundler supporting module workers, which the production build and E2E validated."
                                                                 ],
                                                  "commitHash":  null
                                              },
