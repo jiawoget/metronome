@@ -78,7 +78,7 @@ describe("recordings review history helpers", () => {
     expect(formatTimestamp(5_200)).toBe("0:05");
   });
 
-  it("calculates continue practice targets", () => {
+  it("calculates practice again targets", () => {
     expect(getContinuePracticeHref(quickRecording)).toBe("/quick-metronome?recordingId=quick-1");
     expect(getContinuePracticeHref(sheetRecording)).toBe(
       "/sheet-practice?recordingId=sheet-1&sheetId=sheet-42"

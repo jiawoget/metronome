@@ -13,7 +13,7 @@ It must prove that recordings are real persisted audio artifacts with metadata, 
 - The user can see basic context like BPM, meter, type, and linked sheet.
 - The user can review manual error markers.
 - The user can delete recordings.
-- The user can continue practice from a recording.
+- The user can practice again from a recording's saved context.
 
 ## v0 Scope
 
@@ -26,7 +26,7 @@ It must prove that recordings are real persisted audio artifacts with metadata, 
 - Basic waveform or simplified waveform.
 - Error marker list.
 - Delete recording.
-- Continue Practice.
+- Practice Again.
 - Bad or missing audio error state.
 
 ## Out of Scope for v0
@@ -55,7 +55,7 @@ Open Recordings with saved recordings
   -> Open a recording
   -> Play and pause it
   -> View metadata and error markers
-  -> Continue practice from the recording context
+  -> Practice again from the recording context
 ```
 
 ```text
@@ -71,8 +71,10 @@ Open Recordings
 - Quick recordings and sheet recordings should be separated by filters and metadata.
 - Recording details should not support complex editing in v0.
 - Error markers should display with timestamps and optional notes.
-- Continuing from a linked sheet recording should return to `Sheet Practice`.
-- Continuing from an unlinked quick recording should return to `Quick Metronome`.
+- `Practice Again` from a linked sheet recording should return to `Sheet Practice`.
+- `Practice Again` from an unlinked quick recording should return to `Quick Metronome`.
+- `Practice Again` is a Recordings Review action, not the global Home `Continue Practice` concept.
+- `Practice Again` carries source context from a historical recording, but any later recording must create a new recording entry and new Practice Session. It must never reuse the source recordingId, overwrite the source audio artifact, or mutate immutable source metadata.
 - v0 should not support audio export.
 
 ## Data Boundary
@@ -99,7 +101,7 @@ This module must not create:
 
 - New recording takes.
 - New sheets.
-- New Practice Sessions, except through Continue Practice navigation handled by the target module.
+- New Practice Sessions, except through Practice Again navigation handled by the target module.
 - v1 analysis results.
 
 ## State Boundary
@@ -117,7 +119,7 @@ Shared state:
 
 - Recording list.
 - Playback service state.
-- Practice Session context for continue target.
+- Practice Session context for Practice Again target.
 - Global playback status.
 
 ## Architecture Boundary
@@ -136,8 +138,8 @@ Waveform or peak generation must sit behind a service or adapter boundary.
 
 ## Dependencies
 
-- Quick Metronome for quick recording continue target.
-- Sheet Practice route shell for sheet recording continue target.
+- Quick Metronome for quick recording Practice Again target.
+- Sheet Practice route shell for sheet recording Practice Again target.
 - Practice Session for recording context.
 - Local Data for recording metadata and audio artifacts.
 - Error Markers from Sheet Practice or recording flow.
@@ -160,10 +162,11 @@ Waveform or peak generation must sit behind a service or adapter boundary.
 - [ ] Deleted recording disappears from the list.
 - [ ] Deleted recording remains gone after refresh or reload.
 - [ ] Deleted recording artifact is deleted or no longer accessible.
-- [ ] Continue Practice for quick recording routes to Quick Metronome.
-- [ ] Continue Practice for sheet recording routes to Sheet Practice or its route shell.
+- [ ] Practice Again for quick recording routes to Quick Metronome.
+- [ ] Practice Again for sheet recording routes to Sheet Practice or its route shell.
+- [ ] Recording again after Practice Again creates a new recording/session and leaves the original recording metadata and artifact unchanged.
 - [ ] Bad or missing audio shows a clear error state.
-- [ ] No playback, delete, search, filter, or continue action is stub-only.
+- [ ] No playback, delete, search, filter, or Practice Again action is stub-only.
 
 ## Test Plan
 
@@ -175,7 +178,7 @@ Waveform or peak generation must sit behind a service or adapter boundary.
 - Recording sort order.
 - Duration formatting.
 - Timestamp formatting.
-- Continue target calculation.
+- Practice Again target calculation.
 - Error marker sorting.
 
 ### Integration Tests
@@ -202,11 +205,12 @@ These tests must use real browser interaction.
 - Click Pause and verify playback stops.
 - Verify metadata is visible.
 - Verify seeded error markers are visible.
-- Click Continue Practice and verify Quick Metronome route.
+- Click Practice Again and verify Quick Metronome route.
+- After Practice Again, create another recording and verify the original recording's artifact and immutable metadata are unchanged while the new recording has its own id, session, metadata, and decodable artifact.
 - Return to Recordings.
 - Delete the recording through the UI.
 - Reload and verify the recording is gone.
-- Seed a sheet recording with sheetId and verify Continue Practice routes to Sheet Practice route shell.
+- Seed a sheet recording with sheetId and verify Practice Again routes to Sheet Practice route shell.
 - Seed bad audio and verify the error state.
 - Check browser console errors during the tested flows.
 
@@ -259,8 +263,8 @@ The verifier must seed or provide bad audio and confirm:
 - [ ] Search and type filtering were tested together.
 - [ ] Deletion was tested through the UI.
 - [ ] Deletion persisted after reload.
-- [ ] Continue Practice was tested for quick recording.
-- [ ] Continue Practice was tested for sheet recording route target.
+- [ ] Practice Again was tested for quick recording.
+- [ ] Practice Again was tested for sheet recording route target.
 - [ ] Bad audio state was tested.
 - [ ] No console errors appeared during tested flows.
 
@@ -285,7 +289,7 @@ The implementation agent may build:
 - Basic waveform or simplified waveform integration.
 - Error marker display.
 - Delete flow.
-- Continue Practice route logic.
+- Practice Again route logic.
 - Test fixtures for real decodable audio.
 
 The implementation agent must not build:
@@ -300,7 +304,7 @@ The implementation agent must not build:
 
 Implementation handoff must include:
 
-- Recording list, playback, delete, and continue-practice areas changed.
+- Recording list, playback, delete, and Practice Again areas changed.
 - Tests run.
 - Audio artifact fixture used.
 - Persistence behavior checked.
@@ -312,7 +316,7 @@ The verification agent must:
 
 - Be a separate agent pass from the implementation agent.
 - Run relevant automated tests.
-- Use real browser interaction for list, search, filter, playback, delete, and continue-practice flows.
+- Use real browser interaction for list, search, filter, playback, delete, and Practice Again flows.
 - Use a real decodable recording artifact.
 - Verify playback through the playback service or browser media state, not only button text.
 - Verify waveform or peaks come from real audio or trusted fixture peaks.
@@ -349,7 +353,7 @@ This module is complete only when:
 - All acceptance criteria pass.
 - Real browser E2E covers the review path.
 - Real decodable audio artifact is verified.
-- Playback, delete, search, filter, and continue-practice are verified.
+- Playback, delete, search, filter, and Practice Again are verified.
 - Delete persistence is verified after reload.
 - A separate verification agent reports PASS.
 

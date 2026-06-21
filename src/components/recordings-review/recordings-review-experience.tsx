@@ -439,7 +439,7 @@ function RecordingDetails({
         <Button asChild variant="secondary">
           <Link href={getContinuePracticeHref(recording)}>
             <RotateCcw className="h-4 w-4" aria-hidden="true" />
-            Continue Practice
+            Practice Again
           </Link>
         </Button>
       </div>

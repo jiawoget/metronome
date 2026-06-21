@@ -378,7 +378,7 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await page.getByRole("button", { name: "Pause Recording" }).click();
   await expect(page.getByTestId("recording-playback-status")).toBeHidden();
 
-  await page.getByRole("link", { name: "Continue Practice" }).click();
+  await page.getByRole("link", { name: "Practice Again" }).click();
   await expect(page).toHaveURL(/\/quick-metronome\?recordingId=quick-alpha/);
   await page.getByRole("button", { name: "Start recording" }).click();
   await expect(page.getByText("Recording without metronome.")).toBeVisible();
@@ -469,7 +469,7 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   });
   await page.getByRole("button", { name: "Pause Recording" }).click();
   await expect(page.getByTestId("recording-playback-status")).toBeHidden();
-  await page.getByRole("link", { name: "Continue Practice" }).click();
+  await page.getByRole("link", { name: "Practice Again" }).click();
   await expect(page).toHaveURL(/\/sheet-practice\?recordingId=sheet-beta&sheetId=sheet-42/);
 
   await page.goto("/recordings");
