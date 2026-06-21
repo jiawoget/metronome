@@ -83,7 +83,7 @@
         "value":  [
                       {
                           "module":  "01-app-shell-home",
-                          "status":  "implementation_done",
+                          "status":  "verified",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
@@ -124,15 +124,16 @@
                                              },
                           "verification":  {
                                                "requiredSeparateAgent":  true,
-                                               "agent":  "GPT-5.4 Mini",
-                                               "completedAt":  "2026-06-21T16:32:00Z",
+                                               "agent":  "GPT-5",
+                                               "completedAt":  "2026-06-21T08:45:35Z",
                                                "result":  "PASS",
                                                "acceptanceCriteria":  [
                                                                       "PASS: Home opens with the main v0 practice entries visible.",
+                                                                      "PASS: Import Sheet routes to the Sheet Library shell and states that import is not enabled yet.",
+                                                                      "PASS: Desktop sidebar and mobile bottom nav both include Sheet Practice and keep the current route highlighted.",
+                                                                      "PASS: Hiding devtools leaves a visible restore entry, and restore brings the diagnostics panel back.",
                                                                       "PASS: Desktop and iPad landscape widths show sidebar navigation.",
                                                                       "PASS: Narrow mobile width shows bottom navigation.",
-                                                                      "PASS: Current page navigation item is highlighted.",
-                                                                      "PASS: Quick Metronome and Settings navigation entries work.",
                                                                       "PASS: Continue Practice, Recent Sheets, and Recent Recordings render empty states with no saved data.",
                                                                       "PASS: Today Practice Summary shows zero values with no history.",
                                                                       "PASS: The global status indicator area exists without faking playback or recording.",
@@ -140,19 +141,22 @@
                                                                       ],
                                                "e2eEvidence":  [
                                                                 "Playwright browser test: tests/e2e/app-shell-home.spec.ts used real Chromium interaction at 1280x800, 1024x768, and 390x844.",
-                                                                "Clicked visible sidebar links for Quick Metronome, Sheet Library, Recordings, and Settings and verified route/page changes plus aria-current highlighting.",
-                                                                "Verified mobile bottom navigation visibility and tapped Quick Metronome, Recordings, and Settings links in the browser.",
+                                                                "Clicked Home's Import Sheet control and verified it navigates to /sheet-library with the disabled import copy visible.",
+                                                                "Clicked visible sidebar links for Quick Metronome, Sheet Library, Sheet Practice, Recordings, and Settings and verified route/page changes plus aria-current highlighting.",
+                                                                "Verified mobile bottom navigation visibility and tapped Quick Metronome, Sheet Practice, Recordings, and Settings links in the browser.",
+                                                                "Clicked Hide devtools for this session, verified the restore entry remained visible, and clicked Restore diagnostics to bring the panel back.",
                                                                 "Verified empty states on Home: Today Practice Summary zero values, no recent practice session, no sheets imported yet, no recordings yet, and no recording or playback active.",
                                                                 "Playwright run output: 1 chromium test passed."
                                                                ],
                                                "specializedEvidence":  [
-                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date, audited 481 packages, found 0 vulnerabilities.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date in 576ms, found 0 vulnerabilities.",
                                                                         "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm audit -> found 0 vulnerabilities.",
                                                                         "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS.",
                                                                         "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS.",
-                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 3 test files passed, 5 tests passed.",
-                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed.",
-                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run playwright:install -> PASS; Chromium fallback download completed with the expected unsupported-OS warning."
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 4 test files passed, 6 tests passed.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed and prerendered /, /quick-metronome, /sheet-library, /sheet-practice, /recordings, /settings, and /_not-found.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run playwright:install -> PASS; Chromium fallback download completed with the expected unsupported-OS warning.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 1 chromium test passed."
                                                                        ],
                                                "persistenceEvidence":  [
                                                                         "No persistence claim in this module; verified the Home dashboard renders empty/default state on fresh loads without seeded data."
@@ -161,7 +165,7 @@
                                                "issues":  [
 
                                                           ],
-                                               "commitHash":  "3319b8d46e0310a7ab27ff38a38afd758e6c289f"
+                                               "commitHash":  null
                                            }
                       },
                       {
