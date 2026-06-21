@@ -109,6 +109,7 @@ Before implementation or verification, an agent must read:
 ```text
 docs/v0/00-overview.md
 docs/v0/agent-implementation-rules.md
+docs/v0/agent-loop-protocol.md
 docs/v0/design-style-guide.md
 docs/v0/project-structure.md
 docs/v0/tech-stack-decisions.md

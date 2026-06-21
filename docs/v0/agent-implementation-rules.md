@@ -17,6 +17,14 @@ The same agent pass must not both implement and verify the same module as final 
 
 The implementation agent may self-test, but self-testing is not verification. A module is not done until a separate verification agent pass reports PASS.
 
+Every agent pass starts from empty context. Agents must follow:
+
+```text
+docs/v0/agent-loop-protocol.md
+```
+
+Repository files are the source of truth, not previous chat context.
+
 ## Required Model Assignment
 
 Use these default model assignments for v0 feature work:
