@@ -727,7 +727,7 @@
                       },
                       {
                           "module":  "05b-practice-controls",
-                          "status":  "implementation_done",
+                          "status":  "verified",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High (no fast tier)",
@@ -821,26 +821,42 @@
                                              },
                           "verification":  {
                                                "requiredSeparateAgent":  true,
-                                               "agent":  null,
-                                               "completedAt":  null,
-                                               "result":  null,
+                                               "agent":  "GPT-5.4 Mini",
+                                               "completedAt":  "2026-06-21T15:29:09Z",
+                                               "result":  "PASS",
                                                "acceptanceCriteria":  [
-
+                                                                        "Sheet Practice displayed bottom practice controls on the real sheet page and showed explicit Playing/Stopped/Counting state.",
+                                                                        "BPM draft input accepted a full value entry flow (including typing 60) and clamped only on commit, while preserving min/max bounds.",
+                                                                        "Time signature, subdivision, accent, and countdown were usable; unsupported 5/4 surfaced a recoverable fallback message; Every beat and Off changed the trace pattern.",
+                                                                        "Countdown accepted BPM edits before playback and the started trace/session used the latest BPM after countdown completion.",
+                                                                        "Running/countdown locked meter, subdivision, countdown, and accent while leaving BPM editable.",
+                                                                        "Sheet defaults initialized from imported sheet metadata; metronome start used the 05e session boundary; start failure rolled back only the session ownership it created or reopened.",
+                                                                        "No 05c recording UI/audio/metadata was implemented in production Sheet Practice; recording independence was verified only through the test harness boundary.",
+                                                                        "Desktop/mobile browser interaction kept controls visible without incoherent viewer overlap on the real Sheet Practice route."
                                                                       ],
                                                "e2eEvidence":  [
-
+                                                                "tests/e2e/sheet-practice-controls.spec.ts: real imported sheet flow verified defaults, play/stop state, BPM change timing, countdown BPM edit, accent cycles, subdivision density, recording-harness independence, resize coverage, and no console/page errors.",
+                                                                "npm run test:e2e -> 10 chromium tests passed."
                                                                ],
                                                "specializedEvidence":  [
-
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date, audited 481 packages, found 0 vulnerabilities.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm audit -> found 0 vulnerabilities.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 16 test files passed, 72 tests passed.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 10 chromium tests passed."
                                                                        ],
                                                "persistenceEvidence":  [
-
+                                                                        "Sheet session persisted after metronome activity and remained linked to the imported sheet in the 05b E2E path.",
+                                                                        "Recording independence stayed harness-only for 05b; no production recording metadata was created by metronome-only practice.",
+                                                                        "The real Sheet Practice route kept the viewer and controls usable across desktop and mobile viewport changes."
                                                                        ],
-                                               "consoleStatus":  null,
+                                               "consoleStatus":  "PASS; the 05b Playwright flow reported no console errors or page errors.",
                                                "issues":  [
 
                                                           ],
-                                               "commitHash":  null
+                                               "commitHash":  "06d5763d72b61d9dfdcb1dd13c78c5eaa4e67a4d"
                                            }
                       },
                       {
