@@ -44,6 +44,12 @@ Describe module-owned state and shared state used by the module.
 
 Describe what this module may depend on and what it must not call directly.
 
+## Technology Choices
+
+List the approved libraries/frameworks/services for this module.
+
+Reference `docs/v0/tech-stack-decisions.md`.
+
 ## Dependencies
 
 List other modules this module depends on.

@@ -33,6 +33,8 @@ React
 TypeScript strict mode
 Tailwind CSS
 shadcn/ui-compatible setup
+Radix UI primitives through shadcn/ui patterns
+lucide-react
 Zustand
 Zod
 Dexie
@@ -43,6 +45,8 @@ Playwright
 ```
 
 Exact dependency versions should be selected during implementation based on current compatibility.
+
+Preflight must install the approved open-source defaults unless an incompatibility is discovered and documented before substitution.
 
 ## Out of Scope for v0
 
@@ -122,6 +126,7 @@ It must not directly couple UI to Tone.js, MediaRecorder, wavesurfer, Dexie, PDF
 - `docs/v0/agent-implementation-rules.md`.
 - `docs/v0/design-style-guide.md`.
 - `docs/v0/project-structure.md`.
+- `docs/v0/tech-stack-decisions.md`.
 - `docs/v0/01-app-shell-home.md` for initial shell expectations.
 
 ## Acceptance Criteria

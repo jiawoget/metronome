@@ -111,6 +111,7 @@ docs/v0/00-overview.md
 docs/v0/agent-implementation-rules.md
 docs/v0/design-style-guide.md
 docs/v0/project-structure.md
+docs/v0/tech-stack-decisions.md
 docs/v0/<assigned-module>.md
 ```
 

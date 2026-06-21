@@ -426,6 +426,28 @@ Coding agents must keep edits inside the assigned feature ownership area and exp
 
 Verification agents must check that changed files match the assigned feature ownership map. A feature must fail verification if it implements adjacent feature behavior or changes unrelated ownership areas without an approved contract update.
 
+## Tech Stack Rule
+
+All implementation and verification agents must read:
+
+```text
+docs/v0/tech-stack-decisions.md
+```
+
+Coding agents must use the approved framework and library choices for their assigned module.
+
+Do not replace Next.js, React, TypeScript strict mode, Tailwind, Zustand, Dexie, Playwright, Tone.js, MediaRecorder, wavesurfer, PDF.js/react-pdf, or the adapter/service boundary decisions without explicit approval.
+
+Verification agents must check that implementation technology matches the module's approved stack and that low-level libraries are not called directly from UI components.
+
+## Open Source First Rule
+
+Coding agents must prefer the approved mature open-source library for established behavior instead of hand-rolling it.
+
+If a module has an approved library in `docs/v0/tech-stack-decisions.md`, using custom implementation for that behavior is not allowed without a contract update.
+
+Verification agents must fail a feature if it hand-rolls a mature library-owned responsibility without approval.
+
 ## Scope Rules
 
 When v0 and v1 conflict, v0 wins.
