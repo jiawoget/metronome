@@ -5,17 +5,20 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
 import { BrowserRecordingPlaybackService } from "@/lib/quick-metronome/playback-service";
 import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
 
 export function LatestQuickRecording({ compact = false }: { compact?: boolean }) {
   const playbackService = useMemo(() => new BrowserRecordingPlaybackService(), []);
-  const latestRecording = useSyncExternalStore(
+  const storedRecording = useSyncExternalStore(
     quickRecordingRepository.subscribe,
     quickRecordingRepository.getLatestQuickRecording,
     () => null
   );
   const [playbackState, setPlaybackState] = useState<"idle" | "playing" | "error">("idle");
+  const latestRecording = storedRecording ?? getDemoQuickRecording();
+  const isDemoRecording = latestRecording.origin === "demo";
 
   useEffect(() => {
     return () => {
@@ -25,10 +28,27 @@ export function LatestQuickRecording({ compact = false }: { compact?: boolean })
 
   const body = latestRecording ? (
     <div data-testid="latest-recording" className="flex flex-col gap-4">
+      {isDemoRecording ? (
+        <div
+          data-testid="demo-recording-banner"
+          className="rounded-md border border-dashed border-accent bg-muted px-3 py-3 text-sm"
+        >
+          <audio
+            data-testid="demo-recording-audio"
+            src={latestRecording.audioDataUrl}
+            preload="metadata"
+            className="hidden"
+          />
+          <p className="font-semibold">Demo synthetic recording</p>
+          <p className="mt-1 leading-6 text-muted-foreground">
+            This is a playable 440 Hz WAV sample for checking replay and the recordings outlet. It is not a saved user recording.
+          </p>
+        </div>
+      ) : null}
       <div className="grid gap-3 text-sm sm:grid-cols-3">
         <div className="rounded-md border border-border bg-muted px-3 py-3">
           <p className="text-xs font-medium text-muted-foreground">Type</p>
-          <p className="mt-1 font-semibold">{latestRecording.type}</p>
+          <p className="mt-1 font-semibold">{isDemoRecording ? "demo synthetic" : latestRecording.type}</p>
         </div>
         <div className="rounded-md border border-border bg-muted px-3 py-3">
           <p className="text-xs font-medium text-muted-foreground">Duration</p>
@@ -41,7 +61,7 @@ export function LatestQuickRecording({ compact = false }: { compact?: boolean })
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm leading-6 text-muted-foreground">
-          <p>Session {latestRecording.sessionId.slice(0, 16)}</p>
+          <p>{isDemoRecording ? "Demo sample, not saved." : `Session ${latestRecording.sessionId.slice(0, 16)}`}</p>
           <p>No sheet linked.</p>
         </div>
         <Button
@@ -68,7 +88,11 @@ export function LatestQuickRecording({ compact = false }: { compact?: boolean })
           ) : (
             <Play className="h-4 w-4" aria-hidden="true" />
           )}
-          {playbackState === "playing" ? "Stop Replay" : "Replay Latest Recording"}
+          {playbackState === "playing"
+            ? "Stop Replay"
+            : isDemoRecording
+              ? "Replay Demo Recording"
+              : "Replay Latest Recording"}
         </Button>
       </div>
       {playbackState === "playing" ? (
@@ -82,9 +106,7 @@ export function LatestQuickRecording({ compact = false }: { compact?: boolean })
         </p>
       ) : null}
     </div>
-  ) : (
-    <p className="text-sm leading-6 text-muted-foreground">No quick recordings saved yet.</p>
-  );
+  ) : null;
 
   if (compact) {
     return body;

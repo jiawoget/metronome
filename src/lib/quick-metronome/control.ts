@@ -26,6 +26,16 @@ export function stepBpm(currentBpm: number, direction: -1 | 1, amount = 1) {
   return clampBpm(currentBpm + direction * amount);
 }
 
+export function commitBpmDraft(value: string, fallbackBpm = DEFAULT_BPM) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return clampBpm(fallbackBpm);
+  }
+
+  return clampBpm(Number(trimmedValue));
+}
+
 export function parseTimeSignature(value: string): TimeSignature {
   if (TIME_SIGNATURES.includes(value as TimeSignature)) {
     return value as TimeSignature;
@@ -116,4 +126,3 @@ export function calculateTapTempo(tapTimesMs: number[]) {
 
   return clampBpm(60_000 / averageInterval);
 }
-

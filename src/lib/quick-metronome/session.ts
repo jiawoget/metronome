@@ -37,6 +37,7 @@ export function createQuickRecording({
   return {
     id: createId("recording"),
     type: "quick",
+    origin: "user",
     sessionId: session.id,
     sheetId: null,
     createdAt: createdAt.toISOString(),

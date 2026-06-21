@@ -86,13 +86,95 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   await page.goto("/quick-metronome");
   await expect(page.getByRole("heading", { name: "Quick Metronome" })).toBeVisible();
   await expect(page.getByText("Stopped").first()).toBeVisible();
+  await expect(page.getByTestId("demo-recording-banner")).toBeVisible();
+  await expect(page.getByText("Demo synthetic recording")).toBeVisible();
+  const demoAudioDataUrl = await page.getByTestId("demo-recording-audio").getAttribute("src");
+
+  expect(demoAudioDataUrl).toMatch(/^data:audio\/wav;base64,/);
+  const decodedDemoEvidence = await page.evaluate(async (audioDataUrl) => {
+    if (!audioDataUrl) {
+      throw new Error("Missing demo audio data URL.");
+    }
+
+    const audioWindow = window as Window &
+      typeof globalThis & { webkitAudioContext?: typeof AudioContext };
+    const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+
+    if (!AudioContextConstructor) {
+      throw new Error("Web Audio is not available in this browser.");
+    }
+
+    const response = await fetch(audioDataUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioContext = new AudioContextConstructor();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+    const samples = audioBuffer.getChannelData(0);
+    let peakAmplitude = 0;
+    let sumSquares = 0;
+    let positiveZeroCrossings = 0;
+    let previousSample = samples[0] ?? 0;
+
+    for (let index = 0; index < samples.length; index += 1) {
+      const sample = samples[index] ?? 0;
+      peakAmplitude = Math.max(peakAmplitude, Math.abs(sample));
+      sumSquares += sample * sample;
+      if (previousSample < 0 && sample >= 0) {
+        positiveZeroCrossings += 1;
+      }
+      previousSample = sample;
+    }
+
+    await audioContext.close();
+
+    return {
+      decodedDurationMs: audioBuffer.duration * 1_000,
+      peakAmplitude,
+      rmsAmplitude: Math.sqrt(sumSquares / Math.max(1, samples.length)),
+      estimatedFrequencyHz:
+        audioBuffer.duration > 0 ? positiveZeroCrossings / audioBuffer.duration : null
+    } satisfies DecodedRecordingEvidence;
+  }, demoAudioDataUrl);
+
+  expect(decodedDemoEvidence.decodedDurationMs).toBeGreaterThan(900);
+  expect(decodedDemoEvidence.decodedDurationMs).toBeLessThan(1_100);
+  expect(decodedDemoEvidence.rmsAmplitude).toBeGreaterThan(0.05);
+  expect(decodedDemoEvidence.peakAmplitude).toBeGreaterThan(0.1);
+  expect(decodedDemoEvidence.estimatedFrequencyHz).toBeGreaterThan(430);
+  expect(decodedDemoEvidence.estimatedFrequencyHz).toBeLessThan(450);
+
+  await page.getByRole("button", { name: "Replay Demo Recording" }).click();
+  await expect(page.getByText("Replaying latest recording.").first()).toBeVisible();
+  await page.getByRole("button", { name: "Stop Replay" }).click();
+  await page.goto("/recordings");
+  await expect(page.getByRole("heading", { name: "Recordings" })).toBeVisible();
+  await expect(page.getByTestId("demo-recording-banner")).toBeVisible();
+  await expect(page.getByText("Demo sample, not saved.")).toBeVisible();
+  await page.goto("/quick-metronome");
+
   const bpmInput = page.getByRole("spinbutton", { name: "BPM" });
 
   await page.getByRole("button", { name: "Increase BPM" }).click();
   await expect(bpmInput).toHaveValue("97");
   await page.getByRole("button", { name: "Decrease BPM" }).click();
   await expect(bpmInput).toHaveValue("96");
+  await bpmInput.fill("");
+  await bpmInput.fill("6");
+  await expect(bpmInput).toHaveValue("6");
+  await expect(page.getByText(/Tick interval 625 ms/i)).toBeVisible();
+  await bpmInput.fill("60");
+  await bpmInput.press("Enter");
+  await expect(bpmInput).toHaveValue("60");
+  await expect(page.getByText(/Tick interval 1000 ms/i)).toBeVisible();
+  await bpmInput.fill("72");
+  await page.getByRole("button", { name: "Tap Tempo" }).focus();
+  await expect(bpmInput).toHaveValue("72");
+  await expect(page.getByText(/Tick interval 833 ms/i)).toBeVisible();
+  await bpmInput.fill("6");
+  await page.getByRole("button", { name: "Increase BPM" }).click();
+  await expect(bpmInput).toHaveValue("31");
+  await expect(page.getByText(/Tick interval 1935 ms/i)).toBeVisible();
   await bpmInput.fill("120");
+  await bpmInput.press("Enter");
   await expect(page.getByText(/Tick interval 500 ms/i)).toBeVisible();
 
   await page.getByLabel("Time signature").selectOption("3/4");
@@ -106,13 +188,18 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   await page.getByRole("button", { name: "Tap Tempo" }).click();
   await page.waitForTimeout(500);
   await page.getByRole("button", { name: "Tap Tempo" }).click();
-  await expect(bpmInput).toHaveValue(/11[5-9]|12[0-5]/);
+  await expect(bpmInput).toHaveValue(/10[8-9]|11[0-9]|12[0-9]|130/);
 
   await page.getByLabel("Countdown").selectOption("0");
   await page.getByLabel("Subdivision").selectOption("quarter");
   await bpmInput.fill("120");
   await page.getByRole("button", { name: "Start metronome" }).click();
   await expect(page.getByText("Metronome playing.")).toBeVisible();
+  await expect(page.getByText(/locked while the metronome is running/i)).toBeVisible();
+  await expect(page.getByLabel("Time signature")).toBeDisabled();
+  await expect(page.getByLabel("Subdivision")).toBeDisabled();
+  await expect(page.getByLabel("Countdown")).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Every beat" })).toBeDisabled();
   await page.waitForFunction(() => {
     const e2eWindow = window as Window & { __quickMetronomeTraces?: MetronomeTrace[] };
 
@@ -135,6 +222,7 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   expect(Math.max(...bpm120Intervals) - Math.min(...bpm120Intervals)).toBeLessThan(8);
 
   await bpmInput.fill("180");
+  await bpmInput.press("Enter");
   await page.waitForFunction(() => {
     const e2eWindow = window as Window & { __quickMetronomeTraces?: MetronomeTrace[] };
 
@@ -157,6 +245,7 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   expect(average(bpm180Intervals)).toBeLessThan(average(bpm120Intervals) - 120);
   await page.getByRole("button", { name: "Stop metronome" }).click();
   await expect(page.getByText("Metronome stopped.")).toBeVisible();
+  await expect(page.getByLabel("Countdown")).toBeEnabled();
 
   await page.getByRole("button", { name: "Start recording" }).click();
   await expect(page.getByText("Recording without metronome.")).toBeVisible();
@@ -172,6 +261,7 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
 
   await page.waitForTimeout(700);
   await page.getByRole("button", { name: "Stop recording" }).click();
+  await expect(page.getByText(/^Recording saved/)).toBeVisible();
   await expect(page.getByTestId("latest-recording")).toBeVisible();
   await expect(page.getByText("quick").first()).toBeVisible();
   await expect(page.getByText("No sheet linked.")).toBeVisible();

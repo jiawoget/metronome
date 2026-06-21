@@ -25,6 +25,7 @@ export type PracticeSession = {
 export type QuickRecording = {
   id: string;
   type: "quick";
+  origin: "user" | "demo";
   sessionId: string;
   sheetId: null;
   createdAt: string;

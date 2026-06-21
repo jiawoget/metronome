@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateTapTempo,
   clampBpm,
+  commitBpmDraft,
   getTickIntervalMs,
   isAccentTick,
   parseAccentMode,
@@ -20,6 +21,13 @@ describe("quick metronome controls", () => {
     expect(clampBpm(97.4)).toBe(97);
     expect(stepBpm(30, -1)).toBe(30);
     expect(stepBpm(239, 1)).toBe(240);
+  });
+
+  it("commits BPM draft values only when requested", () => {
+    expect(commitBpmDraft("6", 96)).toBe(30);
+    expect(commitBpmDraft("60", 96)).toBe(60);
+    expect(commitBpmDraft("", 96)).toBe(96);
+    expect(commitBpmDraft("999", 96)).toBe(240);
   });
 
   it("validates time signature, subdivision, accent, and countdown selections", () => {
@@ -74,4 +82,3 @@ describe("quick metronome controls", () => {
     ).toBe(false);
   });
 });
-

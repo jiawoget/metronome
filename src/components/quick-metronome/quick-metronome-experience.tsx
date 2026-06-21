@@ -24,6 +24,7 @@ import {
   TIME_SIGNATURES,
   calculateTapTempo,
   clampBpm,
+  commitBpmDraft,
   getTickIntervalMs,
   parseAccentMode,
   parseCountdownBeats,
@@ -70,6 +71,7 @@ export function QuickMetronomeExperience() {
   const [currentSession, setCurrentSession] = useState<PracticeSession | null>(null);
   const [countdownRemaining, setCountdownRemaining] = useState(0);
   const [lastTick, setLastTick] = useState<MetronomeTick | null>(null);
+  const [bpmDraft, setBpmDraft] = useState(String(DEFAULT_METRONOME_SETTINGS.bpm));
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [message, setMessage] = useState("Ready.");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -103,6 +105,7 @@ export function QuickMetronomeExperience() {
   const isPlaying = transportState === "playing";
   const isCounting = transportState === "counting";
   const isRecording = recordingState === "recording";
+  const arePreRunSettingsLocked = isPlaying || isCounting;
 
   function updateSettings(nextSettings: Partial<MetronomeSettings>) {
     setSettings((currentSettings) => ({
@@ -113,6 +116,21 @@ export function QuickMetronomeExperience() {
           ? currentSettings.bpm
           : clampBpm(nextSettings.bpm)
     }));
+  }
+
+  function commitBpmInput() {
+    const nextBpm = commitBpmDraft(bpmDraft, settings.bpm);
+
+    updateSettings({ bpm: nextBpm });
+    setBpmDraft(String(nextBpm));
+  }
+
+  function stepBpmInput(direction: -1 | 1) {
+    const committedDraftBpm = commitBpmDraft(bpmDraft, settings.bpm);
+    const nextBpm = stepBpm(committedDraftBpm, direction);
+
+    updateSettings({ bpm: nextBpm });
+    setBpmDraft(String(nextBpm));
   }
 
   async function startMetronome() {
@@ -227,6 +245,7 @@ export function QuickMetronomeExperience() {
 
     if (nextBpm !== null) {
       updateSettings({ bpm: nextBpm });
+      setBpmDraft(String(nextBpm));
       setMessage(`Tap tempo set ${nextBpm} BPM.`);
     } else {
       setMessage("Tap again to set tempo.");
@@ -282,7 +301,7 @@ export function QuickMetronomeExperience() {
                     variant="secondary"
                     size="icon"
                     aria-label="Decrease BPM"
-                    onClick={() => updateSettings({ bpm: stepBpm(settings.bpm, -1) })}
+                    onClick={() => stepBpmInput(-1)}
                   >
                     <ChevronDown className="h-4 w-4" aria-hidden="true" />
                   </Button>
@@ -293,8 +312,15 @@ export function QuickMetronomeExperience() {
                     min={MIN_BPM}
                     max={MAX_BPM}
                     step={1}
-                    value={settings.bpm}
-                    onChange={(event) => updateSettings({ bpm: Number(event.target.value) })}
+                    value={bpmDraft}
+                    onChange={(event) => setBpmDraft(event.target.value)}
+                    onBlur={commitBpmInput}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        commitBpmInput();
+                        event.currentTarget.blur();
+                      }
+                    }}
                     className="h-10 min-w-0 rounded-md border border-border bg-background px-3 text-center text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                   <Button
@@ -302,7 +328,7 @@ export function QuickMetronomeExperience() {
                     variant="secondary"
                     size="icon"
                     aria-label="Increase BPM"
-                    onClick={() => updateSettings({ bpm: stepBpm(settings.bpm, 1) })}
+                    onClick={() => stepBpmInput(1)}
                   >
                     <ChevronUp className="h-4 w-4" aria-hidden="true" />
                   </Button>
@@ -322,6 +348,7 @@ export function QuickMetronomeExperience() {
                 <LabeledSelect
                   label="Time signature"
                   value={settings.timeSignature}
+                  disabled={arePreRunSettingsLocked}
                   onChange={(value) => updateSettings({ timeSignature: parseTimeSignature(value) })}
                   options={TIME_SIGNATURES.map((timeSignature) => ({
                     value: timeSignature,
@@ -331,6 +358,7 @@ export function QuickMetronomeExperience() {
                 <LabeledSelect
                   label="Subdivision"
                   value={settings.subdivision}
+                  disabled={arePreRunSettingsLocked}
                   onChange={(value) => updateSettings({ subdivision: parseSubdivision(value) })}
                   options={SUBDIVISIONS.map((subdivision) => ({
                     value: subdivision,
@@ -340,6 +368,7 @@ export function QuickMetronomeExperience() {
                 <LabeledSelect
                   label="Countdown"
                   value={String(settings.countdownBeats)}
+                  disabled={arePreRunSettingsLocked}
                   onChange={(value) => updateSettings({ countdownBeats: parseCountdownBeats(value) })}
                   options={COUNTDOWN_OPTIONS.map((beats) => ({
                     value: String(beats),
@@ -347,6 +376,12 @@ export function QuickMetronomeExperience() {
                   }))}
                 />
               </div>
+
+              {arePreRunSettingsLocked ? (
+                <p role="status" className="text-sm leading-6 text-muted-foreground">
+                  Meter, subdivision, accent, and countdown are locked while the metronome is running. Stop playback to change them.
+                </p>
+              ) : null}
 
               <div>
                 <p className="text-sm font-medium">Accent</p>
@@ -357,6 +392,7 @@ export function QuickMetronomeExperience() {
                       type="button"
                       variant={settings.accent === accentMode ? "default" : "secondary"}
                       aria-pressed={settings.accent === accentMode}
+                      disabled={arePreRunSettingsLocked}
                       onClick={() => updateSettings({ accent: parseAccentMode(accentMode) })}
                     >
                       <Circle className="h-4 w-4" aria-hidden="true" />
@@ -451,12 +487,14 @@ function LabeledSelect({
   label,
   value,
   onChange,
-  options
+  options,
+  disabled = false
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
+  disabled?: boolean;
 }) {
   const id = label.toLowerCase().replaceAll(" ", "-");
 
@@ -469,6 +507,7 @@ function LabeledSelect({
         id={id}
         aria-label={label}
         value={value}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >

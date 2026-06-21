@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
 import { createQuickPracticeSession, createQuickRecording } from "@/lib/quick-metronome/session";
 import { DEFAULT_METRONOME_SETTINGS, type RecordingArtifact } from "@/lib/quick-metronome/types";
 
@@ -40,6 +41,7 @@ describe("quick metronome session and recording metadata", () => {
 
     expect(recording.id).toMatch(/^recording_/);
     expect(recording.type).toBe("quick");
+    expect(recording.origin).toBe("user");
     expect(recording.sessionId).toBe(session.id);
     expect(recording.sheetId).toBeNull();
     expect(recording.createdAt).toBe("2026-06-21T08:01:00.000Z");
@@ -48,5 +50,28 @@ describe("quick metronome session and recording metadata", () => {
     expect(recording.audioDataUrl).toContain("data:audio/webm");
     expect(recording.artifactAnalysis?.estimatedFrequencyHz).toBe(440);
     expect(recording.artifactAnalysis?.isSilent).toBe(false);
+  });
+
+  it("provides a clearly marked playable demo recording without claiming it is a user take", () => {
+    const demoRecording = getDemoQuickRecording();
+    const base64Payload = demoRecording.audioDataUrl.replace(/^data:audio\/wav;base64,/, "");
+    const wavBytes = Buffer.from(base64Payload, "base64");
+
+    expect(demoRecording.type).toBe("quick");
+    expect(demoRecording.origin).toBe("demo");
+    expect(demoRecording.id).toContain("demo");
+    expect(demoRecording.audioDataUrl).toMatch(/^data:audio\/wav;base64,/);
+    expect(demoRecording.sizeBytes).toBeGreaterThan(1_000);
+    expect(wavBytes.subarray(0, 4).toString("ascii")).toBe("RIFF");
+    expect(wavBytes.subarray(8, 12).toString("ascii")).toBe("WAVE");
+    expect(wavBytes.subarray(12, 16).toString("ascii")).toBe("fmt ");
+    expect(wavBytes.readUInt16LE(20)).toBe(1);
+    expect(wavBytes.readUInt16LE(22)).toBe(1);
+    expect(wavBytes.readUInt32LE(24)).toBe(8_000);
+    expect(wavBytes.subarray(36, 40).toString("ascii")).toBe("data");
+    expect(wavBytes.readUInt32LE(40)).toBe(16_000);
+    expect(demoRecording.artifactAnalysis?.estimatedFrequencyHz).toBe(440);
+    expect(demoRecording.artifactAnalysis?.isSilent).toBe(false);
+    expect(demoRecording.sheetId).toBeNull();
   });
 });
