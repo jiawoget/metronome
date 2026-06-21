@@ -37,6 +37,10 @@ export const sheetLibraryRepository: SheetLibraryRepository = {
     return getDatabase().sheets.orderBy("createdAt").reverse().toArray();
   },
 
+  async getSheet(sheetId) {
+    return (await getDatabase().sheets.get(sheetId)) ?? null;
+  },
+
   async saveSheet(sheet, artifact) {
     const db = getDatabase();
 

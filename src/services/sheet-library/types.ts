@@ -36,6 +36,7 @@ export type ImportSheetInput = {
 
 export type SheetLibraryRepository = {
   listSheets: () => Promise<ImportedSheet[]>;
+  getSheet: (sheetId: string) => Promise<ImportedSheet | null>;
   saveSheet: (sheet: ImportedSheet, artifact: SheetArtifact) => Promise<void>;
   getArtifact: (sheetId: string) => Promise<SheetArtifact | null>;
   deleteSheet: (sheetId: string) => Promise<void>;
@@ -48,6 +49,7 @@ export type SheetImportAdapter = {
 
 export type SheetLibraryService = {
   listSheets: () => Promise<SheetListItem[]>;
+  getSheet: (sheetId: string) => Promise<SheetListItem | null>;
   previewImport: (files: File[]) => Promise<SheetImportResult>;
   importSheet: (input: ImportSheetInput) => Promise<{ ok: true; sheet: SheetListItem } | { ok: false; message: string }>;
   deleteSheet: (sheetId: string) => Promise<void>;

@@ -1,20 +1,15 @@
-import { Music2 } from "lucide-react";
+import { SheetViewerExperience } from "@/components/sheet-practice/viewer/sheet-viewer-experience";
 
-import { RouteShell } from "@/components/app-shell/route-shell";
+type SheetPracticePageProps = {
+  searchParams?: Promise<{
+    sheetId?: string | string[];
+  }>;
+};
 
-export default function SheetPracticePage() {
-  return (
-    <RouteShell
-      title="Sheet Practice"
-      eyebrow="Top-level module"
-      description="Practice workspace entry route. Sheet rendering, metronome integration, recording, markers, and references are assigned to later modules."
-      icon={Music2}
-      details={[
-        "Route is ready for top-level navigation.",
-        "No sheet viewer is rendered in this shell.",
-        "No practice controls are enabled here yet.",
-        "Future modules own workspace behavior."
-      ]}
-    />
-  );
+export default async function SheetPracticePage({ searchParams }: SheetPracticePageProps) {
+  const params = await searchParams;
+  const rawSheetId = params?.sheetId;
+  const sheetId = Array.isArray(rawSheetId) ? rawSheetId[0] : rawSheetId ?? null;
+
+  return <SheetViewerExperience sheetId={sheetId} />;
 }

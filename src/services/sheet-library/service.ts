@@ -50,6 +50,12 @@ export function createSheetLibraryService({
       return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     },
 
+    async getSheet(sheetId) {
+      const sheet = await repository.getSheet(sheetId);
+
+      return sheet ? toListItem(sheet) : null;
+    },
+
     previewImport(files) {
       return importAdapter.analyzeFiles(files);
     },

@@ -115,7 +115,8 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
 
   await page.getByRole("link", { name: "Open Sheet Practice" }).click();
   await expect(page).toHaveURL(/\/sheet-practice\?sheetId=sheet_/);
-  await expect(page.getByRole("heading", { name: "Sheet Practice" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Autumn Etude" })).toBeVisible();
+  await expect(page.getByText("Page 1 of 1")).toBeVisible();
 
   await page.goto("/sheet-library");
   await page.getByRole("button", { name: "Delete" }).click();

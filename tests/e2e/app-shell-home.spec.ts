@@ -56,7 +56,7 @@ test("app shell home navigation works on desktop and mobile without console erro
 
   await sidebar.getByRole("link", { name: "Sheet Practice" }).click();
   await expect(page).toHaveURL(/\/sheet-practice$/);
-  await expect(page.getByRole("heading", { name: "Sheet Practice" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No sheet selected" })).toBeVisible();
   await expect(sidebar.getByRole("link", { name: "Sheet Practice" })).toHaveAttribute("aria-current", "page");
 
   await sidebar.getByRole("link", { name: "Recordings" }).click();
@@ -86,7 +86,7 @@ test("app shell home navigation works on desktop and mobile without console erro
 
   await mobileNav.getByLabel("Sheet Practice").click();
   await expect(page).toHaveURL(/\/sheet-practice$/);
-  await expect(page.getByRole("heading", { name: "Sheet Practice" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No sheet selected" })).toBeVisible();
   await expect(mobileNav.getByLabel("Sheet Practice")).toHaveAttribute("aria-current", "page");
 
   await mobileNav.getByLabel("Recordings").click();

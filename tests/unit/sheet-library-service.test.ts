@@ -15,6 +15,9 @@ function createMemoryRepository(): SheetLibraryRepository {
     async listSheets() {
       return Array.from(sheets.values());
     },
+    async getSheet(sheetId) {
+      return sheets.get(sheetId) ?? null;
+    },
     async saveSheet(sheet, artifact) {
       sheets.set(sheet.id, sheet);
       artifacts.set(sheet.id, artifact);
