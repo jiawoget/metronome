@@ -220,6 +220,24 @@ If verification fails, the verification commit must mark the feature `needs_fix`
 
 The implementation commit and verification commit must be separate commits. Do not combine implementation and verification status changes in one commit.
 
+### Status Commit Hash Semantics
+
+Status file `commitHash` fields must only contain commit hashes that are known before the status commit is created.
+
+Implementation status:
+
+- `implementation.commitHash` records the implementation or fix commit that the status is based on when that hash is already known.
+- The implementation status commit must not try to record its own final commit hash inside the same commit.
+- The implementation agent reports its own status commit hash in the final handoff response; the monitor final report, or a later external status update, records or summarizes it if durable reporting is needed.
+
+Verification status:
+
+- `verification.commitHash` records the implementation or fix commit hash being verified.
+- The verification status commit must not try to record its own final commit hash inside the same commit.
+- The verification agent reports its own status commit hash in the final verification report; the monitor final report, or a later external status update, records or summarizes it if durable reporting is needed.
+
+Review agents must check that these fields describe the correct target commit and must not require self-referential commit hashes that would force a second hash-only status commit.
+
 Recommended commit message formats:
 
 ```text

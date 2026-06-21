@@ -161,7 +161,9 @@ Implementation status update must include:
 - Self-tests run.
 - Handoff notes.
 - Known risks.
-- Implementation commit hash after commit.
+- `commitHash` for the implementation commit this status is based on when known before the status commit.
+
+An implementation status commit cannot record its own final git object hash inside the same commit because changing the status file would change that hash. The implementation agent must report the implementation status commit hash in its final handoff response. The monitor final report, or a later external status update, is responsible for recording or summarizing that implementation status commit hash if durable reporting is required.
 
 If commit is blocked by environment permissions, the agent must report the exact blocker and must not pretend the commit happened.
 
@@ -189,9 +191,13 @@ Verification status update must include:
 - Persistence evidence.
 - Console status.
 - Issues.
-- Verification commit hash after commit.
+- `commitHash` for the implementation or fix commit being verified.
+
+A verification status commit cannot record its own final git object hash inside the same commit. The verification agent must report the verification status commit hash in its final report. The monitor final report, or a later external status update, is responsible for reporting the verification commit hash if durable reporting is required.
 
 If verification cannot run, status should be `needs_fix` unless the blocker is outside the implementation and requires planning/user intervention.
+
+Review agents must check that status `commitHash` fields follow these semantics. They must not require an implementation or verification status commit to contain its own self-referential commit hash.
 
 ## Commit Rules
 

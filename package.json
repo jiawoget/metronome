@@ -10,8 +10,9 @@
   },
   "scripts": {
     "install:deps": "npm install",
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/run-next-dev-stable-env.mjs",
+    "build": "next build && node scripts/stabilize-next-env.mjs",
+    "next-env:stable": "node scripts/stabilize-next-env.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
