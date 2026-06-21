@@ -269,7 +269,7 @@
                       },
                       {
                           "module":  "03-recordings-review",
-	                          "status":  "implementation_done",
+                          "status":  "verified",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
