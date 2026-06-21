@@ -269,7 +269,7 @@
                       },
                       {
                           "module":  "03-recordings-review",
-	                          "status":  "implementation_done",
+	                          "status":  "verified",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
@@ -324,7 +324,7 @@
                                              },
 	                          "verification":  {
 	                                               "requiredSeparateAgent":  true,
-	                                               "agent":  "GPT-5.4 mini",
+	                                               "agent":  "GPT-5.4 Mini",
 	                                               "completedAt":  "2026-06-21T10:46:25Z",
 	                                               "result":  "PASS",
 	                                               "acceptanceCriteria":  [
@@ -405,8 +405,8 @@
                                                "issues":  [
 
                                                           ],
-                                               "commitHash":  null
-                                           }
+	                                               "commitHash":  "b2dca7ba31c44741ad510a45a5aa8321ef6765e1"
+	                                           }
                       },
                       {
                           "module":  "05-sheet-practice",
