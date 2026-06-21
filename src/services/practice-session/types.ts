@@ -8,6 +8,7 @@ import type {
 
 export type SheetSessionContext = {
   id: string;
+  name: string;
   bpm: number | null;
   timeSignature: PracticeTimeSignature | null;
 };
@@ -18,9 +19,14 @@ export type PracticeSessionRepository = {
   getRecentSession: () => Promise<PracticeSession | null>;
   getRecentSheetSession: (sheetId: string) => Promise<PracticeSession | null>;
   saveSession: (session: PracticeSession) => Promise<void>;
+  clear: () => Promise<void>;
+  subscribe?: (listener: () => void) => () => void;
+};
+
+export type PracticeRecordingMetadataRepository = {
   listRecordingMetadata: () => Promise<SheetRecordingMetadata[]>;
   listRecordingMetadataForSession: (sessionId: string) => Promise<SheetRecordingMetadata[]>;
-  saveRecordingMetadata: (recording: SheetRecordingMetadata) => Promise<void>;
+  saveRecordingMetadata: (recording: SheetRecordingMetadata, session: PracticeSession) => Promise<void>;
   clear: () => Promise<void>;
   subscribe?: (listener: () => void) => () => void;
 };

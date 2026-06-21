@@ -6,6 +6,7 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
 const sheetDbName = "metronome-practice-v0-sheet-library";
 const practiceDbName = "metronome-practice-v0-practice-sessions";
+const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
 
 async function deleteDatabase(page: Page, databaseName: string) {
   await page.evaluate(
@@ -23,6 +24,7 @@ async function deleteDatabase(page: Page, databaseName: string) {
 
 async function clearDatabases(page: Page) {
   await page.goto("/sheet-library");
+  await page.evaluate((storageKey) => window.localStorage.removeItem(storageKey), recordingHistoryStorageKey);
   await deleteDatabase(page, sheetDbName);
   await deleteDatabase(page, practiceDbName);
   await page.reload();
@@ -48,7 +50,7 @@ async function importSheet(page: Page) {
 
 async function getPracticeSnapshot(page: Page) {
   return page.evaluate(
-    (databaseName: string) =>
+    ({ databaseName, storageKey }: { databaseName: string; storageKey: string }) =>
       new Promise<{
         sessions: Array<{
           id: string;
@@ -64,43 +66,57 @@ async function getPracticeSnapshot(page: Page) {
           sessionId: string;
           sheetId: string;
           durationMs: number;
-          audioDataUrl?: string;
+          audioDataUrl?: string | null;
         }>;
       }>((resolve, reject) => {
-        const openRequest = indexedDB.open(databaseName);
+        const readRecordings = () => {
+          const rawValue = window.localStorage.getItem(storageKey);
+          const parsed = rawValue ? JSON.parse(rawValue) : { recordings: [] };
 
-        openRequest.onerror = () => reject(openRequest.error);
-        openRequest.onupgradeneeded = () => {
-          const database = openRequest.result;
-
-          const sessionsStore = database.createObjectStore("sessions", { keyPath: "id" });
-          const recordingsStore = database.createObjectStore("recordings", { keyPath: "id" });
-
-          sessionsStore.createIndex("sourceType", "sourceType");
-          sessionsStore.createIndex("sheetId", "sheetId");
-          sessionsStore.createIndex("startedAt", "startedAt");
-          sessionsStore.createIndex("updatedAt", "updatedAt");
-          recordingsStore.createIndex("sessionId", "sessionId");
-          recordingsStore.createIndex("sheetId", "sheetId");
-          recordingsStore.createIndex("createdAt", "createdAt");
+          return Array.isArray(parsed.recordings) ? parsed.recordings : [];
         };
-        openRequest.onsuccess = () => {
-          const database = openRequest.result;
-          const transaction = database.transaction(["sessions", "recordings"], "readonly");
-          const sessionsRequest = transaction.objectStore("sessions").getAll();
-          const recordingsRequest = transaction.objectStore("recordings").getAll();
+        const openExistingDatabase = () => {
+          const openRequest = indexedDB.open(databaseName);
 
-          transaction.oncomplete = () => {
-            database.close();
-            resolve({
-              sessions: sessionsRequest.result,
-              recordings: recordingsRequest.result
-            });
+          openRequest.onerror = () => reject(openRequest.error);
+          openRequest.onsuccess = () => {
+            const database = openRequest.result;
+
+            if (!database.objectStoreNames.contains("sessions")) {
+              database.close();
+              resolve({ sessions: [], recordings: readRecordings() });
+              return;
+            }
+
+            const transaction = database.transaction(["sessions"], "readonly");
+            const sessionsRequest = transaction.objectStore("sessions").getAll();
+
+            transaction.oncomplete = () => {
+              database.close();
+              resolve({
+                sessions: sessionsRequest.result,
+                recordings: readRecordings()
+              });
+            };
+            transaction.onerror = () => reject(transaction.error);
           };
-          transaction.onerror = () => reject(transaction.error);
         };
+
+        if ("databases" in indexedDB) {
+          indexedDB.databases().then((databases) => {
+            if (databases.some((database) => database.name === databaseName)) {
+              openExistingDatabase();
+              return;
+            }
+
+            resolve({ sessions: [], recordings: readRecordings() });
+          }, reject);
+          return;
+        }
+
+        openExistingDatabase();
       }),
-    practiceDbName
+    { databaseName: practiceDbName, storageKey: recordingHistoryStorageKey }
   );
 }
 
@@ -121,6 +137,30 @@ async function getSheetLastPracticedAt(page: Page, sheetId: string) {
             resolve((request.result?.lastPracticedAt as string | null | undefined) ?? null);
           };
           request.onerror = () => reject(request.error);
+        };
+      }),
+    { databaseName: sheetDbName, id: sheetId }
+  );
+}
+
+async function deleteSheetRecord(page: Page, sheetId: string) {
+  await page.evaluate(
+    ({ databaseName, id }: { databaseName: string; id: string }) =>
+      new Promise<void>((resolve, reject) => {
+        const openRequest = indexedDB.open(databaseName);
+
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const database = openRequest.result;
+          const transaction = database.transaction(["sheets", "artifacts"], "readwrite");
+
+          transaction.objectStore("artifacts").delete(id);
+          transaction.objectStore("sheets").delete(id);
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () => reject(transaction.error);
         };
       }),
     { databaseName: sheetDbName, id: sheetId }
@@ -209,7 +249,20 @@ test("sheet practice session starts only on activity, persists, links metadata, 
   expect(snapshot.recordings.map((recording) => recording.id)).toContain(snapshot.sessions[0]?.latestRecordingId);
   expect(snapshot.recordings).toHaveLength(2);
   expect(snapshot.recordings.every((recording) => recording.sessionId === sessionId && recording.sheetId === sheetId)).toBe(true);
-  expect(snapshot.recordings.every((recording) => recording.audioDataUrl === undefined)).toBe(true);
+  expect(snapshot.recordings.every((recording) => recording.audioDataUrl === null)).toBe(true);
+
+  await page.goto("/recordings");
+  await expect(page.getByRole("heading", { name: "Recordings" })).toBeVisible();
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Session Contract Sheet");
+  await expect(page.getByTestId("recordings-list")).toBeVisible();
+  await expect(page.getByText("Sheet practice metadata").first()).toBeVisible();
+  await expect(page.getByText("Session Contract Sheet").first()).toBeVisible();
+  await expect(page.getByTestId("recording-artifact-error")).toContainText("no accessible audio artifact");
+
+  await deleteSheetRecord(page, sheetId);
+  await page.goto("/");
+  await expect(page.getByText(/No recent practice session yet/i)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continue Practice" })).toHaveCount(0);
 
   await page.goto("/sheet-practice/unknown-sheet");
   await expect(page.getByText("Sheet not found")).toBeVisible();

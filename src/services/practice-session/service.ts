@@ -6,6 +6,7 @@ import {
 } from "@/domain/practice";
 import type {
   PracticeSessionRepository,
+  PracticeRecordingMetadataRepository,
   PracticeSessionService,
   PracticeSessionSheetGateway,
   SheetPracticeActivityInput,
@@ -14,6 +15,7 @@ import type {
 
 type CreatePracticeSessionServiceOptions = {
   repository: PracticeSessionRepository;
+  recordingRepository: PracticeRecordingMetadataRepository;
   sheetGateway: PracticeSessionSheetGateway;
   now?: () => Date;
   createId?: (prefix: string) => string;
@@ -29,6 +31,7 @@ function createDefaultId(prefix: string) {
 
 export function createPracticeSessionService({
   repository,
+  recordingRepository,
   sheetGateway,
   now = () => new Date(),
   createId = createDefaultId
@@ -114,14 +117,23 @@ export function createPracticeSessionService({
         return null;
       }
 
+      const sheet = await sheetGateway.getSheetContext(session.sheetId);
+
+      if (!sheet) {
+        return null;
+      }
+
       const timestamp = now().toISOString();
       const recording: SheetRecordingMetadata = {
         id: createId("recording"),
         type: "sheet",
         sessionId: session.id,
         sheetId: session.sheetId,
+        sheetName: sheet.name,
         createdAt: timestamp,
-        durationMs: Math.max(0, Math.round(input.durationMs ?? 0))
+        durationMs: Math.max(0, Math.round(input.durationMs ?? 0)),
+        bpm: session.bpm ?? sheet.bpm,
+        timeSignature: session.timeSignature ?? sheet.timeSignature
       };
       const nextSession = {
         ...session,
@@ -131,7 +143,7 @@ export function createPracticeSessionService({
         updatedAt: timestamp
       };
 
-      await repository.saveRecordingMetadata(recording);
+      await recordingRepository.saveRecordingMetadata(recording, nextSession);
       await saveSession(nextSession);
       await sheetGateway.updateLastPracticedAt(session.sheetId, timestamp);
 
@@ -143,19 +155,40 @@ export function createPracticeSessionService({
     },
 
     async getContinuePracticeTarget() {
-      return getContinuePracticeTarget(await repository.getRecentSession());
+      const recentSession = await repository.getRecentSession();
+
+      if (recentSession?.sourceType === "sheet") {
+        if (!recentSession.sheetId) {
+          return null;
+        }
+
+        const sheet = await sheetGateway.getSheetContext(recentSession.sheetId);
+
+        if (!sheet) {
+          return null;
+        }
+      }
+
+      return getContinuePracticeTarget(recentSession);
     },
 
     listRecordingMetadata() {
-      return repository.listRecordingMetadata();
+      return recordingRepository.listRecordingMetadata();
     },
 
-    clear() {
-      return repository.clear();
+    async clear() {
+      await repository.clear();
+      await recordingRepository.clear();
     },
 
     subscribe(listener) {
-      return repository.subscribe?.(listener) ?? (() => undefined);
+      const unsubscribeSession = repository.subscribe?.(listener) ?? (() => undefined);
+      const unsubscribeRecording = recordingRepository.subscribe?.(listener) ?? (() => undefined);
+
+      return () => {
+        unsubscribeSession();
+        unsubscribeRecording();
+      };
     }
   };
 }

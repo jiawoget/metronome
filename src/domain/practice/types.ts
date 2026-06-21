@@ -23,8 +23,11 @@ export type SheetRecordingMetadata = {
   type: "sheet";
   sessionId: string;
   sheetId: string;
+  sheetName: string | null;
   createdAt: string;
   durationMs: number;
+  bpm: number | null;
+  timeSignature: PracticeTimeSignature | null;
 };
 
 export type ContinuePracticeTarget =

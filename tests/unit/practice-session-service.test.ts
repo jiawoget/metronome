@@ -1,19 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { applyPracticeTrigger, getContinuePracticeTarget, type PracticeSession, type SheetRecordingMetadata } from "@/domain/practice";
+import { applyPracticeTrigger, type PracticeSession, type SheetRecordingMetadata } from "@/domain/practice";
 import {
   createPracticeSessionService,
+  type PracticeRecordingMetadataRepository,
   type PracticeSessionRepository,
   type PracticeSessionSheetGateway
 } from "@/services/practice-session";
 
-function createMemoryRepository(): PracticeSessionRepository {
+function createMemorySessionRepository(): PracticeSessionRepository {
   const sessions = new Map<string, PracticeSession>();
-  const recordings = new Map<string, SheetRecordingMetadata>();
   const listSessions = async () =>
     Array.from(sessions.values()).sort((first, second) => second.updatedAt.localeCompare(first.updatedAt));
-  const listRecordingMetadata = async () =>
-    Array.from(recordings.values()).sort((first, second) => second.createdAt.localeCompare(first.createdAt));
 
   return {
     listSessions,
@@ -29,6 +27,18 @@ function createMemoryRepository(): PracticeSessionRepository {
     async saveSession(session) {
       sessions.set(session.id, session);
     },
+    async clear() {
+      sessions.clear();
+    }
+  };
+}
+
+function createMemoryRecordingRepository(): PracticeRecordingMetadataRepository {
+  const recordings = new Map<string, SheetRecordingMetadata>();
+  const listRecordingMetadata = async () =>
+    Array.from(recordings.values()).sort((first, second) => second.createdAt.localeCompare(first.createdAt));
+
+  return {
     listRecordingMetadata,
     async listRecordingMetadataForSession(sessionId) {
       return (await listRecordingMetadata()).filter((recording) => recording.sessionId === sessionId);
@@ -37,7 +47,6 @@ function createMemoryRepository(): PracticeSessionRepository {
       recordings.set(recording.id, recording);
     },
     async clear() {
-      sessions.clear();
       recordings.clear();
     }
   };
@@ -53,6 +62,7 @@ function createSheetGateway(validSheetIds = new Set(["sheet-alpha"])) {
 
       return {
         id: sheetId,
+        name: "Alpha Sheet",
         bpm: 96,
         timeSignature: "4/4"
       };
@@ -73,17 +83,20 @@ describe("practice session service", () => {
   });
 
   function createService() {
-    const repository = createMemoryRepository();
-    const { gateway, lastPracticed } = createSheetGateway();
+    const repository = createMemorySessionRepository();
+    const recordingRepository = createMemoryRecordingRepository();
+    const validSheetIds = new Set(["sheet-alpha"]);
+    const { gateway, lastPracticed } = createSheetGateway(validSheetIds);
     let idNumber = 0;
     const service = createPracticeSessionService({
       repository,
+      recordingRepository,
       sheetGateway: gateway,
       now: () => new Date(nowMs),
       createId: (prefix) => `${prefix}-${++idNumber}`
     });
 
-    return { service, repository, lastPracticed };
+    return { service, repository, recordingRepository, lastPracticed, validSheetIds };
   }
 
   it("does not create a session for missing or unknown sheet context", async () => {
@@ -95,7 +108,7 @@ describe("practice session service", () => {
   });
 
   it("creates a sheet session on metronome trigger without recording metadata", async () => {
-    const { service, repository, lastPracticed } = createService();
+    const { service, lastPracticed } = createService();
 
     const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
 
@@ -109,12 +122,12 @@ describe("practice session service", () => {
       recordingCount: 0,
       latestRecordingId: null
     });
-    expect(await repository.listRecordingMetadata()).toEqual([]);
+    expect(await service.listRecordingMetadata()).toEqual([]);
     expect(lastPracticed.get("sheet-alpha")).toBe("2026-06-21T12:00:00.000Z");
   });
 
   it("restores the existing sheet session, updates duration, and drives Continue Practice", async () => {
-    const { service, repository } = createService();
+    const { service } = createService();
 
     const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
     nowMs += 65_000;
@@ -122,7 +135,7 @@ describe("practice session service", () => {
 
     expect(restored?.id).toBe(session?.id);
     expect(restored?.durationMs).toBe(65_000);
-    expect(getContinuePracticeTarget(await repository.getRecentSession())).toEqual({
+    expect(await service.getContinuePracticeTarget()).toEqual({
       sourceType: "sheet",
       href: "/sheet-practice/sheet-alpha",
       label: "Continue Sheet Practice",
@@ -147,15 +160,33 @@ describe("practice session service", () => {
       type: "sheet",
       sessionId: "session-1",
       sheetId: "sheet-alpha",
+      sheetName: "Alpha Sheet",
       createdAt: "2026-06-21T12:00:12.500Z",
-      durationMs: 12_300
+      durationMs: 12_300,
+      bpm: 96,
+      timeSignature: "4/4"
     });
     expect(recording).not.toHaveProperty("audioDataUrl");
+    expect(await service.listRecordingMetadata()).toEqual([recording]);
     expect(updatedSession).toMatchObject({
       recordingCount: 1,
       latestRecordingId: "recording-2",
       durationMs: 12_500
     });
+  });
+
+  it("does not return Continue Practice for a stale sheet session after the sheet is deleted", async () => {
+    const { service, validSheetIds } = createService();
+
+    await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    expect(await service.getContinuePracticeTarget()).toMatchObject({
+      sourceType: "sheet",
+      sheetId: "sheet-alpha"
+    });
+
+    validSheetIds.delete("sheet-alpha");
+
+    await expect(service.getContinuePracticeTarget()).resolves.toBeNull();
   });
 
   it("keeps metronome, recording, and future reference trigger states independent", () => {

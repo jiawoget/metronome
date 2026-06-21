@@ -1,6 +1,6 @@
 import Dexie, { type Table } from "dexie";
 
-import { sortSessionsByRecentActivity, type PracticeSession, type SheetRecordingMetadata } from "@/domain/practice";
+import { sortSessionsByRecentActivity, type PracticeSession } from "@/domain/practice";
 import type { PracticeSessionRepository } from "@/services/practice-session";
 
 export const PRACTICE_SESSION_DB_NAME = "metronome-practice-v0-practice-sessions";
@@ -8,12 +8,10 @@ export const PRACTICE_SESSION_STORE_EVENT = "practice-session-change";
 
 type PracticeSessionDatabaseSchema = {
   sessions: Table<PracticeSession, string>;
-  recordings: Table<SheetRecordingMetadata, string>;
 };
 
 class PracticeSessionDexieDatabase extends Dexie implements PracticeSessionDatabaseSchema {
   sessions!: Table<PracticeSession, string>;
-  recordings!: Table<SheetRecordingMetadata, string>;
 
   constructor() {
     super(PRACTICE_SESSION_DB_NAME);
@@ -21,6 +19,10 @@ class PracticeSessionDexieDatabase extends Dexie implements PracticeSessionDatab
     this.version(1).stores({
       sessions: "id, sourceType, sheetId, startedAt, updatedAt",
       recordings: "id, sessionId, sheetId, createdAt"
+    });
+    this.version(2).stores({
+      sessions: "id, sourceType, sheetId, startedAt, updatedAt",
+      recordings: null
     });
   }
 }
@@ -63,24 +65,10 @@ export const practiceSessionRepository: PracticeSessionRepository = {
     dispatchPracticeSessionChange();
   },
 
-  async listRecordingMetadata() {
-    return getDatabase().recordings.orderBy("createdAt").reverse().toArray();
-  },
-
-  async listRecordingMetadataForSession(sessionId) {
-    return getDatabase().recordings.where("sessionId").equals(sessionId).reverse().toArray();
-  },
-
-  async saveRecordingMetadata(recording) {
-    await getDatabase().recordings.put(recording);
-    dispatchPracticeSessionChange();
-  },
-
   async clear() {
     const db = getDatabase();
 
-    await db.transaction("rw", db.sessions, db.recordings, async () => {
-      await db.recordings.clear();
+    await db.transaction("rw", db.sessions, async () => {
       await db.sessions.clear();
     });
     dispatchPracticeSessionChange();
