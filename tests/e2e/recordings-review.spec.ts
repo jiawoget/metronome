@@ -322,6 +322,31 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   expect(decodedArtifactEvidence.sheet.peakAmplitude).toBeGreaterThan(0.2);
   expect(decodedArtifactEvidence.sheet.rmsAmplitude).toBeGreaterThan(0.1);
 
+  const originalQuickAlphaSnapshot = await page.evaluate(() => {
+    const rawValue = window.localStorage.getItem("metronome-practice:v0:quick-recordings");
+    const parsed = rawValue ? JSON.parse(rawValue) : null;
+    const recording = parsed.recordings.find((item: { id: string }) => item.id === "quick-alpha");
+
+    return {
+      id: recording.id,
+      type: recording.type,
+      origin: recording.origin,
+      name: recording.name,
+      sessionId: recording.sessionId,
+      sheetId: recording.sheetId,
+      createdAt: recording.createdAt,
+      durationMs: recording.durationMs,
+      sizeBytes: recording.sizeBytes,
+      mimeType: recording.mimeType,
+      audioDataUrl: recording.audioDataUrl,
+      artifactAnalysis: recording.artifactAnalysis,
+      settings: {
+        bpm: recording.settings.bpm,
+        timeSignature: recording.settings.timeSignature
+      }
+    };
+  });
+
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Alpha");
   await expect(page.getByTestId("recording-row-quick-alpha")).toBeVisible();
   await expect(page.getByText("Moonlight Etude")).toBeHidden();
@@ -374,9 +399,21 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
       original: original
         ? {
             id: original.id,
+            type: original.type,
+            origin: original.origin,
+            name: original.name,
+            sessionId: original.sessionId,
+            sheetId: original.sheetId,
+            createdAt: original.createdAt,
             durationMs: original.durationMs,
+            sizeBytes: original.sizeBytes,
+            mimeType: original.mimeType,
             audioDataUrl: original.audioDataUrl,
-            decodedDurationMs: original.artifactAnalysis?.decodedDurationMs ?? null
+            artifactAnalysis: original.artifactAnalysis,
+            settings: {
+              bpm: original.settings.bpm,
+              timeSignature: original.settings.timeSignature
+            }
           }
         : null,
       continued: continued
@@ -391,12 +428,7 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     };
   });
 
-  expect(continuedRecordingEvidence.original).toEqual({
-    id: "quick-alpha",
-    durationMs: 1_000,
-    audioDataUrl: expect.stringMatching(/^data:audio\/wav;base64,/),
-    decodedDurationMs: 1_000
-  });
+  expect(continuedRecordingEvidence.original).toEqual(originalQuickAlphaSnapshot);
   expect(continuedRecordingEvidence.continued?.id).not.toBe("quick-alpha");
   expect(continuedRecordingEvidence.continued?.sessionId).not.toBe("session-quick-1");
   expect(continuedRecordingEvidence.continued?.decodedDurationMs).toBeGreaterThan(600);
