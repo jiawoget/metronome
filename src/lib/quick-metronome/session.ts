@@ -44,7 +44,7 @@ export function createQuickRecording({
     sizeBytes: artifact.sizeBytes,
     mimeType: artifact.mimeType,
     audioDataUrl: artifact.dataUrl,
+    artifactAnalysis: artifact.analysis,
     settings
   } satisfies QuickRecording;
 }
-

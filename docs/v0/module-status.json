@@ -174,13 +174,13 @@
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
-                                                 "completedAt":  "2026-06-21T09:04:34Z",
+                                                 "completedAt":  "2026-06-21T09:11:39Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 6 test files passed, 12 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 7 test files passed, 14 tests passed, including decoded recording artifact analysis",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed and prerendered /quick-metronome and /recordings among static routes",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 3 chromium tests passed covering app shell navigation, quick metronome recording/replay/persistence/control independence, and microphone permission denial"
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 3 chromium tests passed covering app shell navigation, real metronome scheduler trace timing at 120 BPM and after changing to 180 BPM, decoded synthetic 440Hz recording artifact evidence, quick recording/replay/persistence/control independence, and microphone permission denial"
                                                                ],
                                                  "handoffNotes":  [
                                                      "Assigned feature: 02-quick-metronome.",
@@ -188,24 +188,29 @@
                                                      "Implemented only the Quick Metronome v0 contract scope: tempo, meter, subdivision, accent, countdown, tap tempo, metronome playback, quick recording, replay, quick session/recording metadata, persistence, and a minimal latest quick recording outlet.",
                                                      "Metronome UI calls a BrowserMetronomeService boundary that uses Web Audio scheduling; the UI does not directly call Web Audio scheduler APIs.",
                                                      "Recording UI calls a BrowserRecordingService boundary that uses MediaRecorder; E2E injects a controlled synthetic audio stream through getUserMedia and verifies a non-empty quick recording is saved and replayable.",
+                                                     "Code review fix pass: BrowserMetronomeService now emits scheduled tick trace evidence with audioTime, BPM, expected interval, subdivision, and accent status so E2E can measure actual scheduled spacing instead of relying on UI text.",
+                                                     "Code review fix pass: BrowserRecordingService now decodes the captured artifact after stop and records duration, sample rate, peak, RMS, estimated frequency, and silence status; E2E independently decodes the saved data URL and verifies the expected 440Hz synthetic input is present without obvious truncation or silence.",
                                                      "Quick recordings are saved with type quick, linked to a Practice Session with sourceType quick, and have sheetId null.",
                                                      "The /recordings route remains a minimal latest-recording outlet only; full recording library/search/waveform behavior remains for 03-recordings-review.",
                                                      "Implementation commit hash is reported in the final handoff response because a git commit cannot contain its own final object hash without changing that hash."
                                                                   ],
                                                  "changedAreas":  [
                                                      "src/lib/quick-metronome adds pure control helpers, session/recording metadata creation, local persistence, BrowserMetronomeService, BrowserRecordingService, and recording replay service boundaries",
+                                                     "src/lib/quick-metronome/metronome-service.ts adds scheduler trace events for timing verification",
+                                                     "src/lib/quick-metronome/recording-service.ts and src/lib/quick-metronome/types.ts add decoded artifact analysis metadata",
                                                      "src/components/quick-metronome adds the Quick Metronome client experience and latest quick recording outlet",
                                                      "src/app/quick-metronome/page.tsx now renders the real Quick Metronome workflow",
                                                      "src/app/recordings/page.tsx exposes the minimal latest quick recording outlet for v0 continuity without implementing the full recordings module",
                                                      "src/components/home/home-dashboard.tsx updates Quick Metronome and quick recording copy now that the module is implemented",
                                                      "tests/unit/quick-metronome-control.test.ts and tests/unit/quick-metronome-session.test.ts cover tempo bounds, meter/subdivision/accent/countdown validation, tap tempo, timing, and quick metadata",
-                                                     "tests/e2e/quick-metronome.spec.ts covers visible controls, tap tempo, play/stop states, controlled synthetic recording, replay, persistence after reload, microphone denial, and recording/metronome independence",
+                                                     "tests/unit/quick-metronome-recording-analysis.test.ts covers decoded synthetic input frequency/amplitude detection and silent artifact detection",
+                                                     "tests/e2e/quick-metronome.spec.ts covers visible controls, tap tempo, measured scheduler trace timing at selected BPM and after BPM change, decoded controlled synthetic recording contents, replay, persistence after reload, microphone denial, and recording/metronome independence",
                                                      "tests/e2e/app-shell-home.spec.ts and tests/unit/home-dashboard.test.ts update Home assertions for the implemented quick recording path"
                                                                   ],
                                                  "knownRisks":  [
                                                      "Recording format and replay availability depend on browser MediaRecorder and HTMLAudioElement support; unsupported browsers show an explicit recording error.",
                                                      "Quick recording audio is persisted as a data URL in localStorage for the v0 latest-recording outlet; this is suitable for short quick takes but not a long-term storage design for the full recordings module.",
-                                                     "Metronome timing uses Web Audio lookahead scheduling, but independent verification should still measure browser timing tolerance on the target environment.",
+                                                     "Metronome timing is now self-tested through scheduled Web Audio trace intervals in Chromium; independent verification should still confirm the same tolerance on the target environment.",
                                                      "Playwright's configured webServer uses port 3101 and exited after the E2E run; no separate dev server was left running."
                                                                 ],
                                                  "commitHash":  null

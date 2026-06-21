@@ -200,6 +200,10 @@ export function QuickMetronomeExperience() {
         throw new Error("Recording artifact was empty.");
       }
 
+      if (artifact.analysis?.isSilent) {
+        throw new Error("Recording artifact did not contain audible input.");
+      }
+
       const session = currentSession ?? createQuickPracticeSession(settings);
       const recording = createQuickRecording({ artifact, session, settings });
 

@@ -21,7 +21,15 @@ describe("quick metronome session and recording metadata", () => {
       dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
       durationMs: 1_245.4,
       mimeType: "audio/webm",
-      sizeBytes: 15
+      sizeBytes: 15,
+      analysis: {
+        decodedDurationMs: 1_230,
+        sampleRate: 48_000,
+        peakAmplitude: 0.2,
+        rmsAmplitude: 0.12,
+        estimatedFrequencyHz: 440,
+        isSilent: false
+      }
     };
     const recording = createQuickRecording({
       artifact,
@@ -38,6 +46,7 @@ describe("quick metronome session and recording metadata", () => {
     expect(recording.durationMs).toBe(1_245);
     expect(recording.sizeBytes).toBe(15);
     expect(recording.audioDataUrl).toContain("data:audio/webm");
+    expect(recording.artifactAnalysis?.estimatedFrequencyHz).toBe(440);
+    expect(recording.artifactAnalysis?.isSilent).toBe(false);
   });
 });
-

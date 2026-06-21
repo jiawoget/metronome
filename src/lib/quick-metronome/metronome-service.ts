@@ -5,10 +5,19 @@ import {
 } from "@/lib/quick-metronome/control";
 import { DEFAULT_METRONOME_SETTINGS, type MetronomeSettings } from "@/lib/quick-metronome/types";
 
+export const METRONOME_TRACE_EVENT = "quick-metronome:scheduled-tick";
+
 export type MetronomeTick = {
   tickIndex: number;
   audioTime: number;
   accented: boolean;
+};
+
+export type MetronomeTraceEventDetail = MetronomeTick & {
+  bpm: number;
+  expectedIntervalMs: number;
+  subdivision: MetronomeSettings["subdivision"];
+  timeSignature: MetronomeSettings["timeSignature"];
 };
 
 type MetronomeTickHandler = (tick: MetronomeTick) => void;
@@ -91,6 +100,7 @@ export class BrowserMetronomeService {
       };
 
       this.scheduleTick(tick);
+      this.emitTrace(tick);
       this.emitTick(tick);
       this.tickIndex += 1;
       this.nextTickTime += getTickIntervalMs(this.settings) / 1_000;
@@ -127,5 +137,21 @@ export class BrowserMetronomeService {
     window.setTimeout(() => {
       this.tickHandlers.forEach((handler) => handler(tick));
     }, delayMs);
+  }
+
+  private emitTrace(tick: MetronomeTick) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const detail: MetronomeTraceEventDetail = {
+      ...tick,
+      bpm: this.settings.bpm,
+      expectedIntervalMs: getTickIntervalMs(this.settings),
+      subdivision: this.settings.subdivision,
+      timeSignature: this.settings.timeSignature
+    };
+
+    window.dispatchEvent(new CustomEvent<MetronomeTraceEventDetail>(METRONOME_TRACE_EVENT, { detail }));
   }
 }

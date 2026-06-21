@@ -1,5 +1,28 @@
 import { expect, test } from "@playwright/test";
 
+type MetronomeTrace = {
+  tickIndex: number;
+  audioTime: number;
+  bpm: number;
+  expectedIntervalMs: number;
+  subdivision: string;
+};
+
+type DecodedRecordingEvidence = {
+  decodedDurationMs: number;
+  peakAmplitude: number;
+  rmsAmplitude: number;
+  estimatedFrequencyHz: number | null;
+};
+
+function average(values: number[]) {
+  return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function intervalsFromAudioTime(traces: MetronomeTrace[]) {
+  return traces.slice(1).map((trace, index) => (trace.audioTime - traces[index].audioTime) * 1_000);
+}
+
 test("quick metronome records, replays, persists, and keeps playback and recording independent", async ({
   page
 }) => {
@@ -19,6 +42,12 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
       window.localStorage.clear();
       window.sessionStorage.setItem("quick-metronome-e2e-ready", "true");
     }
+    const e2eWindow = window as Window & { __quickMetronomeTraces?: unknown[] };
+
+    e2eWindow.__quickMetronomeTraces = [];
+    window.addEventListener("quick-metronome:scheduled-tick", (event) => {
+      e2eWindow.__quickMetronomeTraces?.push((event as CustomEvent).detail);
+    });
 
     const originalPlay = window.HTMLMediaElement.prototype.play;
 
@@ -80,6 +109,54 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   await expect(bpmInput).toHaveValue(/11[5-9]|12[0-5]/);
 
   await page.getByLabel("Countdown").selectOption("0");
+  await page.getByLabel("Subdivision").selectOption("quarter");
+  await bpmInput.fill("120");
+  await page.getByRole("button", { name: "Start metronome" }).click();
+  await expect(page.getByText("Metronome playing.")).toBeVisible();
+  await page.waitForFunction(() => {
+    const e2eWindow = window as Window & { __quickMetronomeTraces?: MetronomeTrace[] };
+
+    return (e2eWindow.__quickMetronomeTraces ?? []).filter(
+      (trace) => trace.bpm === 120 && trace.subdivision === "quarter"
+    ).length >= 5;
+  });
+
+  const bpm120Traces = await page.evaluate(() => {
+    const e2eWindow = window as Window & { __quickMetronomeTraces?: MetronomeTrace[] };
+
+    return (e2eWindow.__quickMetronomeTraces ?? [])
+      .filter((trace) => trace.bpm === 120 && trace.subdivision === "quarter")
+      .slice(-5);
+  });
+  const bpm120Intervals = intervalsFromAudioTime(bpm120Traces);
+
+  expect(average(bpm120Intervals)).toBeGreaterThan(475);
+  expect(average(bpm120Intervals)).toBeLessThan(525);
+  expect(Math.max(...bpm120Intervals) - Math.min(...bpm120Intervals)).toBeLessThan(8);
+
+  await bpmInput.fill("180");
+  await page.waitForFunction(() => {
+    const e2eWindow = window as Window & { __quickMetronomeTraces?: MetronomeTrace[] };
+
+    return (e2eWindow.__quickMetronomeTraces ?? []).filter(
+      (trace) => trace.bpm === 180 && trace.subdivision === "quarter"
+    ).length >= 5;
+  });
+
+  const bpm180Traces = await page.evaluate(() => {
+    const e2eWindow = window as Window & { __quickMetronomeTraces?: MetronomeTrace[] };
+
+    return (e2eWindow.__quickMetronomeTraces ?? [])
+      .filter((trace) => trace.bpm === 180 && trace.subdivision === "quarter")
+      .slice(-5);
+  });
+  const bpm180Intervals = intervalsFromAudioTime(bpm180Traces);
+
+  expect(average(bpm180Intervals)).toBeGreaterThan(310);
+  expect(average(bpm180Intervals)).toBeLessThan(355);
+  expect(average(bpm180Intervals)).toBeLessThan(average(bpm120Intervals) - 120);
+  await page.getByRole("button", { name: "Stop metronome" }).click();
+  await expect(page.getByText("Metronome stopped.")).toBeVisible();
 
   await page.getByRole("button", { name: "Start recording" }).click();
   await expect(page.getByText("Recording without metronome.")).toBeVisible();
@@ -98,6 +175,71 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   await expect(page.getByTestId("latest-recording")).toBeVisible();
   await expect(page.getByText("quick").first()).toBeVisible();
   await expect(page.getByText("No sheet linked.")).toBeVisible();
+  const latestRecording = await page.evaluate(() => {
+    const rawValue = window.localStorage.getItem("metronome-practice:v0:quick-recordings");
+    const parsed = rawValue ? JSON.parse(rawValue) : null;
+
+    return parsed?.recordings?.[0] ?? null;
+  });
+
+  expect(latestRecording.type).toBe("quick");
+  expect(latestRecording.sheetId).toBeNull();
+  expect(latestRecording.sizeBytes).toBeGreaterThan(1_000);
+  expect(latestRecording.artifactAnalysis.decodedDurationMs).toBeGreaterThan(600);
+  expect(latestRecording.artifactAnalysis.rmsAmplitude).toBeGreaterThan(0.02);
+  expect(latestRecording.artifactAnalysis.peakAmplitude).toBeGreaterThan(0.05);
+  expect(latestRecording.artifactAnalysis.estimatedFrequencyHz).toBeGreaterThan(400);
+  expect(latestRecording.artifactAnalysis.estimatedFrequencyHz).toBeLessThan(480);
+  expect(latestRecording.artifactAnalysis.isSilent).toBe(false);
+
+  const decodedEvidence = await page.evaluate(async () => {
+    const rawValue = window.localStorage.getItem("metronome-practice:v0:quick-recordings");
+    const parsed = rawValue ? JSON.parse(rawValue) : null;
+    const recording = parsed.recordings[0];
+    const audioWindow = window as Window &
+      typeof globalThis & { webkitAudioContext?: typeof AudioContext };
+    const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+
+    if (!AudioContextConstructor) {
+      throw new Error("Web Audio is not available in this browser.");
+    }
+
+    const response = await fetch(recording.audioDataUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioContext = new AudioContextConstructor();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+    const samples = audioBuffer.getChannelData(0);
+    let peakAmplitude = 0;
+    let sumSquares = 0;
+    let positiveZeroCrossings = 0;
+    let previousSample = samples[0] ?? 0;
+
+    for (let index = 0; index < samples.length; index += 1) {
+      const sample = samples[index] ?? 0;
+      peakAmplitude = Math.max(peakAmplitude, Math.abs(sample));
+      sumSquares += sample * sample;
+      if (previousSample < 0 && sample >= 0) {
+        positiveZeroCrossings += 1;
+      }
+      previousSample = sample;
+    }
+
+    await audioContext.close();
+
+    return {
+      decodedDurationMs: audioBuffer.duration * 1_000,
+      peakAmplitude,
+      rmsAmplitude: Math.sqrt(sumSquares / Math.max(1, samples.length)),
+      estimatedFrequencyHz:
+        audioBuffer.duration > 0 ? positiveZeroCrossings / audioBuffer.duration : null
+    } satisfies DecodedRecordingEvidence;
+  });
+
+  expect(decodedEvidence.decodedDurationMs).toBeGreaterThan(600);
+  expect(decodedEvidence.rmsAmplitude).toBeGreaterThan(0.02);
+  expect(decodedEvidence.peakAmplitude).toBeGreaterThan(0.05);
+  expect(decodedEvidence.estimatedFrequencyHz).toBeGreaterThan(400);
+  expect(decodedEvidence.estimatedFrequencyHz).toBeLessThan(480);
 
   await page.getByRole("button", { name: "Replay Latest Recording" }).first().click();
   await expect(page.getByText("Replaying latest recording.").first()).toBeVisible();

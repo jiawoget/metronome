@@ -32,7 +32,17 @@ export type QuickRecording = {
   sizeBytes: number;
   mimeType: string;
   audioDataUrl: string;
+  artifactAnalysis: RecordingArtifactAnalysis | null;
   settings: MetronomeSettings;
+};
+
+export type RecordingArtifactAnalysis = {
+  decodedDurationMs: number;
+  sampleRate: number;
+  peakAmplitude: number;
+  rmsAmplitude: number;
+  estimatedFrequencyHz: number | null;
+  isSilent: boolean;
 };
 
 export type RecordingArtifact = {
@@ -41,6 +51,7 @@ export type RecordingArtifact = {
   durationMs: number;
   mimeType: string;
   sizeBytes: number;
+  analysis: RecordingArtifactAnalysis | null;
 };
 
 export type QuickMetronomeStoreSnapshot = {
@@ -55,4 +66,3 @@ export const DEFAULT_METRONOME_SETTINGS: MetronomeSettings = {
   accent: "downbeat",
   countdownBeats: 0
 };
-
