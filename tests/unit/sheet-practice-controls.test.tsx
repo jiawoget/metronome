@@ -47,6 +47,7 @@ function createFakeToneAdapter() {
 function createIdleSessionService() {
   return {
     ensureSheetSession: vi.fn(async () => null),
+    restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session),
     updateSheetSessionDuration: vi.fn(async () => null),
     endPracticeSession: vi.fn(async () => null),
     getRecentSession: vi.fn(async () => null),
@@ -56,6 +57,7 @@ function createIdleSessionService() {
   } satisfies Pick<
     PracticeSessionService,
     | "ensureSheetSession"
+    | "restorePracticeSessionSnapshot"
     | "updateSheetSessionDuration"
     | "endPracticeSession"
     | "getRecentSession"
@@ -330,6 +332,53 @@ describe("SheetPracticeControls failure handling", () => {
     expect(sessionService.endPracticeSession).not.toHaveBeenCalled();
     expect(metronome.isPlaying()).toBe(false);
     expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+  });
+
+  it("restores a previously ended session when Tone start rejects after ensure reopens it", async () => {
+    const user = userEvent.setup();
+    const previousEndedSession = createSheetSession({
+      endedAt: "2026-06-21T12:03:00.000Z",
+      durationMs: 180_000
+    });
+    const reopenedSession = {
+      ...previousEndedSession,
+      endedAt: null,
+      updatedAt: "2026-06-21T12:05:00.000Z"
+    };
+    const sessionService = {
+      ...createIdleSessionService(),
+      getRecentSheetSession: vi.fn(async () => previousEndedSession),
+      ensureSheetSession: vi.fn(async () => reopenedSession),
+      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session),
+      endPracticeSession: vi.fn(async () => reopenedSession)
+    };
+    const metronome = createRejectingMetronomeService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createMetronomeService={() => metronome.service}
+        sessionService={sessionService}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Tone unavailable")).toBeVisible();
+    });
+    expect(sessionService.getRecentSheetSession).toHaveBeenCalledWith("sheet-alpha");
+    expect(sessionService.ensureSheetSession).toHaveBeenCalled();
+    expect(metronome.service.start).toHaveBeenCalled();
+    expect(metronome.service.stop).toHaveBeenCalled();
+    expect(sessionService.restorePracticeSessionSnapshot).toHaveBeenCalledWith(previousEndedSession);
+    expect(sessionService.endPracticeSession).not.toHaveBeenCalled();
+    expect(metronome.isPlaying()).toBe(false);
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    expect(screen.getByTestId("sheet-session-duration")).toHaveTextContent("3:00");
   });
 
   it("does not end an active recording session before recording metadata exists when Tone start rejects", async () => {

@@ -89,6 +89,49 @@ describe("useMetronomeTransport", () => {
     expect(result.current.transportState).toBe("playing");
   });
 
+  it("uses latest settings when countdown finishes after BPM changes", async () => {
+    vi.useFakeTimers();
+
+    const service = createTransportService();
+    const initialSettings = {
+      ...DEFAULT_METRONOME_SETTINGS,
+      bpm: 90,
+      countdownBeats: 2
+    };
+    const editedSettings = {
+      ...initialSettings,
+      bpm: 132
+    };
+    const { result, rerender } = renderHook(
+      ({ settings }) =>
+        useMetronomeTransport({
+          settings,
+          metronomeService: service
+        }),
+      {
+        initialProps: {
+          settings: initialSettings
+        }
+      }
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+    });
+
+    expect(result.current.transportState).toBe("counting");
+    expect(service.start).not.toHaveBeenCalled();
+
+    rerender({ settings: editedSettings });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_400);
+    });
+
+    expect(service.start).toHaveBeenCalledWith(editedSettings);
+    expect(result.current.transportState).toBe("playing");
+  });
+
   it("passes pre-start context to failure cleanup when playback start rejects", async () => {
     const service = createTransportService();
     const context = { sessionId: "session-alpha" };

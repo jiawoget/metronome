@@ -92,6 +92,12 @@ export function createPracticeSessionService({
   return {
     ensureSheetSession,
 
+    async restorePracticeSessionSnapshot(session) {
+      await saveSession(session);
+
+      return session;
+    },
+
     async updateSheetSessionDuration(sessionId) {
       const session = await repository.getSession(sessionId);
 

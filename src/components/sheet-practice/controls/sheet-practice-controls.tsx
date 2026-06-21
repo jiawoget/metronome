@@ -49,6 +49,7 @@ type SheetPracticeMetronomeService = Pick<BrowserMetronomeService, "onTick" | "u
 type SheetPracticeSessionService = Pick<
   PracticeSessionService,
   | "ensureSheetSession"
+  | "restorePracticeSessionSnapshot"
   | "updateSheetSessionDuration"
   | "endPracticeSession"
   | "getRecentSession"
@@ -59,7 +60,17 @@ type SheetPracticeSessionService = Pick<
 
 type SheetMetronomeStartContext = {
   session: PracticeSession;
-  ownsMetronomeOnlySession: boolean;
+  rollback:
+    | {
+        kind: "end-created-session";
+      }
+    | {
+        kind: "restore-previous-session";
+        previousSession: PracticeSession;
+      }
+    | {
+        kind: "none";
+      };
 };
 
 type SheetPracticeControlsProps = {
@@ -180,7 +191,12 @@ export function SheetPracticeControls({
 
     return {
       session: nextSession,
-      ownsMetronomeOnlySession: existingSheetSession === null
+      rollback:
+        existingSheetSession === null
+          ? { kind: "end-created-session" }
+          : existingSheetSession.endedAt
+            ? { kind: "restore-previous-session", previousSession: existingSheetSession }
+            : { kind: "none" }
     };
   }, [sessionService, settings.bpm, settings.timeSignature, sheetId]);
   const handleCountdownStarted = useCallback(() => {
@@ -198,10 +214,16 @@ export function SheetPracticeControls({
   );
   const handleStartFailed = useCallback(
     async (error: unknown, context: SheetMetronomeStartContext | null) => {
-      if (context?.ownsMetronomeOnlySession) {
+      if (context?.rollback.kind === "end-created-session") {
         const endedSession = await sessionService.endPracticeSession(context.session.id);
 
         setSession(endedSession);
+      } else if (context?.rollback.kind === "restore-previous-session") {
+        const restoredSession = await sessionService.restorePracticeSessionSnapshot(
+          context.rollback.previousSession
+        );
+
+        setSession(restoredSession);
       } else if (context?.session) {
         setSession(context.session);
       }

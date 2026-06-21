@@ -311,6 +311,18 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await bpmInput.fill("91");
   await bpmInput.press("Enter");
   await expect(bpmInput).toHaveValue("91");
+  await page.waitForFunction(() => {
+    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+
+    return (e2eWindow.__sheetMetronomeTraces ?? []).some(
+      (trace) => trace.bpm === 91 && trace.subdivision === "quarter"
+    );
+  });
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
+  snapshot = await getPracticeSnapshot(page);
+  expect(snapshot.sessions[0]).toMatchObject({
+    bpm: 91
+  });
   await page.getByRole("button", { name: "Stop metronome" }).click();
   await expect(page.getByLabel("Countdown")).toBeEnabled();
   await page.getByLabel("Countdown").selectOption("0");

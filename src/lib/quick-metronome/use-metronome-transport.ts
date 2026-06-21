@@ -33,6 +33,27 @@ export function useMetronomeTransport<StartContext = null>({
   const [transportState, setTransportState] = useState<MetronomeTransportState>("stopped");
   const [countdownRemaining, setCountdownRemaining] = useState(0);
   const countdownTimeoutRef = useRef<number | null>(null);
+  const latestOptionsRef = useRef({
+    settings,
+    beforeStart,
+    onCountdownStarted,
+    onStartBlocked,
+    onStarted,
+    onStartFailed,
+    onStopped
+  });
+
+  useEffect(() => {
+    latestOptionsRef.current = {
+      settings,
+      beforeStart,
+      onCountdownStarted,
+      onStartBlocked,
+      onStarted,
+      onStartFailed,
+      onStopped
+    };
+  }, [beforeStart, onCountdownStarted, onStartBlocked, onStartFailed, onStarted, onStopped, settings]);
 
   useEffect(() => {
     metronomeService.update(settings);
@@ -59,27 +80,29 @@ export function useMetronomeTransport<StartContext = null>({
     let startContext: StartContext | null = null;
 
     try {
-      startContext = beforeStart ? await beforeStart() : null;
+      const latestOptions = latestOptionsRef.current;
 
-      if (beforeStart && startContext === null) {
+      startContext = latestOptions.beforeStart ? await latestOptions.beforeStart() : null;
+
+      if (latestOptions.beforeStart && startContext === null) {
         metronomeService.stop();
         setTransportState("stopped");
         setCountdownRemaining(0);
-        onStartBlocked?.();
+        latestOptions.onStartBlocked?.();
         return;
       }
 
-      await metronomeService.start(settings);
+      await metronomeService.start(latestOptions.settings);
       setTransportState("playing");
       setCountdownRemaining(0);
-      onStarted?.(startContext);
+      latestOptions.onStarted?.(startContext);
     } catch (error) {
       metronomeService.stop();
       setTransportState("stopped");
       setCountdownRemaining(0);
-      await onStartFailed?.(error, startContext);
+      await latestOptionsRef.current.onStartFailed?.(error, startContext);
     }
-  }, [beforeStart, metronomeService, onStartBlocked, onStartFailed, onStarted, settings]);
+  }, [metronomeService]);
 
   const runCountdown = useCallback(
     (remainingBeats: number) => {
@@ -94,33 +117,33 @@ export function useMetronomeTransport<StartContext = null>({
         setCountdownRemaining(remaining);
         countdownTimeoutRef.current = window.setTimeout(() => {
           scheduleNextBeat(remaining - 1);
-        }, 60_000 / settings.bpm);
+        }, 60_000 / latestOptionsRef.current.settings.bpm);
       };
 
       scheduleNextBeat(remainingBeats);
     },
-    [clearCountdown, settings.bpm, startPlaybackNow]
+    [clearCountdown, startPlaybackNow]
   );
 
   const startMetronome = useCallback(async () => {
     if (settings.countdownBeats > 0) {
       setTransportState("counting");
       setCountdownRemaining(settings.countdownBeats);
-      onCountdownStarted?.(settings.countdownBeats);
+      latestOptionsRef.current.onCountdownStarted?.(settings.countdownBeats);
       runCountdown(settings.countdownBeats);
       return;
     }
 
     await startPlaybackNow();
-  }, [onCountdownStarted, runCountdown, settings.countdownBeats, startPlaybackNow]);
+  }, [runCountdown, settings.countdownBeats, startPlaybackNow]);
 
   const stopMetronome = useCallback(async () => {
     clearCountdown();
     metronomeService.stop();
     setTransportState("stopped");
     setCountdownRemaining(0);
-    await onStopped?.();
-  }, [clearCountdown, metronomeService, onStopped]);
+    await latestOptionsRef.current.onStopped?.();
+  }, [clearCountdown, metronomeService]);
 
   return {
     transportState,

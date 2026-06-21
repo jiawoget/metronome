@@ -50,6 +50,7 @@ export type SheetRecordingMetadataInput = {
 
 export type PracticeSessionService = {
   ensureSheetSession: (input: SheetPracticeActivityInput) => Promise<PracticeSession | null>;
+  restorePracticeSessionSnapshot: (session: PracticeSession) => Promise<PracticeSession>;
   updateSheetSessionDuration: (sessionId: string) => Promise<PracticeSession | null>;
   endPracticeSession: (sessionId: string) => Promise<PracticeSession | null>;
   createSheetRecordingMetadata: (input: SheetRecordingMetadataInput) => Promise<SheetRecordingMetadata | null>;

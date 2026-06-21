@@ -167,6 +167,30 @@ describe("practice session service", () => {
     });
   });
 
+  it("restores a previous session snapshot after a failed start reopens an ended session", async () => {
+    const { service, repository } = createService();
+
+    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    nowMs += 5_000;
+    const ended = await service.endPracticeSession(session?.id ?? "");
+
+    expect(ended?.endedAt).toBe("2026-06-21T12:00:05.000Z");
+
+    nowMs += 10_000;
+    const reopened = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+
+    expect(reopened).toMatchObject({
+      id: session?.id,
+      endedAt: null,
+      updatedAt: "2026-06-21T12:00:15.000Z"
+    });
+
+    const restored = await service.restorePracticeSessionSnapshot(ended as PracticeSession);
+
+    expect(restored).toEqual(ended);
+    await expect(repository.getSession(session?.id ?? "")).resolves.toEqual(ended);
+  });
+
   it("creates sheet recording metadata linked to sessionId and sheetId without artifacts", async () => {
     const { service, repository } = createService();
 
