@@ -583,7 +583,7 @@
                                             },
                       {
                           "module":  "05e-session-integration",
-                          "status":  "implementation_done",
+                          "status":  "verified",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5 Codex (no fast tier)",
@@ -676,30 +676,54 @@
                                                      "The local port cleanup check needed unsandboxed execution because sandboxed Node port binding returned EPERM; the unsandboxed one-shot bind check confirmed port 3101 was free."
                                                                 ],
                                                  "commitHash":  null
-                                             },
+                          },
                           "verification":  {
                                                "requiredSeparateAgent":  true,
-                                               "agent":  null,
-                                               "completedAt":  null,
-                                               "result":  null,
+                                               "agent":  "GPT-5.4 Mini",
+                                               "completedAt":  "2026-06-21T14:17:21Z",
+                                               "result":  "PASS",
                                                "acceptanceCriteria":  [
-
-                                                                      ],
+                                                                      "Opening a valid sheet does not create a session until metronome or recording activity begins.",
+                                                                      "Metronome trigger creates or restores a sheet session with sourceType sheet and the active sheetId.",
+                                                                      "Metronome-only activity does not create a recording.",
+                                                                      "Recording trigger creates or restores a sheet session and links sheet recording metadata to sessionId and sheetId.",
+                                                                      "Metronome and recording remain independent when starting or stopping either trigger.",
+                                                                      "Stopping the last active trigger persists endedAt and duration.",
+                                                                      "Continue Practice is global across quick and sheet sessions, and recency wins across both.",
+                                                                      "A stale sheet session whose sheet was deleted is ignored by Continue Practice.",
+                                                                      "Sheet lastPracticed updates after real activity and persists after reload.",
+                                                                      "Session metadata persists after reload.",
+                                                                      "Zod validation rejects invalid persisted session and sheet recording metadata dates, durations, sourceType, and sheet linkage.",
+                                                                      "The recording history bridge validates session and recording linkage before writing shared history.",
+                                                                      "Sheet recording metadata is visible through the shared Recordings Review boundary without claiming audio playback or artifact UI.",
+                                                                      "Missing or unknown sheet does not create an invalid session.",
+                                                                      "No 05b or 05c UI/audio behavior is claimed complete by this verification."
+                                                                     ],
                                                "e2eEvidence":  [
-
+                                                                "tests/e2e/sheet-practice-session.spec.ts passed in the full Playwright run and covered valid sheet open with no session until activity, metronome-triggered session creation, recording-triggered session creation, metronome/recording independence, reload persistence, Continue Practice routing, lastPracticed updates, shared recordings history visibility, stale sheet deletion handling, unknown sheet guard, and console/pageerror capture.",
+                                                                "npm run test:e2e -> 9 chromium tests passed."
                                                                ],
                                                "specializedEvidence":  [
-
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date, audited 481 packages, found 0 vulnerabilities.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm audit -> found 0 vulnerabilities.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 14 test files passed, 57 tests passed.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 9 chromium tests passed."
                                                                        ],
                                                "persistenceEvidence":  [
-
+                                                                        "Sheet session persisted after reload with the same session id in the 05e E2E path.",
+                                                                        "Continue Practice returned to /sheet-practice/{sheetId} after reload and after navigating home.",
+                                                                        "Sheet lastPracticedAt was updated after metronome activity and remained present through reload checks.",
+                                                                        "Recording metadata remained visible through the shared Recordings Review history boundary after reload."
                                                                        ],
-                                               "consoleStatus":  null,
+                                               "consoleStatus":  "PASS; the full E2E run reported no console errors or page errors in the 05e flow.",
                                                "issues":  [
 
                                                           ],
-                                               "commitHash":  null
-                                           }
+                                               "commitHash":  "1e7b9a77897b8f2d4871654a4f894bf7d88e4b90"
+                                          }
                       },
                       {
                           "module":  "05b-practice-controls",
