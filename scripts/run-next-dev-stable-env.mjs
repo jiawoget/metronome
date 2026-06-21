@@ -6,7 +6,8 @@ import { stabilizeNextEnv } from "./stabilize-next-env.mjs";
 const nextBin = fileURLToPath(
   new URL("../node_modules/next/dist/bin/next", import.meta.url)
 );
-const child = spawn(process.execPath, [nextBin, "dev"], {
+const nextDevArgs = process.argv.slice(2);
+const child = spawn(process.execPath, [nextBin, "dev", ...nextDevArgs], {
   stdio: "inherit"
 });
 

@@ -11,7 +11,7 @@
   "scripts": {
     "install:deps": "npm install",
     "dev": "node scripts/run-next-dev-stable-env.mjs",
-    "build": "next build && node scripts/stabilize-next-env.mjs",
+    "build": "node scripts/run-next-build-stable-env.mjs",
     "next-env:stable": "node scripts/stabilize-next-env.mjs",
     "start": "next start",
     "lint": "eslint .",
