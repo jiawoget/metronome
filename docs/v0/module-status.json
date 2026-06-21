@@ -285,7 +285,7 @@
                                                  "handoffNotes":  [
                                                      "Assigned feature: 03-recordings-review.",
                                                      "Coding model used: GPT-5.5 High.",
-                                                     "Implemented only the Recordings / Review v0 contract: unified recordings list, empty state, search, type filter, details, playback, waveform, error markers, delete, continue practice, and bad/missing audio state.",
+                                                     "Implemented only the Recordings / Review v0 contract: unified recordings list, empty state, search, type filter, details, playback, waveform, error markers, delete, Practice Again, and bad/missing audio state.",
                                                      "Recordings UI calls recording history, artifact/waveform, playback, and continue-target services; UI does not directly call IndexedDB/Dexie, raw file APIs, audio element internals, or wavesurfer.js.",
                                                      "Playback/waveform uses wavesurfer.js through RecordingWaveformPlaybackAdapter; artifact validation and simplified peaks are behind loadRecordingArtifactDetails.",
                                                      "Review fix pass: loadRecordingArtifactDetails now always validates and decodes audioDataUrl before returning playback-ready details; trustedPeaks are used only for waveform rendering after the real artifact decodes.",
@@ -303,7 +303,7 @@
                                                                   ],
                                                  "changedAreas":  [
                                                      "src/app/recordings/page.tsx now renders the real Recordings Review experience instead of the placeholder latest-recording outlet",
-                                                     "src/components/recordings-review adds the client UI for empty state, unified list, search/type filtering, details, waveform, playback controls, marker list, delete confirmation, and continue practice",
+                                                     "src/components/recordings-review adds the client UI for empty state, unified list, search/type filtering, details, waveform, playback controls, marker list, delete confirmation, and Practice Again",
                                                      "src/components/recordings-review adds decoded-vs-metadata duration mismatch warning display in recording details",
                                                      "src/lib/recordings-review adds pure history/filter/format helpers, local history repository, audio artifact validation/peak derivation, duration tolerance handling, and wavesurfer playback adapter boundaries",
                                                      "src/lib/quick-metronome/persistence.ts and src/lib/quick-metronome/types.ts preserve marker data and sheet-compatible session metadata when quick recordings are saved",
