@@ -1,15 +1,18 @@
 import {
   calculatePracticeDurationMs,
   getContinuePracticeTarget,
+  getTodayPracticeSummary,
   validateSheetRecordingMetadata,
   type PracticeSession,
   type SheetRecordingMetadata
 } from "@/domain/practice";
 import type {
-  PracticeSessionRepository,
   PracticeRecordingMetadataRepository,
+  PracticeRecordingLinkInput,
+  PracticeSessionRepository,
   PracticeSessionService,
   PracticeSessionSheetGateway,
+  QuickPracticeActivityInput,
   SheetPracticeActivityInput,
   SheetRecordingMetadataInput
 } from "@/services/practice-session/types";
@@ -43,6 +46,57 @@ export function createPracticeSessionService({
 
   function calculateActiveDuration(session: Pick<PracticeSession, "startedAt">) {
     return calculatePracticeDurationMs({ ...session, endedAt: null }, now());
+  }
+
+  async function updateSessionDuration(session: PracticeSession) {
+    const timestamp = now().toISOString();
+    const nextSession = {
+      ...session,
+      durationMs: calculateActiveDuration(session),
+      updatedAt: timestamp
+    };
+
+    await saveSession(nextSession);
+
+    if (nextSession.sourceType === "sheet" && nextSession.sheetId) {
+      await sheetGateway.updateLastPracticedAt(nextSession.sheetId, timestamp);
+    }
+
+    return nextSession;
+  }
+
+  async function ensureQuickSession(input: QuickPracticeActivityInput) {
+    const timestamp = now().toISOString();
+    const existingSession = input.forceNewSession
+      ? null
+      : (await repository.listSessions()).find((session) => session.sourceType === "quick") ?? null;
+    const session: PracticeSession =
+      existingSession ??
+      {
+        id: createId("session"),
+        sourceType: "quick",
+        sheetId: null,
+        startedAt: timestamp,
+        endedAt: null,
+        durationMs: 0,
+        bpm: input.bpm ?? null,
+        timeSignature: input.timeSignature ?? null,
+        recordingCount: 0,
+        latestRecordingId: null,
+        updatedAt: timestamp
+      };
+    const nextSession = {
+      ...session,
+      endedAt: null,
+      bpm: input.bpm ?? session.bpm,
+      timeSignature: input.timeSignature ?? session.timeSignature,
+      durationMs: calculateActiveDuration(session),
+      updatedAt: timestamp
+    };
+
+    await saveSession(nextSession);
+
+    return nextSession;
   }
 
   async function ensureSheetSession(input: SheetPracticeActivityInput) {
@@ -90,45 +144,73 @@ export function createPracticeSessionService({
   }
 
   async function getRecordingSession(input: SheetRecordingMetadataInput) {
-    if (input.sessionId) {
-      const session = await repository.getSession(input.sessionId);
-
-      if (!session || session.sourceType !== "sheet" || !session.sheetId) {
-        return null;
-      }
-
-      const sheet = await sheetGateway.getSheetContext(session.sheetId);
-
-      if (!sheet || (input.sheetId && input.sheetId !== session.sheetId)) {
-        return null;
-      }
-
-      const timestamp = now().toISOString();
-      const nextSession = {
-        ...session,
-        endedAt: null,
-        bpm: input.bpm ?? session.bpm ?? sheet.bpm,
-        timeSignature: input.timeSignature ?? session.timeSignature ?? sheet.timeSignature,
-        durationMs: calculateActiveDuration(session),
-        updatedAt: timestamp
-      };
-
-      await saveSession(nextSession);
-      await sheetGateway.updateLastPracticedAt(session.sheetId, timestamp);
-
-      return nextSession;
+    if (!input.sessionId) {
+      return null;
     }
 
-    return ensureSheetSession({
-      sheetId: input.sheetId,
-      trigger: "recording",
-      bpm: input.bpm,
-      timeSignature: input.timeSignature,
-      forceNewSession: input.forceNewSession
-    });
+    const session = await repository.getSession(input.sessionId);
+
+    if (!session || session.sourceType !== "sheet" || !session.sheetId) {
+      return null;
+    }
+
+    const sheet = await sheetGateway.getSheetContext(session.sheetId);
+
+    if (!sheet || (input.sheetId && input.sheetId !== session.sheetId)) {
+      return null;
+    }
+
+    const timestamp = now().toISOString();
+    const nextSession = {
+      ...session,
+      endedAt: null,
+      bpm: input.bpm ?? session.bpm ?? sheet.bpm,
+      timeSignature: input.timeSignature ?? session.timeSignature ?? sheet.timeSignature,
+      durationMs: calculateActiveDuration(session),
+      updatedAt: timestamp
+    };
+
+    await saveSession(nextSession);
+    await sheetGateway.updateLastPracticedAt(session.sheetId, timestamp);
+
+    return nextSession;
+  }
+
+  async function linkRecordingToSession(input: PracticeRecordingLinkInput) {
+    const sessionId = input.sessionId?.trim();
+    const recordingId = input.recordingId?.trim();
+
+    if (!sessionId || !recordingId) {
+      return null;
+    }
+
+    const session = await repository.getSession(sessionId);
+
+    if (!session) {
+      return null;
+    }
+
+    const timestamp = now().toISOString();
+    const nextSession = {
+      ...session,
+      endedAt: null,
+      durationMs: calculateActiveDuration(session),
+      recordingCount: session.recordingCount + 1,
+      latestRecordingId: recordingId,
+      updatedAt: timestamp
+    };
+
+    await saveSession(nextSession);
+
+    if (nextSession.sourceType === "sheet" && nextSession.sheetId) {
+      await sheetGateway.updateLastPracticedAt(nextSession.sheetId, timestamp);
+    }
+
+    return nextSession;
   }
 
   return {
+    ensureQuickSession,
     ensureSheetSession,
 
     async restorePracticeSessionSnapshot(session) {
@@ -141,6 +223,16 @@ export function createPracticeSessionService({
       return repository.deleteSession(sessionId);
     },
 
+    async updatePracticeSessionDuration(sessionId) {
+      const session = await repository.getSession(sessionId);
+
+      if (!session) {
+        return null;
+      }
+
+      return updateSessionDuration(session);
+    },
+
     async updateSheetSessionDuration(sessionId) {
       const session = await repository.getSession(sessionId);
 
@@ -148,17 +240,7 @@ export function createPracticeSessionService({
         return null;
       }
 
-      const timestamp = now().toISOString();
-      const nextSession = {
-        ...session,
-        durationMs: calculateActiveDuration(session),
-        updatedAt: timestamp
-      };
-
-      await saveSession(nextSession);
-      await sheetGateway.updateLastPracticedAt(session.sheetId, timestamp);
-
-      return nextSession;
+      return updateSessionDuration(session);
     },
 
     async endPracticeSession(sessionId) {
@@ -184,6 +266,8 @@ export function createPracticeSessionService({
 
       return nextSession;
     },
+
+    linkRecordingToSession,
 
     async createSheetRecordingMetadata(input: SheetRecordingMetadataInput) {
       const session = await getRecordingSession(input);
@@ -223,6 +307,14 @@ export function createPracticeSessionService({
       await sheetGateway.updateLastPracticedAt(session.sheetId, timestamp);
 
       return recording;
+    },
+
+    listSessions() {
+      return repository.listSessions();
+    },
+
+    async getTodaySummary() {
+      return getTodayPracticeSummary(await repository.listSessions(), now());
     },
 
     getRecentSession() {

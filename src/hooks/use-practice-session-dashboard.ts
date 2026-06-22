@@ -9,6 +9,7 @@ export type PracticeSessionDashboardState = {
   recentSession: PracticeSession | null;
   continueTarget: ContinuePracticeTarget | null;
   summary: {
+    durationMs: number;
     minutesToday: number;
     sessionsToday: number;
     recordingsToday: number;
@@ -19,21 +20,12 @@ const emptyState: PracticeSessionDashboardState = {
   recentSession: null,
   continueTarget: null,
   summary: {
+    durationMs: 0,
     minutesToday: 0,
     sessionsToday: 0,
     recordingsToday: 0
   }
 };
-
-function isBrowserLocalToday(isoValue: string, now = new Date()) {
-  const value = new Date(isoValue);
-
-  return (
-    value.getFullYear() === now.getFullYear() &&
-    value.getMonth() === now.getMonth() &&
-    value.getDate() === now.getDate()
-  );
-}
 
 export function usePracticeSessionDashboard() {
   const [state, setState] = useState<PracticeSessionDashboardState>(emptyState);
@@ -48,8 +40,7 @@ export function usePracticeSessionDashboard() {
 
       const recentSession = await browserPracticeSessionService.getRecentSession();
       const continueTarget = await browserPracticeSessionService.getContinuePracticeTarget();
-      const sessions = recentSession ? [recentSession] : [];
-      const todaySessions = sessions.filter((session) => isBrowserLocalToday(session.startedAt));
+      const summary = await browserPracticeSessionService.getTodaySummary();
 
       if (!isActive) {
         return;
@@ -58,13 +49,7 @@ export function usePracticeSessionDashboard() {
       setState({
         recentSession,
         continueTarget,
-        summary: {
-          minutesToday: Math.round(
-            todaySessions.reduce((total, session) => total + session.durationMs, 0) / 60_000
-          ),
-          sessionsToday: todaySessions.length,
-          recordingsToday: todaySessions.reduce((total, session) => total + session.recordingCount, 0)
-        }
+        summary
       });
     }
 

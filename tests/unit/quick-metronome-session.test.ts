@@ -72,8 +72,8 @@ describe("quick metronome session and recording metadata", () => {
       }
     };
     const recording = createQuickRecording({ artifact, session, settings: DEFAULT_METRONOME_SETTINGS });
-    const firstSave = quickRecordingRepository.saveQuickRecording(session, recording);
-    const continuedSave = quickRecordingRepository.saveQuickRecording(session, {
+    const firstSave = quickRecordingRepository.saveQuickRecording(recording);
+    const continuedSave = quickRecordingRepository.saveQuickRecording({
       ...recording,
       audioDataUrl: "data:audio/webm;base64,bmV3LXRha2U=",
       artifactAnalysis: {
@@ -87,6 +87,7 @@ describe("quick metronome session and recording metadata", () => {
     expect(firstSave.id).toBe(recording.id);
     expect(continuedSave.id).not.toBe(recording.id);
     expect(snapshot.recordings).toHaveLength(2);
+    expect(snapshot.sessions).toEqual([]);
     expect(snapshot.recordings.find((item) => item.id === recording.id)?.audioDataUrl).toBe(
       recording.audioDataUrl
     );

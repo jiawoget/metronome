@@ -30,7 +30,7 @@ export function createQuickRecording({
   createdAt = new Date()
 }: {
   artifact: RecordingArtifact;
-  session: PracticeSession;
+  session: Pick<PracticeSession, "id">;
   settings: MetronomeSettings;
   createdAt?: Date;
 }) {

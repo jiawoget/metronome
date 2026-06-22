@@ -1,8 +1,4 @@
-import type {
-  PracticeSession,
-  QuickMetronomeStoreSnapshot,
-  QuickRecording
-} from "@/lib/quick-metronome/types";
+import type { QuickMetronomeStoreSnapshot, QuickRecording } from "@/lib/quick-metronome/types";
 
 const STORAGE_KEY = "metronome-practice:v0:quick-recordings";
 const STORE_EVENT = "quick-metronome-recordings-change";
@@ -90,18 +86,17 @@ export const quickRecordingRepository = {
     return snapshot.recordings.find((recording) => recording.type === "quick") ?? null;
   },
 
-  saveQuickRecording(session: PracticeSession, recording: QuickRecording) {
+  saveQuickRecording(recording: QuickRecording) {
     const snapshot = readSnapshot();
     const recordingToSave = snapshot.recordings.some((item) => item.id === recording.id)
       ? { ...recording, id: createRecordingId() }
       : recording;
-    const sessions = [session, ...snapshot.sessions.filter((item) => item.id !== session.id)];
     const recordings = [
       recordingToSave,
       ...snapshot.recordings.filter((item) => item.id !== recordingToSave.id)
     ];
 
-    writeSnapshot({ sessions, recordings, errorMarkers: snapshot.errorMarkers });
+    writeSnapshot({ sessions: snapshot.sessions, recordings, errorMarkers: snapshot.errorMarkers });
 
     return recordingToSave;
   },

@@ -1275,22 +1275,45 @@
                       },
                       {
                           "module":  "08-practice-session",
-                          "status":  "contract_ready",
+                          "status":  "implementation_done",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
-                                                 "agent":  null,
-                                                 "completedAt":  null,
+                                                 "agent":  "GPT-5.5 High",
+                                                 "completedAt":  "2026-06-22T06:57:15Z",
                                                  "selfTests":  [
-
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/practice-session-service.test.ts tests/unit/quick-metronome-session.test.ts tests/unit/home-dashboard.test.tsx tests/unit/settings-service.test.ts tests/unit/sheet-practice-recording.test.ts tests/unit/sheet-practice-controls.test.tsx -> PASS; 6 test files passed, 41 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/practice-session.spec.ts -> PASS; 1 chromium test passed covering quick session, quick recording link, sheet session, Continue Practice quick/sheet targets, Today Summary local-day boundary, reload persistence, Settings Clear All Local Data, and console/pageerror capture",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS"
                                                                ],
                                                  "handoffNotes":  [
-
+                                                     "Assigned feature: 08-practice-session.",
+                                                     "Coding model used: GPT-5.5 High.",
+                                                     "Implemented the global v0 Practice Session service contract on the existing service/repository boundary: quick sessions, sheet sessions, generic duration updates, session-bound recording count/latest updates, recent session, Continue Practice target, and Today Summary aggregation.",
+                                                     "Quick Metronome now creates persisted quick sessions through browserPracticeSessionService on metronome or recording activity, stores quick recordings with a required active sessionId, updates session recordingCount/latestRecordingId, persists duration/endedAt, and no longer writes new quick session history into the quick recording artifact store.",
+                                                     "Sheet recording metadata creation now requires an existing sessionId; the sheet session harness passes the active session id and invalid or missing sheet/session contexts are rejected without creating recording metadata.",
+                                                     "Home Today Summary now reads all sessions through the practice-session service and uses the domain browser-local-day aggregation rule; Continue Practice still validates stale sheet sessions before routing.",
+                                                     "Settings Clear All Local Data integration was exercised through the existing cleanup service and clears practice sessions plus legacy quick recording history.",
+                                                     "The future reference trigger remains decoupled through PracticeActivityTrigger and applyPracticeTrigger; no transport-specific coupling, event timeline, goals, segments, analysis attachments, sync, comparisons, or detailed duration rules were added.",
+                                                     "Today Summary date fixtures tested a current browser-local-day session and a previous browser-local-day session; only the current local day contributed duration, session count, and recording count.",
+                                                     "Implementation commit hash is reported in the final handoff response because a git commit cannot contain its own final object hash without changing that hash."
                                                                   ],
                                                  "changedAreas":  [
-
+                                                     "src/domain/practice adds TodayPracticeSummary and browser-local-day Today Summary rules",
+                                                     "src/services/practice-session adds quick session lifecycle, global duration update, session-bound recording link update, listSessions, and getTodaySummary APIs while preserving sheet session validation through the sheet gateway",
+                                                     "src/hooks/use-practice-session-dashboard and src/components/home/home-dashboard.tsx wire Home Continue Practice and Today Summary to the service aggregation with stable test ids",
+                                                     "src/components/quick-metronome/quick-metronome-experience.tsx uses the practice-session service for quick session creation, duration/end persistence, and quick recording count/latest updates",
+                                                     "src/lib/quick-metronome/persistence.ts and src/lib/quick-metronome/session.ts keep quick recording artifact storage but stop creating duplicate new quick session history there",
+                                                     "src/components/sheet-practice/session/sheet-practice-session-harness.tsx passes the active sessionId for sheet recording metadata",
+                                                     "tests/unit/practice-session-service.test.ts covers quick and sheet session rules, invalid sheet guard, recording sessionId requirement, count/latest updates, recent/Continue targets, duration/endedAt, Today Summary local-day boundary, clearable repository behavior, and trigger independence",
+                                                     "tests/unit/quick-metronome-session.test.ts covers quick recording artifact storage without duplicate new session history",
+                                                     "tests/e2e/practice-session.spec.ts covers real browser quick, sheet, Continue Practice, Today Summary, reload persistence, recording link, clear-data, and console/pageerror checks"
                                                                   ],
                                                  "knownRisks":  [
-
+                                                     "Quick recording audio artifacts still live in the existing v0 localStorage recording artifact store; the global Practice Session service now owns session metadata, while artifact migration to IndexedDB remains outside 08 scope.",
+                                                     "Today Summary counts sessions by the session startedAt browser-local day and rounds total duration to whole minutes; v0 does not implement detailed duration or cross-midnight allocation rules.",
+                                                     "Quick recording save updates artifact storage and then session recording metadata; a browser storage failure between those steps could leave a saved artifact without the latest session count update, which is a v0 local-only consistency risk.",
+                                                     "Playwright webServer used the configured non-monitor E2E port 3101 and exited after the targeted run; no monitor preview port was used."
                                                                 ],
                                                  "commitHash":  null
                                              },

@@ -2,7 +2,8 @@ import type {
   ContinuePracticeTarget,
   PracticeActivityTrigger,
   PracticeSession,
-  PracticeTransportState
+  PracticeTransportState,
+  TodayPracticeSummary
 } from "@/domain/practice/types";
 import { getSheetPracticeHref } from "@/domain/sheet/routes";
 
@@ -50,6 +51,35 @@ export function getContinuePracticeTarget(session: PracticeSession | null): Cont
     label: "Continue Sheet Practice",
     sessionId: session.id,
     sheetId: session.sheetId
+  };
+}
+
+export function isBrowserLocalDay(isoValue: string, now = new Date()) {
+  const value = new Date(isoValue);
+
+  if (!Number.isFinite(value.getTime())) {
+    return false;
+  }
+
+  return (
+    value.getFullYear() === now.getFullYear() &&
+    value.getMonth() === now.getMonth() &&
+    value.getDate() === now.getDate()
+  );
+}
+
+export function getTodayPracticeSummary(
+  sessions: PracticeSession[],
+  now = new Date()
+): TodayPracticeSummary {
+  const todaySessions = sessions.filter((session) => isBrowserLocalDay(session.startedAt, now));
+  const durationMs = todaySessions.reduce((total, session) => total + session.durationMs, 0);
+
+  return {
+    durationMs,
+    minutesToday: Math.round(durationMs / 60_000),
+    sessionsToday: todaySessions.length,
+    recordingsToday: todaySessions.reduce((total, session) => total + session.recordingCount, 0)
   };
 }
 

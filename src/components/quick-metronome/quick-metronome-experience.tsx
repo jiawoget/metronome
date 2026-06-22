@@ -17,6 +17,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { LatestQuickRecording } from "@/components/quick-metronome/latest-quick-recording";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { PracticeSession } from "@/domain/practice";
+import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import {
   ACCENT_MODES,
   COUNTDOWN_OPTIONS,
@@ -33,14 +35,13 @@ import {
 import { BrowserMetronomeService, type MetronomeTick } from "@/lib/quick-metronome/metronome-service";
 import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
 import { BrowserRecordingService, RecordingPermissionError } from "@/lib/quick-metronome/recording-service";
-import { createQuickPracticeSession, createQuickRecording } from "@/lib/quick-metronome/session";
+import { createQuickRecording } from "@/lib/quick-metronome/session";
 import {
   DEFAULT_METRONOME_SETTINGS,
   MAX_BPM,
   MIN_BPM,
   type AccentMode,
   type MetronomeSettings,
-  type PracticeSession,
   type Subdivision
 } from "@/lib/quick-metronome/types";
 import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
@@ -104,15 +105,35 @@ export function QuickMetronomeExperience() {
   const handleCountdownStarted = useCallback(() => {
     setMessage("Countdown running.");
   }, []);
-  const handleStarted = useCallback(() => {
+  const ensureMetronomeSession = useCallback(() => {
+    return browserPracticeSessionService.ensureQuickSession({
+      trigger: "metronome",
+      bpm: settings.bpm,
+      timeSignature: settings.timeSignature
+    });
+  }, [settings.bpm, settings.timeSignature]);
+  const handleStarted = useCallback((session: PracticeSession | null) => {
+    setCurrentSession(session);
     setMessage("Metronome playing.");
   }, []);
-  const handleStartFailed = useCallback((error: unknown) => {
+  const handleStartFailed = useCallback(async (error: unknown, session: PracticeSession | null) => {
+    if (session) {
+      await browserPracticeSessionService.endPracticeSession(session.id);
+    }
+
     setErrorMessage(error instanceof Error ? error.message : "Metronome playback failed.");
   }, []);
-  const handleStopped = useCallback(() => {
+  const handleStopped = useCallback(async () => {
+    if (currentSession) {
+      const nextSession = isRecording
+        ? await browserPracticeSessionService.updatePracticeSessionDuration(currentSession.id)
+        : await browserPracticeSessionService.endPracticeSession(currentSession.id);
+
+      setCurrentSession(nextSession);
+    }
+
     setMessage(isRecording ? "Metronome stopped; recording is still active." : "Metronome stopped.");
-  }, [isRecording]);
+  }, [currentSession, isRecording]);
   const {
     transportState,
     countdownRemaining,
@@ -123,6 +144,7 @@ export function QuickMetronomeExperience() {
   } = useMetronomeTransport({
     settings,
     metronomeService,
+    beforeStart: ensureMetronomeSession,
     onCountdownStarted: handleCountdownStarted,
     onStarted: handleStarted,
     onStartFailed: handleStartFailed,
@@ -139,7 +161,11 @@ export function QuickMetronomeExperience() {
 
     try {
       await recordingService.start();
-      const session = currentSession ?? createQuickPracticeSession(settings);
+      const session = currentSession ?? await browserPracticeSessionService.ensureQuickSession({
+        trigger: "recording",
+        bpm: settings.bpm,
+        timeSignature: settings.timeSignature
+      });
 
       setCurrentSession(session);
       setRecordingState("recording");
@@ -169,11 +195,24 @@ export function QuickMetronomeExperience() {
         throw new Error("Recording artifact did not contain audible input.");
       }
 
-      const session = currentSession ?? createQuickPracticeSession(settings);
-      const recording = createQuickRecording({ artifact, session, settings });
+      const session = currentSession;
 
-      quickRecordingRepository.saveQuickRecording(session, recording);
-      setCurrentSession(session);
+      if (!session) {
+        throw new Error("Recording requires an active practice session.");
+      }
+
+      const recording = createQuickRecording({ artifact, session, settings });
+      const savedRecording = quickRecordingRepository.saveQuickRecording(recording);
+      const nextSession = await browserPracticeSessionService.linkRecordingToSession({
+        sessionId: session.id,
+        recordingId: savedRecording.id
+      });
+
+      if (!nextSession) {
+        throw new Error("Recording requires an active practice session.");
+      }
+
+      setCurrentSession(isPlaying ? nextSession : await browserPracticeSessionService.endPracticeSession(nextSession.id));
       setRecordingState("idle");
       setRecordingVersion((version) => version + 1);
       setMessage(isPlaying ? "Recording saved; metronome is still playing." : "Recording saved.");

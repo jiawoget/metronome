@@ -17,6 +17,7 @@ import { usePracticeSessionDashboard, type PracticeSessionDashboardState } from 
 
 export type HomeDashboardData = {
   summary: {
+    durationMs: number;
     minutesToday: number;
     sessionsToday: number;
     recordingsToday: number;
@@ -29,6 +30,7 @@ export type HomeDashboardData = {
 
 export const emptyHomeDashboardData: HomeDashboardData = {
   summary: {
+    durationMs: 0,
     minutesToday: 0,
     sessionsToday: 0,
     recordingsToday: 0
@@ -131,15 +133,15 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
             <dl className="grid grid-cols-3 gap-3">
               <div className="rounded-md border border-border bg-muted px-3 py-3">
                 <dt className="text-xs font-medium text-muted-foreground">Minutes</dt>
-                <dd className="mt-2 text-2xl font-semibold">{dashboardData.summary.minutesToday}</dd>
+                <dd data-testid="today-summary-minutes" className="mt-2 text-2xl font-semibold">{dashboardData.summary.minutesToday}</dd>
               </div>
               <div className="rounded-md border border-border bg-muted px-3 py-3">
                 <dt className="text-xs font-medium text-muted-foreground">Sessions</dt>
-                <dd className="mt-2 text-2xl font-semibold">{dashboardData.summary.sessionsToday}</dd>
+                <dd data-testid="today-summary-sessions" className="mt-2 text-2xl font-semibold">{dashboardData.summary.sessionsToday}</dd>
               </div>
               <div className="rounded-md border border-border bg-muted px-3 py-3">
                 <dt className="text-xs font-medium text-muted-foreground">Recordings</dt>
-                <dd className="mt-2 text-2xl font-semibold">{dashboardData.summary.recordingsToday}</dd>
+                <dd data-testid="today-summary-recordings" className="mt-2 text-2xl font-semibold">{dashboardData.summary.recordingsToday}</dd>
               </div>
             </dl>
           </CardContent>

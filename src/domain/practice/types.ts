@@ -30,6 +30,13 @@ export type SheetRecordingMetadata = {
   timeSignature: PracticeTimeSignature | null;
 };
 
+export type TodayPracticeSummary = {
+  durationMs: number;
+  minutesToday: number;
+  sessionsToday: number;
+  recordingsToday: number;
+};
+
 export type ContinuePracticeTarget =
   | {
       sourceType: "quick";

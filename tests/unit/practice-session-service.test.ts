@@ -170,6 +170,135 @@ describe("practice session service", () => {
     });
   });
 
+  it("creates quick sessions without sheetId and routes Continue Practice to Quick Metronome", async () => {
+    const { service, repository } = createService();
+
+    const session = await service.ensureQuickSession({
+      trigger: "metronome",
+      bpm: 120,
+      timeSignature: "3/4"
+    });
+
+    expect(session).toMatchObject({
+      id: "session-1",
+      sourceType: "quick",
+      sheetId: null,
+      bpm: 120,
+      timeSignature: "3/4",
+      recordingCount: 0,
+      latestRecordingId: null
+    });
+
+    nowMs += 4_000;
+    await expect(service.updatePracticeSessionDuration(session.id)).resolves.toMatchObject({
+      id: "session-1",
+      durationMs: 4_000
+    });
+    await expect(service.endPracticeSession(session.id)).resolves.toMatchObject({
+      id: "session-1",
+      endedAt: "2026-06-21T12:00:04.000Z",
+      durationMs: 4_000
+    });
+    await expect(repository.getSession(session.id)).resolves.toMatchObject({
+      sourceType: "quick",
+      sheetId: null,
+      durationMs: 4_000
+    });
+    await expect(service.getContinuePracticeTarget()).resolves.toEqual({
+      sourceType: "quick",
+      href: "/quick-metronome",
+      label: "Continue Quick Practice",
+      sessionId: "session-1"
+    });
+  });
+
+  it("updates recording count and latest recording id for session-bound quick recordings", async () => {
+    const { service, repository } = createService();
+    const session = await service.ensureQuickSession({ trigger: "recording", bpm: 96, timeSignature: "4/4" });
+
+    nowMs += 1_000;
+    await expect(
+      service.linkRecordingToSession({
+        sessionId: session.id,
+        recordingId: "quick-recording-1"
+      })
+    ).resolves.toMatchObject({
+      id: session.id,
+      recordingCount: 1,
+      latestRecordingId: "quick-recording-1",
+      durationMs: 1_000
+    });
+
+    nowMs += 2_000;
+    await expect(
+      service.linkRecordingToSession({
+        sessionId: session.id,
+        recordingId: "quick-recording-2"
+      })
+    ).resolves.toMatchObject({
+      id: session.id,
+      recordingCount: 2,
+      latestRecordingId: "quick-recording-2",
+      durationMs: 3_000
+    });
+    await expect(repository.getSession(session.id)).resolves.toMatchObject({
+      recordingCount: 2,
+      latestRecordingId: "quick-recording-2"
+    });
+  });
+
+  it("aggregates Today Summary using the browser-local day boundary", async () => {
+    const { service, repository } = createService();
+    nowMs = new Date(2026, 5, 21, 12, 0, 0).getTime();
+
+    await repository.saveSession({
+      id: "today-quick",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: new Date(2026, 5, 21, 0, 30, 0).toISOString(),
+      endedAt: new Date(2026, 5, 21, 0, 33, 0).toISOString(),
+      durationMs: 180_000,
+      bpm: 120,
+      timeSignature: "4/4",
+      recordingCount: 1,
+      latestRecordingId: "quick-recording",
+      updatedAt: new Date(2026, 5, 21, 0, 33, 0).toISOString()
+    });
+    await repository.saveSession({
+      id: "today-sheet",
+      sourceType: "sheet",
+      sheetId: "sheet-alpha",
+      startedAt: new Date(2026, 5, 21, 23, 30, 0).toISOString(),
+      endedAt: new Date(2026, 5, 21, 23, 34, 0).toISOString(),
+      durationMs: 240_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: new Date(2026, 5, 21, 23, 34, 0).toISOString()
+    });
+    await repository.saveSession({
+      id: "previous-local-day",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: new Date(2026, 5, 20, 23, 59, 0).toISOString(),
+      endedAt: new Date(2026, 5, 21, 0, 1, 0).toISOString(),
+      durationMs: 120_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 1,
+      latestRecordingId: "previous-recording",
+      updatedAt: new Date(2026, 5, 21, 0, 1, 0).toISOString()
+    });
+
+    await expect(service.getTodaySummary()).resolves.toEqual({
+      durationMs: 420_000,
+      minutesToday: 7,
+      sessionsToday: 2,
+      recordingsToday: 1
+    });
+  });
+
   it("restores a previous session snapshot after a failed start reopens an ended session", async () => {
     const { service, repository } = createService();
 
@@ -201,6 +330,7 @@ describe("practice session service", () => {
     nowMs += 12_500;
     const recording = await service.createSheetRecordingMetadata({
       sheetId: "sheet-alpha",
+      sessionId: session?.id,
       durationMs: 12_300
     });
     const updatedSession = await repository.getSession(session?.id ?? "");
@@ -229,6 +359,21 @@ describe("practice session service", () => {
       endedAt: "2026-06-21T12:00:13.500Z",
       durationMs: 13_500
     });
+  });
+
+  it("rejects recording metadata without an existing sessionId", async () => {
+    const { service, repository } = createService();
+
+    await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "recording" });
+    await expect(
+      service.createSheetRecordingMetadata({
+        sheetId: "sheet-alpha",
+        durationMs: 500
+      })
+    ).resolves.toBeNull();
+    await expect(service.linkRecordingToSession({ sessionId: null, recordingId: "recording-missing-session" })).resolves.toBeNull();
+    await expect(repository.listSessions()).resolves.toHaveLength(1);
+    await expect(service.listRecordingMetadata()).resolves.toEqual([]);
   });
 
   it("creates a fresh sheet session for Practice Again recording instead of mutating the source session", async () => {

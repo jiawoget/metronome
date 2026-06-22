@@ -90,8 +90,18 @@ export function SheetPracticeSessionHarness({ sheetId }: SheetPracticeSessionHar
   async function stopRecordingTrigger() {
     const durationMs =
       recordingStartedAtRef.current === null ? 0 : Math.max(0, performance.now() - recordingStartedAtRef.current);
+    const activeSession = session ?? await browserPracticeSessionService.getRecentSheetSession(sheetId);
+
+    if (!activeSession) {
+      recordingStartedAtRef.current = null;
+      setRecordingActive(false);
+      setMessage("No active sheet session. Recording metadata was not created.");
+      return;
+    }
+
     const recording = await browserPracticeSessionService.createSheetRecordingMetadata({
       sheetId,
+      sessionId: activeSession.id,
       durationMs
     });
 

@@ -3,7 +3,8 @@ import type {
   PracticeActivityTrigger,
   PracticeSession,
   PracticeTimeSignature,
-  SheetRecordingMetadata
+  SheetRecordingMetadata,
+  TodayPracticeSummary
 } from "@/domain/practice";
 
 export type SheetSessionContext = {
@@ -45,6 +46,13 @@ export type SheetPracticeActivityInput = {
   forceNewSession?: boolean;
 };
 
+export type QuickPracticeActivityInput = {
+  trigger: PracticeActivityTrigger;
+  bpm?: number | null;
+  timeSignature?: PracticeTimeSignature | null;
+  forceNewSession?: boolean;
+};
+
 export type SheetRecordingMetadataInput = {
   sheetId: string | null;
   sessionId?: string | null;
@@ -54,13 +62,23 @@ export type SheetRecordingMetadataInput = {
   forceNewSession?: boolean;
 };
 
+export type PracticeRecordingLinkInput = {
+  sessionId: string | null | undefined;
+  recordingId: string | null | undefined;
+};
+
 export type PracticeSessionService = {
+  ensureQuickSession: (input: QuickPracticeActivityInput) => Promise<PracticeSession>;
   ensureSheetSession: (input: SheetPracticeActivityInput) => Promise<PracticeSession | null>;
   restorePracticeSessionSnapshot: (session: PracticeSession) => Promise<PracticeSession>;
   deletePracticeSessionSnapshot: (sessionId: string) => Promise<void>;
+  updatePracticeSessionDuration: (sessionId: string) => Promise<PracticeSession | null>;
   updateSheetSessionDuration: (sessionId: string) => Promise<PracticeSession | null>;
   endPracticeSession: (sessionId: string) => Promise<PracticeSession | null>;
+  linkRecordingToSession: (input: PracticeRecordingLinkInput) => Promise<PracticeSession | null>;
   createSheetRecordingMetadata: (input: SheetRecordingMetadataInput) => Promise<SheetRecordingMetadata | null>;
+  listSessions: () => Promise<PracticeSession[]>;
+  getTodaySummary: () => Promise<TodayPracticeSummary>;
   getRecentSession: () => Promise<PracticeSession | null>;
   getRecentSheetSession: (sheetId: string) => Promise<PracticeSession | null>;
   getContinuePracticeTarget: () => Promise<ContinuePracticeTarget | null>;
