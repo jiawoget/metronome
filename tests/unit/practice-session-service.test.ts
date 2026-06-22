@@ -35,6 +35,9 @@ function createMemorySessionRepository(): PracticeSessionRepository {
     async saveSession(session) {
       sessions.set(session.id, validatePracticeSession(session));
     },
+    async deleteSession(sessionId) {
+      sessions.delete(sessionId);
+    },
     async clear() {
       sessions.clear();
     }

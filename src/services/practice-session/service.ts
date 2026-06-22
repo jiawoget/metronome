@@ -137,6 +137,10 @@ export function createPracticeSessionService({
       return session;
     },
 
+    deletePracticeSessionSnapshot(sessionId) {
+      return repository.deleteSession(sessionId);
+    },
+
     async updateSheetSessionDuration(sessionId) {
       const session = await repository.getSession(sessionId);
 

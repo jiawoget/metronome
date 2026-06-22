@@ -74,6 +74,11 @@ export const practiceSessionRepository: PracticeSessionRepository = {
     dispatchPracticeSessionChange();
   },
 
+  async deleteSession(sessionId) {
+    await getDatabase().sessions.delete(sessionId);
+    dispatchPracticeSessionChange();
+  },
+
   async clear() {
     const db = getDatabase();
 

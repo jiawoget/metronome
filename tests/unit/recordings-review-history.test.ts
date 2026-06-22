@@ -168,6 +168,13 @@ describe("recordings review artifact helpers", () => {
         trustedPeaks: [Number.NaN, 0.5]
       })
     ).rejects.toThrow("invalid waveform peak data");
+
+    await expect(
+      loadRecordingArtifactDetails({
+        ...sheetRecording,
+        trustedPeaks: [Number.POSITIVE_INFINITY, 0.5]
+      })
+    ).rejects.toThrow("invalid waveform peak data");
   });
 
   it("derives peaks from decoded audio when trusted peaks are missing", async () => {

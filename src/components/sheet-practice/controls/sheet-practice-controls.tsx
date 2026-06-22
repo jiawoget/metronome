@@ -55,6 +55,7 @@ type SheetPracticeSessionService = Pick<
   PracticeSessionService,
   | "ensureSheetSession"
   | "restorePracticeSessionSnapshot"
+  | "deletePracticeSessionSnapshot"
   | "updateSheetSessionDuration"
   | "endPracticeSession"
   | "createSheetRecordingMetadata"

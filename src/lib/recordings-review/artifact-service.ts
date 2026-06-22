@@ -113,6 +113,11 @@ export async function loadRecordingArtifactDetails(
   const decodedDurationMs = audioBuffer.duration * 1_000;
   const trustedPeaks = recording.trustedPeaks;
   const useTrustedPeaks = !!trustedPeaks && trustedPeaks.length > 0;
+
+  if (useTrustedPeaks && !trustedPeaks.every((peak) => Number.isFinite(peak))) {
+    throw new RecordingArtifactError("This recording has invalid waveform peak data.");
+  }
+
   const normalizedTrustedPeaks = useTrustedPeaks ? normalizeTrustedPeaks(trustedPeaks) : [];
 
   if (useTrustedPeaks && !hasUsablePeaks(normalizedTrustedPeaks)) {

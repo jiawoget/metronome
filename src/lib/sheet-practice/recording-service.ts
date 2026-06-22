@@ -8,7 +8,10 @@ import type { PracticeSessionService } from "@/services/practice-session";
 
 type SheetRecordingSessionService = Pick<
   PracticeSessionService,
-  "createSheetRecordingMetadata" | "getRecentSheetSession"
+  | "createSheetRecordingMetadata"
+  | "deletePracticeSessionSnapshot"
+  | "getRecentSheetSession"
+  | "restorePracticeSessionSnapshot"
 >;
 
 type SheetRecordingCaptureService = Pick<BrowserRecordingService, "start" | "stop" | "isRecording">;
@@ -151,6 +154,9 @@ export class BrowserSheetRecordingService {
 
   async stopAndSave(input: SaveSheetRecordingInput): Promise<SaveSheetRecordingResult> {
     const artifact = await this.captureService.stop();
+    let metadata: SheetRecordingMetadata | null = null;
+    const previousHistorySnapshot = recordingHistoryRepository.getSnapshot();
+    const previousSession = await input.sessionService.getRecentSheetSession(input.sheetId);
 
     if (artifact.sizeBytes <= 0) {
       throw new Error("Recording artifact was empty.");
@@ -173,50 +179,78 @@ export class BrowserSheetRecordingService {
       throw new Error("Recording waveform could not be derived from the saved audio.");
     }
 
-    const metadata = await input.sessionService.createSheetRecordingMetadata({
-      sheetId: input.sheetId,
-      sessionId: input.sessionId,
-      durationMs: roundDuration(decodedDetails.decodedDurationMs),
-      bpm: input.settings.bpm,
-      timeSignature: input.settings.timeSignature,
-      forceNewSession: input.forceNewSession
-    });
+    try {
+      metadata = await input.sessionService.createSheetRecordingMetadata({
+        sheetId: input.sheetId,
+        sessionId: input.sessionId,
+        durationMs: roundDuration(decodedDetails.decodedDurationMs),
+        bpm: input.settings.bpm,
+        timeSignature: input.settings.timeSignature,
+        forceNewSession: input.forceNewSession
+      });
 
-    if (!metadata) {
-      throw new Error("No valid sheet context. Recording was not saved.");
-    }
+      if (!metadata) {
+        throw new Error("No valid sheet context. Recording was not saved.");
+      }
 
-    const decodedRecording = createSheetReviewRecording({
-      metadata,
-      artifact,
-      settings: input.settings
-    });
-    const recording = {
-      ...decodedRecording,
-      durationMs: roundDuration(decodedDetails.decodedDurationMs),
-      trustedPeaks: decodedDetails.peaks,
-      artifactAnalysis: decodedRecording.artifactAnalysis
-        ? {
-            ...decodedRecording.artifactAnalysis,
-            decodedDurationMs: decodedDetails.decodedDurationMs
+      const decodedRecording = createSheetReviewRecording({
+        metadata,
+        artifact,
+        settings: input.settings
+      });
+      const recording = {
+        ...decodedRecording,
+        durationMs: roundDuration(decodedDetails.decodedDurationMs),
+        trustedPeaks: decodedDetails.peaks,
+        artifactAnalysis: decodedRecording.artifactAnalysis
+          ? {
+              ...decodedRecording.artifactAnalysis,
+              decodedDurationMs: decodedDetails.decodedDurationMs
+            }
+          : decodedRecording.artifactAnalysis
+      };
+      const artifactDetails: RecordingArtifactDetails = {
+        ...decodedDetails,
+        metadataDurationMs: recording.durationMs,
+        durationDifferenceMs: Math.abs(decodedDetails.decodedDurationMs - recording.durationMs),
+        durationWarning: null,
+        peaks: recording.trustedPeaks,
+        source: "trusted-peaks"
+      };
+
+      saveSheetReviewRecording(recording);
+
+      return {
+        metadata,
+        recording,
+        artifactDetails
+      };
+    } catch (error) {
+      if (metadata) {
+        const rollbackErrors: unknown[] = [];
+
+        try {
+          recordingHistoryRepository.saveSnapshot(previousHistorySnapshot);
+        } catch (rollbackError) {
+          rollbackErrors.push(rollbackError);
+        }
+
+        try {
+          if (previousSession) {
+            await input.sessionService.restorePracticeSessionSnapshot(previousSession);
+          } else {
+            await input.sessionService.deletePracticeSessionSnapshot(metadata.sessionId);
           }
-        : decodedRecording.artifactAnalysis
-    };
-    const artifactDetails: RecordingArtifactDetails = {
-      ...decodedDetails,
-      metadataDurationMs: recording.durationMs,
-      durationDifferenceMs: Math.abs(decodedDetails.decodedDurationMs - recording.durationMs),
-      durationWarning: null,
-      peaks: recording.trustedPeaks,
-      source: "trusted-peaks"
-    };
+        } catch (rollbackError) {
+          rollbackErrors.push(rollbackError);
+        }
 
-    saveSheetReviewRecording(recording);
+        if (rollbackErrors.length > 0) {
+          throw new Error("Recording save failed, and rollback could not fully restore the previous session state.");
+        }
+      }
 
-    return {
-      metadata,
-      recording,
-      artifactDetails
-    };
+      throw error;
+    }
   }
 }

@@ -48,6 +48,7 @@ function createIdleSessionService() {
   return {
     ensureSheetSession: vi.fn(async () => null),
     restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session),
+    deletePracticeSessionSnapshot: vi.fn(async () => undefined),
     updateSheetSessionDuration: vi.fn(async () => null),
     endPracticeSession: vi.fn(async () => null),
     createSheetRecordingMetadata: vi.fn(async () => null),
@@ -59,6 +60,7 @@ function createIdleSessionService() {
     PracticeSessionService,
     | "ensureSheetSession"
     | "restorePracticeSessionSnapshot"
+    | "deletePracticeSessionSnapshot"
     | "updateSheetSessionDuration"
     | "endPracticeSession"
     | "createSheetRecordingMetadata"

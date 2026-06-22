@@ -130,6 +130,10 @@ export function createGlobalPracticeSessionRepository(sheetRepository: PracticeS
       return sheetRepository.saveSession(session);
     },
 
+    deleteSession(sessionId) {
+      return sheetRepository.deleteSession(sessionId);
+    },
+
     clear() {
       return sheetRepository.clear();
     },
