@@ -231,7 +231,7 @@ export function SheetPracticeControls({
     return {
       session: nextSession,
       rollback:
-        existingSheetSession === null
+        existingSheetSession === null || nextSession.id !== existingSheetSession.id
           ? { kind: "end-created-session" }
           : existingSheetSession.endedAt
             ? { kind: "restore-previous-session", previousSession: existingSheetSession }

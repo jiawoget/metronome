@@ -51,7 +51,7 @@ function getLatestRecordingForSession(recordings: ReviewRecording[], sessionId: 
     .sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt))[0] ?? null;
 }
 
-function quickSessionToPracticeSession(value: unknown, recordings: ReviewRecording[]) {
+function legacyQuickSessionToPracticeSession(value: unknown, recordings: ReviewRecording[]) {
   if (!hasStringId(value)) {
     return null;
   }
@@ -91,11 +91,11 @@ function quickSessionToPracticeSession(value: unknown, recordings: ReviewRecordi
   });
 }
 
-function listQuickPracticeSessions() {
+function listLegacyQuickPracticeSessions() {
   const snapshot = recordingHistoryRepository.getSnapshot();
 
   return snapshot.sessions
-    .map((session) => quickSessionToPracticeSession(session, snapshot.recordings))
+    .map((session) => legacyQuickSessionToPracticeSession(session, snapshot.recordings))
     .filter((session): session is PracticeSession => session !== null);
 }
 
@@ -103,7 +103,7 @@ export function createGlobalPracticeSessionRepository(sheetRepository: PracticeS
   async function listSessions() {
     return sortSessionsByRecentActivity([
       ...(await sheetRepository.listSessions()),
-      ...listQuickPracticeSessions()
+      ...listLegacyQuickPracticeSessions()
     ]);
   }
 
@@ -113,7 +113,7 @@ export function createGlobalPracticeSessionRepository(sheetRepository: PracticeS
     async getSession(sessionId) {
       return (
         (await sheetRepository.getSession(sessionId)) ??
-        listQuickPracticeSessions().find((session) => session.id === sessionId) ??
+        listLegacyQuickPracticeSessions().find((session) => session.id === sessionId) ??
         null
       );
     },

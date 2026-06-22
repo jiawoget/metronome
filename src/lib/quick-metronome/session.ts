@@ -1,9 +1,5 @@
-import type {
-  MetronomeSettings,
-  PracticeSession,
-  QuickRecording,
-  RecordingArtifact
-} from "@/lib/quick-metronome/types";
+import type { PracticeSession } from "@/domain/practice";
+import type { MetronomeSettings, QuickRecording, RecordingArtifact } from "@/lib/quick-metronome/types";
 
 function createId(prefix: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -11,16 +7,6 @@ function createId(prefix: string) {
   }
 
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-}
-
-export function createQuickPracticeSession(settings: MetronomeSettings, startedAt = new Date()) {
-  return {
-    id: createId("session"),
-    sourceType: "quick",
-    startedAt: startedAt.toISOString(),
-    endedAt: null,
-    settings
-  } satisfies PracticeSession;
 }
 
 export function createQuickRecording({

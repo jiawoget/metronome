@@ -14,14 +14,6 @@ export type MetronomeSettings = {
   countdownBeats: number;
 };
 
-export type PracticeSession = {
-  id: string;
-  sourceType: "quick" | "sheet";
-  startedAt: string;
-  endedAt: string | null;
-  settings: MetronomeSettings;
-};
-
 export type QuickRecording = {
   id: string;
   type: "quick";
@@ -56,7 +48,7 @@ export type RecordingArtifact = {
 };
 
 export type QuickMetronomeStoreSnapshot = {
-  sessions: PracticeSession[];
+  sessions: unknown[];
   recordings: QuickRecording[];
   errorMarkers: unknown[];
 };

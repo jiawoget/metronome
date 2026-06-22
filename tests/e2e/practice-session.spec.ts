@@ -142,28 +142,6 @@ async function seedDateBoundarySessions(page: Page) {
   );
 }
 
-function calculateTodaySummary(sessions: SessionSnapshot) {
-  return sessions
-    .filter((session) => {
-      const value = new Date(session.startedAt);
-      const now = new Date();
-
-      return (
-        value.getFullYear() === now.getFullYear() &&
-        value.getMonth() === now.getMonth() &&
-        value.getDate() === now.getDate()
-      );
-    })
-    .reduce(
-      (summary, session) => ({
-        durationMs: summary.durationMs + session.durationMs,
-        sessionsToday: summary.sessionsToday + 1,
-        recordingsToday: summary.recordingsToday + session.recordingCount
-      }),
-      { durationMs: 0, sessionsToday: 0, recordingsToday: 0 }
-    );
-}
-
 async function importSheet(page: Page) {
   await page.goto("/sheet-library");
   await page.getByLabel("File").setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
@@ -269,21 +247,19 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   await page.reload();
 
   sessions = await getPracticeSessions(page);
-  const expectedSummary = calculateTodaySummary(sessions);
 
-  await expect(page.getByTestId("today-summary-minutes")).toHaveText(
-    String(Math.round(expectedSummary.durationMs / 60_000))
-  );
-  await expect(page.getByTestId("today-summary-sessions")).toHaveText(String(expectedSummary.sessionsToday));
-  await expect(page.getByTestId("today-summary-recordings")).toHaveText(String(expectedSummary.recordingsToday));
-  expect(expectedSummary.recordingsToday).not.toBeGreaterThanOrEqual(6);
+  expect(sessions).toHaveLength(5);
+  expect(sessions.filter((session) => session.sourceType === "quick")).toHaveLength(4);
+  await expect(page.getByTestId("today-summary-minutes")).toHaveText("2");
+  await expect(page.getByTestId("today-summary-sessions")).toHaveText("4");
+  await expect(page.getByTestId("today-summary-recordings")).toHaveText("3");
 
   await page.reload();
   await expect(page.getByRole("link", { name: "Continue Practice" })).toHaveAttribute(
     "href",
     `/sheet-practice/${sheetId}`
   );
-  await expect(page.getByTestId("today-summary-sessions")).toHaveText(String(expectedSummary.sessionsToday));
+  await expect(page.getByTestId("today-summary-sessions")).toHaveText("4");
 
   await page.goto("/settings");
   await expect(page.getByTestId("settings-count-sessions")).not.toHaveText("0");

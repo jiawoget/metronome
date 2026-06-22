@@ -2,6 +2,7 @@ import {
   calculatePracticeDurationMs,
   getContinuePracticeTarget,
   getTodayPracticeSummary,
+  isBrowserLocalDay,
   validateSheetRecordingMetadata,
   type PracticeSession,
   type SheetRecordingMetadata
@@ -48,6 +49,10 @@ export function createPracticeSessionService({
     return calculatePracticeDurationMs({ ...session, endedAt: null }, now());
   }
 
+  function canReuseActiveSession(session: PracticeSession | null) {
+    return !!session && session.endedAt === null && isBrowserLocalDay(session.startedAt, now());
+  }
+
   async function updateSessionDuration(session: PracticeSession) {
     const timestamp = now().toISOString();
     const nextSession = {
@@ -67,9 +72,11 @@ export function createPracticeSessionService({
 
   async function ensureQuickSession(input: QuickPracticeActivityInput) {
     const timestamp = now().toISOString();
-    const existingSession = input.forceNewSession
+    const recentQuickSession =
+      (await repository.listSessions()).find((session) => session.sourceType === "quick") ?? null;
+    const existingSession = input.forceNewSession || !canReuseActiveSession(recentQuickSession)
       ? null
-      : (await repository.listSessions()).find((session) => session.sourceType === "quick") ?? null;
+      : recentQuickSession;
     const session: PracticeSession =
       existingSession ??
       {
@@ -111,7 +118,10 @@ export function createPracticeSessionService({
     }
 
     const timestamp = now().toISOString();
-    const existingSession = input.forceNewSession ? null : await repository.getRecentSheetSession(sheet.id);
+    const recentSheetSession = await repository.getRecentSheetSession(sheet.id);
+    const existingSession = input.forceNewSession || !canReuseActiveSession(recentSheetSession)
+      ? null
+      : recentSheetSession;
     const session: PracticeSession =
       existingSession ??
       {

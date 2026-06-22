@@ -2,22 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
 import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
-import { createQuickPracticeSession, createQuickRecording } from "@/lib/quick-metronome/session";
+import { createQuickRecording } from "@/lib/quick-metronome/session";
 import { DEFAULT_METRONOME_SETTINGS, type RecordingArtifact } from "@/lib/quick-metronome/types";
 
-describe("quick metronome session and recording metadata", () => {
-  it("creates a quick practice session with settings metadata", () => {
-    const session = createQuickPracticeSession(DEFAULT_METRONOME_SETTINGS, new Date("2026-06-21T08:00:00Z"));
-
-    expect(session.id).toMatch(/^session_/);
-    expect(session.sourceType).toBe("quick");
-    expect(session.startedAt).toBe("2026-06-21T08:00:00.000Z");
-    expect(session.endedAt).toBeNull();
-    expect(session.settings).toEqual(DEFAULT_METRONOME_SETTINGS);
-  });
-
+describe("quick metronome recording metadata", () => {
   it("creates quick recording metadata linked to a session and not to a sheet", () => {
-    const session = createQuickPracticeSession(DEFAULT_METRONOME_SETTINGS);
+    const session = { id: "session-canonical-quick" };
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
       dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
@@ -55,7 +45,7 @@ describe("quick metronome session and recording metadata", () => {
 
   it("does not overwrite an existing recording when saving a continued take with a reused id", () => {
     quickRecordingRepository.clear();
-    const session = createQuickPracticeSession(DEFAULT_METRONOME_SETTINGS);
+    const session = { id: "session-canonical-quick" };
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
       dataUrl: "data:audio/webm;base64,c3ludGhldGlj",

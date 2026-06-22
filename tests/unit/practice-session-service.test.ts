@@ -212,6 +212,55 @@ describe("practice session service", () => {
     });
   });
 
+  it("creates new quick history entries after an old quick session ended or crossed a local day", async () => {
+    const { service, repository } = createService();
+    nowMs = new Date(2026, 5, 21, 10, 0, 0).getTime();
+
+    const firstSession = await service.ensureQuickSession({
+      trigger: "metronome",
+      bpm: 100,
+      timeSignature: "4/4"
+    });
+
+    nowMs = new Date(2026, 5, 21, 10, 5, 0).getTime();
+    await service.endPracticeSession(firstSession.id);
+
+    nowMs = new Date(2026, 5, 22, 9, 0, 0).getTime();
+    const secondSession = await service.ensureQuickSession({
+      trigger: "metronome",
+      bpm: 110,
+      timeSignature: "3/4"
+    });
+
+    expect(secondSession.id).toBe("session-2");
+    expect(secondSession.id).not.toBe(firstSession.id);
+    await expect(repository.listSessions()).resolves.toHaveLength(2);
+    await expect(service.getTodaySummary()).resolves.toEqual({
+      durationMs: 0,
+      minutesToday: 0,
+      sessionsToday: 1,
+      recordingsToday: 0
+    });
+  });
+
+  it("reuses only an active same-day quick session during one practice context", async () => {
+    const { service, repository } = createService();
+    nowMs = new Date(2026, 5, 21, 10, 0, 0).getTime();
+
+    const firstSession = await service.ensureQuickSession({ trigger: "metronome", bpm: 96, timeSignature: "4/4" });
+
+    nowMs = new Date(2026, 5, 21, 10, 1, 0).getTime();
+    const sameContextSession = await service.ensureQuickSession({ trigger: "recording", bpm: 100, timeSignature: "3/4" });
+
+    expect(sameContextSession.id).toBe(firstSession.id);
+    expect(sameContextSession).toMatchObject({
+      durationMs: 60_000,
+      bpm: 100,
+      timeSignature: "3/4"
+    });
+    await expect(repository.listSessions()).resolves.toHaveLength(1);
+  });
+
   it("updates recording count and latest recording id for session-bound quick recordings", async () => {
     const { service, repository } = createService();
     const session = await service.ensureQuickSession({ trigger: "recording", bpm: 96, timeSignature: "4/4" });
@@ -299,7 +348,7 @@ describe("practice session service", () => {
     });
   });
 
-  it("restores a previous session snapshot after a failed start reopens an ended session", async () => {
+  it("creates a new sheet history entry instead of reopening an ended sheet session", async () => {
     const { service, repository } = createService();
 
     const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
@@ -309,13 +358,15 @@ describe("practice session service", () => {
     expect(ended?.endedAt).toBe("2026-06-21T12:00:05.000Z");
 
     nowMs += 10_000;
-    const reopened = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    const nextSession = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
 
-    expect(reopened).toMatchObject({
-      id: session?.id,
+    expect(nextSession).toMatchObject({
+      id: "session-2",
       endedAt: null,
       updatedAt: "2026-06-21T12:00:15.000Z"
     });
+    expect(nextSession?.id).not.toBe(session?.id);
+    await expect(repository.listSessions()).resolves.toHaveLength(2);
 
     const restored = await service.restorePracticeSessionSnapshot(ended as PracticeSession);
 
@@ -365,6 +416,13 @@ describe("practice session service", () => {
     const { service, repository } = createService();
 
     await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "recording" });
+    await expect(
+      service.createSheetRecordingMetadata({
+        sheetId: "sheet-alpha",
+        sessionId: "session-missing",
+        durationMs: 500
+      })
+    ).resolves.toBeNull();
     await expect(
       service.createSheetRecordingMetadata({
         sheetId: "sheet-alpha",
@@ -434,17 +492,29 @@ describe("practice session service", () => {
   });
 
   it("does not return Continue Practice for a stale sheet session after the sheet is deleted", async () => {
-    const { service, validSheetIds } = createService();
+    const { service, repository, validSheetIds } = createService();
 
+    await service.ensureQuickSession({ trigger: "metronome", bpm: 120, timeSignature: "4/4" });
+    expect(await service.getContinuePracticeTarget()).toEqual({
+      sourceType: "quick",
+      href: "/quick-metronome",
+      label: "Continue Quick Practice",
+      sessionId: "session-1"
+    });
+    nowMs += 1_000;
     await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
-    expect(await service.getContinuePracticeTarget()).toMatchObject({
+    expect(await service.getContinuePracticeTarget()).toEqual({
       sourceType: "sheet",
+      href: "/sheet-practice/sheet-alpha",
+      label: "Continue Sheet Practice",
+      sessionId: "session-2",
       sheetId: "sheet-alpha"
     });
 
     validSheetIds.delete("sheet-alpha");
 
     await expect(service.getContinuePracticeTarget()).resolves.toBeNull();
+    await expect(repository.listSessions()).resolves.toHaveLength(2);
   });
 
   it("rejects invalid session and recording metadata at validation boundaries", () => {

@@ -1279,12 +1279,16 @@
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
-                                                 "completedAt":  "2026-06-22T06:57:15Z",
+                                                 "completedAt":  "2026-06-22T07:05:35Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/practice-session-service.test.ts tests/unit/quick-metronome-session.test.ts tests/unit/home-dashboard.test.tsx tests/unit/settings-service.test.ts tests/unit/sheet-practice-recording.test.ts tests/unit/sheet-practice-controls.test.tsx -> PASS; 6 test files passed, 41 tests passed",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/practice-session.spec.ts -> PASS; 1 chromium test passed covering quick session, quick recording link, sheet session, Continue Practice quick/sheet targets, Today Summary local-day boundary, reload persistence, Settings Clear All Local Data, and console/pageerror capture",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS"
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/practice-session-service.test.ts tests/unit/quick-metronome-session.test.ts tests/unit/sheet-practice-controls.test.tsx tests/unit/sheet-practice-recording.test.ts tests/unit/home-dashboard.test.tsx tests/unit/settings-service.test.ts -> PASS; 6 test files passed, 42 tests passed",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/practice-session.spec.ts -> PASS; 1 chromium test passed with concrete Today Summary expectations and distinct quick/sheet history entries",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS"
                                                                ],
                                                  "handoffNotes":  [
                                                      "Assigned feature: 08-practice-session.",
@@ -1296,6 +1300,10 @@
                                                      "Settings Clear All Local Data integration was exercised through the existing cleanup service and clears practice sessions plus legacy quick recording history.",
                                                      "The future reference trigger remains decoupled through PracticeActivityTrigger and applyPracticeTrigger; no transport-specific coupling, event timeline, goals, segments, analysis attachments, sync, comparisons, or detailed duration rules were added.",
                                                      "Today Summary date fixtures tested a current browser-local-day session and a previous browser-local-day session; only the current local day contributed duration, session count, and recording count.",
+                                                     "Strict review fix: Practice Session service now reuses only active same-browser-local-day sessions; ended sessions and later-day activity create new practice-history entries for both quick and sheet sources.",
+                                                     "Strict review fix: Quick Metronome no longer exposes a duplicate quick PracticeSession type or createQuickPracticeSession factory; quick recordings accept the canonical domain PracticeSession id, and legacy quick session reads are bounded to the global repository adapter.",
+                                                     "Strict review fix: Sheet controls rollback now treats a newly created session as the rollback target instead of restoring an older ended session when the service correctly creates fresh history.",
+                                                     "Strict review fix: Tests now cover later-day activity against old sessions, active-session reuse, missing-sheet Continue Practice recovery, invalid sheet guard, recording-without-session rejection, and concrete Today Summary browser assertions.",
                                                      "Implementation commit hash is reported in the final handoff response because a git commit cannot contain its own final object hash without changing that hash."
                                                                   ],
                                                  "changedAreas":  [
@@ -1307,7 +1315,11 @@
                                                      "src/components/sheet-practice/session/sheet-practice-session-harness.tsx passes the active sessionId for sheet recording metadata",
                                                      "tests/unit/practice-session-service.test.ts covers quick and sheet session rules, invalid sheet guard, recording sessionId requirement, count/latest updates, recent/Continue targets, duration/endedAt, Today Summary local-day boundary, clearable repository behavior, and trigger independence",
                                                      "tests/unit/quick-metronome-session.test.ts covers quick recording artifact storage without duplicate new session history",
-                                                     "tests/e2e/practice-session.spec.ts covers real browser quick, sheet, Continue Practice, Today Summary, reload persistence, recording link, clear-data, and console/pageerror checks"
+                                                     "tests/e2e/practice-session.spec.ts covers real browser quick, sheet, Continue Practice, Today Summary, reload persistence, recording link, clear-data, and console/pageerror checks",
+                                                     "Strict review fix: src/services/practice-session/service.ts constrains active-session reuse to unended sessions from the same browser-local day",
+                                                     "Strict review fix: src/lib/quick-metronome/session.ts and src/lib/quick-metronome/types.ts retire the duplicate quick session model and factory",
+                                                     "Strict review fix: src/infrastructure/db/global-practice-session-repository.ts clearly bounds legacy quick session reads to the adapter path",
+                                                     "Strict review fix: tests/unit/practice-session-service.test.ts and tests/e2e/practice-session.spec.ts add regression coverage for new-session history entries, stale sheet recovery, recording sessionId rejection, and concrete summary values"
                                                                   ],
                                                  "knownRisks":  [
                                                      "Quick recording audio artifacts still live in the existing v0 localStorage recording artifact store; the global Practice Session service now owns session metadata, while artifact migration to IndexedDB remains outside 08 scope.",
