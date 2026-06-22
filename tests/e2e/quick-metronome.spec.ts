@@ -287,6 +287,22 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
     page.getByTestId("active-recording-navigation-guard")
   ).toContainText("Stop and save the recording before changing pages.");
   await expect(page.getByText("Recording").first()).toBeVisible();
+  await page.evaluate(() => window.history.back());
+  await expect(page).toHaveURL(/\/quick-metronome/);
+  await expect(
+    page.getByTestId("active-recording-navigation-guard")
+  ).toContainText("Stop and save the recording before changing pages.");
+  await expect(page.getByText("Recording").first()).toBeVisible();
+  await expect(
+    page.evaluate(() => {
+      window.history.pushState(null, "", "/settings");
+
+      return window.location.pathname;
+    })
+  ).resolves.toBe("/quick-metronome");
+  await expect(
+    page.getByTestId("active-recording-navigation-guard")
+  ).toContainText("Stop and save the recording before changing pages.");
 
   await page.getByRole("button", { name: "Start metronome" }).click();
   await expect(page.getByText(/Playing \+ Recording/i)).toBeVisible();

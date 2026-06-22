@@ -17,6 +17,7 @@ import {
   createErrorMarker,
   MAX_ERROR_MARKER_NOTE_LENGTH,
   normalizeErrorMarkerNote,
+  seekToErrorMarker,
   validateErrorMarkerInput
 } from "@/lib/recordings-review/error-markers";
 import type { RecordingErrorMarker, ReviewRecording } from "@/lib/recordings-review/types";
@@ -209,6 +210,61 @@ describe("recordings review history helpers", () => {
 
   it("calculates marker seek targets through the playback service contract value", () => {
     expect(getErrorMarkerSeekTarget({ timestampMs: 1_200 })).toBe(1_200);
+  });
+
+  it("seeks error markers through the shared playback helper", () => {
+    const seekToMs = vi.fn((timestampMs: number) => ({
+      targetTimeMs: timestampMs,
+      currentTimeMs: timestampMs + 20
+    }));
+
+    expect(
+      seekToErrorMarker({
+        marker: { timestampMs: 1_200 },
+        activeRecordingId: "recording-1",
+        playbackControls: {
+          recordingId: "recording-1",
+          seekToMs
+        }
+      })
+    ).toEqual({
+      ok: true,
+      seekTargetMs: 1_200,
+      currentTimeMs: 1_220,
+      message: "Playback moved to 0:01."
+    });
+    expect(seekToMs).toHaveBeenCalledWith(1_200);
+  });
+
+  it("reports shared marker seek readiness and tolerance failures", () => {
+    expect(
+      seekToErrorMarker({
+        marker: { timestampMs: 1_200 },
+        activeRecordingId: "recording-1",
+        playbackControls: null
+      })
+    ).toEqual({
+      ok: false,
+      seekTargetMs: null,
+      message: "Recording playback is still loading."
+    });
+    expect(
+      seekToErrorMarker({
+        marker: { timestampMs: 1_200 },
+        activeRecordingId: "recording-1",
+        playbackControls: {
+          recordingId: "recording-1",
+          seekToMs: (timestampMs) => ({
+            targetTimeMs: timestampMs,
+            currentTimeMs: timestampMs + 120
+          })
+        }
+      })
+    ).toEqual({
+      ok: false,
+      seekTargetMs: 1_200,
+      message: "Playback did not move to the selected marker."
+    });
   });
 });
 

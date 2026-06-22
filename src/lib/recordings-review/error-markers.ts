@@ -1,8 +1,10 @@
 import { z } from "zod";
 
+import { formatTimestamp } from "@/lib/recordings-review/format";
 import type { RecordingErrorMarker } from "@/lib/recordings-review/types";
 
 export const MAX_ERROR_MARKER_NOTE_LENGTH = 160;
+export const ERROR_MARKER_SEEK_TOLERANCE_MS = 80;
 
 export type ErrorMarkerValidationInput = {
   recordingId: string | null | undefined;
@@ -18,6 +20,27 @@ export type CreateErrorMarkerInput = ErrorMarkerValidationInput & {
 export type PersistedErrorMarkerInput = ErrorMarkerValidationInput & {
   id: string;
 };
+
+export type ErrorMarkerPlaybackControls = {
+  recordingId: string;
+  seekToMs: (timestampMs: number) => {
+    targetTimeMs: number;
+    currentTimeMs: number;
+  };
+};
+
+export type ErrorMarkerSeekResult =
+  | {
+      ok: true;
+      seekTargetMs: number;
+      currentTimeMs: number;
+      message: string;
+    }
+  | {
+      ok: false;
+      seekTargetMs: number | null;
+      message: string;
+    };
 
 const markerInputSchema = z.object({
   recordingId: z.string().trim().min(1, "A recording is required before saving an error marker."),
@@ -104,4 +127,48 @@ export function sortErrorMarkers(markers: RecordingErrorMarker[]) {
 
 export function getErrorMarkerSeekTarget(marker: Pick<RecordingErrorMarker, "timestampMs">) {
   return marker.timestampMs;
+}
+
+export function seekToErrorMarker({
+  marker,
+  activeRecordingId,
+  playbackControls,
+  toleranceMs = ERROR_MARKER_SEEK_TOLERANCE_MS
+}: {
+  marker: Pick<RecordingErrorMarker, "timestampMs">;
+  activeRecordingId: string;
+  playbackControls: ErrorMarkerPlaybackControls | null;
+  toleranceMs?: number;
+}): ErrorMarkerSeekResult {
+  if (!playbackControls || playbackControls.recordingId !== activeRecordingId) {
+    return {
+      ok: false,
+      seekTargetMs: null,
+      message: "Recording playback is still loading."
+    };
+  }
+
+  const seekTargetMs = getErrorMarkerSeekTarget(marker);
+
+  try {
+    const result = playbackControls.seekToMs(seekTargetMs);
+    const seekDeltaMs = Math.abs(result.currentTimeMs - seekTargetMs);
+
+    if (seekDeltaMs > toleranceMs) {
+      throw new Error("Playback did not move to the selected marker.");
+    }
+
+    return {
+      ok: true,
+      seekTargetMs,
+      currentTimeMs: result.currentTimeMs,
+      message: `Playback moved to ${formatTimestamp(seekTargetMs)}.`
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      seekTargetMs,
+      message: error instanceof Error ? error.message : "Playback could not move to this marker."
+    };
+  }
 }

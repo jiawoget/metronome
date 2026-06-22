@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { EyeOff, RotateCcw } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,11 +23,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [navigationGuardMessage, setNavigationGuardMessage] = useState<
     string | null
   >(null);
+  const guardedHrefRef = useRef<string | null>(null);
   const activeRecordingLabels = useMemo(
     () => Object.values(activeRecordings),
     [activeRecordings]
   );
   const hasActiveRecording = activeRecordingLabels.length > 0;
+  const activeRecordingLabel = activeRecordingLabels[0] ?? "a recording";
+  const recordingNavigationBlockedMessage = `Navigation blocked while ${activeRecordingLabel} is active. Stop and save the recording before changing pages.`;
 
   useEffect(() => {
     const handleActiveRecordingChange = (event: Event) => {
@@ -71,6 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hasActiveRecording) {
+      guardedHrefRef.current = null;
       return;
     }
 
@@ -85,6 +89,99 @@ export function AppShell({ children }: { children: ReactNode }) {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [hasActiveRecording]);
+
+  useEffect(() => {
+    if (!hasActiveRecording) {
+      guardedHrefRef.current = null;
+      return;
+    }
+
+    const guardedHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const originalPushState = window.history.pushState.bind(window.history);
+    const originalReplaceState = window.history.replaceState.bind(window.history);
+
+    guardedHrefRef.current = guardedHref;
+    originalPushState(
+      {
+        ...(typeof window.history.state === "object" && window.history.state !== null
+          ? window.history.state
+          : {}),
+        __activeRecordingGuard: true
+      },
+      "",
+      guardedHref
+    );
+
+    const resolveHref = (url: string | URL | null | undefined) => {
+      if (url === null || url === undefined) {
+        return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      }
+
+      const resolved = new URL(url, window.location.href);
+
+      return `${resolved.pathname}${resolved.search}${resolved.hash}`;
+    };
+    const blockHistoryChange = () => {
+      setNavigationGuardMessage(recordingNavigationBlockedMessage);
+    };
+
+    window.history.pushState = function guardedPushState(data, unused, url) {
+      if (resolveHref(url) !== guardedHrefRef.current) {
+        blockHistoryChange();
+        return;
+      }
+
+      return originalPushState(data, unused, url);
+    };
+    window.history.replaceState = function guardedReplaceState(data, unused, url) {
+      if (resolveHref(url) !== guardedHrefRef.current) {
+        blockHistoryChange();
+        return;
+      }
+
+      return originalReplaceState(data, unused, url);
+    };
+
+    const handlePopState = () => {
+      const currentHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+      if (currentHref === guardedHrefRef.current) {
+        originalPushState(
+          {
+            ...(typeof window.history.state === "object" && window.history.state !== null
+              ? window.history.state
+              : {}),
+            __activeRecordingGuard: true
+          },
+          "",
+          guardedHrefRef.current
+        );
+        blockHistoryChange();
+        return;
+      }
+
+      originalPushState(
+        {
+          ...(typeof window.history.state === "object" && window.history.state !== null
+            ? window.history.state
+            : {}),
+          __activeRecordingGuard: true
+        },
+        "",
+        guardedHrefRef.current ?? guardedHref
+      );
+      blockHistoryChange();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+      window.removeEventListener("popstate", handlePopState);
+      guardedHrefRef.current = null;
+    };
+  }, [hasActiveRecording, recordingNavigationBlockedMessage]);
 
   function handleNavigationClickCapture(event: MouseEvent<HTMLDivElement>) {
     if (
@@ -114,9 +211,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     event.preventDefault();
     event.stopPropagation();
-    setNavigationGuardMessage(
-      `Navigation blocked while ${activeRecordingLabels[0] ?? "a recording"} is active. Stop and save the recording before changing pages.`
-    );
+    setNavigationGuardMessage(recordingNavigationBlockedMessage);
   }
 
   return (

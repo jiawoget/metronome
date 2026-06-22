@@ -5,8 +5,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { RecordingPlaybackControls } from "@/components/recordings-review/recording-artifact-review";
+import { seekToErrorMarker } from "@/lib/recordings-review/error-markers";
 import { formatTimestamp } from "@/lib/recordings-review/format";
-import { getErrorMarkerSeekTarget } from "@/lib/recordings-review/history";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { RecordingErrorMarker, ReviewRecording } from "@/lib/recordings-review/types";
 
@@ -15,8 +15,6 @@ type ErrorMarkerPanelProps = {
   playbackControls: RecordingPlaybackControls | null;
   currentTimeMs: number;
 };
-
-const SEEK_CONFIRMATION_TOLERANCE_MS = 80;
 
 function formatSecondsInput(timestampMs: number) {
   return (Math.max(0, timestampMs) / 1_000).toFixed(1);
@@ -107,29 +105,21 @@ export function ErrorMarkerPanel({
   }
 
   function seekToMarker(marker: RecordingErrorMarker) {
-    if (!playbackControls || playbackControls.recordingId !== activeRecording.id) {
-      setMessage(null);
-      setErrorMessage("Recording playback is still loading.");
+    const result = seekToErrorMarker({
+      marker,
+      activeRecordingId: activeRecording.id,
+      playbackControls
+    });
+
+    if (result.ok) {
+      setTimestampDraftOverride(formatSecondsInput(result.seekTargetMs));
+      setMessage(result.message);
+      setErrorMessage(null);
       return;
     }
 
-    const seekTargetMs = getErrorMarkerSeekTarget(marker);
-
-    try {
-      const result = playbackControls.seekToMs(seekTargetMs);
-      const seekDeltaMs = Math.abs(result.currentTimeMs - seekTargetMs);
-
-      if (seekDeltaMs > SEEK_CONFIRMATION_TOLERANCE_MS) {
-        throw new Error("Playback did not move to the selected marker.");
-      }
-
-      setTimestampDraftOverride(formatSecondsInput(seekTargetMs));
-      setMessage(`Playback moved to ${formatTimestamp(seekTargetMs)}.`);
-      setErrorMessage(null);
-    } catch (error) {
-      setMessage(null);
-      setErrorMessage(error instanceof Error ? error.message : "Playback could not move to this marker.");
-    }
+    setMessage(null);
+    setErrorMessage(result.message);
   }
 
   function deleteMarker(marker: RecordingErrorMarker) {

@@ -32,11 +32,11 @@ import {
 import {
   filterRecordings,
   getContinuePracticeHref,
-  getErrorMarkerSeekTarget,
   getRecordingDisplayName,
   sortErrorMarkers,
   type RecordingTypeFilter
 } from "@/lib/recordings-review/history";
+import { seekToErrorMarker } from "@/lib/recordings-review/error-markers";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type {
   RecordingErrorMarker,
@@ -343,32 +343,20 @@ function RecordingDetails({
   );
 
   function seekToMarker(marker: RecordingErrorMarker) {
-    if (!playbackControls || playbackControls.recordingId !== recording.id) {
-      setMarkerMessage(null);
-      setMarkerErrorMessage("Recording playback is still loading.");
+    const result = seekToErrorMarker({
+      marker,
+      activeRecordingId: recording.id,
+      playbackControls
+    });
+
+    if (result.ok) {
+      setMarkerMessage(result.message);
+      setMarkerErrorMessage(null);
       return;
     }
 
-    const seekTargetMs = getErrorMarkerSeekTarget(marker);
-
-    try {
-      const result = playbackControls.seekToMs(seekTargetMs);
-      const seekDeltaMs = Math.abs(result.currentTimeMs - seekTargetMs);
-
-      if (seekDeltaMs > 80) {
-        throw new Error("Playback did not move to the selected marker.");
-      }
-
-      setMarkerMessage(`Playback moved to ${formatTimestamp(seekTargetMs)}.`);
-      setMarkerErrorMessage(null);
-    } catch (error) {
-      setMarkerMessage(null);
-      setMarkerErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Playback could not move to this marker."
-      );
-    }
+    setMarkerMessage(null);
+    setMarkerErrorMessage(result.message);
   }
 
   return (
