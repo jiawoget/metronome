@@ -457,7 +457,7 @@
                       },
                       {
                           "module":  "05-sheet-practice",
-                          "status":  "implementation_done",
+                          "status":  "verified",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
@@ -501,30 +501,50 @@
                                                      "Playwright webServer exited after E2E; the final local bind check confirmed 127.0.0.1:3101 was free.",
                                                      "One full-suite run produced a transient existing sheet-viewer PDF canvas non-empty failure; targeted sheet-viewer rerun passed, and the subsequent full-suite rerun passed 14 chromium tests."
                                                                 ],
-                                                 "commitHash":  null
+                                                 "commitHash":  "bf937b67e60d03403fc85a451804a9a7985b0e05"
                           },
                           "verification":  {
                                                "requiredSeparateAgent":  true,
-                                               "agent":  null,
-                                               "completedAt":  null,
-                                               "result":  null,
+                                               "agent":  "GPT-5.4 Mini",
+                                               "completedAt":  "2026-06-22T05:38:54Z",
+                                               "result":  "PASS",
                                                "acceptanceCriteria":  [
-
+                                                                      "PASS: Sheet Library routes into Sheet Practice for a real imported sheet and the sheet remains visible with visual priority above the bottom controls.",
+                                                                      "PASS: Bottom controls are available without overlap on desktop, tablet, and narrow mobile layouts.",
+                                                                      "PASS: An active sheet practice session is created and bound to the imported sheet.",
+                                                                      "PASS: Sheet-linked recording starts, stops, persists, and remains replayable through the integrated Sheet Practice UI.",
+                                                                      "PASS: The latest replay control plays the saved sheet recording artifact.",
+                                                                      "PASS: Manual error markers can be added, seek playback, and persist after reload.",
+                                                                      "PASS: Home Continue Practice returns to the same sheet after reload and preserves the integrated practice context.",
+                                                                      "PASS: No reference advanced behavior appears, and no v1 automatic analysis or bar detection is present."
                                                                       ],
                                                "e2eEvidence":  [
-
+                                                                "Playwright browser verification used real Chromium interaction in tests/e2e/sheet-practice-integration.spec.ts with a seeded image sheet imported from the Sheet Library, then opened Sheet Practice from the real sheet link.",
+                                                                "Layout evidence covered desktop 1280x820, tablet 1024x768, and narrow mobile 390x844 at initial open, after recording/marker UI render, after reload, and after Continue Practice return; the test asserted sheet visibility, viewer sizing, control sizing, document order, no viewer/control overlap, and mobile scroll reachability.",
+                                                                "The browser flow exercised metronome start/stop, controlled synthetic audio recording, latest recording replay, marker creation, marker seek, reload persistence, and Continue Practice returning to the same sheet.",
+                                                                "Targeted parent E2E: npm run test:e2e -- tests/e2e/sheet-practice-integration.spec.ts -> 1 chromium test passed.",
+                                                                "Full E2E: npm run test:e2e -> 14 chromium tests passed, including the parent integration path."
                                                                ],
                                                "specializedEvidence":  [
-
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date in 492ms.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm audit -> found 0 vulnerabilities.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 18 test files passed, 91 tests passed.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-practice-integration.spec.ts -> PASS; 1 chromium parent integration test passed.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 14 chromium tests passed."
                                                                        ],
                                                "persistenceEvidence":  [
-
+                                                                       "Reload preserved the imported sheet, the latest sheet recording, and the manual error marker in the same Sheet Practice session context.",
+                                                                       "Home Continue Practice returned to /sheet-practice/[sheetId] for the same sheet after leaving and re-entering from Home.",
+                                                                       "The browser snapshot check showed the persisted practice session, recording metadata, and error marker records still present after reload."
                                                                        ],
-                                               "consoleStatus":  null,
+                                               "consoleStatus":  "PASS; no console.error entries and no pageerror events were captured during the verified flows.",
                                                "issues":  [
 
                                                           ],
-                                               "commitHash":  null
+                                               "commitHash":  "bf937b67e60d03403fc85a451804a9a7985b0e05"
                                            }
                       },
                                                                                         {
