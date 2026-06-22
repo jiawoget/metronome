@@ -228,6 +228,63 @@ describe("practice session service", () => {
     });
   });
 
+  it("creates a fresh sheet session for Practice Again recording instead of mutating the source session", async () => {
+    const { service, repository } = createService();
+
+    const sourceSession = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    nowMs += 2_000;
+    await service.endPracticeSession(sourceSession?.id ?? "");
+
+    nowMs += 8_000;
+    const freshSession = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording",
+      bpm: 88,
+      timeSignature: "3/4",
+      forceNewSession: true
+    });
+
+    expect(freshSession).toMatchObject({
+      id: "session-2",
+      sourceType: "sheet",
+      sheetId: "sheet-alpha",
+      bpm: 88,
+      timeSignature: "3/4",
+      recordingCount: 0,
+      latestRecordingId: null
+    });
+    expect(freshSession?.id).not.toBe(sourceSession?.id);
+
+    nowMs += 900;
+    const recording = await service.createSheetRecordingMetadata({
+      sheetId: "sheet-alpha",
+      sessionId: freshSession?.id,
+      durationMs: 900,
+      bpm: 88,
+      timeSignature: "3/4"
+    });
+
+    expect(recording).toMatchObject({
+      id: "recording-3",
+      type: "sheet",
+      sessionId: "session-2",
+      sheetId: "sheet-alpha",
+      durationMs: 900,
+      bpm: 88,
+      timeSignature: "3/4"
+    });
+    await expect(repository.getSession(sourceSession?.id ?? "")).resolves.toMatchObject({
+      id: "session-1",
+      latestRecordingId: null,
+      recordingCount: 0
+    });
+    await expect(repository.getSession(freshSession?.id ?? "")).resolves.toMatchObject({
+      id: "session-2",
+      latestRecordingId: "recording-3",
+      recordingCount: 1
+    });
+  });
+
   it("does not return Continue Practice for a stale sheet session after the sheet is deleted", async () => {
     const { service, validSheetIds } = createService();
 

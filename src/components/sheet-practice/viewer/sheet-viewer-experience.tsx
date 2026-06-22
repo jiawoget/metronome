@@ -26,6 +26,7 @@ const PdfSheetRenderer = dynamic(
 
 type SheetViewerExperienceProps = {
   sheetId: string | null;
+  sourceRecordingId?: string | null;
 };
 
 function useSheetViewer(sheetId: string | null) {
@@ -157,7 +158,13 @@ function SheetViewerToolbar({
   );
 }
 
-function SheetViewerReady({ state }: { state: Extract<SheetViewerLoadState, { status: "ready" }> }) {
+function SheetViewerReady({
+  state,
+  sourceRecordingId
+}: {
+  state: Extract<SheetViewerLoadState, { status: "ready" }>;
+  sourceRecordingId: string | null;
+}) {
   const objectUrls = useBrowserSheetViewerObjectUrls(state);
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(1);
@@ -254,12 +261,13 @@ function SheetViewerReady({ state }: { state: Extract<SheetViewerLoadState, { st
         sheetName={state.sheet.name}
         defaultBpm={state.sheet.bpm}
         defaultTimeSignature={state.sheet.timeSignature}
+        sourceRecordingId={sourceRecordingId}
       />
     </div>
   );
 }
 
-export function SheetViewerExperience({ sheetId }: SheetViewerExperienceProps) {
+export function SheetViewerExperience({ sheetId, sourceRecordingId = null }: SheetViewerExperienceProps) {
   const state = useSheetViewer(sheetId);
 
   if (state.status === "loading") {
@@ -274,5 +282,5 @@ export function SheetViewerExperience({ sheetId }: SheetViewerExperienceProps) {
     return <SheetViewerError title={state.title} message={state.message} />;
   }
 
-  return <SheetViewerReady key={state.sheet.id} state={state} />;
+  return <SheetViewerReady key={state.sheet.id} state={state} sourceRecordingId={sourceRecordingId} />;
 }

@@ -41,11 +41,16 @@ export type SheetPracticeActivityInput = {
   trigger: PracticeActivityTrigger;
   bpm?: number | null;
   timeSignature?: PracticeTimeSignature | null;
+  forceNewSession?: boolean;
 };
 
 export type SheetRecordingMetadataInput = {
   sheetId: string | null;
+  sessionId?: string | null;
   durationMs?: number;
+  bpm?: number | null;
+  timeSignature?: PracticeTimeSignature | null;
+  forceNewSession?: boolean;
 };
 
 export type PracticeSessionService = {

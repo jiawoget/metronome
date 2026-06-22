@@ -3,13 +3,16 @@ import { SheetViewerExperience } from "@/components/sheet-practice/viewer/sheet-
 type SheetPracticePageProps = {
   searchParams?: Promise<{
     sheetId?: string | string[];
+    recordingId?: string | string[];
   }>;
 };
 
 export default async function SheetPracticePage({ searchParams }: SheetPracticePageProps) {
   const params = await searchParams;
   const rawSheetId = params?.sheetId;
+  const rawRecordingId = params?.recordingId;
   const sheetId = Array.isArray(rawSheetId) ? rawSheetId[0] : rawSheetId ?? null;
+  const sourceRecordingId = Array.isArray(rawRecordingId) ? rawRecordingId[0] : rawRecordingId ?? null;
 
-  return <SheetViewerExperience sheetId={sheetId} />;
+  return <SheetViewerExperience sheetId={sheetId} sourceRecordingId={sourceRecordingId} />;
 }

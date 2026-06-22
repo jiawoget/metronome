@@ -50,6 +50,7 @@ function createIdleSessionService() {
     restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session),
     updateSheetSessionDuration: vi.fn(async () => null),
     endPracticeSession: vi.fn(async () => null),
+    createSheetRecordingMetadata: vi.fn(async () => null),
     getRecentSession: vi.fn(async () => null),
     getRecentSheetSession: vi.fn(async () => null),
     listRecordingMetadata: vi.fn(async () => []),
@@ -60,6 +61,7 @@ function createIdleSessionService() {
     | "restorePracticeSessionSnapshot"
     | "updateSheetSessionDuration"
     | "endPracticeSession"
+    | "createSheetRecordingMetadata"
     | "getRecentSession"
     | "getRecentSheetSession"
     | "listRecordingMetadata"
@@ -252,7 +254,8 @@ describe("SheetPracticeControls failure handling", () => {
       sheetId: "sheet-alpha",
       trigger: "metronome",
       bpm: 72,
-      timeSignature: "4/4"
+      timeSignature: "4/4",
+      forceNewSession: false
     });
     expect(metronome.service.start).not.toHaveBeenCalled();
     expect(metronome.service.stop).toHaveBeenCalled();

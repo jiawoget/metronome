@@ -57,7 +57,7 @@ export function createPracticeSessionService({
     }
 
     const timestamp = now().toISOString();
-    const existingSession = await repository.getRecentSheetSession(sheet.id);
+    const existingSession = input.forceNewSession ? null : await repository.getRecentSheetSession(sheet.id);
     const session: PracticeSession =
       existingSession ??
       {
@@ -87,6 +87,45 @@ export function createPracticeSessionService({
     await sheetGateway.updateLastPracticedAt(sheet.id, timestamp);
 
     return nextSession;
+  }
+
+  async function getRecordingSession(input: SheetRecordingMetadataInput) {
+    if (input.sessionId) {
+      const session = await repository.getSession(input.sessionId);
+
+      if (!session || session.sourceType !== "sheet" || !session.sheetId) {
+        return null;
+      }
+
+      const sheet = await sheetGateway.getSheetContext(session.sheetId);
+
+      if (!sheet || (input.sheetId && input.sheetId !== session.sheetId)) {
+        return null;
+      }
+
+      const timestamp = now().toISOString();
+      const nextSession = {
+        ...session,
+        endedAt: null,
+        bpm: input.bpm ?? session.bpm ?? sheet.bpm,
+        timeSignature: input.timeSignature ?? session.timeSignature ?? sheet.timeSignature,
+        durationMs: calculateActiveDuration(session),
+        updatedAt: timestamp
+      };
+
+      await saveSession(nextSession);
+      await sheetGateway.updateLastPracticedAt(session.sheetId, timestamp);
+
+      return nextSession;
+    }
+
+    return ensureSheetSession({
+      sheetId: input.sheetId,
+      trigger: "recording",
+      bpm: input.bpm,
+      timeSignature: input.timeSignature,
+      forceNewSession: input.forceNewSession
+    });
   }
 
   return {
@@ -143,10 +182,7 @@ export function createPracticeSessionService({
     },
 
     async createSheetRecordingMetadata(input: SheetRecordingMetadataInput) {
-      const session = await ensureSheetSession({
-        sheetId: input.sheetId,
-        trigger: "recording"
-      });
+      const session = await getRecordingSession(input);
 
       if (!session || !session.sheetId) {
         return null;

@@ -90,6 +90,7 @@ export class BrowserMetronomeService {
   private eventId: number | null = null;
   private readonly createAdapter: ToneMetronomeAdapterFactory;
   private settings: MetronomeSettings = DEFAULT_METRONOME_SETTINGS;
+  private scheduleToken = 0;
   private tickIndex = 0;
   private readonly tickHandlers = new Set<MetronomeTickHandler>();
 
@@ -123,7 +124,8 @@ export class BrowserMetronomeService {
     this.adapter.stopTransport();
     this.adapter.cancelTransport();
     this.tickIndex = 0;
-    this.scheduleCurrentSettings();
+    this.scheduleToken += 1;
+    this.scheduleCurrentSettings(this.scheduleToken);
     this.adapter.startTransport("+0.05");
   }
 
@@ -150,6 +152,7 @@ export class BrowserMetronomeService {
     this.adapter.cancelTransport();
     this.adapter.dispose();
     this.adapter = null;
+    this.scheduleToken += 1;
   }
 
   private rescheduleCurrentSettings() {
@@ -165,16 +168,21 @@ export class BrowserMetronomeService {
     this.adapter.stopTransport();
     this.adapter.cancelTransport();
     this.tickIndex = 0;
-    this.scheduleCurrentSettings();
+    this.scheduleToken += 1;
+    this.scheduleCurrentSettings(this.scheduleToken);
     this.adapter.startTransport("+0.02");
   }
 
-  private scheduleCurrentSettings() {
+  private scheduleCurrentSettings(scheduleToken: number) {
     if (!this.adapter) {
       return;
     }
 
-    this.eventId = this.adapter.scheduleRepeat((time) => this.handleScheduledTick(time), getTickIntervalMs(this.settings) / 1_000);
+    this.eventId = this.adapter.scheduleRepeat((time) => {
+      if (scheduleToken === this.scheduleToken) {
+        this.handleScheduledTick(time);
+      }
+    }, getTickIntervalMs(this.settings) / 1_000);
   }
 
   private handleScheduledTick(audioTime: number) {
@@ -233,4 +241,3 @@ export class BrowserMetronomeService {
     window.dispatchEvent(new CustomEvent<MetronomeTraceEventDetail>(METRONOME_TRACE_EVENT, { detail }));
   }
 }
-

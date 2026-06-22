@@ -861,22 +861,45 @@
                       },
                       {
                           "module":  "05c-sheet-recording-review",
-                          "status":  "contract_ready",
+                          "status":  "implementation_done",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
-                                                 "agent":  null,
-                                                 "completedAt":  null,
+                                                 "agent":  "GPT-5.5 High",
+                                                 "completedAt":  "2026-06-22T00:39:31Z",
                                                  "selfTests":  [
-
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 17 test files passed, 76 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-recording-review.spec.ts -> PASS; 2 chromium tests passed covering synthetic sheet recording, artifact decode, latest replay, waveform stability, Practice Again immutability, metronome/recording independence, permission denial, and bad artifact handling",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-practice-controls.spec.ts tests/e2e/sheet-practice-session.spec.ts tests/e2e/recordings-review.spec.ts -> PASS; 3 chromium tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 12 chromium tests passed"
                                                                ],
                                                  "handoffNotes":  [
-
+                                                     "Assigned feature: 05c-sheet-recording-review.",
+                                                     "Coding model used: GPT-5.5 High.",
+                                                     "Implemented production Sheet Practice recording controls using service boundaries; UI does not directly call MediaRecorder, wavesurfer, raw Web Audio, IndexedDB, or localStorage.",
+                                                     "Sheet recording capture reuses the Quick Metronome BrowserRecordingService and persists sheet recordings through the shared Recordings Review history boundary with real audio artifacts, artifact analysis, and trusted peaks derived after decoding the artifact.",
+                                                     "Sheet Practice latest-take replay and waveform reuse the Recordings Review artifact loader and wavesurfer playback adapter; waveform peaks are inspected and remain stable across play/pause, repeated sampling, resize, and reload in E2E.",
+                                                     "Recording and metronome controls remain independent: stopping recording does not stop the metronome, and stopping the metronome does not stop recording.",
+                                                     "Practice Again from Recordings passes the source recording id into Sheet Practice; the next recording creates a fresh sheet session and a new recording id, while the source recording metadata and audio artifact remain unchanged.",
+                                                     "Added a schedule-token guard to BrowserMetronomeService so stale Tone.Transport callbacks from rapid restart cannot trigger a newly created synth with old audio times.",
+                                                     "No error markers, multi-take management, reference comparison, scoring, export, or v1 analysis behavior was implemented."
                                                                   ],
                                                  "changedAreas":  [
-
+                                                     "src/lib/sheet-practice/recording-service.ts adds the sheet recording service boundary for capture, artifact validation, decoded waveform peaks, and shared history persistence",
+                                                     "src/components/sheet-practice/controls/sheet-practice-controls.tsx adds production sheet recording controls and keeps harness-only independence support for existing 05b regression tests",
+                                                     "src/components/sheet-practice/recording/latest-sheet-recording.tsx adds latest sheet recording replay, artifact error handling, and derived waveform rendering",
+                                                     "src/app/sheet-practice/page.tsx, src/app/sheet-practice/[sheetId]/page.tsx, and src/components/sheet-practice/viewer/sheet-viewer-experience.tsx pass Recordings Practice Again source context to Sheet Practice",
+                                                     "src/services/practice-session/types.ts and src/services/practice-session/service.ts add optional fresh-session and sessionId-bound recording metadata paths for Practice Again without changing default metronome/session behavior",
+                                                     "src/lib/quick-metronome/metronome-service.ts ignores stale scheduled Tone callbacks after stop/reschedule/restart",
+                                                     "tests/unit/practice-session-service.test.ts and tests/unit/sheet-practice-recording.test.ts cover fresh Practice Again sessions, artifact-backed sheet review recordings, decoded peaks, duration consistency, and silent-artifact rejection",
+                                                     "tests/e2e/sheet-recording-review.spec.ts covers controlled synthetic audio input, browser decoding, latest replay, waveform stability, persistence, Recordings visibility, Practice Again immutability, metronome independence, permission denial, and bad artifact errors"
                                                                   ],
                                                  "knownRisks":  [
-
+                                                     "Browser recording format still depends on Chromium/MediaRecorder support; unsupported browsers surface the existing recording availability or permission error states.",
+                                                     "Sheet audio artifacts continue to be stored in the shared localStorage-backed v0 recording history boundary, matching current Quick/Recordings behavior but not a long-term large-audio storage design.",
+                                                     "Recordings Review already uses the label Practice Again, so no ambiguous Continue Practice button text needed to be changed for this feature."
                                                                 ],
                                                  "commitHash":  null
                                              },

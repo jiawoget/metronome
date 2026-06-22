@@ -4,6 +4,8 @@ import {
   ChevronDown,
   ChevronUp,
   Circle,
+  Mic,
+  Octagon,
   Play,
   Radio,
   Square,
@@ -13,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { formatPracticeDuration, type PracticeSession, type SheetRecordingMetadata } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
+import { LatestSheetRecording } from "@/components/sheet-practice/recording/latest-sheet-recording";
 import {
   ACCENT_MODES,
   COUNTDOWN_OPTIONS,
@@ -35,6 +38,8 @@ import {
 } from "@/lib/quick-metronome/types";
 import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
+import { BrowserSheetRecordingService } from "@/lib/sheet-practice/recording-service";
+import type { ReviewRecording } from "@/lib/recordings-review/types";
 import type { PracticeSessionService } from "@/services/practice-session";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,9 +57,19 @@ type SheetPracticeSessionService = Pick<
   | "restorePracticeSessionSnapshot"
   | "updateSheetSessionDuration"
   | "endPracticeSession"
+  | "createSheetRecordingMetadata"
   | "getRecentSession"
   | "getRecentSheetSession"
   | "listRecordingMetadata"
+  | "subscribe"
+>;
+
+type SheetPracticeRecordingService = Pick<
+  BrowserSheetRecordingService,
+  | "startCapture"
+  | "stopAndSave"
+  | "discardCapture"
+  | "getLatestSheetRecording"
   | "subscribe"
 >;
 
@@ -78,7 +93,9 @@ type SheetPracticeControlsProps = {
   sheetName: string;
   defaultBpm: number | null;
   defaultTimeSignature: string | null;
+  sourceRecordingId?: string | null;
   createMetronomeService?: () => SheetPracticeMetronomeService;
+  createSheetRecordingService?: () => SheetPracticeRecordingService;
   sessionService?: SheetPracticeSessionService;
 };
 
@@ -99,12 +116,18 @@ function createBrowserMetronomeService() {
   return new BrowserMetronomeService();
 }
 
+function createBrowserSheetRecordingService() {
+  return new BrowserSheetRecordingService();
+}
+
 export function SheetPracticeControls({
   sheetId,
   sheetName,
   defaultBpm,
   defaultTimeSignature,
+  sourceRecordingId = null,
   createMetronomeService = createBrowserMetronomeService,
+  createSheetRecordingService = createBrowserSheetRecordingService,
   sessionService = browserPracticeSessionService
 }: SheetPracticeControlsProps) {
   const initialState = useMemo(
@@ -116,25 +139,32 @@ export function SheetPracticeControls({
     [defaultBpm, defaultTimeSignature]
   );
   const metronomeService = useMemo(() => createMetronomeService(), [createMetronomeService]);
+  const sheetRecordingService = useMemo(() => createSheetRecordingService(), [createSheetRecordingService]);
   const [settings, setSettings] = useState<MetronomeSettings>(initialState.settings);
   const [recordingHarnessActive, setRecordingHarnessActive] = useState(false);
+  const [recordingState, setRecordingState] = useState<"idle" | "recording" | "saving">("idle");
+  const [consumedSourceRecordingId, setConsumedSourceRecordingId] = useState<string | null>(null);
   const [lastTick, setLastTick] = useState<MetronomeTick | null>(null);
   const [session, setSession] = useState<PracticeSession | null>(null);
   const [recordings, setRecordings] = useState<SheetRecordingMetadata[]>([]);
+  const [latestSheetRecording, setLatestSheetRecording] = useState<ReviewRecording | null>(null);
   const [message, setMessage] = useState("Ready. Viewing the sheet has not started practice.");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isSheetRecording = recordingState === "recording";
+  const isRecordingActive = isSheetRecording || recordingHarnessActive;
 
   const unsupportedTimeSignatureMessage = initialState.unsupportedTimeSignature
     ? formatUnsupportedTimeSignatureMessage(initialState.unsupportedTimeSignature)
     : null;
 
   const refreshSession = useCallback(async () => {
-    const recentSession = await sessionService.getRecentSession();
+    const recentSession = await sessionService.getRecentSheetSession(sheetId);
     const allRecordings = await sessionService.listRecordingMetadata();
 
-    setSession(recentSession?.sourceType === "sheet" && recentSession.sheetId === sheetId ? recentSession : null);
+    setSession(recentSession);
     setRecordings(allRecordings.filter((recording) => recording.sheetId === sheetId));
-  }, [sessionService, sheetId]);
+    setLatestSheetRecording(sheetRecordingService.getLatestSheetRecording(sheetId));
+  }, [sessionService, sheetId, sheetRecordingService]);
 
   useEffect(() => {
     const unsubscribe = metronomeService.onTick((tick) => {
@@ -153,12 +183,16 @@ export function SheetPracticeControls({
     const unsubscribe = sessionService.subscribe(() => {
       void refreshSession();
     });
+    const unsubscribeRecordings = sheetRecordingService.subscribe(() => {
+      void refreshSession();
+    });
 
     return () => {
       window.clearTimeout(timeoutId);
       unsubscribe();
+      unsubscribeRecordings();
     };
-  }, [refreshSession, sessionService]);
+  }, [refreshSession, sessionService, sheetRecordingService]);
 
   function updateSettings(nextSettings: Partial<MetronomeSettings>) {
     setSettings((currentSettings) => ({
@@ -175,14 +209,18 @@ export function SheetPracticeControls({
     settings.bpm,
     (nextBpm) => updateSettings({ bpm: nextBpm })
   );
+  const shouldCreatePracticeAgainSession = Boolean(sourceRecordingId) && consumedSourceRecordingId !== sourceRecordingId;
 
   const ensureMetronomeSession = useCallback(async (): Promise<SheetMetronomeStartContext | null> => {
-    const existingSheetSession = await sessionService.getRecentSheetSession(sheetId);
+    const existingSheetSession = shouldCreatePracticeAgainSession
+      ? null
+      : await sessionService.getRecentSheetSession(sheetId);
     const nextSession = await sessionService.ensureSheetSession({
         sheetId,
         trigger: "metronome",
         bpm: settings.bpm,
-        timeSignature: settings.timeSignature
+        timeSignature: settings.timeSignature,
+        forceNewSession: shouldCreatePracticeAgainSession
       });
 
     if (!nextSession) {
@@ -198,7 +236,7 @@ export function SheetPracticeControls({
             ? { kind: "restore-previous-session", previousSession: existingSheetSession }
             : { kind: "none" }
     };
-  }, [sessionService, settings.bpm, settings.timeSignature, sheetId]);
+  }, [sessionService, settings.bpm, settings.timeSignature, sheetId, shouldCreatePracticeAgainSession]);
   const handleCountdownStarted = useCallback(() => {
     setMessage("Countdown running.");
   }, []);
@@ -208,9 +246,12 @@ export function SheetPracticeControls({
   const handleStarted = useCallback(
     (context: SheetMetronomeStartContext | null) => {
       setSession(context?.session ?? null);
-      setMessage(recordingHarnessActive ? "Metronome playing; recording harness stays active." : "Metronome playing.");
+      if (context?.session && shouldCreatePracticeAgainSession) {
+        setConsumedSourceRecordingId(sourceRecordingId);
+      }
+      setMessage(isRecordingActive ? "Metronome playing; recording stays active." : "Metronome playing.");
     },
-    [recordingHarnessActive]
+    [isRecordingActive, shouldCreatePracticeAgainSession, sourceRecordingId]
   );
   const handleStartFailed = useCallback(
     async (error: unknown, context: SheetMetronomeStartContext | null) => {
@@ -234,7 +275,7 @@ export function SheetPracticeControls({
   );
   const handleStopped = useCallback(async () => {
     if (session) {
-      const nextSession = recordingHarnessActive
+      const nextSession = isRecordingActive
         ? await sessionService.updateSheetSessionDuration(session.id)
         : await sessionService.endPracticeSession(session.id);
 
@@ -242,11 +283,11 @@ export function SheetPracticeControls({
     }
 
     setMessage(
-      recordingHarnessActive
-        ? "Metronome stopped; recording harness stays active."
+      isRecordingActive
+        ? "Metronome stopped; recording stays active."
         : "Metronome stopped."
     );
-  }, [recordingHarnessActive, session, sessionService]);
+  }, [isRecordingActive, session, sessionService]);
   const {
     transportState,
     countdownRemaining,
@@ -269,6 +310,67 @@ export function SheetPracticeControls({
     void startMetronome();
   }, [startMetronome]);
   const arePreRunSettingsLocked = isPlaying || isCounting;
+
+  async function startSheetRecording() {
+    setErrorMessage(null);
+    let captureStarted = false;
+
+    try {
+      await sheetRecordingService.startCapture();
+      captureStarted = true;
+
+      const nextSession = await sessionService.ensureSheetSession({
+        sheetId,
+        trigger: "recording",
+        bpm: settings.bpm,
+        timeSignature: settings.timeSignature,
+        forceNewSession: shouldCreatePracticeAgainSession
+      });
+
+      if (!nextSession) {
+        await sheetRecordingService.discardCapture();
+        throw new Error("No valid sheet context. Recording was stopped.");
+      }
+
+      setSession(nextSession);
+      setConsumedSourceRecordingId(sourceRecordingId);
+      setRecordingState("recording");
+      setMessage(isPlaying ? "Recording while metronome plays." : "Recording without metronome.");
+    } catch (error) {
+      if (captureStarted) {
+        await sheetRecordingService.discardCapture();
+      }
+
+      setRecordingState("idle");
+      setErrorMessage(error instanceof Error ? error.message : "Recording failed before it could start.");
+    }
+  }
+
+  async function stopSheetRecording() {
+    setErrorMessage(null);
+    setRecordingState("saving");
+
+    try {
+      const result = await sheetRecordingService.stopAndSave({
+        sheetId,
+        sessionId: session?.id ?? null,
+        settings,
+        forceNewSession: false,
+        sessionService
+      });
+      const nextSession = await sessionService.getRecentSheetSession(sheetId);
+      const allRecordings = await sessionService.listRecordingMetadata();
+
+      setSession(nextSession);
+      setRecordings(allRecordings.filter((recording) => recording.sheetId === sheetId));
+      setLatestSheetRecording(result.recording);
+      setRecordingState("idle");
+      setMessage(isPlaying ? "Recording saved; metronome is still playing." : "Recording saved.");
+    } catch (error) {
+      setRecordingState("idle");
+      setErrorMessage(error instanceof Error ? error.message : "Recording could not be saved.");
+    }
+  }
 
   useEffect(() => {
     const harnessWindow = window as Window & {
@@ -293,7 +395,7 @@ export function SheetPracticeControls({
             : "Recording harness stopped."
       );
 
-      if (!active && transportState !== "playing" && session) {
+      if (!active && !isSheetRecording && transportState !== "playing" && session) {
         void sessionService.endPracticeSession(session.id).then((nextSession) => {
           setSession(nextSession);
         });
@@ -305,7 +407,7 @@ export function SheetPracticeControls({
     return () => {
       window.removeEventListener(SHEET_RECORDING_HARNESS_EVENT, handleRecordingHarnessEvent);
     };
-  }, [session, sessionService, transportState]);
+  }, [isSheetRecording, session, sessionService, transportState]);
 
   return (
     <section
@@ -325,7 +427,7 @@ export function SheetPracticeControls({
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <StatusTile label="Metronome" value={isCounting ? `Counting ${countdownRemaining}` : isPlaying ? "Playing" : "Stopped"} testId="sheet-metronome-state" />
-            <StatusTile label="Recording" value={recordingHarnessActive ? "active" : "stopped"} testId="sheet-recording-state" />
+            <StatusTile label="Recording" value={recordingState === "saving" ? "saving" : isRecordingActive ? "active" : "stopped"} testId="sheet-recording-state" />
             <StatusTile label="Session" value={session?.sourceType ?? "none"} testId="sheet-session-source" />
             <StatusTile label="Sheet" value={session?.sheetId ?? sheetId} testId="sheet-session-sheet-id" />
             <StatusTile label="Duration" value={session ? formatPracticeDuration(session.durationMs) : "0:00"} testId="sheet-session-duration" />
@@ -452,6 +554,26 @@ export function SheetPracticeControls({
               <Square className="h-4 w-4" aria-hidden="true" />
               Stop
             </Button>
+            <Button
+              type="button"
+              variant={isSheetRecording ? "secondary" : "default"}
+              onClick={() => void startSheetRecording()}
+              disabled={isSheetRecording || recordingState === "saving"}
+              aria-label="Start recording"
+            >
+              <Mic className="h-4 w-4" aria-hidden="true" />
+              Record
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void stopSheetRecording()}
+              disabled={!isSheetRecording}
+              aria-label="Stop recording"
+            >
+              <Octagon className="h-4 w-4" aria-hidden="true" />
+              Stop Rec
+            </Button>
           </div>
 
           <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
@@ -472,6 +594,7 @@ export function SheetPracticeControls({
               </p>
             ) : null}
           </div>
+          <LatestSheetRecording recording={latestSheetRecording} />
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-3 border-t border-border px-3 py-2 text-xs text-muted-foreground">
