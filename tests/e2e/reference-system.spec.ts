@@ -178,6 +178,59 @@ async function getReferenceSnapshot(page: Page, databaseName = referenceDbName) 
   );
 }
 
+async function getPracticeSnapshot(page: Page) {
+  return page.evaluate(
+    ({ databaseName, storageKey }: { databaseName: string; storageKey: string }) =>
+      new Promise<{
+        sessions: Array<{
+          id: string;
+          sourceType: string;
+          sheetId: string | null;
+          recordingCount: number;
+          latestRecordingId: string | null;
+        }>;
+        recordings: Array<{
+          id: string;
+          type: string;
+          sessionId: string;
+          sheetId: string | null;
+        }>;
+      }>((resolve, reject) => {
+        const readRecordings = () => {
+          const rawValue = window.localStorage.getItem(storageKey);
+          const parsed = rawValue ? JSON.parse(rawValue) : { recordings: [] };
+
+          return Array.isArray(parsed.recordings) ? parsed.recordings : [];
+        };
+        const openRequest = indexedDB.open(databaseName);
+
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const database = openRequest.result;
+
+          if (!database.objectStoreNames.contains("sessions")) {
+            database.close();
+            resolve({ sessions: [], recordings: readRecordings() });
+            return;
+          }
+
+          const transaction = database.transaction(["sessions"], "readonly");
+          const sessionsRequest = transaction.objectStore("sessions").getAll();
+
+          transaction.oncomplete = () => {
+            database.close();
+            resolve({
+              sessions: sessionsRequest.result,
+              recordings: readRecordings()
+            });
+          };
+          transaction.onerror = () => reject(transaction.error);
+        };
+      }),
+    { databaseName: practiceDbName, storageKey: recordingHistoryStorageKey }
+  );
+}
+
 test("reference system saves local audio and Bilibili references through Sheet Practice", async ({ page }) => {
   const consoleErrors: string[] = [];
 
@@ -253,6 +306,18 @@ test("reference system saves local audio and Bilibili references through Sheet P
       (audioSnapshot) => audioSnapshot.state === "playing" && audioSnapshot.currentTime > 0.05
     );
   });
+  const referenceOnlyPracticeSnapshot = await getPracticeSnapshot(page);
+  const referenceSessionId = referenceOnlyPracticeSnapshot.sessions[0]?.id ?? "";
+
+  expect(referenceSessionId).toBeTruthy();
+  expect(referenceOnlyPracticeSnapshot.sessions).toHaveLength(1);
+  expect(referenceOnlyPracticeSnapshot.sessions[0]).toMatchObject({
+    sourceType: "sheet",
+    sheetId,
+    recordingCount: 0,
+    latestRecordingId: null
+  });
+  expect(referenceOnlyPracticeSnapshot.recordings).toEqual([]);
 
   await page.getByLabel("Reference volume").fill("0.35");
   await expect(page.getByTestId("reference-volume-state")).toHaveText("35");
@@ -276,6 +341,19 @@ test("reference system saves local audio and Bilibili references through Sheet P
   await page.getByRole("button", { name: "Play local reference" }).click();
   await expect(page.getByTestId("reference-playback-state")).toHaveText("playing");
   await page.getByRole("button", { name: "Pause local reference" }).click();
+  await expect(page.getByTestId("sheet-session-id")).toHaveText(referenceSessionId);
+  expect(await getPracticeSnapshot(page)).toMatchObject({
+    sessions: [
+      {
+        id: referenceSessionId,
+        sourceType: "sheet",
+        sheetId,
+        recordingCount: 0,
+        latestRecordingId: null
+      }
+    ],
+    recordings: []
+  });
 
   await page.getByRole("button", { name: "Start recording" }).click();
   await expect(page.getByText("Recording without metronome.")).toBeVisible();
@@ -292,6 +370,22 @@ test("reference system saves local audio and Bilibili references through Sheet P
   await expect(page.getByText("Recording saved.")).toBeVisible();
   await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
   await expect(page.getByTestId("sheet-recording-count")).toContainText("1");
+  const practiceSnapshotAfterRecording = await getPracticeSnapshot(page);
+
+  expect(practiceSnapshotAfterRecording.sessions).toHaveLength(1);
+  expect(practiceSnapshotAfterRecording.sessions[0]).toMatchObject({
+    id: referenceSessionId,
+    sourceType: "sheet",
+    sheetId,
+    recordingCount: 1
+  });
+  expect(practiceSnapshotAfterRecording.recordings.filter((recording) => recording.sheetId === sheetId)).toEqual([
+    expect.objectContaining({
+      type: "sheet",
+      sessionId: referenceSessionId,
+      sheetId
+    })
+  ]);
 
   await page.setViewportSize({ width: 1024, height: 768 });
   await expect(page.getByTestId("reference-panel")).toBeVisible();

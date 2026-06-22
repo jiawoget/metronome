@@ -129,11 +129,43 @@ describe("recordings review history helpers", () => {
     expect(() =>
       validateErrorMarkerInput({
         recordingId: "sheet-1",
+        timestampMs: Number.NaN,
+        durationMs: 1_000,
+        note: null
+      })
+    ).toThrow("valid recording timestamp");
+    expect(() =>
+      validateErrorMarkerInput({
+        recordingId: "sheet-1",
+        timestampMs: Number.POSITIVE_INFINITY,
+        durationMs: 1_000,
+        note: null
+      })
+    ).toThrow("valid recording timestamp");
+    expect(() =>
+      validateErrorMarkerInput({
+        recordingId: "sheet-1",
+        timestampMs: 100,
+        durationMs: Number.NaN,
+        note: null
+      })
+    ).toThrow("Recording duration is unavailable");
+    expect(() =>
+      validateErrorMarkerInput({
+        recordingId: "sheet-1",
         timestampMs: 100,
         durationMs: 1_000,
         note: "x".repeat(MAX_ERROR_MARKER_NOTE_LENGTH + 1)
       })
     ).toThrow("160 characters");
+    expect(() =>
+      validateErrorMarkerInput({
+        recordingId: "sheet-1",
+        timestampMs: 100,
+        durationMs: 1_000,
+        note: "x".repeat(MAX_ERROR_MARKER_NOTE_LENGTH)
+      })
+    ).not.toThrow();
 
     expect(normalizeErrorMarkerNote("  missed shift  ")).toBe("missed shift");
     expect(normalizeErrorMarkerNote("   ")).toBeNull();

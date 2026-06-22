@@ -41,10 +41,21 @@ export function normalizeErrorMarkerNote(note: string | null | undefined) {
 }
 
 export function validateErrorMarkerInput(input: ErrorMarkerValidationInput) {
+  const timestampMs = Math.round(input.timestampMs);
+  const durationMs = Math.round(input.durationMs);
+
+  if (!Number.isFinite(timestampMs)) {
+    throw new Error("Choose a valid recording timestamp.");
+  }
+
+  if (!Number.isFinite(durationMs)) {
+    throw new Error("Recording duration is unavailable.");
+  }
+
   const result = markerInputSchema.safeParse({
     recordingId: input.recordingId ?? "",
-    timestampMs: Math.round(input.timestampMs),
-    durationMs: Math.round(input.durationMs),
+    timestampMs,
+    durationMs,
     note: normalizeErrorMarkerNote(input.note)
   });
 

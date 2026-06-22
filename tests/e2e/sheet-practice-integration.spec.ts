@@ -412,8 +412,25 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   }, sheetRecordings[0]?.id);
   await page.getByRole("button", { name: "Pause latest sheet recording" }).click();
 
+  await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("");
+  await page.getByRole("button", { name: "Mark Error" }).click();
+  await expect(page.getByTestId("sheet-error-marker-error")).toContainText(
+    "Choose a valid recording timestamp."
+  );
+  await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("-1");
+  await page.getByRole("button", { name: "Mark Error" }).click();
+  await expect(page.getByTestId("sheet-error-marker-error")).toContainText(
+    "Marker time must be within the recording."
+  );
+  await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("99");
+  await page.getByRole("button", { name: "Mark Error" }).click();
+  await expect(page.getByTestId("sheet-error-marker-error")).toContainText(
+    "Marker time must be within the recording."
+  );
+  expect((await getPracticeSnapshot(page)).errorMarkers).toEqual([]);
+
   await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("0.4");
-  await page.getByRole("textbox", { name: "Marker note" }).fill("Integrated marker");
+  await page.getByRole("textbox", { name: "Marker note" }).fill("  Integrated marker  ");
   await page.getByRole("button", { name: "Mark Error" }).click();
   await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Integrated marker");
   await expectIntegratedLayoutAcrossViewports(page, "recording and marker UI");

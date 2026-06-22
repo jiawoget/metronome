@@ -23,6 +23,10 @@ function formatSecondsInput(timestampMs: number) {
 }
 
 function parseSecondsInput(value: string) {
+  if (!value.trim()) {
+    return Number.NaN;
+  }
+
   const seconds = Number(value);
 
   return Number.isFinite(seconds) ? Math.round(seconds * 1_000) : Number.NaN;
@@ -158,8 +162,6 @@ export function ErrorMarkerPanel({
             <input
               aria-label="Marker time seconds"
               type="number"
-              min={0}
-              max={activeRecording.durationMs / 1_000}
               step={0.1}
               value={timestampDraft}
               onChange={(event) => {
@@ -177,7 +179,6 @@ export function ErrorMarkerPanel({
           <input
             aria-label="Marker note"
             value={note}
-            maxLength={160}
             onChange={(event) => setNote(event.target.value)}
             placeholder="Optional note"
             className="h-10 min-w-0 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

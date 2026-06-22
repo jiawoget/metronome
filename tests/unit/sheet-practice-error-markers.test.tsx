@@ -62,6 +62,74 @@ describe("ErrorMarkerPanel", () => {
     window.localStorage.removeItem(RECORDINGS_STORAGE_KEY);
   });
 
+  it("shows a validation error for blank timestamps", async () => {
+    const user = userEvent.setup();
+
+    seedMarker();
+    render(
+      <ErrorMarkerPanel
+        recording={recording}
+        playbackControls={createPlaybackControls()}
+        currentTimeMs={0}
+      />
+    );
+
+    const timestampInput = screen.getByRole("spinbutton", { name: "Marker time seconds" });
+    await user.clear(timestampInput);
+    await user.click(screen.getByRole("button", { name: "Mark Error" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Choose a valid recording timestamp.");
+  });
+
+  it("shows a validation error for overlong notes", async () => {
+    const user = userEvent.setup();
+
+    seedMarker();
+    render(
+      <ErrorMarkerPanel
+        recording={recording}
+        playbackControls={createPlaybackControls()}
+        currentTimeMs={500}
+      />
+    );
+
+    const noteInput = screen.getByRole("textbox", { name: "Marker note" });
+
+    await user.type(noteInput, "x".repeat(161));
+    await user.click(screen.getByRole("button", { name: "Mark Error" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Marker note must be 160 characters or less.");
+  });
+
+  it("trims marker notes before saving visible marker text", async () => {
+    const user = userEvent.setup();
+
+    recordingHistoryRepository.saveSnapshot({
+      sessions: [{ id: "session-1" }],
+      recordings: [recording],
+      errorMarkers: []
+    });
+    render(
+      <ErrorMarkerPanel
+        recording={recording}
+        playbackControls={createPlaybackControls()}
+        currentTimeMs={0}
+      />
+    );
+
+    await user.clear(screen.getByRole("spinbutton", { name: "Marker time seconds" }));
+    await user.type(screen.getByRole("spinbutton", { name: "Marker time seconds" }), "0.5");
+    await user.type(screen.getByRole("textbox", { name: "Marker note" }), "  rushed shift  ");
+    await user.click(screen.getByRole("button", { name: "Mark Error" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent("Error marker saved at 0:01.");
+    expect(screen.getByTestId("sheet-error-marker-list")).toHaveTextContent("rushed shift");
+    expect(recordingHistoryRepository.getErrorMarkers(recording.id)).toEqual([
+      expect.objectContaining({
+        timestampMs: 500,
+        note: "rushed shift"
+      })
+    ]);
+  });
+
   it("shows a recoverable error when playback seek throws instead of fake success", async () => {
     const user = userEvent.setup();
     const playbackControls = createPlaybackControls({

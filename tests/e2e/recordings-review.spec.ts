@@ -1,5 +1,78 @@
 import { expect, test } from "@playwright/test";
 
+type WaveformEvidence = {
+  source: string | null;
+  peakCount: string | null;
+  width: number;
+  height: number;
+  visibleBarCount: number;
+  nonZeroBarCount: number;
+  barHeights: number[];
+};
+
+async function expectVisibleDerivedWaveform({
+  page,
+  source,
+  peakCount,
+  label
+}: {
+  page: import("@playwright/test").Page;
+  source: "decoded-audio" | "trusted-peaks";
+  peakCount: number;
+  label: string;
+}) {
+  const waveform = page.getByTestId("derived-waveform");
+
+  await expect(waveform, `${label}: waveform container visible`).toBeVisible();
+  await expect(waveform, `${label}: waveform source`).toHaveAttribute("data-waveform-source", source);
+  await expect(waveform, `${label}: waveform peak count`).toHaveAttribute("data-peak-count", String(peakCount));
+
+  const evidence = await waveform.evaluate((element): WaveformEvidence => {
+    const bounds = element.getBoundingClientRect();
+    const bars = Array.from(element.querySelectorAll("span")).map((bar) => {
+      const rect = bar.getBoundingClientRect();
+
+      return {
+        width: rect.width,
+        height: rect.height,
+        visible:
+          rect.width > 0 &&
+          rect.height > 0 &&
+          rect.bottom > 0 &&
+          rect.right > 0 &&
+          rect.top < window.innerHeight &&
+          rect.left < window.innerWidth
+      };
+    });
+
+    return {
+      source: element.getAttribute("data-waveform-source"),
+      peakCount: element.getAttribute("data-peak-count"),
+      width: bounds.width,
+      height: bounds.height,
+      visibleBarCount: bars.filter((bar) => bar.visible).length,
+      nonZeroBarCount: bars.filter((bar) => bar.height > 0).length,
+      barHeights: bars.map((bar) => Math.round(bar.height))
+    };
+  });
+
+  expect(evidence.width, `${label}: waveform has layout width`).toBeGreaterThan(160);
+  expect(evidence.height, `${label}: waveform has layout height`).toBeGreaterThan(40);
+  expect(evidence.visibleBarCount, `${label}: all waveform bars are visible`).toBe(peakCount);
+  expect(evidence.nonZeroBarCount, `${label}: all waveform bars have nonzero height`).toBe(peakCount);
+  expect(Math.max(...evidence.barHeights), `${label}: waveform bars have visible height`).toBeGreaterThan(7);
+
+  return evidence;
+}
+
+function expectStableWaveform(before: WaveformEvidence, after: WaveformEvidence, label: string) {
+  expect(after.source, `${label}: source stays stable`).toBe(before.source);
+  expect(after.peakCount, `${label}: peak count stays stable`).toBe(before.peakCount);
+  expect(after.visibleBarCount, `${label}: visible bar count stays stable`).toBe(before.visibleBarCount);
+  expect(after.nonZeroBarCount, `${label}: nonzero bar count stays stable`).toBe(before.nonZeroBarCount);
+  expect(after.barHeights, `${label}: bar geometry stays stable`).toEqual(before.barHeights);
+}
+
 test("recordings review lists, filters, plays, continues, deletes, and handles bad audio", async ({
   page
 }) => {
@@ -377,8 +450,12 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await expect(page.getByTestId("recording-details")).toBeVisible();
   await expect(page.getByTestId("recording-details").getByText("120")).toBeVisible();
   await expect(page.getByTestId("recording-details").getByText("4/4")).toBeVisible();
-  await expect(page.getByTestId("derived-waveform")).toHaveAttribute("data-waveform-source", "decoded-audio");
-  await expect(page.getByTestId("derived-waveform")).toHaveAttribute("data-peak-count", "48");
+  const quickWaveformBeforePlayback = await expectVisibleDerivedWaveform({
+    page,
+    source: "decoded-audio",
+    peakCount: 48,
+    label: "quick-alpha before playback"
+  });
   await expect(page.getByTestId("recording-duration-warning")).toBeHidden();
   await expect(page.getByTestId("error-marker-list")).toContainText("0:01");
   await expect(page.getByTestId("error-marker-list")).toContainText("Early entrance");
@@ -397,6 +474,18 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   });
   await page.getByRole("button", { name: "Pause Recording" }).click();
   await expect(page.getByTestId("recording-playback-status")).toBeHidden();
+  const quickWaveformAfterPlayback = await expectVisibleDerivedWaveform({
+    page,
+    source: "decoded-audio",
+    peakCount: 48,
+    label: "quick-alpha after playback"
+  });
+
+  expectStableWaveform(
+    quickWaveformBeforePlayback,
+    quickWaveformAfterPlayback,
+    "quick-alpha playback interaction"
+  );
 
   await page.getByRole("link", { name: "Practice Again" }).click();
   await expect(page).toHaveURL(/\/quick-metronome\?recordingId=quick-alpha/);
@@ -465,6 +554,12 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await expect(page.getByTestId("recording-row-quick-alpha")).toBeVisible();
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Quick metronome");
   await page.getByTestId(`recording-row-${continuedRecordingEvidence.continued?.id}`).click();
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "decoded-audio",
+    peakCount: 48,
+    label: "continued quick recording after filter"
+  });
   await expect(page.getByTestId("recording-duration-warning")).toBeHidden();
 
   await page.goto("/recordings");
@@ -474,7 +569,12 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await expect(page.getByText("Alpha quick take")).toBeHidden();
   await page.getByTestId("recording-row-sheet-beta").click();
   await expect(page.getByTestId("recording-details").getByText("Moonlight Etude")).toBeVisible();
-  await expect(page.getByTestId("derived-waveform")).toHaveAttribute("data-waveform-source", "trusted-peaks");
+  const sheetWaveformBeforePlayback = await expectVisibleDerivedWaveform({
+    page,
+    source: "trusted-peaks",
+    peakCount: 5,
+    label: "sheet-beta before playback"
+  });
   await expect(page.getByTestId("recording-duration-warning")).toBeHidden();
   await page.getByRole("button", { name: "Play Recording" }).click();
   await expect(page.getByTestId("recording-playback-status")).toBeVisible();
@@ -489,6 +589,14 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   });
   await page.getByRole("button", { name: "Pause Recording" }).click();
   await expect(page.getByTestId("recording-playback-status")).toBeHidden();
+  const sheetWaveformAfterPlayback = await expectVisibleDerivedWaveform({
+    page,
+    source: "trusted-peaks",
+    peakCount: 5,
+    label: "sheet-beta after playback"
+  });
+
+  expectStableWaveform(sheetWaveformBeforePlayback, sheetWaveformAfterPlayback, "sheet-beta playback interaction");
   await page.getByRole("link", { name: "Practice Again" }).click();
   await expect(page).toHaveURL(/\/sheet-practice\?recordingId=sheet-beta&sheetId=sheet-42/);
 
@@ -534,6 +642,7 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Broken");
   await page.getByTestId("recording-row-bad-gamma").click();
   await expect(page.getByTestId("recording-artifact-error")).toContainText("cannot be decoded");
+  await expect(page.getByTestId("derived-waveform")).toBeHidden();
   await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
 
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Trusted peaks missing");
@@ -541,16 +650,19 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await expect(page.getByTestId("recording-artifact-error")).toContainText(
     "no accessible audio artifact"
   );
+  await expect(page.getByTestId("derived-waveform")).toBeHidden();
   await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
 
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Trusted peaks bad");
   await page.getByTestId("recording-row-trusted-bad").click();
   await expect(page.getByTestId("recording-artifact-error")).toContainText("cannot be decoded");
+  await expect(page.getByTestId("derived-waveform")).toBeHidden();
   await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
 
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Invalid waveform peaks");
   await page.getByTestId("recording-row-invalid-peaks-epsilon").click();
   await expect(page.getByTestId("recording-artifact-error")).toContainText("invalid waveform peak data");
+  await expect(page.getByTestId("derived-waveform")).toBeHidden();
   await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
 
   const playbackRejections = await page.evaluate(() => {
