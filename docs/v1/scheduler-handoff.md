@@ -37,6 +37,8 @@ All coding/review/verification agents must:
 
 - Use `fork_context: false`.
 - Use standard speed unless the user approves otherwise.
+- Use the model/effort tier assigned in the implementation slice file.
+- Prefer the least expensive safe model tier; do not default every slice to the highest model.
 - Read repository docs directly.
 - Preserve v0 verified behavior.
 - Avoid adjacent v1 and v2 scope.
@@ -68,6 +70,17 @@ Expected first-slice scope:
 - No persistence.
 - No Sheet Practice wiring.
 
+Model assignment for the first slice:
+
+```text
+Tier A
+Coding agent: gpt-5.4, medium effort, standard speed
+Review agent: gpt-5.4-mini, medium effort, standard speed
+Verification agent: gpt-5.4-mini, medium effort, standard speed
+```
+
+Reason: pure domain math and validation only.
+
 ## Pack 1 User Acceptance Path
 
 Pack 1 is not accepted until the full path works:
@@ -86,7 +99,7 @@ Open a sheet
 
 - `docs/v1/module-status.json` tracks product feature contract readiness, not slice implementation readiness.
 - `docs/v1/implementation-slices/status.json` is the source of truth for implementation scheduling.
+- `docs/v1/implementation-slices/README.md` defines model budget tiers and escalation rules.
 - Only `P1-01 measure-grid-types-and-math` is currently `ready_for_coding`.
 - Later Pack 1 slices should be promoted to `ready_for_coding` only after dependency slices are verified.
 - Do not start Pack 2 until Pack 1 is accepted unless the user explicitly reprioritizes.
-

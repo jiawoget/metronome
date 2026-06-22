@@ -27,6 +27,17 @@ Product contracts:
 
 ### P1-01 `measure-grid-types-and-math`
 
+Model assignment:
+
+```text
+Tier A
+Coding agent: gpt-5.4, medium effort, standard speed
+Review agent: gpt-5.4-mini, medium effort, standard speed
+Verification agent: gpt-5.4-mini, medium effort, standard speed
+```
+
+Reason: pure domain math and validation only; no UI, persistence, or media.
+
 Scope:
 
 - Add MeasureGrid domain types.
@@ -54,6 +65,17 @@ Verification:
 
 ### P1-02 `measure-grid-repository`
 
+Model assignment:
+
+```text
+Tier B
+Coding agent: gpt-5.4, high effort, standard speed
+Review agent: gpt-5.4-mini, high effort, standard speed
+Verification agent: gpt-5.4-mini, high effort, standard speed
+```
+
+Reason: local persistence/service boundary with no browser UI or media artifacts.
+
 Scope:
 
 - Add local MeasureGrid repository/service.
@@ -78,6 +100,17 @@ Verification:
 - Reload or storage-boundary test where feasible.
 
 ### P1-03 `measure-grid-calibration-ui`
+
+Model assignment:
+
+```text
+Tier C
+Coding agent: gpt-5.5, high effort, standard speed
+Review agent: gpt-5.4, medium effort, standard speed
+Verification agent: gpt-5.4-mini, high effort, standard speed
+```
+
+Reason: user-facing Sheet Practice UI requiring browser E2E, reload, console, and responsive checks.
 
 Scope:
 
@@ -106,6 +139,17 @@ Verification:
 
 ### P1-04 `segment-types-and-validation`
 
+Model assignment:
+
+```text
+Tier A
+Coding agent: gpt-5.4, medium effort, standard speed
+Review agent: gpt-5.4-mini, medium effort, standard speed
+Verification agent: gpt-5.4-mini, medium effort, standard speed
+```
+
+Reason: pure domain types, validation, and stale-status helpers only.
+
 Scope:
 
 - Add Practice Segment domain types.
@@ -132,6 +176,17 @@ Verification:
 
 ### P1-05 `segment-repository`
 
+Model assignment:
+
+```text
+Tier B
+Coding agent: gpt-5.4, high effort, standard speed
+Review agent: gpt-5.4-mini, high effort, standard speed
+Verification agent: gpt-5.4-mini, high effort, standard speed
+```
+
+Reason: local persistence and service boundary; no browser UI or media capture.
+
 Scope:
 
 - Add local segment repository/service.
@@ -155,6 +210,17 @@ Verification:
 - Persistence/reload test where feasible.
 
 ### P1-06 `segment-selector-read-ui`
+
+Model assignment:
+
+```text
+Tier C
+Coding agent: gpt-5.5, high effort, standard speed
+Review agent: gpt-5.4, medium effort, standard speed
+Verification agent: gpt-5.4-mini, high effort, standard speed
+```
+
+Reason: user-facing selection UI with browser E2E and responsive checks, but no recording artifacts.
 
 Scope:
 
@@ -181,6 +247,17 @@ Verification:
 
 ### P1-07 `segment-create-edit-delete-ui`
 
+Model assignment:
+
+```text
+Tier C
+Coding agent: gpt-5.5, high effort, standard speed
+Review agent: gpt-5.4, medium effort, standard speed
+Verification agent: gpt-5.4-mini, high effort, standard speed
+```
+
+Reason: UI plus persistence through existing service boundaries; no media artifacts or destructive cross-domain cleanup.
+
 Scope:
 
 - Add create/edit/delete UI for segments in Sheet Practice.
@@ -206,6 +283,17 @@ Verification:
 
 ### P1-08 `recording-metadata-segment-fields`
 
+Model assignment:
+
+```text
+Tier B
+Coding agent: gpt-5.4, high effort, standard speed
+Review agent: gpt-5.4-mini, high effort, standard speed
+Verification agent: gpt-5.4-mini, high effort, standard speed
+```
+
+Reason: metadata/schema compatibility work, but no artifact capture or browser recording flow yet.
+
 Scope:
 
 - Extend recording metadata types/services to allow optional `segmentId` and segment snapshot.
@@ -230,6 +318,17 @@ Verification:
 - Source inspection for backwards compatibility.
 
 ### P1-09 `recording-save-segment-context`
+
+Model assignment:
+
+```text
+Tier D
+Coding agent: gpt-5.5, high effort, standard speed
+Review agent: gpt-5.4, high effort, standard speed
+Verification agent: gpt-5.4, high effort, standard speed
+```
+
+Reason: real recording artifact flow plus metadata persistence and legacy/no-segment compatibility.
 
 Scope:
 
@@ -257,6 +356,17 @@ Verification:
 
 ### P1-10 `rerecord-workflow-state`
 
+Model assignment:
+
+```text
+Tier B
+Coding agent: gpt-5.4, high effort, standard speed
+Review agent: gpt-5.4-mini, high effort, standard speed
+Verification agent: gpt-5.4-mini, high effort, standard speed
+```
+
+Reason: workflow state and service integration without adding the real repeated artifact action yet.
+
 Scope:
 
 - Preserve active segment after save/cancel/failure.
@@ -280,6 +390,17 @@ Verification:
 - Browser E2E where current UI permits.
 
 ### P1-11 `rerecord-record-again-action`
+
+Model assignment:
+
+```text
+Tier D
+Coding agent: gpt-5.5, high effort, standard speed
+Review agent: gpt-5.4, high effort, standard speed
+Verification agent: gpt-5.4, high effort, standard speed
+```
+
+Reason: repeated recording must create separate real artifacts and avoid duplicate starts.
 
 Scope:
 
@@ -306,6 +427,17 @@ Verification:
 
 ### P1-12 `rerecord-two-artifact-verification`
 
+Model assignment:
+
+```text
+Tier D
+Coding agent: gpt-5.4, high effort, standard speed
+Review agent: gpt-5.4-mini, high effort, standard speed
+Verification agent: gpt-5.4, high effort, standard speed
+```
+
+Reason: verification-hardening slice centered on real artifact evidence; coding should be limited to tests/harness changes unless implementation gaps are found.
+
 Scope:
 
 - Add/strengthen verification coverage proving two repeated takes create two separate real artifacts and metadata records.
@@ -330,4 +462,3 @@ Verification:
 ## Pack-Level Acceptance Gate
 
 Pack 1 can be presented for user acceptance only when all P1 slices are verified and the pack acceptance path passes in a final browser E2E run.
-

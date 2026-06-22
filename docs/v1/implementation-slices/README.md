@@ -84,3 +84,100 @@ Every slice agent prompt should include paths, not pasted full docs:
 
 Do not launch a coding agent for a product feature directly. Launch agents only for a slice marked `ready_for_coding`.
 
+## Model Budget Policy
+
+The scheduler should choose the least expensive model tier that can safely complete the slice.
+
+Use standard speed for all v1 subagents unless the user explicitly approves otherwise.
+
+### Tier A: Pure Logic / Types
+
+Use for pure domain math, validation, formatting, selectors, and small non-UI utilities.
+
+```text
+Coding agent: gpt-5.4, medium effort, standard speed
+Review agent: gpt-5.4-mini, medium effort, standard speed
+Verification agent: gpt-5.4-mini, medium effort, standard speed
+```
+
+Expected token profile: low. Prefer this tier whenever there is no UI, persistence, browser E2E, media, or migration work.
+
+### Tier B: Local Persistence / Service Boundary
+
+Use for repositories, local storage services, metadata schema changes, and integration tests without complex media artifacts.
+
+```text
+Coding agent: gpt-5.4, high effort, standard speed
+Review agent: gpt-5.4-mini, high effort, standard speed
+Verification agent: gpt-5.4-mini, high effort, standard speed
+```
+
+Expected token profile: medium. Use this tier when persistence after reload or backwards compatibility matters, but no browser-heavy UI or real media artifact verification is required.
+
+### Tier C: User-Facing UI With Browser E2E
+
+Use for compact UI slices, responsive layout, route wiring, forms, and browser E2E without media capture or complex timing.
+
+```text
+Coding agent: gpt-5.5, high effort, standard speed
+Review agent: gpt-5.4, medium effort, standard speed
+Verification agent: gpt-5.4-mini, high effort, standard speed
+```
+
+Expected token profile: medium-high. Use this tier for UI because implementation must preserve the v1 visual direction, responsive behavior, interaction polish, and browser E2E expectations.
+
+### Tier D: Recording / Media / Timing / Waveform
+
+Use for recording artifacts, metronome timing, scheduler behavior, waveform decode, audio analysis evidence, or any slice where a false pass could leave fake media behavior.
+
+```text
+Coding agent: gpt-5.5, high effort, standard speed
+Review agent: gpt-5.4, high effort, standard speed
+Verification agent: gpt-5.4, high effort, standard speed
+```
+
+Expected token profile: high. Use this tier only when real artifact, timing, scheduler, decode, or waveform evidence is required.
+
+### Tier E: Risky Data Operations / Migration / Cleanup
+
+Use for import/export, backup/restore-like workflows, selective cleanup, data migration, or operations that can corrupt or delete local data.
+
+```text
+Coding agent: gpt-5.5, high effort, standard speed
+Review agent: gpt-5.5, high effort, standard speed
+Verification agent: gpt-5.4, high effort, standard speed
+```
+
+Expected token profile: high. Use this tier for destructive or data-integrity-sensitive work even when the UI is small.
+
+### Escalation Rules
+
+Escalate one tier if:
+
+- The previous review or verification failed for architecture or data-integrity reasons.
+- The slice touches verified v0 behavior in a shared service.
+- The slice requires browser E2E plus persistence plus nontrivial service rewiring.
+- The slice has repeated failures after a fix pass.
+
+Do not escalate just because a task is user-facing if it is a simple form or display slice covered by Tier C.
+
+### Fix Pass Rules
+
+Use the same coding model as the original slice for the first fix pass.
+
+If a second fix pass is needed for the same failure category:
+
+- Tier A may escalate coding to `gpt-5.4, high effort`.
+- Tier B may escalate coding to `gpt-5.5, high effort`.
+- Tier C already uses `gpt-5.5` for coding; narrow the fix prompt to the failed UI evidence instead of escalating by default.
+- Tier D/E should stay on the original high-risk assignment and narrow the prompt to the failing evidence.
+
+### Token-Saving Prompt Rules
+
+For every subagent prompt:
+
+- Pass file paths and slice id, not full document contents.
+- Ask the agent to read only the required docs and local files for the assigned slice.
+- Include explicit out-of-scope bullets.
+- For review and verification agents, pass the implementation commit hash and changed files.
+- Do not ask verification agents to re-review unrelated source unless boundary inspection is part of the slice.

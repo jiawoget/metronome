@@ -47,31 +47,39 @@ Feature contract_ready
 
 Use `standard` speed/service tier for v1 subagents unless the user explicitly approves a different speed.
 
-Default assignments:
+Implementation should use the model tier assigned in the active implementation slice file under `docs/v1/implementation-slices/`.
 
-```text
-Coding agent: gpt-5.5, high effort, standard speed
-Review agent: gpt-5.4, high effort, standard speed
-Verification agent: gpt-5.4-mini, high effort, standard speed
-```
+Do not default every slice to the highest model. The scheduler should choose the least expensive safe model tier and escalate only when the slice risk requires it.
 
-Low-risk pure logic features may use:
+Global fallback assignments, used only when a slice file does not yet specify a tier:
 
 ```text
 Coding agent: gpt-5.4, high effort, standard speed
 Review agent: gpt-5.4-mini, high effort, standard speed
-Verification agent: gpt-5.4-mini, medium or high effort, standard speed
+Verification agent: gpt-5.4-mini, high effort, standard speed
 ```
 
-High-risk media, timing, recording, waveform, persistence, or complex browser E2E features should use:
+Low-risk pure logic slices should use:
+
+```text
+Coding agent: gpt-5.4, medium effort, standard speed
+Review agent: gpt-5.4-mini, medium effort, standard speed
+Verification agent: gpt-5.4-mini, medium effort, standard speed
+```
+
+User-facing UI implementation should use `gpt-5.5` for the coding agent when the slice includes real app UI, responsive layout, or browser E2E.
+
+High-risk media, timing, recording, waveform, data cleanup, migration, or complex browser E2E slices should use:
 
 ```text
 Coding agent: gpt-5.5, high effort, standard speed
-Review agent: gpt-5.5 or gpt-5.4, high effort, standard speed
+Review agent: gpt-5.4 or gpt-5.5, high effort, standard speed
 Verification agent: gpt-5.4, high effort, standard speed
 ```
 
 Use `xhigh` effort only for unusually hard architecture migration, audio algorithm, data migration, or repeated failure debugging work.
+
+Detailed tier definitions live in `docs/v1/implementation-slices/README.md`.
 
 ## Status Flow
 
