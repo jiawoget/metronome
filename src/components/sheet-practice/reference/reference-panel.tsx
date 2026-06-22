@@ -1,0 +1,511 @@
+"use client";
+
+import {
+  ExternalLink,
+  FileAudio,
+  Link2,
+  Pause,
+  Play,
+  Search,
+  Video
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import {
+  clampReferenceVolume,
+  type BilibiliSearchResult,
+  type LocalAudioReference,
+  type SheetReference
+} from "@/domain/reference";
+import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
+import { BrowserLocalReferenceAudioPlayer } from "@/infrastructure/reference/local-reference-audio-player";
+import { browserReferenceService } from "@/infrastructure/reference/browser-reference-service";
+import type { PracticeSessionService } from "@/services/practice-session";
+import type { ReferenceService } from "@/services/reference";
+import { Button } from "@/components/ui/button";
+
+type ReferencePanelProps = {
+  sheetId: string;
+  referenceService?: ReferenceService;
+  sessionService?: Pick<PracticeSessionService, "ensureSheetSession">;
+  createAudioPlayer?: () => BrowserLocalReferenceAudioPlayer;
+};
+
+type PlaybackState = {
+  state: "idle" | "playing" | "paused" | "error";
+  currentTime: number;
+  volume: number;
+  message: string | null;
+};
+
+function formatDuration(ms: number) {
+  const totalSeconds = Math.max(0, Math.round(ms / 1_000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function getReferenceSummary(reference: SheetReference | null) {
+  if (!reference) {
+    return "No reference saved for this sheet.";
+  }
+
+  if (reference.kind === "local-audio") {
+    return `${reference.fileName} · ${formatDuration(reference.durationMs)}`;
+  }
+
+  return [reference.bvid, reference.durationLabel, reference.author].filter(Boolean).join(" · ");
+}
+
+function createDefaultAudioPlayer() {
+  return new BrowserLocalReferenceAudioPlayer();
+}
+
+export function ReferencePanel({
+  sheetId,
+  referenceService = browserReferenceService,
+  sessionService = browserPracticeSessionService,
+  createAudioPlayer = createDefaultAudioPlayer
+}: ReferencePanelProps) {
+  const audioPlayer = useMemo(() => createAudioPlayer(), [createAudioPlayer]);
+  const [references, setReferences] = useState<SheetReference[]>([]);
+  const [activeReference, setActiveReference] = useState<SheetReference | null>(null);
+  const [localTitle, setLocalTitle] = useState("");
+  const [localFile, setLocalFile] = useState<File | null>(null);
+  const [bilibiliUrl, setBilibiliUrl] = useState("");
+  const [bilibiliTitle, setBilibiliTitle] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<BilibiliSearchResult[]>([]);
+  const [selectedResult, setSelectedResult] = useState<BilibiliSearchResult | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [message, setMessage] = useState("References are saved locally for this sheet.");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [playbackState, setPlaybackState] = useState<PlaybackState>({
+    state: "idle",
+    currentTime: 0,
+    volume: 1,
+    message: null
+  });
+
+  const refresh = useCallback(async () => {
+    const nextReferences = await referenceService.listReferences(sheetId);
+    const nextActive = await referenceService.getActiveReference(sheetId);
+
+    setReferences(nextReferences);
+    setActiveReference(nextActive);
+  }, [referenceService, sheetId]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+    const unsubscribe = referenceService.subscribe(() => {
+      void refresh();
+    });
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      unsubscribe();
+    };
+  }, [referenceService, refresh]);
+
+  useEffect(() => {
+    if (activeReference?.kind !== "local-audio") {
+      audioPlayer.dispose();
+      return;
+    }
+
+    let active = true;
+
+    void referenceService.getLocalAudioArtifact(activeReference.id).then((artifact) => {
+      if (!active) {
+        return;
+      }
+
+      if (artifact) {
+        audioPlayer.load(activeReference, artifact);
+        setPlaybackState((current) => ({ ...current, state: "paused", currentTime: 0 }));
+      } else {
+        setErrorMessage("Local audio artifact is missing. Add the file again.");
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [activeReference, audioPlayer, referenceService]);
+
+  useEffect(() => {
+    const handleAudioState = (event: Event) => {
+      const detail = (event as CustomEvent<PlaybackState>).detail;
+
+      setPlaybackState({
+        state: detail.state,
+        currentTime: detail.currentTime,
+        volume: detail.volume,
+        message: detail.message
+      });
+      if (detail.message) {
+        setErrorMessage(detail.message);
+      }
+    };
+
+    window.addEventListener("reference-audio:state-change", handleAudioState);
+
+    return () => {
+      window.removeEventListener("reference-audio:state-change", handleAudioState);
+      audioPlayer.dispose();
+    };
+  }, [audioPlayer]);
+
+  async function saveLocalReference() {
+    setErrorMessage(null);
+
+    if (!localFile) {
+      setErrorMessage("Choose a local audio file first.");
+      return;
+    }
+
+    const result = await referenceService.addLocalAudioReference({
+      sheetId,
+      file: localFile,
+      title: localTitle
+    });
+
+    if (!result.ok) {
+      setErrorMessage(result.message);
+      return;
+    }
+
+    setLocalTitle("");
+    setLocalFile(null);
+    setMessage("Local audio reference saved.");
+    await refresh();
+  }
+
+  async function playLocalReference() {
+    if (activeReference?.kind !== "local-audio") {
+      return;
+    }
+
+    setErrorMessage(null);
+    await sessionService.ensureSheetSession({
+      sheetId,
+      trigger: "reference"
+    });
+    await audioPlayer.play();
+    setMessage("Local reference playing.");
+  }
+
+  function pauseLocalReference() {
+    audioPlayer.pause();
+    setMessage("Local reference paused.");
+  }
+
+  function changeVolume(value: string) {
+    const volume = audioPlayer.setVolume(clampReferenceVolume(Number(value)));
+
+    setPlaybackState((current) => ({
+      ...current,
+      volume
+    }));
+  }
+
+  async function searchBilibili() {
+    setErrorMessage(null);
+    setIsSearching(true);
+    setSelectedResult(null);
+
+    const result = await referenceService.searchBilibili(searchQuery);
+
+    setIsSearching(false);
+
+    if (!result.ok) {
+      setSearchResults([]);
+      setErrorMessage(result.message);
+      return;
+    }
+
+    setSearchResults(result.value);
+    setMessage(`Bilibili search returned ${result.value.length} result${result.value.length === 1 ? "" : "s"}.`);
+  }
+
+  async function saveSelectedBilibiliResult() {
+    setErrorMessage(null);
+
+    if (!selectedResult) {
+      setErrorMessage("Select a Bilibili search result first.");
+      return;
+    }
+
+    const result = await referenceService.saveBilibiliSearchResultReference({
+      sheetId,
+      result: selectedResult
+    });
+
+    if (!result.ok) {
+      setErrorMessage(result.message);
+      return;
+    }
+
+    await sessionService.ensureSheetSession({
+      sheetId,
+      trigger: "reference"
+    });
+    setMessage("Bilibili search result saved as the active reference.");
+    await refresh();
+  }
+
+  async function saveBilibiliUrlReference() {
+    setErrorMessage(null);
+
+    const result = await referenceService.saveBilibiliUrlReference({
+      sheetId,
+      url: bilibiliUrl,
+      title: bilibiliTitle
+    });
+
+    if (!result.ok) {
+      setErrorMessage(result.message);
+      return;
+    }
+
+    await sessionService.ensureSheetSession({
+      sheetId,
+      trigger: "reference"
+    });
+    setBilibiliUrl("");
+    setBilibiliTitle("");
+    setMessage("Bilibili URL saved as the active reference.");
+    await refresh();
+  }
+
+  const localReference = activeReference?.kind === "local-audio" ? (activeReference as LocalAudioReference) : null;
+
+  return (
+    <aside
+      aria-labelledby="reference-panel-title"
+      data-testid="reference-panel"
+      className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-soft"
+    >
+      <div className="border-b border-border px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">06 Reference System</p>
+        <h2 id="reference-panel-title" className="mt-1 text-lg font-semibold tracking-normal">
+          References
+        </h2>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4">
+        <section aria-label="Active reference" className="rounded-md border border-border bg-muted p-3">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
+              {activeReference?.kind === "bilibili" ? (
+                <Video className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <FileAudio className="h-4 w-4" aria-hidden="true" />
+              )}
+            </span>
+            <div className="min-w-0">
+              <p data-testid="active-reference-title" className="truncate font-medium">
+                {activeReference?.title ?? "No active reference"}
+              </p>
+              <p data-testid="active-reference-summary" className="mt-1 text-sm leading-6 text-muted-foreground">
+                {getReferenceSummary(activeReference)}
+              </p>
+            </div>
+          </div>
+
+          {localReference ? (
+            <div className="mt-3 grid gap-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  onClick={() => void playLocalReference()}
+                  disabled={playbackState.state === "playing"}
+                  aria-label="Play local reference"
+                >
+                  <Play className="h-4 w-4" aria-hidden="true" />
+                  Play
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={pauseLocalReference}
+                  disabled={playbackState.state !== "playing"}
+                  aria-label="Pause local reference"
+                >
+                  <Pause className="h-4 w-4" aria-hidden="true" />
+                  Pause
+                </Button>
+              </div>
+              <label className="grid gap-2 text-sm font-medium">
+                Reference volume
+                <input
+                  aria-label="Reference volume"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={playbackState.volume}
+                  onChange={(event) => changeVolume(event.target.value)}
+                  className="w-full accent-primary"
+                />
+              </label>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <StatusPill label="State" value={playbackState.state} testId="reference-playback-state" />
+                <StatusPill label="Time" value={playbackState.currentTime.toFixed(2)} testId="reference-current-time" />
+                <StatusPill label="Volume" value={Math.round(playbackState.volume * 100).toString()} testId="reference-volume-state" />
+              </div>
+            </div>
+          ) : null}
+
+          {activeReference?.kind === "bilibili" ? (
+            <div className="mt-3 rounded-md border border-border bg-background p-3">
+              {activeReference.embedUrl ? (
+                <iframe
+                  title={`Bilibili reference ${activeReference.title}`}
+                  src={activeReference.embedUrl}
+                  loading="lazy"
+                  className="aspect-video w-full rounded-md border border-border bg-muted"
+                  referrerPolicy="no-referrer"
+                />
+              ) : null}
+              <Button asChild variant="secondary" className="mt-3 w-full">
+                <a href={activeReference.url} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  Open Bilibili reference
+                </a>
+              </Button>
+            </div>
+          ) : null}
+        </section>
+
+        <section aria-labelledby="local-reference-title" className="grid gap-3 rounded-md border border-border p-3">
+          <h3 id="local-reference-title" className="text-sm font-semibold tracking-normal">
+            Local Audio
+          </h3>
+          <label className="grid gap-1 text-sm font-medium">
+            Local title
+            <input
+              value={localTitle}
+              onChange={(event) => setLocalTitle(event.target.value)}
+              className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="Optional title"
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Local audio file
+            <input
+              aria-label="Local audio file"
+              type="file"
+              accept="audio/*,.mp3,.wav,.ogg,.aac,.m4a,.webm"
+              onChange={(event) => setLocalFile(event.target.files?.[0] ?? null)}
+              className="min-h-10 rounded-md border border-border bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1 file:text-sm file:font-medium"
+            />
+          </label>
+          <Button type="button" onClick={() => void saveLocalReference()}>
+            <FileAudio className="h-4 w-4" aria-hidden="true" />
+            Save local reference
+          </Button>
+        </section>
+
+        <section aria-labelledby="bilibili-search-title" className="grid gap-3 rounded-md border border-border p-3">
+          <h3 id="bilibili-search-title" className="text-sm font-semibold tracking-normal">
+            Bilibili Search
+          </h3>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+            <label className="sr-only" htmlFor="bilibili-search-input">
+              Search Bilibili
+            </label>
+            <input
+              id="bilibili-search-input"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="h-10 min-w-0 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="Search Bilibili"
+            />
+            <Button type="button" size="icon" aria-label="Search Bilibili" onClick={() => void searchBilibili()}>
+              <Search className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
+          {isSearching ? <p className="text-sm text-muted-foreground">Searching...</p> : null}
+          {searchResults.length > 0 ? (
+            <div className="grid gap-2" data-testid="bilibili-search-results">
+              {searchResults.map((result) => (
+                <button
+                  key={result.id}
+                  type="button"
+                  aria-pressed={selectedResult?.id === result.id}
+                  onClick={() => setSelectedResult(result)}
+                  className="rounded-md border border-border bg-background p-3 text-left text-sm transition-colors hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10"
+                >
+                  <span className="block truncate font-medium">{result.title}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {[result.bvid, result.durationLabel, result.author].filter(Boolean).join(" · ")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <Button type="button" variant="secondary" onClick={() => void saveSelectedBilibiliResult()}>
+            <Video className="h-4 w-4" aria-hidden="true" />
+            Save selected result
+          </Button>
+        </section>
+
+        <section aria-labelledby="bilibili-url-title" className="grid gap-3 rounded-md border border-border p-3">
+          <h3 id="bilibili-url-title" className="text-sm font-semibold tracking-normal">
+            Bilibili URL
+          </h3>
+          <label className="grid gap-1 text-sm font-medium">
+            URL title
+            <input
+              value={bilibiliTitle}
+              onChange={(event) => setBilibiliTitle(event.target.value)}
+              className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="Optional title"
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Bilibili URL
+            <input
+              aria-label="Bilibili URL"
+              value={bilibiliUrl}
+              onChange={(event) => setBilibiliUrl(event.target.value)}
+              className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="https://www.bilibili.com/video/BV..."
+            />
+          </label>
+          <Button type="button" variant="secondary" onClick={() => void saveBilibiliUrlReference()}>
+            <Link2 className="h-4 w-4" aria-hidden="true" />
+            Save Bilibili URL
+          </Button>
+        </section>
+
+        <div aria-live="polite" className="rounded-md border border-border bg-muted px-3 py-2 text-sm">
+          <p className="font-medium">{message}</p>
+          <p data-testid="reference-count" className="mt-1 text-xs text-muted-foreground">
+            Saved references {references.length}
+          </p>
+          {errorMessage ? (
+            <p role="alert" className="mt-2 font-medium text-destructive">
+              {errorMessage}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function StatusPill({ label, value, testId }: { label: string; value: string; testId: string }) {
+  return (
+    <div className="rounded-md border border-border bg-background px-2 py-1">
+      <p className="text-[0.7rem] font-medium text-muted-foreground">{label}</p>
+      <p data-testid={testId} className="mt-0.5 truncate font-semibold">
+        {value}
+      </p>
+    </div>
+  );
+}
