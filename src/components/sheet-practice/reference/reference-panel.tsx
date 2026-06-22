@@ -362,15 +362,10 @@ export function ReferencePanel({
 
           {activeReference?.kind === "bilibili" ? (
             <div className="mt-3 rounded-md border border-border bg-background p-3">
-              {activeReference.embedUrl ? (
-                <iframe
-                  title={`Bilibili reference ${activeReference.title}`}
-                  src={activeReference.embedUrl}
-                  loading="lazy"
-                  className="aspect-video w-full rounded-md border border-border bg-muted"
-                  referrerPolicy="no-referrer"
-                />
-              ) : null}
+              <p className="text-sm leading-6 text-muted-foreground">
+                Bilibili references open in the original player to keep practice playback isolated from third-party
+                page scripts.
+              </p>
               <Button asChild variant="secondary" className="mt-3 w-full">
                 <a href={activeReference.url} target="_blank" rel="noreferrer">
                   <ExternalLink className="h-4 w-4" aria-hidden="true" />

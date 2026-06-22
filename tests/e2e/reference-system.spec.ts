@@ -7,7 +7,7 @@ const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
 const sheetDbName = "metronome-practice-v0-sheet-library";
 const referenceDbName = "metronome-practice-v0-references";
 const practiceDbName = "metronome-practice-v0-practice-sessions";
-const recordingHarnessEvent = "sheet-practice-controls:set-recording-harness-active";
+const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
 
 type ReferenceAudioSnapshot = {
   referenceId: string | null;
@@ -64,11 +64,50 @@ async function deleteDatabase(page: Page, databaseName: string) {
 
 async function clearDatabases(page: Page) {
   await page.goto("/sheet-library");
+  await page.evaluate((storageKey) => window.localStorage.removeItem(storageKey), recordingHistoryStorageKey);
   await deleteDatabase(page, sheetDbName);
   await deleteDatabase(page, referenceDbName);
   await deleteDatabase(page, practiceDbName);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+}
+
+async function installSyntheticMicrophone(page: Page, frequencyHz = 440) {
+  await page.addInitScript((frequency) => {
+    const e2eWindow = window as Window & {
+      __referenceSyntheticAudioNodes?: unknown[];
+    };
+
+    e2eWindow.__referenceSyntheticAudioNodes = [];
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: async () => {
+          const audioWindow = window as Window &
+            typeof globalThis & { webkitAudioContext?: typeof AudioContext };
+          const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+
+          if (!AudioContextConstructor) {
+            throw new Error("Web Audio is not available in this browser.");
+          }
+
+          const audioContext = new AudioContextConstructor();
+          const destination = audioContext.createMediaStreamDestination();
+          const oscillator = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+
+          oscillator.frequency.value = frequency;
+          gain.gain.value = 0.22;
+          oscillator.connect(gain);
+          gain.connect(destination);
+          oscillator.start();
+          e2eWindow.__referenceSyntheticAudioNodes?.push({ audioContext, oscillator, gain });
+
+          return destination.stream;
+        }
+      }
+    });
+  }, frequencyHz);
 }
 
 async function importSheet(page: Page) {
@@ -153,16 +192,17 @@ test("reference system saves local audio and Bilibili references through Sheet P
 
   await page.addInitScript(() => {
     const testWindow = window as Window & {
-      __sheetPracticeControlsTestHarness?: boolean;
+      __referenceSystemUseFixtureSearch?: boolean;
       __referenceAudioSnapshots?: ReferenceAudioSnapshot[];
     };
 
-    testWindow.__sheetPracticeControlsTestHarness = true;
+    testWindow.__referenceSystemUseFixtureSearch = true;
     testWindow.__referenceAudioSnapshots = [];
     window.addEventListener("reference-audio:state-change", (event) => {
       testWindow.__referenceAudioSnapshots?.push((event as CustomEvent<ReferenceAudioSnapshot>).detail);
     });
   });
+  await installSyntheticMicrophone(page);
 
   await page.setViewportSize({ width: 1280, height: 860 });
   await clearDatabases(page);
@@ -237,9 +277,8 @@ test("reference system saves local audio and Bilibili references through Sheet P
   await expect(page.getByTestId("reference-playback-state")).toHaveText("playing");
   await page.getByRole("button", { name: "Pause local reference" }).click();
 
-  await page.evaluate((eventName) => {
-    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: true } }));
-  }, recordingHarnessEvent);
+  await page.getByRole("button", { name: "Start recording" }).click();
+  await expect(page.getByText("Recording without metronome.")).toBeVisible();
   await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
   await page.getByRole("button", { name: "Start metronome" }).click();
   await expect(page.getByTestId("sheet-metronome-state")).toContainText(/Playing|Counting/);
@@ -248,10 +287,11 @@ test("reference system saves local audio and Bilibili references through Sheet P
   await expect(page.getByTestId("sheet-metronome-state")).toContainText(/Playing|Counting/);
   await page.getByRole("button", { name: "Pause local reference" }).click();
   await page.getByRole("button", { name: "Stop metronome" }).click();
-  await page.evaluate((eventName) => {
-    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: false } }));
-  }, recordingHarnessEvent);
+  await page.waitForTimeout(350);
+  await page.getByRole("button", { name: "Stop recording" }).click();
+  await expect(page.getByText("Recording saved.")).toBeVisible();
   await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
+  await expect(page.getByTestId("sheet-recording-count")).toContainText("1");
 
   await page.setViewportSize({ width: 1024, height: 768 });
   await expect(page.getByTestId("reference-panel")).toBeVisible();

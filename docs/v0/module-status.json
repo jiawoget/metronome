@@ -1093,7 +1093,7 @@
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
-                                                 "completedAt":  "2026-06-22T06:05:18Z",
+                                                 "completedAt":  "2026-06-22T06:16:00Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/reference-domain.test.ts tests/unit/reference-service.test.ts -> PASS; 2 files passed, 10 tests passed.",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS.",
@@ -1101,7 +1101,14 @@
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/reference-system.spec.ts -> PASS; 1 chromium test passed covering local audio upload/decode/play/pause/volume/reload, Bilibili search/result save/reload, URL save, invalid URL, failed search, independence, resize, and console/pageerror capture.",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 20 files passed, 101 tests passed.",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-viewer.spec.ts tests/e2e/sheet-practice-controls.spec.ts -> PASS; 4 chromium tests passed after reference layout integration.",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed and prerendered static routes."
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed and prerendered static routes.",
+                                                     "Fix pass: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/bilibili-search-adapter.test.ts tests/unit/reference-domain.test.ts tests/unit/reference-service.test.ts -> PASS; 3 files passed, 13 tests passed.",
+                                                     "Fix pass: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS.",
+                                                     "Fix pass: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS.",
+                                                     "Fix pass: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/reference-system.spec.ts -> PASS; 1 chromium test passed with deterministic fixture search, no third-party iframe console errors, and real recording UI/service independence coverage.",
+                                                     "Fix pass: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-recording-review.spec.ts tests/e2e/sheet-practice-controls.spec.ts -> PASS; 4 chromium tests passed.",
+                                                     "Fix pass: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed.",
+                                                     "Fix pass: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 21 files passed, 104 tests passed."
                                                                ],
                                                  "handoffNotes":  [
                                                      "Assigned feature: 06-reference-system.",
@@ -1112,21 +1119,28 @@
                                                      "Reference playback triggers sheet session activity through the existing practice-session service with trigger reference and does not stop active metronome or recording state.",
                                                      "E2E uses a generated 1.2s 440Hz WAV payload uploaded through the visible Local audio file input, then verifies currentTime advance while playing, pause stability, volume propagation, and reload persistence.",
                                                      "E2E uses DeterministicBilibiliSearchAdapter fixture result Canon in D guitar practice reference / BV1ab411c7dE for visible search and result selection; URL paste uses BV1XY411P7mn.",
-                                                     "Shared Sheet Practice viewer composition was touched only to mount the 06-owned reference panel beside the sheet and preserve the existing bottom controls; adjacent sheet viewer and controls E2E specs were rerun."
+                                                     "Shared Sheet Practice viewer composition was touched only to mount the 06-owned reference panel beside the sheet and preserve the existing bottom controls; adjacent sheet viewer and controls E2E specs were rerun.",
+                                                     "Strict review fix: removed the Bilibili iframe from the reference panel so deterministic tests do not execute third-party player scripts; saved Bilibili references still expose a usable external video link.",
+                                                     "Strict review fix: browser production search now uses a small fetch-backed Bilibili adapter by default, while deterministic E2E opts into the fixture adapter through an explicit browser test flag.",
+                                                     "Strict review fix: reference E2E now verifies recording independence through the real Start recording / Stop recording UI and sheet recording service with a synthetic microphone stream, not the harness flag.",
+                                                     "DB cleanup helper duplication was left local to this E2E because there is no existing shared helper; extracting common helpers would touch unrelated E2E ownership outside this review fix."
                                                                   ],
                                                  "changedAreas":  [
                                                      "src/domain/reference adds reference types, local audio validation, Bilibili URL parsing via URL, search result normalization, volume clamping, and zod-backed persisted record validation.",
                                                      "src/services/reference adds the reference service boundary for local audio add, Bilibili URL save, Bilibili search result save, adapter-backed search, active reference lookup, artifacts, and subscriptions.",
                                                      "src/infrastructure/reference adds Dexie persistence, browser local audio decode inspection, browser local audio playback boundary, and browser service composition.",
                                                      "src/infrastructure/bilibili adds DeterministicBilibiliSearchAdapter for stable automated Bilibili search flows.",
+                                                     "src/infrastructure/bilibili/fetch-bilibili-search-adapter.ts adds a production fetch-backed Bilibili search adapter with API response normalization and error handling.",
                                                      "src/components/sheet-practice/reference adds the Sheet Practice reference panel with local audio, Bilibili search, Bilibili URL, active reference, playback, volume, embed/link, and error states.",
+                                                     "src/components/sheet-practice/reference/reference-panel.tsx now renders Bilibili references as an external-link fallback instead of loading the third-party iframe during practice.",
                                                      "src/components/sheet-practice/viewer/sheet-viewer-experience.tsx composes the reference panel into Sheet Practice with a bounded viewer/reference row and existing controls below.",
                                                      "tests/unit/reference-domain.test.ts and tests/unit/reference-service.test.ts cover validation, URL parsing, volume clamp, service persistence, artifacts, search, URL save, sheet scoping, and error results.",
+                                                     "tests/unit/bilibili-search-adapter.test.ts covers fetch-backed Bilibili search normalization, query parameters, and failure handling.",
                                                      "tests/e2e/reference-system.spec.ts covers the real browser reference workflow with local audio fixture generation, persistence, Bilibili search fixture, URL paste, independence, resize, and console capture."
                                                                   ],
                                                  "knownRisks":  [
-                                                     "Bilibili live network search is intentionally not implemented for deterministic v0 verification; the adapter boundary is present and automated flows use a fixture adapter.",
-                                                     "Bilibili embed availability depends on the third-party player in real use; the saved reference always includes a safe external Bilibili link fallback.",
+                                                     "Bilibili production search is fetch-backed against Bilibili's public web search endpoint and may fail because of network, CORS, rate limits, or third-party response changes; failures return a visible error.",
+                                                     "Bilibili inline iframe playback is intentionally not rendered in v0 to avoid third-party script noise and coupling; the saved reference always includes a safe external Bilibili link fallback.",
                                                      "Local audio decode/playback depends on browser AudioContext and HTMLMediaElement support; unsupported or bad files show clear errors and are not saved as playable references.",
                                                      "Reference persistence is local IndexedDB only; cloud sync, download, extraction, sync, A-B loop, playback speed, offset, waveform comparison, and analysis remain out of scope."
                                                                 ],
