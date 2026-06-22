@@ -276,9 +276,7 @@ export function SheetPracticeControls({
   );
   const handleStopped = useCallback(async () => {
     if (session) {
-      const nextSession = isRecordingActive
-        ? await sessionService.updateSheetSessionDuration(session.id)
-        : await sessionService.endPracticeSession(session.id);
+      const nextSession = await sessionService.updateSheetSessionDuration(session.id);
 
       setSession(nextSession);
     }
@@ -397,7 +395,7 @@ export function SheetPracticeControls({
       );
 
       if (!active && !isSheetRecording && transportState !== "playing" && session) {
-        void sessionService.endPracticeSession(session.id).then((nextSession) => {
+        void sessionService.updateSheetSessionDuration(session.id).then((nextSession) => {
           setSession(nextSession);
         });
       }

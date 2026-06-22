@@ -339,23 +339,71 @@ describe("SheetPracticeControls failure handling", () => {
     expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
   });
 
-  it("restores a previously ended session when Tone start rejects after ensure reopens it", async () => {
+  it("updates duration instead of ending the session when stopping within the same sheet context", async () => {
+    const user = userEvent.setup();
+    const session = createSheetSession();
+    const updatedSession = {
+      ...session,
+      durationMs: 2_000,
+      updatedAt: "2026-06-21T12:00:02.000Z"
+    };
+    const sessionService = {
+      ...createIdleSessionService(),
+      getRecentSheetSession: vi.fn(async () => null),
+      ensureSheetSession: vi.fn(async () => session),
+      updateSheetSessionDuration: vi.fn(async () => updatedSession),
+      endPracticeSession: vi.fn(async () => ({ ...updatedSession, endedAt: updatedSession.updatedAt }))
+    };
+    const metronome = createInspectableMetronomeService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createMetronomeService={() => metronome.service}
+        sessionService={sessionService}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+    });
+
+    await user.click(screen.getByRole("button", { name: "Stop metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-session-duration")).toHaveTextContent("0:02");
+    });
+    expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith("session-alpha");
+    expect(sessionService.endPracticeSession).not.toHaveBeenCalled();
+    expect(screen.getByTestId("sheet-session-id")).toHaveTextContent("session-alpha");
+  });
+
+  it("ends only a newly created replacement session when Tone start rejects after a previous session ended", async () => {
     const user = userEvent.setup();
     const previousEndedSession = createSheetSession({
       endedAt: "2026-06-21T12:03:00.000Z",
       durationMs: 180_000
     });
-    const reopenedSession = {
-      ...previousEndedSession,
+    const replacementSession = createSheetSession({
+      id: "session-beta",
       endedAt: null,
+      durationMs: 0,
       updatedAt: "2026-06-21T12:05:00.000Z"
-    };
+    });
     const sessionService = {
       ...createIdleSessionService(),
       getRecentSheetSession: vi.fn(async () => previousEndedSession),
-      ensureSheetSession: vi.fn(async () => reopenedSession),
+      ensureSheetSession: vi.fn(async () => replacementSession),
       restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session),
-      endPracticeSession: vi.fn(async () => reopenedSession)
+      endPracticeSession: vi.fn(async () => ({
+        ...replacementSession,
+        endedAt: "2026-06-21T12:05:01.000Z",
+        durationMs: 1_000
+      }))
     };
     const metronome = createRejectingMetronomeService();
 
@@ -379,11 +427,11 @@ describe("SheetPracticeControls failure handling", () => {
     expect(sessionService.ensureSheetSession).toHaveBeenCalled();
     expect(metronome.service.start).toHaveBeenCalled();
     expect(metronome.service.stop).toHaveBeenCalled();
-    expect(sessionService.restorePracticeSessionSnapshot).toHaveBeenCalledWith(previousEndedSession);
-    expect(sessionService.endPracticeSession).not.toHaveBeenCalled();
+    expect(sessionService.restorePracticeSessionSnapshot).not.toHaveBeenCalled();
+    expect(sessionService.endPracticeSession).toHaveBeenCalledWith("session-beta");
     expect(metronome.isPlaying()).toBe(false);
     expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
-    expect(screen.getByTestId("sheet-session-duration")).toHaveTextContent("3:00");
+    expect(screen.getByTestId("sheet-session-id")).toHaveTextContent("session-beta");
   });
 
   it("does not end an active recording session before recording metadata exists when Tone start rejects", async () => {
