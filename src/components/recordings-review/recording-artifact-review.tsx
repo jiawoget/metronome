@@ -35,6 +35,15 @@ type RecordingArtifactReviewProps = {
   readyGapClassName?: string;
   sourceTestId: string;
   warningTestId: string;
+  onPlaybackControlsChange?: (controls: RecordingPlaybackControls | null) => void;
+  onPlaybackTimeChange?: (currentTimeMs: number) => void;
+};
+
+export type RecordingPlaybackControls = {
+  recordingId: string;
+  durationMs: number;
+  getCurrentTimeMs: () => number;
+  seekToMs: (timestampMs: number) => void;
 };
 
 export function RecordingArtifactReview({
@@ -53,7 +62,9 @@ export function RecordingArtifactReview({
   pauseText,
   readyGapClassName = "grid gap-3",
   sourceTestId,
-  warningTestId
+  warningTestId,
+  onPlaybackControlsChange,
+  onPlaybackTimeChange
 }: RecordingArtifactReviewProps) {
   const adapter = useMemo(() => new RecordingWaveformPlaybackAdapter(), []);
   const waveformRef = useRef<HTMLDivElement | null>(null);
@@ -104,25 +115,60 @@ export function RecordingArtifactReview({
 
   useEffect(() => {
     if (artifactState.status !== "ready" || !waveformRef.current || !recording.audioDataUrl) {
+      onPlaybackControlsChange?.(null);
       return;
     }
 
     let cancelled = false;
 
-    adapter.load(waveformRef.current, recording).catch(() => {
-      if (!cancelled) {
-        setArtifactState({
-          status: "error",
-          details: null,
-          message: "Waveform playback could not load this artifact."
-        });
-      }
-    });
+    adapter
+      .load(waveformRef.current, recording)
+      .then(() => {
+        if (!cancelled) {
+          onPlaybackControlsChange?.({
+            recordingId: recording.id,
+            durationMs: recording.durationMs,
+            getCurrentTimeMs: () => adapter.getCurrentTimeMs(),
+            seekToMs: (timestampMs) => adapter.seekToMs(timestampMs)
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          onPlaybackControlsChange?.(null);
+          setArtifactState({
+            status: "error",
+            details: null,
+            message: "Waveform playback could not load this artifact."
+          });
+        }
+      });
 
     return () => {
       cancelled = true;
+      onPlaybackControlsChange?.(null);
     };
-  }, [adapter, artifactState.status, recording]);
+  }, [adapter, artifactState.status, onPlaybackControlsChange, recording]);
+
+  useEffect(() => {
+    if (!onPlaybackTimeChange) {
+      return;
+    }
+
+    const handleTimeUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ recordingId?: string; currentTimeMs?: number }>).detail;
+
+      if (detail?.recordingId === recording.id && typeof detail.currentTimeMs === "number") {
+        onPlaybackTimeChange(detail.currentTimeMs);
+      }
+    };
+
+    window.addEventListener("recordings-review:timeupdate", handleTimeUpdate);
+
+    return () => {
+      window.removeEventListener("recordings-review:timeupdate", handleTimeUpdate);
+    };
+  }, [onPlaybackTimeChange, recording.id]);
 
   async function togglePlayback() {
     if (playbackState === "playing") {

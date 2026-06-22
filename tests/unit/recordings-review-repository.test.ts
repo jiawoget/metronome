@@ -64,6 +64,63 @@ describe("recording history repository", () => {
     expect(recordingHistoryRepository.getArtifact("recording-1")).toBeNull();
   });
 
+  it("creates sorted recording-scoped markers and persists deletion", () => {
+    recordingHistoryRepository.saveSnapshot({
+      ...snapshot,
+      errorMarkers: []
+    });
+
+    expect(() =>
+      recordingHistoryRepository.createErrorMarker({
+        recordingId: "",
+        timestampMs: 100,
+        note: null
+      })
+    ).toThrow("recording is required");
+
+    const lateMarker = recordingHistoryRepository.createErrorMarker({
+      id: "marker-late",
+      recordingId: "recording-1",
+      timestampMs: 900,
+      note: "  late accent  "
+    });
+    const earlyMarker = recordingHistoryRepository.createErrorMarker({
+      id: "marker-early",
+      recordingId: "recording-1",
+      timestampMs: 100,
+      note: ""
+    });
+
+    expect(lateMarker.note).toBe("late accent");
+    expect(earlyMarker.note).toBeNull();
+    expect(recordingHistoryRepository.getErrorMarkers("recording-1").map((marker) => marker.id)).toEqual([
+      "marker-early",
+      "marker-late"
+    ]);
+    expect(recordingHistoryRepository.getErrorMarkers("other-recording")).toEqual([]);
+
+    recordingHistoryRepository.deleteErrorMarker("marker-early");
+
+    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+
+    expect(recordingHistoryRepository.getErrorMarkers("recording-1").map((marker) => marker.id)).toEqual([
+      "marker-late"
+    ]);
+    expect(persisted.errorMarkers.map((marker: { id: string }) => marker.id)).toEqual(["marker-late"]);
+  });
+
+  it("rejects marker timestamps outside the recording duration", () => {
+    recordingHistoryRepository.saveSnapshot(snapshot);
+
+    expect(() =>
+      recordingHistoryRepository.createErrorMarker({
+        recordingId: "recording-1",
+        timestampMs: 1_001,
+        note: null
+      })
+    ).toThrow("within the recording");
+  });
+
   it("stores 05e sheet recording metadata in the shared recording history boundary", async () => {
     await recordingHistoryMetadataRepository.saveRecordingMetadata(createSheetRecording(), createSheetSession());
 

@@ -8,10 +8,17 @@ import {
 import { formatDuration, formatTimestamp } from "@/lib/recordings-review/format";
 import {
   filterRecordings,
+  getErrorMarkerSeekTarget,
   getContinuePracticeHref,
   sortErrorMarkers,
   sortRecordingsByNewest
 } from "@/lib/recordings-review/history";
+import {
+  createErrorMarker,
+  MAX_ERROR_MARKER_NOTE_LENGTH,
+  normalizeErrorMarkerNote,
+  validateErrorMarkerInput
+} from "@/lib/recordings-review/error-markers";
 import type { RecordingErrorMarker, ReviewRecording } from "@/lib/recordings-review/types";
 
 const quickRecording: ReviewRecording = {
@@ -92,6 +99,62 @@ describe("recordings review history helpers", () => {
     ];
 
     expect(sortErrorMarkers(markers).map((marker) => marker.id)).toEqual(["early", "late"]);
+  });
+
+  it("validates marker recordingId, timestamp duration range, and note trimming", () => {
+    expect(() =>
+      validateErrorMarkerInput({
+        recordingId: "",
+        timestampMs: 100,
+        durationMs: 1_000,
+        note: null
+      })
+    ).toThrow("recording is required");
+    expect(() =>
+      validateErrorMarkerInput({
+        recordingId: "sheet-1",
+        timestampMs: -1,
+        durationMs: 1_000,
+        note: null
+      })
+    ).toThrow("within the recording");
+    expect(() =>
+      validateErrorMarkerInput({
+        recordingId: "sheet-1",
+        timestampMs: 1_001,
+        durationMs: 1_000,
+        note: null
+      })
+    ).toThrow("within the recording");
+    expect(() =>
+      validateErrorMarkerInput({
+        recordingId: "sheet-1",
+        timestampMs: 100,
+        durationMs: 1_000,
+        note: "x".repeat(MAX_ERROR_MARKER_NOTE_LENGTH + 1)
+      })
+    ).toThrow("160 characters");
+
+    expect(normalizeErrorMarkerNote("  missed shift  ")).toBe("missed shift");
+    expect(normalizeErrorMarkerNote("   ")).toBeNull();
+    expect(
+      createErrorMarker({
+        id: "marker-created",
+        recordingId: "sheet-1",
+        timestampMs: 1_234.4,
+        durationMs: 2_000,
+        note: "  missed shift  "
+      })
+    ).toEqual({
+      id: "marker-created",
+      recordingId: "sheet-1",
+      timestampMs: 1_234,
+      note: "missed shift"
+    });
+  });
+
+  it("calculates marker seek targets through the playback service contract value", () => {
+    expect(getErrorMarkerSeekTarget({ timestampMs: 1_200 })).toBe(1_200);
   });
 });
 

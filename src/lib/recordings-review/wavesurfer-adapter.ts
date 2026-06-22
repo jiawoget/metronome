@@ -7,6 +7,7 @@ import type { ReviewRecording } from "@/lib/recordings-review/types";
 export class RecordingWaveformPlaybackAdapter {
   private waveSurfer: WaveSurfer | null = null;
   private recordingId: string | null = null;
+  private unsubscribeTimeUpdate: (() => void) | null = null;
 
   async load(container: HTMLElement, recording: ReviewRecording) {
     this.destroy();
@@ -29,6 +30,9 @@ export class RecordingWaveformPlaybackAdapter {
       cursorColor: "#1f1a14",
       normalize: true,
       interact: false
+    });
+    this.unsubscribeTimeUpdate = this.waveSurfer.on("timeupdate", (currentTimeSeconds) => {
+      this.dispatchTimeUpdate(currentTimeSeconds * 1_000);
     });
 
     await new Promise<void>((resolve, reject) => {
@@ -62,7 +66,26 @@ export class RecordingWaveformPlaybackAdapter {
     this.dispatchPlaybackEvent("paused");
   }
 
+  seekToMs(timestampMs: number) {
+    if (!this.waveSurfer || !this.recordingId) {
+      throw new Error("No recording is loaded for playback.");
+    }
+
+    const timestampSeconds = Math.max(0, timestampMs / 1_000);
+
+    this.waveSurfer.setTime(timestampSeconds);
+    this.dispatchTimeUpdate(timestampMs);
+    this.dispatchSeekEvent(timestampMs);
+  }
+
+  getCurrentTimeMs() {
+    return Math.round((this.waveSurfer?.getCurrentTime() ?? 0) * 1_000);
+  }
+
   destroy() {
+    this.unsubscribeTimeUpdate?.();
+    this.unsubscribeTimeUpdate = null;
+
     if (this.waveSurfer) {
       this.waveSurfer.destroy();
       this.waveSurfer = null;
@@ -82,6 +105,37 @@ export class RecordingWaveformPlaybackAdapter {
         detail: {
           recordingId: this.recordingId,
           state
+        }
+      })
+    );
+  }
+
+  private dispatchSeekEvent(timestampMs: number) {
+    if (typeof window === "undefined" || !this.recordingId) {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("recordings-review:seek", {
+        detail: {
+          recordingId: this.recordingId,
+          timestampMs,
+          currentTimeMs: this.getCurrentTimeMs()
+        }
+      })
+    );
+  }
+
+  private dispatchTimeUpdate(currentTimeMs: number) {
+    if (typeof window === "undefined" || !this.recordingId) {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("recordings-review:timeupdate", {
+        detail: {
+          recordingId: this.recordingId,
+          currentTimeMs: Math.round(currentTimeMs)
         }
       })
     );

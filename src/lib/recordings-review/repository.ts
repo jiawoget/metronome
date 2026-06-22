@@ -3,6 +3,7 @@ import type {
   RecordingReviewSnapshot,
   ReviewRecording
 } from "@/lib/recordings-review/types";
+import { createErrorMarker, sortErrorMarkers, type CreateErrorMarkerInput } from "@/lib/recordings-review/error-markers";
 
 export const RECORDINGS_STORAGE_KEY = "metronome-practice:v0:quick-recordings";
 const STORE_EVENT = "recordings-review-change";
@@ -121,7 +122,7 @@ export const recordingHistoryRepository = {
   },
 
   getErrorMarkers(recordingId: string) {
-    return readSnapshot().errorMarkers.filter((marker) => marker.recordingId === recordingId);
+    return sortErrorMarkers(readSnapshot().errorMarkers.filter((marker) => marker.recordingId === recordingId));
   },
 
   getArtifact(recordingId: string) {
@@ -129,7 +130,49 @@ export const recordingHistoryRepository = {
   },
 
   saveSnapshot(snapshot: RecordingReviewSnapshot) {
-    writeSnapshot(snapshot);
+    writeSnapshot({
+      ...snapshot,
+      errorMarkers: sortErrorMarkers(snapshot.errorMarkers)
+    });
+  },
+
+  createErrorMarker(input: Omit<CreateErrorMarkerInput, "durationMs"> & { durationMs?: number }) {
+    const snapshot = readSnapshot();
+    const recordingId = input.recordingId ?? "";
+    const recording = snapshot.recordings.find((item) => item.id === recordingId);
+
+    if (!recording) {
+      throw new Error("A recording is required before saving an error marker.");
+    }
+
+    const marker = createErrorMarker({
+      ...input,
+      recordingId: recording.id,
+      durationMs: input.durationMs ?? recording.durationMs
+    });
+    const nextSnapshot: RecordingReviewSnapshot = {
+      ...snapshot,
+      errorMarkers: sortErrorMarkers([
+        ...snapshot.errorMarkers.filter((item) => item.id !== marker.id),
+        marker
+      ])
+    };
+
+    writeSnapshot(nextSnapshot);
+
+    return marker;
+  },
+
+  deleteErrorMarker(markerId: string) {
+    const snapshot = readSnapshot();
+    const nextSnapshot: RecordingReviewSnapshot = {
+      ...snapshot,
+      errorMarkers: snapshot.errorMarkers.filter((marker) => marker.id !== markerId)
+    };
+
+    writeSnapshot(nextSnapshot);
+
+    return nextSnapshot;
   },
 
   deleteRecording(recordingId: string) {

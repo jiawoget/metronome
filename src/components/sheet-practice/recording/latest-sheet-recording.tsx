@@ -1,6 +1,12 @@
 "use client";
 
-import { RecordingArtifactReview } from "@/components/recordings-review/recording-artifact-review";
+import { useCallback, useState } from "react";
+
+import {
+  RecordingArtifactReview,
+  type RecordingPlaybackControls
+} from "@/components/recordings-review/recording-artifact-review";
+import { ErrorMarkerPanel } from "@/components/sheet-practice/markers/error-marker-panel";
 import { formatDuration } from "@/lib/recordings-review/format";
 import { getRecordingDisplayName } from "@/lib/recordings-review/history";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
@@ -10,6 +16,9 @@ export function LatestSheetRecording({ recording }: { recording: ReviewRecording
     return (
       <div data-testid="sheet-latest-recording-empty" className="rounded-md border border-dashed border-border bg-muted px-3 py-3 text-sm text-muted-foreground">
         No sheet recording saved for this sheet yet.
+        <div className="mt-3">
+          <ErrorMarkerPanel recording={null} playbackControls={null} currentTimeMs={0} />
+        </div>
       </div>
     );
   }
@@ -18,6 +27,16 @@ export function LatestSheetRecording({ recording }: { recording: ReviewRecording
 }
 
 function LatestSheetRecordingLoaded({ recording }: { recording: ReviewRecording }) {
+  const [playbackControls, setPlaybackControls] = useState<RecordingPlaybackControls | null>(null);
+  const [currentTimeMs, setCurrentTimeMs] = useState(0);
+  const handlePlaybackControlsChange = useCallback((controls: RecordingPlaybackControls | null) => {
+    setPlaybackControls(controls);
+    setCurrentTimeMs(controls?.getCurrentTimeMs() ?? 0);
+  }, []);
+  const handlePlaybackTimeChange = useCallback((nextCurrentTimeMs: number) => {
+    setCurrentTimeMs(nextCurrentTimeMs);
+  }, []);
+
   return (
     <div data-testid="sheet-latest-recording" className="grid gap-3 rounded-md border border-border bg-muted px-3 py-3">
       <div className="min-w-0">
@@ -47,6 +66,13 @@ function LatestSheetRecordingLoaded({ recording }: { recording: ReviewRecording 
         readyGapClassName="grid gap-2"
         sourceTestId="sheet-waveform-source"
         warningTestId="sheet-recording-duration-warning"
+        onPlaybackControlsChange={handlePlaybackControlsChange}
+        onPlaybackTimeChange={handlePlaybackTimeChange}
+      />
+      <ErrorMarkerPanel
+        recording={recording}
+        playbackControls={playbackControls}
+        currentTimeMs={currentTimeMs}
       />
     </div>
   );

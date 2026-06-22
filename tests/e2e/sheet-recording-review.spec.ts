@@ -189,6 +189,149 @@ async function getWaveformState(page: Page) {
   }));
 }
 
+async function seedSheetMarkerRecordings({
+  page,
+  sheetId,
+  latestRecordingId = "marker-sheet-a",
+  includeSecondRecording = false
+}: {
+  page: Page;
+  sheetId: string;
+  latestRecordingId?: "marker-sheet-a" | "marker-sheet-b";
+  includeSecondRecording?: boolean;
+}) {
+  await page.evaluate(
+    ({
+      storageKey,
+      id,
+      latestId,
+      withSecond
+    }: {
+      storageKey: string;
+      id: string;
+      latestId: "marker-sheet-a" | "marker-sheet-b";
+      withSecond: boolean;
+    }) => {
+      function createWavDataUrl(frequencyHz: number, durationSeconds: number) {
+        const sampleRate = 8_000;
+        const sampleCount = Math.round(sampleRate * durationSeconds);
+        const dataSize = sampleCount * 2;
+        const buffer = new ArrayBuffer(44 + dataSize);
+        const view = new DataView(buffer);
+
+        function writeString(offset: number, value: string) {
+          for (let index = 0; index < value.length; index += 1) {
+            view.setUint8(offset + index, value.charCodeAt(index));
+          }
+        }
+
+        writeString(0, "RIFF");
+        view.setUint32(4, 36 + dataSize, true);
+        writeString(8, "WAVE");
+        writeString(12, "fmt ");
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeString(36, "data");
+        view.setUint32(40, dataSize, true);
+
+        for (let index = 0; index < sampleCount; index += 1) {
+          const sample = Math.sin((2 * Math.PI * frequencyHz * index) / sampleRate) * 0.35;
+
+          view.setInt16(44 + index * 2, Math.max(-1, Math.min(1, sample)) * 0x7fff, true);
+        }
+
+        let binary = "";
+        const bytes = new Uint8Array(buffer);
+
+        for (let index = 0; index < bytes.length; index += 1) {
+          binary += String.fromCharCode(bytes[index]);
+        }
+
+        return {
+          dataUrl: `data:audio/wav;base64,${window.btoa(binary)}`,
+          sizeBytes: bytes.length,
+          durationMs: durationSeconds * 1_000
+        };
+      }
+
+      const rawValue = window.localStorage.getItem(storageKey);
+      const existing = rawValue ? JSON.parse(rawValue) : { sessions: [], recordings: [], errorMarkers: [] };
+      const markerAArtifact = createWavDataUrl(330, 2);
+      const markerBArtifact = createWavDataUrl(440, 2);
+      const recordings = [
+        {
+          id: "marker-sheet-a",
+          type: "sheet",
+          origin: "user",
+          name: "Marker sheet take A",
+          sessionId: "session-marker-a",
+          sheetId: id,
+          sheetName: "Marker Contract Sheet",
+          createdAt: latestId === "marker-sheet-a" ? "2026-06-22T08:10:00.000Z" : "2026-06-22T08:00:00.000Z",
+          durationMs: markerAArtifact.durationMs,
+          sizeBytes: markerAArtifact.sizeBytes,
+          mimeType: "audio/wav",
+          audioDataUrl: markerAArtifact.dataUrl,
+          trustedPeaks: [0.1, 0.6, 0.9, 0.4, 0.2],
+          settings: {
+            bpm: 88,
+            timeSignature: "3/4"
+          }
+        },
+        ...(withSecond
+          ? [
+              {
+                id: "marker-sheet-b",
+                type: "sheet",
+                origin: "user",
+                name: "Marker sheet take B",
+                sessionId: "session-marker-b",
+                sheetId: id,
+                sheetName: "Marker Contract Sheet",
+                createdAt:
+                  latestId === "marker-sheet-b"
+                    ? "2026-06-22T08:20:00.000Z"
+                    : "2026-06-22T07:50:00.000Z",
+                durationMs: markerBArtifact.durationMs,
+                sizeBytes: markerBArtifact.sizeBytes,
+                mimeType: "audio/wav",
+                audioDataUrl: markerBArtifact.dataUrl,
+                trustedPeaks: [0.2, 0.7, 0.5, 0.3, 0.1],
+                settings: {
+                  bpm: 92,
+                  timeSignature: "4/4"
+                }
+              }
+            ]
+          : [])
+      ];
+
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          sessions: [
+            { id: "session-marker-a", sourceType: "sheet", sheetId: id },
+            ...(withSecond ? [{ id: "session-marker-b", sourceType: "sheet", sheetId: id }] : [])
+          ],
+          recordings,
+          errorMarkers: Array.isArray(existing.errorMarkers) ? existing.errorMarkers : []
+        })
+      );
+    },
+    {
+      storageKey: recordingHistoryStorageKey,
+      id: sheetId,
+      latestId: latestRecordingId,
+      withSecond: includeSecondRecording
+    }
+  );
+}
+
 test("sheet practice records real synthetic audio, replays latest take, persists waveform, and keeps Practice Again immutable", async ({
   page
 }) => {
@@ -336,6 +479,120 @@ test("sheet practice records real synthetic audio, replays latest take, persists
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
   await page.getByRole("button", { name: "Stop metronome" }).click();
 
+  expect(consoleErrors).toEqual([]);
+});
+
+test("sheet practice creates recording-scoped error markers and seeks playback to marker time", async ({
+  page
+}) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+  await page.addInitScript(() => {
+    const e2eWindow = window as Window & {
+      __sheetMarkerSeekEvents?: { recordingId: string; timestampMs: number; currentTimeMs: number }[];
+    };
+
+    e2eWindow.__sheetMarkerSeekEvents = [];
+    window.addEventListener("recordings-review:seek", (event) => {
+      e2eWindow.__sheetMarkerSeekEvents?.push((event as CustomEvent).detail);
+    });
+  });
+
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await clearState(page);
+  const { link, sheetId } = await importSheet(page, "Marker Contract Sheet");
+
+  await link.click();
+  await expect(page.getByTestId("sheet-latest-recording-empty")).toBeVisible();
+  await expect(page.getByTestId("sheet-error-marker-empty")).toContainText(
+    "Save a sheet recording before adding manual error markers."
+  );
+  await expect(page.getByRole("button", { name: "Mark Error" })).toHaveCount(0);
+
+  await seedSheetMarkerRecordings({ page, sheetId });
+  await page.goto(`/sheet-practice/${sheetId}`);
+  await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
+  await expect(page.getByTestId("sheet-error-marker-scope")).toContainText("marker-sheet-a");
+  await expect(page.getByTestId("sheet-error-marker-list-empty")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Use playback time" })).toBeEnabled();
+
+  await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("1.2");
+  await page.getByRole("textbox", { name: "Marker note" }).fill("  Missed left hand  ");
+  await page.getByRole("button", { name: "Mark Error" }).click();
+  await expect(page.getByTestId("sheet-error-marker-list")).toContainText("0:01");
+  await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Missed left hand");
+
+  await page.getByRole("button", { name: /Seek to marker 0:01/ }).click();
+  await page.waitForFunction(() => {
+    const e2eWindow = window as Window & {
+      __sheetMarkerSeekEvents?: { recordingId: string; timestampMs: number; currentTimeMs: number }[];
+    };
+
+    return e2eWindow.__sheetMarkerSeekEvents?.some(
+      (event) =>
+        event.recordingId === "marker-sheet-a" &&
+        event.timestampMs === 1_200 &&
+        Math.abs(event.currentTimeMs - 1_200) <= 80
+    );
+  });
+
+  await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("0.4");
+  await page.getByRole("textbox", { name: "Marker note" }).fill("Early entrance");
+  await page.getByRole("button", { name: "Mark Error" }).click();
+
+  await expect.poll(async () => page.getByTestId("sheet-error-marker-list").locator("li").allTextContents()).toEqual([
+    expect.stringContaining("Early entrance"),
+    expect.stringContaining("Missed left hand")
+  ]);
+
+  await page.reload();
+  await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Early entrance");
+  await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Missed left hand");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId("sheet-error-marker-panel")).toBeVisible();
+  await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Missed left hand");
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await expect(page.getByRole("button", { name: "Mark Error" })).toBeVisible();
+
+  await page.getByRole("button", { name: /Delete marker 0:00/ }).click();
+  await expect(page.getByTestId("sheet-error-marker-list")).not.toContainText("Early entrance");
+  await page.reload();
+  await expect(page.getByTestId("sheet-error-marker-list")).not.toContainText("Early entrance");
+  await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Missed left hand");
+
+  await seedSheetMarkerRecordings({
+    page,
+    sheetId,
+    latestRecordingId: "marker-sheet-b",
+    includeSecondRecording: true
+  });
+  await page.reload();
+  await expect(page.getByTestId("sheet-error-marker-scope")).toContainText("marker-sheet-b");
+  await expect(page.getByTestId("sheet-error-marker-list-empty")).toBeVisible();
+  await expect(page.getByTestId("sheet-error-marker-list-empty")).not.toContainText("Missed left hand");
+
+  const markerPersistence = await page.evaluate((storageKey) => {
+    const rawValue = window.localStorage.getItem(storageKey);
+    const parsed = rawValue ? JSON.parse(rawValue) : { errorMarkers: [] };
+
+    return parsed.errorMarkers.map((marker: { recordingId: string; note: string | null }) => marker);
+  }, recordingHistoryStorageKey);
+
+  expect(markerPersistence).toEqual([
+    expect.objectContaining({
+      recordingId: "marker-sheet-a",
+      note: "Missed left hand"
+    })
+  ]);
   expect(consoleErrors).toEqual([]);
 });
 
