@@ -1,90 +1,35 @@
 "use client";
 
-import {
-  ChevronDown,
-  ChevronUp,
-  Circle,
-  Mic,
-  Octagon,
-  Play,
-  Radio,
-  Square,
-  Timer
-} from "lucide-react";
+import { Timer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
-  formatPracticeDuration,
   type PracticeSession,
   type SheetRecordingMetadata
 } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
-import { LatestSheetRecording } from "@/components/sheet-practice/recording/latest-sheet-recording";
-import {
-  ACCENT_MODES,
-  COUNTDOWN_OPTIONS,
-  SUBDIVISIONS,
-  TIME_SIGNATURES,
-  clampBpm,
-  getTickIntervalMs,
-  parseAccentMode,
-  parseCountdownBeats,
-  parseSubdivision,
-  parseTimeSignature
-} from "@/lib/quick-metronome/control";
+import { clampBpm } from "@/lib/quick-metronome/control";
 import {
   BrowserMetronomeService,
   type MetronomeTick
 } from "@/lib/quick-metronome/metronome-service";
-import {
-  MAX_BPM,
-  MIN_BPM,
-  type AccentMode,
-  type MetronomeSettings,
-  type Subdivision
-} from "@/lib/quick-metronome/types";
+import type { MetronomeSettings } from "@/lib/quick-metronome/types";
 import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
-import { BrowserSheetRecordingService } from "@/lib/sheet-practice/recording-service";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
-import type { PracticeSessionService } from "@/services/practice-session";
-import { Button } from "@/components/ui/button";
+import { BrowserSheetRecordingService } from "@/lib/sheet-practice/recording-service";
+import { MetronomeSettingsPanel } from "@/components/sheet-practice/controls/metronome-settings-panel";
 import {
   createSheetPracticeControlInitialState,
   formatUnsupportedTimeSignatureMessage
 } from "@/components/sheet-practice/controls/practice-control-state";
+import { PracticeStatusPanel } from "@/components/sheet-practice/controls/practice-status-panel";
+import { TransportActionsPanel } from "@/components/sheet-practice/controls/transport-actions-panel";
+import type { SheetPracticeControlsProps } from "@/components/sheet-practice/controls/types";
 
 export const SHEET_RECORDING_HARNESS_EVENT =
   "sheet-practice-controls:set-recording-harness-active";
-
-type SheetPracticeMetronomeService = Pick<
-  BrowserMetronomeService,
-  "onTick" | "update" | "start" | "stop"
->;
-
-type SheetPracticeSessionService = Pick<
-  PracticeSessionService,
-  | "ensureSheetSession"
-  | "restorePracticeSessionSnapshot"
-  | "deletePracticeSessionSnapshot"
-  | "updateSheetSessionDuration"
-  | "endPracticeSession"
-  | "createSheetRecordingMetadata"
-  | "getRecentSession"
-  | "getRecentSheetSession"
-  | "listRecordingMetadata"
-  | "subscribe"
->;
-
-type SheetPracticeRecordingService = Pick<
-  BrowserSheetRecordingService,
-  | "startCapture"
-  | "stopAndSave"
-  | "discardCapture"
-  | "getLatestSheetRecording"
-  | "subscribe"
->;
 
 type SheetMetronomeStartContext = {
   session: PracticeSession;
@@ -99,30 +44,6 @@ type SheetMetronomeStartContext = {
     | {
         kind: "none";
       };
-};
-
-type SheetPracticeControlsProps = {
-  sheetId: string;
-  sheetName: string;
-  defaultBpm: number | null;
-  defaultTimeSignature: string | null;
-  sourceRecordingId?: string | null;
-  createMetronomeService?: () => SheetPracticeMetronomeService;
-  createSheetRecordingService?: () => SheetPracticeRecordingService;
-  sessionService?: SheetPracticeSessionService;
-};
-
-const subdivisionLabels: Record<Subdivision, string> = {
-  quarter: "Quarter",
-  eighth: "Eighth",
-  triplet: "Triplet",
-  sixteenth: "Sixteenth"
-};
-
-const accentLabels: Record<AccentMode, string> = {
-  downbeat: "Downbeat",
-  "every-beat": "Every beat",
-  off: "Off"
 };
 
 function createBrowserMetronomeService() {
@@ -180,6 +101,7 @@ export function SheetPracticeControls({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isSheetRecording = recordingState === "recording";
   const isRecordingActive = isSheetRecording || recordingHarnessActive;
+
   useActiveRecordingNavigationGuard(
     `sheet-practice-recording-${sheetId}`,
     recordingState !== "idle",
@@ -370,6 +292,9 @@ export function SheetPracticeControls({
     setErrorMessage(null);
     void startMetronome();
   }, [startMetronome]);
+  const handleStopMetronome = useCallback(() => {
+    void stopMetronome();
+  }, [stopMetronome]);
   const arePreRunSettingsLocked = isPlaying || isCounting;
 
   async function startSheetRecording() {
@@ -508,276 +433,45 @@ export function SheetPracticeControls({
       className="border-border bg-card shadow-soft shrink-0 rounded-lg border"
     >
       <div className="grid gap-3 p-3 lg:grid-cols-[minmax(16rem,0.9fr)_minmax(22rem,1.35fr)_minmax(16rem,0.9fr)] lg:items-stretch">
-        <div className="border-border bg-muted flex min-w-0 flex-col justify-between gap-3 rounded-md border p-3">
-          <div>
-            <h2
-              id="sheet-practice-controls-title"
-              className="text-lg font-semibold tracking-normal"
-            >
-              Practice Controls
-            </h2>
-            <p className="text-muted-foreground mt-1 truncate text-xs font-semibold tracking-[0.08em] uppercase">
-              {sheetName}
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <StatusTile
-              label="Metronome"
-              value={
-                isCounting
-                  ? `Counting ${countdownRemaining}`
-                  : isPlaying
-                    ? "Playing"
-                    : "Stopped"
-              }
-              testId="sheet-metronome-state"
-            />
-            <StatusTile
-              label="Recording"
-              value={
-                recordingState === "saving"
-                  ? "saving"
-                  : isRecordingActive
-                    ? "active"
-                    : "stopped"
-              }
-              testId="sheet-recording-state"
-            />
-            <StatusTile
-              label="Session"
-              value={session?.sourceType ?? "none"}
-              testId="sheet-session-source"
-            />
-            <StatusTile
-              label="Sheet"
-              value={session?.sheetId ?? sheetId}
-              testId="sheet-session-sheet-id"
-            />
-            <StatusTile
-              label="Duration"
-              value={
-                session ? formatPracticeDuration(session.durationMs) : "0:00"
-              }
-              testId="sheet-session-duration"
-            />
-          </div>
-        </div>
+        <PracticeStatusPanel
+          sheetId={sheetId}
+          sheetName={sheetName}
+          session={session}
+          isCounting={isCounting}
+          isPlaying={isPlaying}
+          countdownRemaining={countdownRemaining}
+          recordingState={recordingState}
+          isRecordingActive={isRecordingActive}
+        />
 
-        <div className="border-border bg-background grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(13rem,0.85fr)_1fr]">
-          <div>
-            <label htmlFor="sheet-bpm" className="text-sm font-medium">
-              BPM
-            </label>
-            <div className="mt-2 grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                aria-label="Decrease BPM"
-                onClick={() => stepBpmInput(-1)}
-              >
-                <ChevronDown className="h-4 w-4" aria-hidden="true" />
-              </Button>
-              <input
-                id="sheet-bpm"
-                aria-label="BPM"
-                type="number"
-                min={MIN_BPM}
-                max={MAX_BPM}
-                step={1}
-                value={bpmDraft}
-                onChange={(event) => setBpmDraft(event.target.value)}
-                onBlur={commitBpmInput}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    commitBpmInput();
-                    event.currentTarget.blur();
-                  }
-                }}
-                className="border-border bg-background focus-visible:ring-ring h-10 min-w-0 rounded-md border px-2 text-center text-lg font-semibold focus-visible:ring-2 focus-visible:outline-none"
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                aria-label="Increase BPM"
-                onClick={() => stepBpmInput(1)}
-              >
-                <ChevronUp className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </div>
-            <p className="text-muted-foreground mt-2 text-sm leading-6">
-              Tick interval {Math.round(getTickIntervalMs(settings))} ms.
-            </p>
-          </div>
+        <MetronomeSettingsPanel
+          settings={settings}
+          bpmDraft={bpmDraft}
+          unsupportedTimeSignatureMessage={unsupportedTimeSignatureMessage}
+          arePreRunSettingsLocked={arePreRunSettingsLocked}
+          setBpmDraft={setBpmDraft}
+          commitBpmInput={commitBpmInput}
+          stepBpmInput={stepBpmInput}
+          updateSettings={updateSettings}
+        />
 
-          {unsupportedTimeSignatureMessage ? (
-            <p
-              role="status"
-              className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 md:col-span-2"
-            >
-              {unsupportedTimeSignatureMessage}
-            </p>
-          ) : null}
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <LabeledSelect
-              label="Time signature"
-              value={settings.timeSignature}
-              disabled={arePreRunSettingsLocked}
-              onChange={(value) =>
-                updateSettings({ timeSignature: parseTimeSignature(value) })
-              }
-              options={TIME_SIGNATURES.map((timeSignature) => ({
-                value: timeSignature,
-                label: timeSignature
-              }))}
-            />
-            <LabeledSelect
-              label="Subdivision"
-              value={settings.subdivision}
-              disabled={arePreRunSettingsLocked}
-              onChange={(value) =>
-                updateSettings({ subdivision: parseSubdivision(value) })
-              }
-              options={SUBDIVISIONS.map((subdivision) => ({
-                value: subdivision,
-                label: subdivisionLabels[subdivision]
-              }))}
-            />
-            <LabeledSelect
-              label="Countdown"
-              value={String(settings.countdownBeats)}
-              disabled={arePreRunSettingsLocked}
-              onChange={(value) =>
-                updateSettings({ countdownBeats: parseCountdownBeats(value) })
-              }
-              options={COUNTDOWN_OPTIONS.map((beats) => ({
-                value: String(beats),
-                label: beats === 0 ? "Off" : `${beats} beats`
-              }))}
-            />
-          </div>
-
-          {arePreRunSettingsLocked ? (
-            <p
-              role="status"
-              className="text-muted-foreground text-sm leading-6 md:col-span-2"
-            >
-              Meter, subdivision, accent, and countdown are locked while the
-              metronome is running. Stop playback to change them.
-            </p>
-          ) : null}
-
-          <div className="md:col-span-2">
-            <p className="text-sm font-medium">Accent</p>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              {ACCENT_MODES.map((accentMode) => (
-                <Button
-                  key={accentMode}
-                  type="button"
-                  variant={
-                    settings.accent === accentMode ? "default" : "secondary"
-                  }
-                  aria-pressed={settings.accent === accentMode}
-                  disabled={arePreRunSettingsLocked}
-                  onClick={() =>
-                    updateSettings({ accent: parseAccentMode(accentMode) })
-                  }
-                >
-                  <Circle className="h-4 w-4" aria-hidden="true" />
-                  {accentLabels[accentMode]}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="border-border bg-background flex min-w-0 flex-col justify-between gap-3 rounded-md border p-3">
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              onClick={handleStartMetronome}
-              disabled={isPlaying || isCounting}
-              aria-label="Start metronome"
-            >
-              <Play className="h-4 w-4" aria-hidden="true" />
-              Play
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => void stopMetronome()}
-              disabled={transportState === "stopped"}
-              aria-label="Stop metronome"
-            >
-              <Square className="h-4 w-4" aria-hidden="true" />
-              Stop
-            </Button>
-            <Button
-              type="button"
-              variant={isSheetRecording ? "secondary" : "default"}
-              onClick={() => void startSheetRecording()}
-              disabled={isSheetRecording || recordingState === "saving"}
-              aria-label="Start recording"
-            >
-              <Mic className="h-4 w-4" aria-hidden="true" />
-              Record
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => void stopSheetRecording()}
-              disabled={!isSheetRecording}
-              aria-label="Stop recording"
-            >
-              <Octagon className="h-4 w-4" aria-hidden="true" />
-              Stop Rec
-            </Button>
-          </div>
-
-          <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-            <StatusTile
-              label="Last tick"
-              value={lastTick ? `#${lastTick.tickIndex + 1}` : "None"}
-              testId="sheet-last-tick"
-            />
-            <StatusTile
-              label="Accent tick"
-              value={lastTick?.accented ? "Yes" : "No"}
-              testId="sheet-accent-tick"
-            />
-            <StatusTile
-              label="Session id"
-              value={session?.id ?? "none"}
-              testId="sheet-session-id"
-            />
-            <StatusTile
-              label="Recordings"
-              value={String(recordings.length)}
-              testId="sheet-recording-count"
-            />
-          </div>
-
-          <div
-            aria-live="polite"
-            className="border-border bg-muted rounded-md border px-3 py-2 text-sm"
-          >
-            <div className="flex items-start gap-2">
-              <Radio
-                className="text-accent mt-0.5 h-4 w-4 shrink-0"
-                aria-hidden="true"
-              />
-              <p className="font-medium">{message}</p>
-            </div>
-            {errorMessage ? (
-              <p role="alert" className="text-destructive mt-2 font-medium">
-                {errorMessage}
-              </p>
-            ) : null}
-          </div>
-          <LatestSheetRecording recording={latestSheetRecording} />
-        </div>
+        <TransportActionsPanel
+          lastTick={lastTick}
+          session={session}
+          recordings={recordings}
+          latestSheetRecording={latestSheetRecording}
+          message={message}
+          errorMessage={errorMessage}
+          transportState={transportState}
+          isPlaying={isPlaying}
+          isCounting={isCounting}
+          isSheetRecording={isSheetRecording}
+          recordingState={recordingState}
+          startMetronome={handleStartMetronome}
+          stopMetronome={handleStopMetronome}
+          startSheetRecording={() => void startSheetRecording()}
+          stopSheetRecording={() => void stopSheetRecording()}
+        />
       </div>
       <div className="border-border text-muted-foreground flex flex-wrap items-center gap-3 border-t px-3 py-2 text-xs">
         <span className="inline-flex items-center gap-1">
@@ -787,64 +481,5 @@ export function SheetPracticeControls({
         </span>
       </div>
     </section>
-  );
-}
-
-function LabeledSelect({
-  label,
-  value,
-  onChange,
-  options,
-  disabled = false
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-  disabled?: boolean;
-}) {
-  const id = `sheet-${label.toLowerCase().replaceAll(" ", "-")}`;
-
-  return (
-    <div className="min-w-0">
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
-      <select
-        id={id}
-        aria-label={label}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function StatusTile({
-  label,
-  value,
-  testId
-}: {
-  label: string;
-  value: string;
-  testId?: string;
-}) {
-  return (
-    <div className="border-border bg-muted min-w-0 rounded-md border px-3 py-2">
-      <p className="text-muted-foreground truncate text-xs font-medium">
-        {label}
-      </p>
-      <p className="mt-1 truncate font-semibold" data-testid={testId}>
-        {value}
-      </p>
-    </div>
   );
 }
