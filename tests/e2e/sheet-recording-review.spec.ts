@@ -189,6 +189,12 @@ async function getWaveformState(page: Page) {
   }));
 }
 
+async function markerNotesFitTheirContainers(page: Page, testId: string) {
+  return page.getByTestId(testId).evaluateAll((elements) =>
+    elements.every((element) => element.scrollWidth <= element.clientWidth + 1)
+  );
+}
+
 async function seedSheetMarkerRecordings({
   page,
   sheetId,
@@ -509,6 +515,7 @@ test("sheet practice creates recording-scoped error markers and seeks playback t
   await page.setViewportSize({ width: 1280, height: 820 });
   await clearState(page);
   const { link, sheetId } = await importSheet(page, "Marker Contract Sheet");
+  const longUnbrokenNote = "L".repeat(160);
 
   await link.click();
   await expect(page.getByTestId("sheet-latest-recording-empty")).toBeVisible();
@@ -543,25 +550,44 @@ test("sheet practice creates recording-scoped error markers and seeks playback t
         Math.abs(event.currentTimeMs - 1_200) <= 80
     );
   });
+  await expect(page.getByTestId("sheet-error-marker-message")).toContainText("Playback moved to 0:01.");
 
   await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("0.4");
   await page.getByRole("textbox", { name: "Marker note" }).fill("Early entrance");
   await page.getByRole("button", { name: "Mark Error" }).click();
+  await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("1.6");
+  await page.getByRole("textbox", { name: "Marker note" }).fill(longUnbrokenNote);
+  await page.getByRole("button", { name: "Mark Error" }).click();
 
   await expect.poll(async () => page.getByTestId("sheet-error-marker-list").locator("li").allTextContents()).toEqual([
     expect.stringContaining("Early entrance"),
-    expect.stringContaining("Missed left hand")
+    expect.stringContaining("Missed left hand"),
+    expect.stringContaining(longUnbrokenNote)
   ]);
 
   await page.reload();
   await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Early entrance");
   await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Missed left hand");
+  await expect(page.getByTestId("sheet-error-marker-list")).toContainText(longUnbrokenNote);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByTestId("sheet-error-marker-panel")).toBeVisible();
   await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Missed left hand");
+  await expect.poll(async () => markerNotesFitTheirContainers(page, "sheet-error-marker-note")).toBe(true);
   await page.setViewportSize({ width: 1280, height: 820 });
   await expect(page.getByRole("button", { name: "Mark Error" })).toBeVisible();
+
+  await page.goto("/recordings");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Marker sheet take A");
+  await page.getByLabel("Type filter").selectOption("sheet");
+  await page.getByTestId("recording-row-marker-sheet-a").click();
+  await expect(page.getByTestId("error-marker-list")).toContainText(longUnbrokenNote);
+  await expect.poll(async () => markerNotesFitTheirContainers(page, "error-marker-note")).toBe(true);
+
+  await page.goto(`/sheet-practice/${sheetId}`);
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Early entrance");
 
   await page.getByRole("button", { name: /Delete marker 0:00/ }).click();
   await expect(page.getByTestId("sheet-error-marker-list")).not.toContainText("Early entrance");
@@ -591,6 +617,10 @@ test("sheet practice creates recording-scoped error markers and seeks playback t
     expect.objectContaining({
       recordingId: "marker-sheet-a",
       note: "Missed left hand"
+    }),
+    expect.objectContaining({
+      recordingId: "marker-sheet-a",
+      note: longUnbrokenNote
     })
   ]);
   expect(consoleErrors).toEqual([]);

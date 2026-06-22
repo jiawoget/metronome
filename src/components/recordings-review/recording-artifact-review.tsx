@@ -43,7 +43,12 @@ export type RecordingPlaybackControls = {
   recordingId: string;
   durationMs: number;
   getCurrentTimeMs: () => number;
-  seekToMs: (timestampMs: number) => void;
+  seekToMs: (timestampMs: number) => RecordingSeekResult;
+};
+
+export type RecordingSeekResult = {
+  targetTimeMs: number;
+  currentTimeMs: number;
 };
 
 export function RecordingArtifactReview({

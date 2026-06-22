@@ -74,8 +74,15 @@ export class RecordingWaveformPlaybackAdapter {
     const timestampSeconds = Math.max(0, timestampMs / 1_000);
 
     this.waveSurfer.setTime(timestampSeconds);
-    this.dispatchTimeUpdate(timestampMs);
+    const currentTimeMs = this.getCurrentTimeMs();
+
+    this.dispatchTimeUpdate(currentTimeMs);
     this.dispatchSeekEvent(timestampMs);
+
+    return {
+      targetTimeMs: timestampMs,
+      currentTimeMs
+    };
   }
 
   getCurrentTimeMs() {

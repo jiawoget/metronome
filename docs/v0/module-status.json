@@ -965,12 +965,12 @@
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
-                                                 "completedAt":  "2026-06-22T01:21:01Z",
+                                                 "completedAt":  "2026-06-22T01:30:20Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/recordings-review-history.test.ts tests/unit/recordings-review-repository.test.ts -> PASS; 2 test files passed, 22 tests passed",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 17 test files passed, 86 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/recordings-review-repository.test.ts tests/unit/sheet-practice-error-markers.test.tsx -> PASS; 2 test files passed, 11 tests passed",
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 18 test files passed, 91 tests passed",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-recording-review.spec.ts tests/e2e/recordings-review.spec.ts -> PASS; 4 chromium tests passed",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 13 chromium tests passed"
@@ -982,22 +982,27 @@
                                                      "Markers require an existing recordingId, validate timestamp against recording duration, trim optional notes, persist in the shared recordings review storage shape, sort by timestamp, and can be deleted with deletion persisting after reload.",
                                                      "The marker panel shows a clear empty state when Sheet Practice has no latest sheet recording.",
                                                      "Clicking a marker calls the shared recording playback boundary seekToMs and Playwright verifies the real playback currentTime through the recordings-review:seek event, not list highlighting.",
+                                                     "Strict review fix: repository read/write boundaries now normalize persisted markers with the shared marker validation path and filter orphaned, non-finite, negative, out-of-range, untrimmed-overlong, and otherwise invalid markers before they reach UI snapshots or storage.",
+                                                     "Strict review fix: marker seek now returns a playback boundary result; Sheet Practice only shows success when currentTime is confirmed within tolerance and otherwise shows a recoverable error.",
+                                                     "Strict review fix: long unbroken marker notes wrap in both Sheet Practice and Recordings Review, with Playwright mobile overflow coverage.",
                                                      "Recordings Review keeps using the shared artifact review component and marker display; the shared playback component now exposes reusable currentTime/seek controls without changing existing Recordings Review behavior.",
                                                      "Implementation commit hash is reported in the final handoff response because a git commit cannot contain its own final object hash without changing that hash."
                                                                   ],
                                                  "changedAreas":  [
                                                      "src/lib/recordings-review/error-markers.ts adds marker validation, note normalization, sorting, creation, and seek target helpers",
-                                                     "src/lib/recordings-review/repository.ts adds recording-scoped marker create/delete APIs while preserving shared recording history persistence",
-                                                     "src/lib/recordings-review/wavesurfer-adapter.ts and src/components/recordings-review/recording-artifact-review.tsx expose reusable playback current time and seek controls through the playback service boundary",
-                                                     "src/components/sheet-practice/markers/error-marker-panel.tsx adds the Sheet Practice marker UI for current/explicit timestamp selection, note entry, sorted list, seek, delete, and empty state",
+                                                     "src/lib/recordings-review/repository.ts adds recording-scoped marker create/delete APIs, persisted marker normalization, orphan/out-of-range filtering, and cache cleanup while preserving shared recording history persistence",
+                                                     "src/lib/recordings-review/wavesurfer-adapter.ts and src/components/recordings-review/recording-artifact-review.tsx expose reusable playback current time and seek controls with seek confirmation results through the playback service boundary",
+                                                     "src/components/sheet-practice/markers/error-marker-panel.tsx adds the Sheet Practice marker UI for current/explicit timestamp selection, note entry, sorted list, confirmed seek, recoverable seek errors, delete, long-note wrapping, and empty state",
+                                                     "src/components/recordings-review/recordings-review-experience.tsx wraps long marker notes in the Recordings Review marker list",
                                                      "src/components/sheet-practice/recording/latest-sheet-recording.tsx wires marker UI to the latest sheet recording and playback boundary",
-                                                     "tests/unit/recordings-review-history.test.ts and tests/unit/recordings-review-repository.test.ts cover validation, sorting, note trim, timestamp formatting, seek target, persistence create/delete/filter, and duration range failures",
-                                                     "tests/e2e/sheet-recording-review.spec.ts adds real-browser marker coverage for no-recording state, marker create/note/sort, real playback seek, reload persistence, delete persistence, recording scope switching, resize, and console/pageerror capture"
+                                                     "tests/unit/recordings-review-history.test.ts, tests/unit/recordings-review-repository.test.ts, and tests/unit/sheet-practice-error-markers.test.tsx cover validation, sorting, note trim, timestamp formatting, seek target, persistence create/delete/filter, duration range failures, persisted invalid marker filtering, and seek failure recovery",
+                                                     "tests/e2e/sheet-recording-review.spec.ts and tests/e2e/recordings-review.spec.ts cover no-recording state, marker create/note/sort, real playback seek, reload persistence, delete persistence, recording scope switching, long-note mobile wrapping, resize, and console/pageerror capture"
                                                                   ],
                                                  "knownRisks":  [
                                                      "Marker timestamp display currently reuses the existing minute:second formatter, so sub-second marker times such as 1.2s display as 0:01 while the persisted and seeked timestamp remains millisecond-precise.",
                                                      "The Sheet Practice panel is scoped to the latest sheet recording for the current sheet, matching the current 05c latest-recording surface; full multi-take selection remains outside 05d.",
-                                                     "Playwright webServer exited after the E2E runs; ss could not open netlink in the sandbox for port verification, but pgrep found no Next or Playwright server process other than the sandbox command itself."
+                                                     "Playwright webServer exited after the E2E runs; ss could not open netlink in the sandbox for port verification, but pgrep found no Next or Playwright server process other than the sandbox command itself.",
+                                                     "Invalid persisted marker rows are filtered rather than surfaced to the UI; this preserves the valid recording history while dropping stale or corrupt marker records."
                                                                 ],
                                                  "commitHash":  null
                                              },

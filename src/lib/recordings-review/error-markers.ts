@@ -15,6 +15,10 @@ export type CreateErrorMarkerInput = ErrorMarkerValidationInput & {
   id?: string;
 };
 
+export type PersistedErrorMarkerInput = ErrorMarkerValidationInput & {
+  id: string;
+};
+
 const markerInputSchema = z.object({
   recordingId: z.string().trim().min(1, "A recording is required before saving an error marker."),
   timestampMs: z.number().finite("Choose a valid recording timestamp.").min(0, "Marker time must be within the recording."),
@@ -70,6 +74,17 @@ export function createErrorMarker(input: CreateErrorMarkerInput): RecordingError
     timestampMs: normalized.timestampMs,
     note: normalized.note
   };
+}
+
+export function normalizePersistedErrorMarker(input: PersistedErrorMarkerInput) {
+  if (!input.id.trim()) {
+    throw new Error("Error marker id is required.");
+  }
+
+  return createErrorMarker({
+    ...input,
+    id: input.id.trim()
+  });
 }
 
 export function sortErrorMarkers(markers: RecordingErrorMarker[]) {

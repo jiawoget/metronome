@@ -3,7 +3,12 @@ import type {
   RecordingReviewSnapshot,
   ReviewRecording
 } from "@/lib/recordings-review/types";
-import { createErrorMarker, sortErrorMarkers, type CreateErrorMarkerInput } from "@/lib/recordings-review/error-markers";
+import {
+  createErrorMarker,
+  normalizePersistedErrorMarker,
+  sortErrorMarkers,
+  type CreateErrorMarkerInput
+} from "@/lib/recordings-review/error-markers";
 
 export const RECORDINGS_STORAGE_KEY = "metronome-practice:v0:quick-recordings";
 const STORE_EVENT = "recordings-review-change";
@@ -38,10 +43,14 @@ function isRecording(value: unknown): value is ReviewRecording {
     typeof recording.sessionId === "string" &&
     typeof recording.createdAt === "string" &&
     typeof recording.durationMs === "number" &&
+    Number.isFinite(recording.durationMs) &&
+    recording.durationMs >= 0 &&
     typeof recording.sizeBytes === "number" &&
+    Number.isFinite(recording.sizeBytes) &&
     typeof recording.mimeType === "string" &&
     !!recording.settings &&
     typeof recording.settings.bpm === "number" &&
+    Number.isFinite(recording.settings.bpm) &&
     typeof recording.settings.timeSignature === "string"
   );
 }
@@ -61,6 +70,59 @@ function isErrorMarker(value: unknown): value is RecordingErrorMarker {
   );
 }
 
+function normalizeErrorMarkersForRecordings({
+  markers,
+  recordings
+}: {
+  markers: unknown[];
+  recordings: ReviewRecording[];
+}) {
+  const recordingsById = new Map(recordings.map((recording) => [recording.id, recording]));
+  const normalizedMarkers: RecordingErrorMarker[] = [];
+
+  for (const value of markers) {
+    if (!isErrorMarker(value)) {
+      continue;
+    }
+
+    const recording = recordingsById.get(value.recordingId.trim());
+
+    if (!recording) {
+      continue;
+    }
+
+    try {
+      normalizedMarkers.push(
+        normalizePersistedErrorMarker({
+          id: value.id,
+          recordingId: value.recordingId,
+          timestampMs: value.timestampMs,
+          durationMs: recording.durationMs,
+          note: value.note ?? null
+        })
+      );
+    } catch {
+      continue;
+    }
+  }
+
+  return sortErrorMarkers(normalizedMarkers);
+}
+
+function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | RecordingReviewSnapshot): RecordingReviewSnapshot {
+  const recordings = Array.isArray(value.recordings) ? value.recordings.filter(isRecording) : [];
+  const markers = Array.isArray(value.errorMarkers) ? value.errorMarkers : [];
+
+  return {
+    sessions: Array.isArray(value.sessions) ? value.sessions : [],
+    recordings,
+    errorMarkers: normalizeErrorMarkersForRecordings({
+      markers,
+      recordings
+    })
+  };
+}
+
 function normalizeSnapshot(rawValue: string | null): RecordingReviewSnapshot {
   if (!rawValue) {
     return emptySnapshot;
@@ -69,16 +131,7 @@ function normalizeSnapshot(rawValue: string | null): RecordingReviewSnapshot {
   try {
     const parsed = JSON.parse(rawValue) as Partial<RecordingReviewSnapshot>;
 
-    return {
-      sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
-      recordings: Array.isArray(parsed.recordings) ? parsed.recordings.filter(isRecording) : [],
-      errorMarkers: Array.isArray(parsed.errorMarkers)
-        ? parsed.errorMarkers.filter(isErrorMarker).map((marker) => ({
-            ...marker,
-            note: marker.note ?? null
-          }))
-        : []
-    };
+    return normalizeSnapshotValue(parsed);
   } catch {
     return emptySnapshot;
   }
@@ -101,13 +154,17 @@ function readSnapshot(): RecordingReviewSnapshot {
 
 function writeSnapshot(snapshot: RecordingReviewSnapshot) {
   const storage = getStorage();
+  const normalizedSnapshot = normalizeSnapshotValue(snapshot);
 
   if (!storage) {
     return;
   }
 
-  storage.setItem(RECORDINGS_STORAGE_KEY, JSON.stringify(snapshot));
-  cachedRawValue = null;
+  const serializedSnapshot = JSON.stringify(normalizedSnapshot);
+
+  storage.setItem(RECORDINGS_STORAGE_KEY, serializedSnapshot);
+  cachedRawValue = serializedSnapshot;
+  cachedSnapshot = normalizedSnapshot;
   window.dispatchEvent(new Event(STORE_EVENT));
   window.dispatchEvent(new Event(QUICK_STORE_EVENT));
 }
@@ -130,10 +187,7 @@ export const recordingHistoryRepository = {
   },
 
   saveSnapshot(snapshot: RecordingReviewSnapshot) {
-    writeSnapshot({
-      ...snapshot,
-      errorMarkers: sortErrorMarkers(snapshot.errorMarkers)
-    });
+    writeSnapshot(snapshot);
   },
 
   createErrorMarker(input: Omit<CreateErrorMarkerInput, "durationMs"> & { durationMs?: number }) {

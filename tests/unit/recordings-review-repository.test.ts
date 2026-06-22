@@ -121,6 +121,127 @@ describe("recording history repository", () => {
     ).toThrow("within the recording");
   });
 
+  it("sanitizes persisted invalid, orphaned, out-of-range, and untrimmed markers on read and write", () => {
+    const invalidSnapshot = {
+      ...snapshot,
+      errorMarkers: [
+        {
+          id: "marker-trimmed",
+          recordingId: "recording-1",
+          timestampMs: 500,
+          note: "  trimmed note  "
+        },
+        {
+          id: "marker-orphan",
+          recordingId: "missing-recording",
+          timestampMs: 500,
+          note: "orphan"
+        },
+        {
+          id: "marker-negative",
+          recordingId: "recording-1",
+          timestampMs: -1,
+          note: "negative"
+        },
+        {
+          id: "marker-too-late",
+          recordingId: "recording-1",
+          timestampMs: 1_001,
+          note: "too late"
+        },
+        {
+          id: "marker-nan",
+          recordingId: "recording-1",
+          timestampMs: Number.NaN,
+          note: "nan"
+        },
+        {
+          id: "marker-long-note",
+          recordingId: "recording-1",
+          timestampMs: 700,
+          note: "x".repeat(161)
+        }
+      ]
+    } as RecordingReviewSnapshot;
+
+    recordingHistoryRepository.saveSnapshot(invalidSnapshot);
+
+    expect(recordingHistoryRepository.getSnapshot().errorMarkers).toEqual([
+      {
+        id: "marker-trimmed",
+        recordingId: "recording-1",
+        timestampMs: 500,
+        note: "trimmed note"
+      }
+    ]);
+    expect(recordingHistoryRepository.getErrorMarkers("recording-1")).toEqual([
+      {
+        id: "marker-trimmed",
+        recordingId: "recording-1",
+        timestampMs: 500,
+        note: "trimmed note"
+      }
+    ]);
+
+    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+
+    expect(persisted.errorMarkers).toEqual([
+      {
+        id: "marker-trimmed",
+        recordingId: "recording-1",
+        timestampMs: 500,
+        note: "trimmed note"
+      }
+    ]);
+  });
+
+  it("filters invalid markers loaded from storage before they reach snapshots or marker lists", () => {
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        ...snapshot,
+        errorMarkers: [
+          {
+            id: "marker-valid",
+            recordingId: "recording-1",
+            timestampMs: 250,
+            note: "  valid loaded  "
+          },
+          {
+            id: "marker-orphan",
+            recordingId: "missing-recording",
+            timestampMs: 250,
+            note: "orphan"
+          },
+          {
+            id: "marker-too-late",
+            recordingId: "recording-1",
+            timestampMs: 5_000,
+            note: "too late"
+          }
+        ]
+      })
+    );
+
+    const loadedSnapshot = recordingHistoryRepository.getSnapshot();
+
+    expect(loadedSnapshot.errorMarkers).toEqual([
+      {
+        id: "marker-valid",
+        recordingId: "recording-1",
+        timestampMs: 250,
+        note: "valid loaded"
+      }
+    ]);
+    expect(recordingHistoryRepository.getErrorMarkers("recording-1")).toEqual(loadedSnapshot.errorMarkers);
+
+    recordingHistoryRepository.saveSnapshot(loadedSnapshot);
+
+    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+
+    expect(persisted.errorMarkers).toEqual(loadedSnapshot.errorMarkers);
+  });
+
   it("stores 05e sheet recording metadata in the shared recording history boundary", async () => {
     await recordingHistoryMetadataRepository.saveRecordingMetadata(createSheetRecording(), createSheetSession());
 

@@ -273,7 +273,7 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
           {
             id: "marker-late",
             recordingId: "quick-alpha",
-            timestampMs: 1_500,
+            timestampMs: 900,
             note: "Late accent"
           },
           {

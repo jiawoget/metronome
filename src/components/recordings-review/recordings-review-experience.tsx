@@ -324,7 +324,12 @@ function RecordingDetails({
             {markers.map((marker) => (
               <li key={marker.id} className="rounded-md border border-border bg-muted px-3 py-2">
                 <span className="font-semibold">{formatTimestamp(marker.timestampMs)}</span>
-                <span className="ml-2 text-muted-foreground">{marker.note || "No note"}</span>
+                <span
+                  data-testid="error-marker-note"
+                  className="block min-w-0 break-all text-muted-foreground sm:ml-2 sm:inline"
+                >
+                  {marker.note || "No note"}
+                </span>
               </li>
             ))}
           </ul>

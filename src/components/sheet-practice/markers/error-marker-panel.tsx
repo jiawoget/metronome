@@ -16,6 +16,8 @@ type ErrorMarkerPanelProps = {
   currentTimeMs: number;
 };
 
+const SEEK_CONFIRMATION_TOLERANCE_MS = 80;
+
 function formatSecondsInput(timestampMs: number) {
   return (Math.max(0, timestampMs) / 1_000).toFixed(1);
 }
@@ -109,10 +111,21 @@ export function ErrorMarkerPanel({
 
     const seekTargetMs = getErrorMarkerSeekTarget(marker);
 
-    playbackControls.seekToMs(seekTargetMs);
-    setTimestampDraftOverride(formatSecondsInput(seekTargetMs));
-    setMessage(`Playback moved to ${formatTimestamp(seekTargetMs)}.`);
-    setErrorMessage(null);
+    try {
+      const result = playbackControls.seekToMs(seekTargetMs);
+      const seekDeltaMs = Math.abs(result.currentTimeMs - seekTargetMs);
+
+      if (seekDeltaMs > SEEK_CONFIRMATION_TOLERANCE_MS) {
+        throw new Error("Playback did not move to the selected marker.");
+      }
+
+      setTimestampDraftOverride(formatSecondsInput(seekTargetMs));
+      setMessage(`Playback moved to ${formatTimestamp(seekTargetMs)}.`);
+      setErrorMessage(null);
+    } catch (error) {
+      setMessage(null);
+      setErrorMessage(error instanceof Error ? error.message : "Playback could not move to this marker.");
+    }
   }
 
   function deleteMarker(marker: RecordingErrorMarker) {
@@ -202,7 +215,12 @@ export function ErrorMarkerPanel({
                 aria-label={`Seek to marker ${formatTimestamp(marker.timestampMs)}`}
               >
                 <span className="font-semibold">{formatTimestamp(marker.timestampMs)}</span>
-                <span className="ml-2 text-muted-foreground">{marker.note || "No note"}</span>
+                <span
+                  data-testid="sheet-error-marker-note"
+                  className="block min-w-0 break-all text-muted-foreground sm:ml-2 sm:inline"
+                >
+                  {marker.note || "No note"}
+                </span>
               </button>
               <Button
                 type="button"
