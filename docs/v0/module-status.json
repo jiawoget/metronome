@@ -961,7 +961,7 @@
                       },
                       {
                           "module":  "05d-error-markers",
-                          "status":  "implementation_done",
+                          "status":  "verified",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
@@ -1008,27 +1008,37 @@
                                              },
                           "verification":  {
                                                "requiredSeparateAgent":  true,
-                                               "agent":  null,
-                                               "completedAt":  null,
-                                               "result":  null,
+                                               "agent":  "GPT-5.4 Mini",
+                                               "completedAt":  "2026-06-22T01:35:18Z",
+                                               "result":  "PASS",
                                                "acceptanceCriteria":  [
-
-                                                                      ],
+                                                   "PASS: A marker can be added when a recording exists, and the no-recording state is a clear empty/disabled state.",
+                                                   "PASS: Markers store recordingId, accept timestamps from current playback or an explicit selected time, and reject invalid or out-of-range timestamps before persistence.",
+                                                   "PASS: Marker notes are trimmed and validated; marker lists stay sorted by timestamp.",
+                                                   "PASS: Clicking a marker seeks real playback currentTime through the playback boundary, and seek failures surface as recoverable errors instead of fake success.",
+                                                   "PASS: Markers persist after reload, deletions persist after reload, switching recordings scopes the list correctly, and invalid/orphaned markers do not leak into UI or storage.",
+                                                   "PASS: No automatic mistake detection or bar-aware behavior appears in v0."
+                                               ],
                                                "e2eEvidence":  [
-
-                                                               ],
+                                                   "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-recording-review.spec.ts tests/e2e/recordings-review.spec.ts -> PASS; 4 chromium tests passed.",
+                                                   "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 13 chromium tests passed.",
+                                                   "tests/e2e/sheet-recording-review.spec.ts:491-626 covers no-recording empty state, marker creation, real seek confirmation via currentTime within 80ms, reload persistence, delete persistence, scoped filtering, and mobile wrapping/resize.",
+                                                   "tests/e2e/recordings-review.spec.ts:3-215 covers recordings list/filter/play/continue/delete and bad-audio handling."
+                                               ],
                                                "specializedEvidence":  [
-
-                                                                       ],
+                                                   "tests/unit/recordings-review-repository.test.ts:67-99 and 112-242 cover recordingId required, duration validation, note trimming, sorted markers, and sanitization of invalid, orphaned, out-of-range, non-finite, and overlong persisted markers.",
+                                                   "tests/unit/sheet-practice-error-markers.test.tsx:65-129 covers recoverable seek errors and success only after the playback boundary confirms the seek target."
+                                               ],
                                                "persistenceEvidence":  [
-
-                                                                       ],
-                                               "consoleStatus":  null,
+                                                   "Reload kept the sheet error marker list intact, delete persisted across reload, and switching to another recording changed the scope to that recording's markers only.",
+                                                   "Repository read/write normalization filtered orphaned, out-of-range, non-finite, and overlong markers so they did not leak back into persisted snapshot state."
+                                               ],
+                                               "consoleStatus":  "PASS; the targeted and full Playwright runs reported no console errors or page errors on the tested flows.",
                                                "issues":  [
 
                                                           ],
-                                               "commitHash":  null
-                                           }
+                                               "commitHash":  "9b81f9b0ce6064370aaa53917d4e6a0fb26ffdf4"
+                                            }
                       },
                       {
                           "module":  "06-reference-system",
