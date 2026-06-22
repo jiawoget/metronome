@@ -47,9 +47,13 @@ function createArtifact(overrides: Partial<RecordingArtifact> = {}): RecordingAr
   };
 }
 
-function installAudioContextMock() {
+function installAudioContextMock({ reject = false } = {}) {
   class MockAudioContext {
     async decodeAudioData() {
+      if (reject) {
+        throw new Error("decode failed");
+      }
+
       return {
         duration: 0.8,
         sampleRate: 8_000,
@@ -198,5 +202,29 @@ describe("sheet practice recording service", () => {
       })
     ).rejects.toThrow("audible input");
     expect(sessionService.createSheetRecordingMetadata).not.toHaveBeenCalled();
+  });
+
+  it("does not persist sheet metadata or recording history when post-capture decode fails", async () => {
+    installAudioContextMock({ reject: true });
+
+    const capture = createCaptureService();
+    const sessionService = {
+      createSheetRecordingMetadata: vi.fn(async () => metadata),
+      getRecentSheetSession: vi.fn(async () => null)
+    };
+    const service = new BrowserSheetRecordingService(capture.service);
+
+    await expect(
+      service.stopAndSave({
+        sheetId: "sheet-alpha",
+        sessionId: "session-new",
+        settings,
+        forceNewSession: false,
+        sessionService
+      })
+    ).rejects.toThrow("cannot be decoded");
+
+    expect(sessionService.createSheetRecordingMetadata).not.toHaveBeenCalled();
+    expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
   });
 });

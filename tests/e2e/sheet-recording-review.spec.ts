@@ -330,6 +330,7 @@ test("sheet practice records real synthetic audio, replays latest take, persists
   await page.getByRole("button", { name: "Start recording" }).click();
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
   await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
+  await page.waitForTimeout(700);
   await page.getByRole("button", { name: "Stop recording" }).click();
   await expect(page.getByText("Recording saved; metronome is still playing.")).toBeVisible();
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
@@ -396,4 +397,84 @@ test("sheet recording surfaces microphone denial and bad artifact states", async
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
   await expect(page.getByTestId("sheet-recording-artifact-error")).toContainText("cannot be decoded");
   await expect(page.getByRole("button", { name: "Play latest sheet recording" })).toBeDisabled();
+
+  await page.evaluate(
+    ({ storageKey, id }: { storageKey: string; id: string }) => {
+      const sampleRate = 8_000;
+      const durationSeconds = 1;
+      const sampleCount = sampleRate * durationSeconds;
+      const dataSize = sampleCount * 2;
+      const buffer = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(buffer);
+
+      function writeString(offset: number, value: string) {
+        for (let index = 0; index < value.length; index += 1) {
+          view.setUint8(offset + index, value.charCodeAt(index));
+        }
+      }
+
+      writeString(0, "RIFF");
+      view.setUint32(4, 36 + dataSize, true);
+      writeString(8, "WAVE");
+      writeString(12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeString(36, "data");
+      view.setUint32(40, dataSize, true);
+
+      for (let index = 0; index < sampleCount; index += 1) {
+        const sample = Math.sin((2 * Math.PI * 330 * index) / sampleRate) * 0.35;
+
+        view.setInt16(44 + index * 2, Math.max(-1, Math.min(1, sample)) * 0x7fff, true);
+      }
+
+      let binary = "";
+      const bytes = new Uint8Array(buffer);
+
+      for (let index = 0; index < bytes.length; index += 1) {
+        binary += String.fromCharCode(bytes[index]);
+      }
+
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          sessions: [{ id: "session-mismatch-sheet", sourceType: "sheet", sheetId: id }],
+          recordings: [
+            {
+              id: "mismatch-sheet-recording",
+              type: "sheet",
+              origin: "user",
+              name: "Mismatch sheet take",
+              sessionId: "session-mismatch-sheet",
+              sheetId: id,
+              sheetName: "Bad Artifact Contract Sheet",
+              createdAt: "2026-06-22T06:35:00.000Z",
+              durationMs: 4_000,
+              sizeBytes: bytes.length,
+              mimeType: "audio/wav",
+              audioDataUrl: `data:audio/wav;base64,${window.btoa(binary)}`,
+              trustedPeaks: [0.2, 0.7, 0.4],
+              settings: {
+                bpm: 88,
+                timeSignature: "3/4"
+              }
+            }
+          ],
+          errorMarkers: []
+        })
+      );
+    },
+    { storageKey: recordingHistoryStorageKey, id: sheetId }
+  );
+
+  await page.goto(`/sheet-practice/${sheetId}`);
+  await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
+  await expect(page.getByTestId("sheet-recording-duration-warning")).toContainText(
+    "differs from saved metadata"
+  );
 });

@@ -115,6 +115,7 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     const quickArtifact = createWavDataUrl(440, 1);
     const sheetArtifact = createWavDataUrl(330, 1.2);
     const mismatchArtifact = createWavDataUrl(220, 1);
+    const invalidPeaksArtifact = createWavDataUrl(260, 1);
 
     window.localStorage.setItem(
       "metronome-practice:v0:quick-recordings",
@@ -246,6 +247,25 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
             settings: {
               bpm: 88,
               timeSignature: "4/4"
+            }
+          },
+          {
+            id: "invalid-peaks-epsilon",
+            type: "sheet",
+            origin: "user",
+            name: "Invalid waveform peaks take",
+            sessionId: "session-sheet-1",
+            sheetId: "sheet-42",
+            sheetName: "Moonlight Etude",
+            createdAt: "2026-06-21T15:00:00.000Z",
+            durationMs: invalidPeaksArtifact.durationMs,
+            sizeBytes: invalidPeaksArtifact.sizeBytes,
+            mimeType: "audio/wav",
+            audioDataUrl: invalidPeaksArtifact.dataUrl,
+            trustedPeaks: [0, 0],
+            settings: {
+              bpm: 96,
+              timeSignature: "3/4"
             }
           }
         ],
@@ -526,6 +546,11 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Trusted peaks bad");
   await page.getByTestId("recording-row-trusted-bad").click();
   await expect(page.getByTestId("recording-artifact-error")).toContainText("cannot be decoded");
+  await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Invalid waveform peaks");
+  await page.getByTestId("recording-row-invalid-peaks-epsilon").click();
+  await expect(page.getByTestId("recording-artifact-error")).toContainText("invalid waveform peak data");
   await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
 
   const playbackRejections = await page.evaluate(() => {

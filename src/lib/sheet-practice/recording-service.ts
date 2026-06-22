@@ -1,5 +1,5 @@
 import type { SheetRecordingMetadata } from "@/domain/practice";
-import { loadRecordingArtifactDetails } from "@/lib/recordings-review/artifact-service";
+import { hasUsablePeaks, loadRecordingArtifactDetails } from "@/lib/recordings-review/artifact-service";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
 import { BrowserRecordingService } from "@/lib/quick-metronome/recording-service";
@@ -29,10 +29,6 @@ export type SaveSheetRecordingResult = {
 
 function roundDuration(durationMs: number) {
   return Math.max(0, Math.round(durationMs));
-}
-
-function hasUsablePeaks(peaks: number[]) {
-  return peaks.length > 0 && peaks.every((peak) => Number.isFinite(peak)) && peaks.some((peak) => peak > 0);
 }
 
 export function createSheetReviewRecording({
@@ -66,6 +62,43 @@ export function createSheetReviewRecording({
     settings: {
       bpm: metadata.bpm ?? settings.bpm,
       timeSignature: metadata.timeSignature ?? settings.timeSignature,
+      subdivision: settings.subdivision,
+      accent: settings.accent,
+      countdownBeats: settings.countdownBeats
+    }
+  };
+}
+
+function createDraftSheetReviewRecording({
+  artifact,
+  sheetId,
+  sessionId,
+  settings
+}: {
+  artifact: RecordingArtifact;
+  sheetId: string;
+  sessionId: string | null;
+  settings: MetronomeSettings;
+}): ReviewRecording {
+  const durationMs = roundDuration(artifact.analysis?.decodedDurationMs ?? artifact.durationMs);
+
+  return {
+    id: "sheet-recording-draft",
+    type: "sheet",
+    origin: "user",
+    name: "Sheet practice take",
+    sessionId: sessionId ?? "pending-sheet-session",
+    sheetId,
+    sheetName: null,
+    createdAt: new Date(0).toISOString(),
+    durationMs,
+    sizeBytes: artifact.sizeBytes,
+    mimeType: artifact.mimeType,
+    audioDataUrl: artifact.dataUrl,
+    artifactAnalysis: artifact.analysis,
+    settings: {
+      bpm: settings.bpm,
+      timeSignature: settings.timeSignature,
       subdivision: settings.subdivision,
       accent: settings.accent,
       countdownBeats: settings.countdownBeats
@@ -127,11 +160,23 @@ export class BrowserSheetRecordingService {
       throw new Error("Recording artifact did not contain audible input.");
     }
 
-    const initialDurationMs = roundDuration(artifact.analysis?.decodedDurationMs ?? artifact.durationMs);
+    const decodedDetails = await loadRecordingArtifactDetails(
+      createDraftSheetReviewRecording({
+        artifact,
+        sheetId: input.sheetId,
+        sessionId: input.sessionId,
+        settings: input.settings
+      })
+    );
+
+    if (!hasUsablePeaks(decodedDetails.peaks)) {
+      throw new Error("Recording waveform could not be derived from the saved audio.");
+    }
+
     const metadata = await input.sessionService.createSheetRecordingMetadata({
       sheetId: input.sheetId,
       sessionId: input.sessionId,
-      durationMs: initialDurationMs,
+      durationMs: roundDuration(decodedDetails.decodedDurationMs),
       bpm: input.settings.bpm,
       timeSignature: input.settings.timeSignature,
       forceNewSession: input.forceNewSession
@@ -146,12 +191,6 @@ export class BrowserSheetRecordingService {
       artifact,
       settings: input.settings
     });
-    const decodedDetails = await loadRecordingArtifactDetails(decodedRecording);
-
-    if (!hasUsablePeaks(decodedDetails.peaks)) {
-      throw new Error("Recording waveform could not be derived from the saved audio.");
-    }
-
     const recording = {
       ...decodedRecording,
       durationMs: roundDuration(decodedDetails.decodedDurationMs),

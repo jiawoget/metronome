@@ -152,6 +152,41 @@ describe("recordings review artifact helpers", () => {
     expect(details.durationWarning).toBeNull();
   });
 
+  it("rejects invalid trusted peaks after the artifact decodes", async () => {
+    installAudioContextMock({ durationSeconds: 125 });
+
+    await expect(
+      loadRecordingArtifactDetails({
+        ...sheetRecording,
+        trustedPeaks: [0, 0]
+      })
+    ).rejects.toThrow("invalid waveform peak data");
+
+    await expect(
+      loadRecordingArtifactDetails({
+        ...sheetRecording,
+        trustedPeaks: [Number.NaN, 0.5]
+      })
+    ).rejects.toThrow("invalid waveform peak data");
+  });
+
+  it("derives peaks from decoded audio when trusted peaks are missing", async () => {
+    installAudioContextMock({
+      durationSeconds: 1,
+      samples: new Float32Array([0, 0.5, -1, 0.25])
+    });
+
+    const details = await loadRecordingArtifactDetails({
+      ...sheetRecording,
+      durationMs: 1_000,
+      trustedPeaks: undefined
+    });
+
+    expect(details.source).toBe("decoded-audio");
+    expect(details.peaks).toContain(1);
+    expect(details.durationWarning).toBeNull();
+  });
+
   it("rejects trusted peaks with missing audio", async () => {
     await expect(
       loadRecordingArtifactDetails({

@@ -91,6 +91,7 @@ export class BrowserMetronomeService {
   private readonly createAdapter: ToneMetronomeAdapterFactory;
   private settings: MetronomeSettings = DEFAULT_METRONOME_SETTINGS;
   private scheduleToken = 0;
+  private lastTriggerTime = Number.NEGATIVE_INFINITY;
   private tickIndex = 0;
   private readonly tickHandlers = new Set<MetronomeTickHandler>();
 
@@ -124,6 +125,7 @@ export class BrowserMetronomeService {
     this.adapter.stopTransport();
     this.adapter.cancelTransport();
     this.tickIndex = 0;
+    this.lastTriggerTime = Number.NEGATIVE_INFINITY;
     this.scheduleToken += 1;
     this.scheduleCurrentSettings(this.scheduleToken);
     this.adapter.startTransport("+0.05");
@@ -168,6 +170,7 @@ export class BrowserMetronomeService {
     this.adapter.stopTransport();
     this.adapter.cancelTransport();
     this.tickIndex = 0;
+    this.lastTriggerTime = Number.NEGATIVE_INFINITY;
     this.scheduleToken += 1;
     this.scheduleCurrentSettings(this.scheduleToken);
     this.adapter.startTransport("+0.02");
@@ -207,11 +210,17 @@ export class BrowserMetronomeService {
     const beatMultiplier = getSubdivisionMultiplier(this.settings.subdivision);
     const isBeatTick = tick.tickIndex % beatMultiplier === 0;
     const note = tick.accented ? "E6" : isBeatTick ? "B5" : "E5";
+    const triggerTime =
+      tick.audioTime <= this.lastTriggerTime
+        ? this.lastTriggerTime + 0.001
+        : tick.audioTime;
+
+    this.lastTriggerTime = triggerTime;
 
     this.adapter.trigger({
       note,
       duration: 0.06,
-      time: tick.audioTime,
+      time: triggerTime,
       velocity: tick.accented ? 0.9 : 0.55
     });
   }

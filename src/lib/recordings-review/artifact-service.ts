@@ -45,6 +45,10 @@ export function normalizeTrustedPeaks(peaks: number[]) {
   return peaks.map((peak) => Math.max(0, Math.min(1, peak)));
 }
 
+export function hasUsablePeaks(peaks: number[]) {
+  return peaks.length > 0 && peaks.every((peak) => Number.isFinite(peak)) && peaks.some((peak) => peak > 0);
+}
+
 export function derivePeaksFromSamples(samples: Float32Array, peakCount = 48) {
   if (samples.length === 0) {
     return [];
@@ -109,6 +113,12 @@ export async function loadRecordingArtifactDetails(
   const decodedDurationMs = audioBuffer.duration * 1_000;
   const trustedPeaks = recording.trustedPeaks;
   const useTrustedPeaks = !!trustedPeaks && trustedPeaks.length > 0;
+  const normalizedTrustedPeaks = useTrustedPeaks ? normalizeTrustedPeaks(trustedPeaks) : [];
+
+  if (useTrustedPeaks && !hasUsablePeaks(normalizedTrustedPeaks)) {
+    throw new RecordingArtifactError("This recording has invalid waveform peak data.");
+  }
+
   const durationWarning = getDurationWarning({
     decodedDurationMs,
     metadataDurationMs: recording.durationMs
@@ -120,7 +130,7 @@ export async function loadRecordingArtifactDetails(
     metadataDurationMs: recording.durationMs,
     durationDifferenceMs: Math.abs(decodedDurationMs - recording.durationMs),
     durationWarning,
-    peaks: useTrustedPeaks ? normalizeTrustedPeaks(trustedPeaks) : decodedPeaks,
+    peaks: useTrustedPeaks ? normalizedTrustedPeaks : decodedPeaks,
     source: useTrustedPeaks ? "trusted-peaks" : "decoded-audio"
   };
 }

@@ -91,6 +91,23 @@ describe("BrowserMetronomeService Tone adapter", () => {
     expect(ticks[0]).toMatchObject({ audioTime: 12.5, accented: true });
   });
 
+  it("keeps instrument trigger time monotonic when Tone repeats a scheduled time", async () => {
+    const fakeTone = createFakeToneAdapter();
+    const service = new BrowserMetronomeService(async () => fakeTone.adapter);
+    const traces: MetronomeTraceEventDetail[] = [];
+
+    window.addEventListener(METRONOME_TRACE_EVENT, (event) => {
+      traces.push((event as CustomEvent<MetronomeTraceEventDetail>).detail);
+    });
+
+    await service.start({ ...DEFAULT_METRONOME_SETTINGS, bpm: 120 });
+    fakeTone.callbacks[0]?.(3);
+    fakeTone.callbacks[0]?.(3);
+
+    expect(traces.map((trace) => trace.audioTime)).toEqual([3, 3]);
+    expect(fakeTone.triggers.map((trigger) => trigger.time)).toEqual([3, 3.001]);
+  });
+
   it("reschedules Tone transport when BPM changes while playing", async () => {
     const fakeTone = createFakeToneAdapter();
     const service = new BrowserMetronomeService(async () => fakeTone.adapter);

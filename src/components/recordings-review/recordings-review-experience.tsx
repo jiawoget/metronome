@@ -1,26 +1,20 @@
 "use client";
 
 import {
-  AlertTriangle,
   AudioLines,
   Clock3,
   Filter,
   ListMusic,
-  Pause,
-  Play,
   RotateCcw,
   Search,
   Trash2
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
+import { RecordingArtifactReview } from "@/components/recordings-review/recording-artifact-review";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  loadRecordingArtifactDetails,
-  RecordingArtifactError
-} from "@/lib/recordings-review/artifact-service";
 import { formatDuration, formatRecordingDate, formatTimestamp } from "@/lib/recordings-review/format";
 import {
   filterRecordings,
@@ -31,17 +25,9 @@ import {
 } from "@/lib/recordings-review/history";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type {
-  RecordingArtifactDetails,
   RecordingErrorMarker,
   ReviewRecording
 } from "@/lib/recordings-review/types";
-import { RecordingWaveformPlaybackAdapter } from "@/lib/recordings-review/wavesurfer-adapter";
-
-type ArtifactState =
-  | { status: "idle"; details: null; message: null }
-  | { status: "loading"; details: null; message: null }
-  | { status: "ready"; details: RecordingArtifactDetails; message: null }
-  | { status: "error"; details: null; message: string };
 
 const emptyClientSnapshot = {
   sessions: [],
@@ -280,97 +266,6 @@ function RecordingDetails({
   onCancelDelete: () => void;
   onConfirmDelete: () => void;
 }) {
-  const adapter = useMemo(() => new RecordingWaveformPlaybackAdapter(), []);
-  const waveformRef = useRef<HTMLDivElement | null>(null);
-  const [artifactState, setArtifactState] = useState<ArtifactState>({
-    status: "idle",
-    details: null,
-    message: null
-  });
-  const [playbackState, setPlaybackState] = useState<"idle" | "playing">("idle");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    adapter.destroy();
-
-    Promise.resolve()
-      .then(() => {
-        if (!cancelled) {
-          setArtifactState({ status: "loading", details: null, message: null });
-          setPlaybackState("idle");
-        }
-
-        return loadRecordingArtifactDetails(recording);
-      })
-      .then((details) => {
-        if (!cancelled) {
-          setArtifactState({ status: "ready", details, message: null });
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setArtifactState({
-            status: "error",
-            details: null,
-            message:
-              error instanceof RecordingArtifactError || error instanceof Error
-                ? error.message
-                : "Recording artifact could not be loaded."
-          });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-      adapter.destroy();
-    };
-  }, [adapter, recording]);
-
-  useEffect(() => {
-    if (artifactState.status !== "ready" || !waveformRef.current || !recording.audioDataUrl) {
-      return;
-    }
-
-    let cancelled = false;
-
-    adapter
-      .load(waveformRef.current, recording)
-      .catch(() => {
-        if (!cancelled) {
-          setArtifactState({
-            status: "error",
-            details: null,
-            message: "Waveform playback could not load this artifact."
-          });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [adapter, artifactState.status, recording]);
-
-  async function togglePlayback() {
-    if (playbackState === "playing") {
-      adapter.pause();
-      setPlaybackState("idle");
-      return;
-    }
-
-    try {
-      await adapter.play();
-      setPlaybackState("playing");
-    } catch (error) {
-      setPlaybackState("idle");
-      setArtifactState({
-        status: "error",
-        details: null,
-        message: error instanceof Error ? error.message : "Playback failed."
-      });
-    }
-  }
-
   return (
     <div data-testid="recording-details" className="grid gap-5">
       <div>
@@ -385,69 +280,30 @@ function RecordingDetails({
         )}
       </div>
 
-      <div className="rounded-md border border-border bg-muted px-3 py-3">
-        {artifactState.status === "loading" ? (
-          <p role="status" className="text-sm font-medium">
-            Loading recording artifact.
-          </p>
-        ) : null}
-        {artifactState.status === "error" ? (
-          <div role="alert" data-testid="recording-artifact-error" className="flex items-start gap-2 text-sm font-medium text-destructive">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{artifactState.message}</span>
-          </div>
-        ) : null}
-        {artifactState.status === "ready" ? (
-          <div className="grid gap-3">
-            <div
-              ref={waveformRef}
-              data-testid="waveform-adapter"
-              className="min-h-24 overflow-hidden rounded-md border border-border bg-card"
-            />
-            <DerivedPeaks details={artifactState.details} />
-            <p data-testid="waveform-source" className="text-xs font-medium text-muted-foreground">
-              Waveform source: {artifactState.details.source === "decoded-audio" ? "decoded audio artifact" : "trusted peaks"}
-            </p>
-            {artifactState.details.durationWarning ? (
-              <div
-                role="status"
-                data-testid="recording-duration-warning"
-                className="flex items-start gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-destructive"
-              >
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{artifactState.details.durationWarning}</span>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button
-          type="button"
-          onClick={togglePlayback}
-          disabled={artifactState.status !== "ready"}
-          variant={playbackState === "playing" ? "secondary" : "default"}
-        >
-          {playbackState === "playing" ? (
-            <Pause className="h-4 w-4" aria-hidden="true" />
-          ) : (
-            <Play className="h-4 w-4" aria-hidden="true" />
-          )}
-          {playbackState === "playing" ? "Pause Recording" : "Play Recording"}
-        </Button>
-        <Button asChild variant="secondary">
-          <Link href={getContinuePracticeHref(recording)}>
-            <RotateCcw className="h-4 w-4" aria-hidden="true" />
-            Practice Again
-          </Link>
-        </Button>
-      </div>
-      {playbackState === "playing" ? (
-        <p role="status" data-testid="recording-playback-status" className="text-sm font-medium">
-          Playing recording.
-        </p>
-      ) : null}
+      <RecordingArtifactReview
+        recording={recording}
+        adapterClassName="min-h-24 overflow-hidden rounded-md border border-border bg-card"
+        adapterTestId="waveform-adapter"
+        derivedWaveformClassName="flex h-16 items-center gap-1 rounded-md border border-border bg-background px-2"
+        derivedWaveformTestId="derived-waveform"
+        errorTestId="recording-artifact-error"
+        peakHeightPx={56}
+        playbackStatusTestId="recording-playback-status"
+        playAriaLabel="Play Recording"
+        playText="Play Recording"
+        pauseAriaLabel="Pause Recording"
+        pauseText="Pause Recording"
+        sourceTestId="waveform-source"
+        warningTestId="recording-duration-warning"
+        actions={
+          <Button asChild variant="secondary">
+            <Link href={getContinuePracticeHref(recording)}>
+              <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              Practice Again
+            </Link>
+          </Button>
+        }
+      />
 
       <div className="grid gap-2 text-sm sm:grid-cols-2">
         <DetailTile label="Date" value={formatRecordingDate(recording.createdAt)} />
@@ -514,25 +370,6 @@ function DetailTile({ label, value }: { label: string; value: string }) {
     <div className="rounded-md border border-border bg-muted px-3 py-3">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 break-words font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function DerivedPeaks({ details }: { details: RecordingArtifactDetails }) {
-  return (
-    <div
-      data-testid="derived-waveform"
-      data-waveform-source={details.source}
-      data-peak-count={details.peaks.length}
-      className="flex h-16 items-center gap-1 rounded-md border border-border bg-background px-2"
-    >
-      {details.peaks.map((peak, index) => (
-        <span
-          key={`${details.recordingId}-${index}`}
-          className="w-full rounded-sm bg-accent"
-          style={{ height: `${Math.max(8, peak * 56)}px` }}
-        />
-      ))}
     </div>
   );
 }
