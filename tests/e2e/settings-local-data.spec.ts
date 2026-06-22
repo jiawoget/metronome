@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const sheetDbName = "metronome-practice-v0-sheet-library";
 const referenceDbName = "metronome-practice-v0-references";
 const practiceDbName = "metronome-practice-v0-practice-sessions";
+const settingsDbName = "metronome-practice-v0-settings";
 const recordingStorageKey = "metronome-practice:v0:quick-recordings";
 
 async function clearStores(page: Page, databaseName: string, storeNames: string[]) {
@@ -204,6 +205,145 @@ async function seedLocalData(page: Page) {
   );
 }
 
+type PersistenceSnapshot = {
+  sheets: number;
+  sheetArtifacts: number;
+  references: number;
+  referenceArtifacts: number;
+  recordings: number;
+  recordingArtifacts: number;
+  errorMarkers: number;
+  practiceSessions: number;
+  recordingHistorySessions: number;
+  settingsRecords: number;
+  settingsValue: {
+    defaultBpm?: number;
+    defaultTimeSignature?: string;
+    defaultSubdivision?: string;
+    metronomeVolume?: number;
+    referenceDefaultVolume?: number;
+  } | null;
+};
+
+async function countStores(page: Page, databaseName: string, storeNames: string[]) {
+  return page.evaluate(
+    ({ name, stores }) =>
+      new Promise<Record<string, number>>((resolve, reject) => {
+        const request = indexedDB.open(name);
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+          const availableStores = stores.filter((storeName) => database.objectStoreNames.contains(storeName));
+          const result = Object.fromEntries(stores.map((storeName) => [storeName, 0]));
+
+          if (availableStores.length === 0) {
+            database.close();
+            resolve(result);
+            return;
+          }
+
+          const transaction = database.transaction(availableStores, "readonly");
+
+          for (const storeName of availableStores) {
+            const countRequest = transaction.objectStore(storeName).count();
+
+            countRequest.onsuccess = () => {
+              result[storeName] = countRequest.result;
+            };
+          }
+
+          transaction.oncomplete = () => {
+            database.close();
+            resolve(result);
+          };
+          transaction.onerror = () => {
+            database.close();
+            reject(transaction.error);
+          };
+        };
+      }),
+    { name: databaseName, stores: storeNames }
+  );
+}
+
+async function getSettingsValue(page: Page) {
+  return page.evaluate(
+    (databaseName) =>
+      new Promise<PersistenceSnapshot["settingsValue"]>((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+
+          if (!database.objectStoreNames.contains("settings")) {
+            database.close();
+            resolve(null);
+            return;
+          }
+
+          const transaction = database.transaction(["settings"], "readonly");
+          const settingsRequest = transaction.objectStore("settings").get("user-settings");
+
+          settingsRequest.onsuccess = () => {
+            const value = settingsRequest.result?.value ?? null;
+
+            database.close();
+            resolve(value);
+          };
+          settingsRequest.onerror = () => {
+            database.close();
+            reject(settingsRequest.error);
+          };
+        };
+      }),
+    settingsDbName
+  );
+}
+
+async function getPersistenceSnapshot(page: Page): Promise<PersistenceSnapshot> {
+  const [sheetStores, referenceStores, practiceStores, settingsStores, settingsValue, recordingSnapshot] =
+    await Promise.all([
+      countStores(page, sheetDbName, ["sheets", "artifacts"]),
+      countStores(page, referenceDbName, ["references", "artifacts"]),
+      countStores(page, practiceDbName, ["sessions"]),
+      countStores(page, settingsDbName, ["settings"]),
+      getSettingsValue(page),
+      page.evaluate((storageKey) => {
+        const rawValue = window.localStorage.getItem(storageKey);
+        const parsed = rawValue
+          ? (JSON.parse(rawValue) as {
+              sessions?: unknown[];
+              recordings?: Array<{ audioDataUrl?: string | null }>;
+              errorMarkers?: unknown[];
+            })
+          : {};
+
+        return {
+          sessions: parsed.sessions?.length ?? 0,
+          recordings: parsed.recordings?.length ?? 0,
+          recordingArtifacts: parsed.recordings?.filter((recording) => !!recording.audioDataUrl).length ?? 0,
+          errorMarkers: parsed.errorMarkers?.length ?? 0
+        };
+      }, recordingStorageKey)
+    ]);
+
+  return {
+    sheets: sheetStores.sheets ?? 0,
+    sheetArtifacts: sheetStores.artifacts ?? 0,
+    references: referenceStores.references ?? 0,
+    referenceArtifacts: referenceStores.artifacts ?? 0,
+    recordings: recordingSnapshot.recordings,
+    recordingArtifacts: recordingSnapshot.recordingArtifacts,
+    errorMarkers: recordingSnapshot.errorMarkers,
+    practiceSessions: practiceStores.sessions ?? 0,
+    recordingHistorySessions: recordingSnapshot.sessions,
+    settingsRecords: settingsStores.settings ?? 0,
+    settingsValue
+  };
+}
+
 test("settings persist and clear all local data across reloads", async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -243,15 +383,66 @@ test("settings persist and clear all local data across reloads", async ({ page }
   await expect(page.getByTestId("settings-metronome-volume")).toHaveText("55");
   await expect(page.getByTestId("settings-reference-volume")).toHaveText("45");
 
+  await expect.poll(() => getPersistenceSnapshot(page)).toMatchObject({
+    sheets: 1,
+    sheetArtifacts: 1,
+    references: 1,
+    referenceArtifacts: 1,
+    recordings: 1,
+    recordingArtifacts: 1,
+    errorMarkers: 1,
+    practiceSessions: 1,
+    recordingHistorySessions: 1,
+    settingsRecords: 1,
+    settingsValue: {
+      defaultBpm: 142,
+      defaultTimeSignature: "6/8",
+      defaultSubdivision: "sixteenth",
+      metronomeVolume: 55,
+      referenceDefaultVolume: 45
+    }
+  });
+
   await page.getByRole("button", { name: "Clear All Local Data" }).click();
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByText("Cleanup canceled. Local data was not changed.")).toBeVisible();
   await expect(page.getByTestId("settings-count-sheets")).toHaveText("1");
   await expect(page.getByTestId("settings-count-recordings")).toHaveText("1");
+  await expect.poll(() => getPersistenceSnapshot(page)).toMatchObject({
+    sheets: 1,
+    sheetArtifacts: 1,
+    references: 1,
+    referenceArtifacts: 1,
+    recordings: 1,
+    recordingArtifacts: 1,
+    errorMarkers: 1,
+    practiceSessions: 1,
+    recordingHistorySessions: 1,
+    settingsRecords: 1
+  });
 
   await page.getByRole("button", { name: "Clear All Local Data" }).click();
   await page.getByRole("button", { name: "Confirm clear local data" }).click();
   await expect(page.getByText("All local data was cleared and settings returned to defaults.")).toBeVisible();
+  await expect.poll(() => getPersistenceSnapshot(page)).toMatchObject({
+    sheets: 0,
+    sheetArtifacts: 0,
+    references: 0,
+    referenceArtifacts: 0,
+    recordings: 0,
+    recordingArtifacts: 0,
+    errorMarkers: 0,
+    practiceSessions: 0,
+    recordingHistorySessions: 0,
+    settingsRecords: 1,
+    settingsValue: {
+      defaultBpm: 96,
+      defaultTimeSignature: "4/4",
+      defaultSubdivision: "quarter",
+      metronomeVolume: 80,
+      referenceDefaultVolume: 100
+    }
+  });
   await page.reload();
 
   await expect(page.getByTestId("settings-default-bpm")).toHaveValue("96");
@@ -271,4 +462,28 @@ test("settings persist and clear all local data across reloads", async ({ page }
 
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
+});
+
+test("settings shows browser fallback storage estimate and denied microphone status", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "storage", {
+      configurable: true,
+      value: {}
+    });
+    Object.defineProperty(navigator, "permissions", {
+      configurable: true,
+      value: {
+        async query() {
+          return { state: "denied" };
+        }
+      }
+    });
+  });
+
+  await page.goto("/settings");
+
+  await expect(page.getByTestId("settings-storage-estimate")).toContainText(
+    "Storage estimate is not available in this browser."
+  );
+  await expect(page.getByTestId("settings-microphone-status")).toContainText("Microphone permission denied");
 });
