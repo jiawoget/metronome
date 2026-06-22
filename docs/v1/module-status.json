@@ -1,348 +1,348 @@
-[
-  {
-    "module": "design-style",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "design-style.analytics-visuals",
-        "status": "not_started"
-      },
-      {
-        "feature": "design-style.segment-visual-states",
-        "status": "not_started"
-      },
-      {
-        "feature": "design-style.review-comparison-views",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "01-app-shell-home",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "home.dashboard-analytics",
-        "status": "not_started"
-      },
-      {
-        "feature": "home.practice-streaks",
-        "status": "not_started"
-      },
-      {
-        "feature": "home.goal-management",
-        "status": "not_started"
-      },
-      {
-        "feature": "home.recent-activity-timeline",
-        "status": "not_started"
-      },
-      {
-        "feature": "home.continue-practice-recommendations",
-        "status": "not_started"
-      },
-      {
-        "feature": "home.command-palette",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "02-quick-metronome",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "quick.auto-increase",
-        "status": "not_started"
-      },
-      {
-        "feature": "quick.mute-training",
-        "status": "not_started"
-      },
-      {
-        "feature": "quick.practice-templates",
-        "status": "not_started"
-      },
-      {
-        "feature": "quick.warmup-routines",
-        "status": "not_started"
-      },
-      {
-        "feature": "quick.tempo-progress-history",
-        "status": "not_started"
-      },
-      {
-        "feature": "quick.advanced-countdown",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "03-recordings-review",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "recordings.review-grouping",
-        "status": "not_started"
-      },
-      {
-        "feature": "recordings.tags-favorites-archive",
-        "status": "not_started"
-      },
-      {
-        "feature": "recordings.recording-comparison",
-        "status": "not_started"
-      },
-      {
-        "feature": "recordings.audio-export",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "04-sheet-library",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "library.tags-favorites",
-        "status": "not_started"
-      },
-      {
-        "feature": "library.batch-import",
-        "status": "not_started"
-      },
-      {
-        "feature": "library.recent-practice-summary",
-        "status": "not_started"
-      },
-      {
-        "feature": "library.review-by-sheet",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "05-sheet-practice",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "practice.measure-grid",
-        "status": "not_started"
-      },
-      {
-        "feature": "practice.practice-segments",
-        "status": "not_started"
-      },
-      {
-        "feature": "practice.segment-recording",
-        "status": "not_started"
-      },
-      {
-        "feature": "practice.segment-rerecording",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "05a-sheet-viewer",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "viewer.page-thumbnails",
-        "status": "not_started"
-      },
-      {
-        "feature": "viewer.multi-page-jump",
-        "status": "not_started"
-      },
-      {
-        "feature": "viewer.advanced-zoom-pan",
-        "status": "not_started"
-      },
-      {
-        "feature": "viewer.assisted-page-turning",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "05b-practice-controls",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "controls.segment-tempo",
-        "status": "not_started"
-      },
-      {
-        "feature": "controls.bar-aware-count-in",
-        "status": "not_started"
-      },
-      {
-        "feature": "controls.per-sheet-metronome-presets",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "05c-sheet-recording-review",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "takes.multi-take-management",
-        "status": "not_started"
-      },
-      {
-        "feature": "takes.active-best-take",
-        "status": "not_started"
-      },
-      {
-        "feature": "takes.take-history",
-        "status": "not_started"
-      },
-      {
-        "feature": "takes.waveform-comparison",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "05d-error-markers",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "markers.categories-severity",
-        "status": "not_started"
-      },
-      {
-        "feature": "markers.segment-markers",
-        "status": "not_started"
-      },
-      {
-        "feature": "markers.waveform-overlay",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "05e-session-integration",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "sessions.event-timeline",
-        "status": "not_started"
-      },
-      {
-        "feature": "sessions.segment-sessions",
-        "status": "not_started"
-      },
-      {
-        "feature": "sessions.session-history-grouping",
-        "status": "not_started"
-      },
-      {
-        "feature": "sessions.goal-completion",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "06-reference-system",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "reference.ab-loop",
-        "status": "not_started"
-      },
-      {
-        "feature": "reference.playback-speed",
-        "status": "not_started"
-      },
-      {
-        "feature": "reference.manual-offset-alignment",
-        "status": "not_started"
-      },
-      {
-        "feature": "reference.segment-binding",
-        "status": "not_started"
-      },
-      {
-        "feature": "reference.waveform-display",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "07-settings-local-data",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "settings.audio-device-selection",
-        "status": "not_started"
-      },
-      {
-        "feature": "settings.theme-system",
-        "status": "not_started"
-      },
-      {
-        "feature": "settings.notification-settings",
-        "status": "not_started"
-      },
-      {
-        "feature": "settings.data-import-export",
-        "status": "not_started"
-      },
-      {
-        "feature": "settings.storage-usage-breakdown",
-        "status": "not_started"
-      },
-      {
-        "feature": "settings.selective-cleanup",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "08-practice-session",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "practice-session.event-timeline",
-        "status": "not_started"
-      },
-      {
-        "feature": "practice-session.segment-history",
-        "status": "not_started"
-      },
-      {
-        "feature": "practice-session.session-comparison",
-        "status": "not_started"
-      },
-      {
-        "feature": "practice-session.duration-rules",
-        "status": "not_started"
-      }
-    ]
-  },
-  {
-    "module": "09-audio-analysis",
-    "status": "not_started",
-    "features": [
-      {
-        "feature": "analysis.engine-boundary",
-        "status": "not_started"
-      },
-      {
-        "feature": "analysis.peak-precomputation",
-        "status": "not_started"
-      },
-      {
-        "feature": "analysis.onset-detection-infrastructure",
-        "status": "not_started"
-      },
-      {
-        "feature": "analysis.reference-recording-support",
-        "status": "not_started"
-      }
-    ]
-  }
+﻿[
+    {
+        "module":  "design-style",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "design-style.analytics-visuals",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "design-style.segment-visual-states",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "design-style.review-comparison-views",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "01-app-shell-home",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "home.dashboard-analytics",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "home.practice-streaks",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "home.goal-management",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "home.recent-activity-timeline",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "home.continue-practice-recommendations",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "home.command-palette",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "02-quick-metronome",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "quick.auto-increase",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "quick.mute-training",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "quick.practice-templates",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "quick.warmup-routines",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "quick.tempo-progress-history",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "quick.advanced-countdown",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "03-recordings-review",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "recordings.review-grouping",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "recordings.tags-favorites-archive",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "recordings.recording-comparison",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "recordings.audio-export",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "04-sheet-library",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "library.tags-favorites",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "library.batch-import",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "library.recent-practice-summary",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "library.review-by-sheet",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "05-sheet-practice",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "practice.measure-grid",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "practice.practice-segments",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "practice.segment-recording",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "practice.segment-rerecording",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "05a-sheet-viewer",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "viewer.page-thumbnails",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "viewer.multi-page-jump",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "viewer.advanced-zoom-pan",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "viewer.assisted-page-turning",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "05b-practice-controls",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "controls.segment-tempo",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "controls.bar-aware-count-in",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "controls.per-sheet-metronome-presets",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "05c-sheet-recording-review",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "takes.multi-take-management",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "takes.active-best-take",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "takes.take-history",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "takes.waveform-comparison",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "05d-error-markers",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "markers.categories-severity",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "markers.segment-markers",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "markers.waveform-overlay",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "05e-session-integration",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "sessions.event-timeline",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "sessions.segment-sessions",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "sessions.session-history-grouping",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "sessions.goal-completion",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "06-reference-system",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "reference.ab-loop",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "reference.playback-speed",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "reference.manual-offset-alignment",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "reference.segment-binding",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "reference.waveform-display",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "07-settings-local-data",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "settings.audio-device-selection",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "settings.theme-system",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "settings.notification-settings",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "settings.data-import-export",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "settings.storage-usage-breakdown",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "settings.selective-cleanup",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "08-practice-session",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "practice-session.event-timeline",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "practice-session.segment-history",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "practice-session.session-comparison",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "practice-session.duration-rules",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    },
+    {
+        "module":  "09-audio-analysis",
+        "status":  "contract_ready",
+        "features":  [
+                         {
+                             "feature":  "analysis.engine-boundary",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "analysis.peak-precomputation",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "analysis.onset-detection-infrastructure",
+                             "status":  "contract_ready"
+                         },
+                         {
+                             "feature":  "analysis.reference-recording-support",
+                             "status":  "contract_ready"
+                         }
+                     ]
+    }
 ]

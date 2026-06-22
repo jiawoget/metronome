@@ -1,0 +1,57 @@
+[
+  {
+    "pack": "pack-1-practice-segment-mvp",
+    "status": "slicing_ready",
+    "slices": [
+      {
+        "slice": "P1-01 measure-grid-types-and-math",
+        "status": "ready_for_coding"
+      },
+      {
+        "slice": "P1-02 measure-grid-repository",
+        "status": "not_started"
+      },
+      {
+        "slice": "P1-03 measure-grid-calibration-ui",
+        "status": "not_started"
+      },
+      {
+        "slice": "P1-04 segment-types-and-validation",
+        "status": "not_started"
+      },
+      {
+        "slice": "P1-05 segment-repository",
+        "status": "not_started"
+      },
+      {
+        "slice": "P1-06 segment-selector-read-ui",
+        "status": "not_started"
+      },
+      {
+        "slice": "P1-07 segment-create-edit-delete-ui",
+        "status": "not_started"
+      },
+      {
+        "slice": "P1-08 recording-metadata-segment-fields",
+        "status": "not_started"
+      },
+      {
+        "slice": "P1-09 recording-save-segment-context",
+        "status": "not_started"
+      },
+      {
+        "slice": "P1-10 rerecord-workflow-state",
+        "status": "not_started"
+      },
+      {
+        "slice": "P1-11 rerecord-record-again-action",
+        "status": "not_started"
+      },
+      {
+        "slice": "P1-12 rerecord-two-artifact-verification",
+        "status": "not_started"
+      }
+    ]
+  }
+]
+

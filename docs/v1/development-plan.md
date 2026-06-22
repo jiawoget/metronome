@@ -29,7 +29,84 @@ The first implementation phase is documentation and definition only:
 3. Convert priority v1 features into full contracts using `docs/v1/module-template.md`.
 4. Include UI design requirements for every user-facing feature contract.
 5. Set a feature to `contract_ready` only after it has v0-level scope, boundaries, acceptance criteria, test plan, implementation contract, verification contract, and done definition.
-6. Assign one implementation agent to exactly one `contract_ready` feature.
+6. Group feature contracts into user-acceptance packs in `docs/v1/acceptance-packs.md`.
+7. Split the next pack into atomic implementation slices under `docs/v1/implementation-slices/`.
+8. Assign one implementation agent to exactly one `ready_for_coding` implementation slice.
+
+## Planning Layers
+
+v1 planning uses three layers so implementation agents do not receive oversized feature contracts:
+
+```text
+Product Feature Inventory
+  -> Product Feature Contracts
+  -> Atomic Implementation Slices
+  -> Acceptance Packs
+```
+
+- Product feature inventory records what v1 includes.
+- Product feature contracts define user scope, boundaries, acceptance criteria, and verification expectations.
+- Implementation slices are the small units assigned to fresh coding/review/verification agents.
+- Acceptance packs are the larger product increments the user accepts after all included slices are verified.
+
+Do not launch a coding agent directly for a large product feature if it has not been split into implementation slices.
+
+## Acceptance Packs
+
+The user accepts v1 in packs, not one tiny slice at a time.
+
+Pack definitions live in:
+
+```text
+docs/v1/acceptance-packs.md
+```
+
+The current pack order is:
+
+```text
+Pack 0 Design / Planning Foundation
+Pack 1 Practice Segment MVP
+Pack 2 Segment Take Review
+Pack 3 Session / Continue Practice
+Pack 4 Practice Controls Upgrade
+Pack 5 Library / Viewer Upgrade
+Pack 6 Quick Metronome Training
+Pack 7 Reference / Markers
+Pack 8 Settings / Local Data
+Pack 9 Audio Analysis Infrastructure
+```
+
+Pack implementation should proceed in dependency order unless the user explicitly reprioritizes.
+
+## Implementation Slices
+
+Implementation slices live under:
+
+```text
+docs/v1/implementation-slices/
+```
+
+Slice status is tracked separately from product feature status in:
+
+```text
+docs/v1/implementation-slices/status.json
+```
+
+Only slices marked `ready_for_coding` may be assigned to a coding agent.
+
+Each slice should be small enough for one fresh coding agent context:
+
+- One narrow behavior boundary.
+- One to three primary code areas.
+- Five to eight acceptance criteria.
+- Clear out-of-scope list.
+- Focused verification requirements.
+
+The first implementation target is Pack 1:
+
+```text
+docs/v1/implementation-slices/01-practice-segment-mvp.md
+```
 
 ## Initial v1 Spine
 
