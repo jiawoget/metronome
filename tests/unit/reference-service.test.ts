@@ -25,6 +25,9 @@ function createMemoryRepository(): ReferenceRepository {
 
   return {
     listReferences,
+    async countAllReferences() {
+      return references.size;
+    },
     async getActiveReference(sheetId) {
       return (await listReferences(sheetId)).find((reference) => reference.isActive) ?? null;
     },

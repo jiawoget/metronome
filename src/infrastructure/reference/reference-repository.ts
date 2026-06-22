@@ -60,6 +60,10 @@ async function listReferences(sheetId: string) {
 
 export const referenceRepository: ReferenceRepository = {
   listReferences,
+  async countAllReferences() {
+    return getDatabase().references.count();
+  },
+
   async getActiveReference(sheetId) {
     return (await listReferences(sheetId)).find((reference) => reference.isActive) ?? null;
   },

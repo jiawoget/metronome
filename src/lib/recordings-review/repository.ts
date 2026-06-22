@@ -242,6 +242,10 @@ export const recordingHistoryRepository = {
     return nextSnapshot;
   },
 
+  clear() {
+    writeSnapshot(emptySnapshot);
+  },
+
   subscribe(listener: () => void) {
     if (typeof window === "undefined") {
       return () => undefined;

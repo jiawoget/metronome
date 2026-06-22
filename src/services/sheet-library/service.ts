@@ -116,6 +116,10 @@ export function createSheetLibraryService({
 
     getArtifact(sheetId) {
       return repository.getArtifact(sheetId);
+    },
+
+    clear() {
+      return repository.clear();
     }
   };
 }

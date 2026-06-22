@@ -39,6 +39,10 @@ function createMemoryRepository(): SheetLibraryRepository {
     async deleteSheet(sheetId) {
       sheets.delete(sheetId);
       artifacts.delete(sheetId);
+    },
+    async clear() {
+      sheets.clear();
+      artifacts.clear();
     }
   };
 }

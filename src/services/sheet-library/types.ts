@@ -41,6 +41,7 @@ export type SheetLibraryRepository = {
   updateLastPracticedAt: (sheetId: string, practicedAt: string) => Promise<void>;
   getArtifact: (sheetId: string) => Promise<SheetArtifact | null>;
   deleteSheet: (sheetId: string) => Promise<void>;
+  clear: () => Promise<void>;
 };
 
 export type SheetImportAdapter = {
@@ -56,4 +57,5 @@ export type SheetLibraryService = {
   updateLastPracticedAt: (sheetId: string, practicedAt: string) => Promise<void>;
   deleteSheet: (sheetId: string) => Promise<void>;
   getArtifact: (sheetId: string) => Promise<SheetArtifact | null>;
+  clear: () => Promise<void>;
 };

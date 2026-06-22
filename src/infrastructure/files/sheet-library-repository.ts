@@ -75,6 +75,15 @@ export const sheetLibraryRepository: SheetLibraryRepository = {
       await db.artifacts.delete(sheetId);
       await db.sheets.delete(sheetId);
     });
+  },
+
+  async clear() {
+    const db = getDatabase();
+
+    await db.transaction("rw", db.sheets, db.artifacts, async () => {
+      await db.artifacts.clear();
+      await db.sheets.clear();
+    });
   }
 };
 

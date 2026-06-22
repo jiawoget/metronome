@@ -39,6 +39,7 @@ export type BilibiliResultReferenceInput = {
 
 export type ReferenceRepository = {
   listReferences: (sheetId: string) => Promise<SheetReference[]>;
+  countAllReferences: () => Promise<number>;
   getActiveReference: (sheetId: string) => Promise<SheetReference | null>;
   getLocalAudioArtifact: (referenceId: string) => Promise<LocalAudioReferenceArtifact | null>;
   saveReference: (reference: SheetReference, artifact?: LocalAudioReferenceArtifact | null) => Promise<void>;
@@ -56,6 +57,7 @@ export type BilibiliSearchAdapter = {
 
 export type ReferenceService = {
   listReferences: (sheetId: string) => Promise<SheetReference[]>;
+  countAllReferences: () => Promise<number>;
   getActiveReference: (sheetId: string) => Promise<SheetReference | null>;
   getLocalAudioArtifact: (referenceId: string) => Promise<LocalAudioReferenceArtifact | null>;
   addLocalAudioReference: (input: LocalAudioReferenceInput) => Promise<ReferenceResult<LocalAudioReference>>;

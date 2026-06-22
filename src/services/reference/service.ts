@@ -78,6 +78,10 @@ export function createReferenceService({
       return repository.listReferences(sheetId);
     },
 
+    countAllReferences() {
+      return repository.countAllReferences();
+    },
+
     getActiveReference(sheetId) {
       return repository.getActiveReference(sheetId);
     },
