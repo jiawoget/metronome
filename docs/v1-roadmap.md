@@ -8,7 +8,7 @@ This document is intentionally separate from the v0 plan. Future ideas should li
 
 ## Product Direction
 
-v1 should deepen the practice workflow after the v0 loop is stable:
+v1 should deepen the local-first practice workflow after the v0 loop is stable:
 
 ```text
 Practice material
@@ -16,17 +16,13 @@ Practice material
   -> Reference alignment
   -> Multiple takes
   -> Review and comparison
-  -> Sync and long-term history
+  -> Local long-term history
 ```
 
 ## Candidate v1 Areas
 
 v1 may include:
 
-- User login.
-- Supabase-backed cloud sync.
-- Cross-device practice history.
-- Cloud storage for recordings and reference files.
 - More complete Practice Segment management.
 - Segment-level history.
 - Start recording from a selected bar.
@@ -37,6 +33,8 @@ v1 may include:
 - More detailed practice statistics.
 - Richer Bilibili reference metadata.
 - Better review workflow for repeated takes.
+
+Cloud sync, login, cross-device resume, cloud storage, backup/restore, and conflict handling are tracked in `docs/v2`.
 
 ## Sheet Practice Expansion
 
@@ -84,9 +82,7 @@ Candidate improvements include:
 - Recording comparison.
 - Multi-take management.
 - Bar-level navigation.
-- Automatic scoring experiments.
-- Automatic timing analysis.
-- Cloud backup and restore.
+- Analysis-backed waveform support.
 - Tags.
 - Favorites.
 - Archive.
@@ -107,18 +103,14 @@ Candidate improvements include:
 - Tags.
 - Favorites.
 - Batch import.
-- Guitar Pro import exploration.
-- MusicXML import exploration.
-- Automatic BPM detection.
-- Automatic time signature detection.
-- Assisted bar detection.
-- Cloud-synced sheet library.
 - Sheet sharing.
 - Richer sheet detail pages.
 - Recent practice summary per sheet.
 - Review grouped by sheet.
 
 These features should build on the v0 decision that a sheet can be opened directly into `Sheet Practice`.
+
+Guitar Pro import, MusicXML import, automatic BPM detection, automatic time-signature detection, and assisted bar detection are deferred to v2.
 
 ## Reference System Expansion
 
@@ -142,7 +134,7 @@ Bilibili should remain a lightweight watching and follow-along reference unless 
 
 ## Home / App Shell Expansion
 
-After the v0 practice dashboard and navigation are stable, v1 can make the app feel more like a long-term practice companion.
+After the v0 practice dashboard and navigation are stable, v1 can make the app feel more like a long-term local practice companion.
 
 Candidate improvements include:
 
@@ -154,22 +146,17 @@ Candidate improvements include:
 - Advanced notifications.
 - Recent activity timeline.
 - More detailed continue-practice recommendations.
-- Cross-device resume after cloud sync exists.
+
+Cross-device resume is deferred to v2.
 
 These features should keep `Home` focused on practice entry and review, not marketing content.
 
 ## Settings / Data Expansion
 
-After the v0 local-first data model is stable, v1 can add account, sync, and more advanced data controls.
+After the v0 local-first data model is stable, v1 can add more advanced local data controls.
 
 Candidate improvements include:
 
-- Account settings.
-- Cloud sync settings.
-- Device sync status.
-- Supabase-backed user data.
-- Cross-device settings sync.
-- Cross-device sheet and recording sync.
 - Advanced audio device selection.
 - Theme system.
 - Notification settings.
@@ -178,7 +165,7 @@ Candidate improvements include:
 - Storage usage breakdown.
 - Selective cleanup by data type.
 
-Cloud sync should be added as a layer over the local-first model rather than replacing the v0 local practice loop.
+Account and cloud sync work is deferred to v2, where it should be added as a layer over the local-first model rather than replacing the local practice loop.
 
 ## Practice Session Expansion
 
@@ -192,29 +179,30 @@ Candidate improvements include:
 - Practice Segment-level sessions.
 - Multi-take comp sessions.
 - Automatic analysis result attachments.
-- Cross-device session merging.
 - Session history grouped by sheet or segment.
 - Session comparison over time.
 - More detailed practice duration rules.
+
+Cross-device session merging is deferred to v2.
 
 These features should extend the v0 session concept instead of replacing it with recording-only history.
 
 ## Audio Analysis Direction
 
-v1 can start introducing analysis features where they directly improve practice:
+v1 can start introducing bounded analysis infrastructure where it directly improves practice:
 
 - Peak precomputation for faster waveform rendering.
-- Onset detection.
-- Timing deviation analysis.
-- BPM detection.
-- Pitch detection experiments.
-- Audio alignment experiments.
+- Onset detection infrastructure.
+- Reference-to-recording comparison support.
+- Analysis result boundaries for future review features.
 
 These features should remain behind an `AudioAnalysisEngine` boundary so the app can start with TypeScript implementations and later replace expensive parts with Rust/WASM or C++/WASM.
 
-## WASM Expansion Boundary
+User-facing timing deviation feedback, BPM detection, pitch detection, automatic scoring, and productized audio alignment are deferred to v2.
 
-The preferred future performance path is:
+## Future WASM Expansion Boundary
+
+The preferred future performance path for later analysis-heavy work is:
 
 ```text
 Rust + wasm-bindgen
@@ -239,6 +227,8 @@ These ideas should not be assumed for v1 unless explicitly selected later:
 - Automatic sheet bar-line recognition.
 - Guitar Pro parsing.
 - MusicXML parsing.
+- Automatic BPM detection.
+- Automatic time-signature detection.
 - Bilibili or YouTube downloading.
 - Automatic extraction of video audio.
 - Full multitrack DAW editing.

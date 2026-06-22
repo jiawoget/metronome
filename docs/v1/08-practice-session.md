@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This module extends v0 Practice Session into more structured, analytics-ready, segment-aware, and sync-ready practice history.
+This module extends v0 Practice Session into more structured, analytics-ready, segment-aware local practice history.
 
 ## Builds On
 
@@ -21,18 +21,16 @@ This module extends v0 Practice Session into more structured, analytics-ready, s
 - Practice Segment-level sessions.
 - Multi-take comp sessions.
 - Automatic analysis result attachments.
-- Cross-device session merging.
 - Session history grouped by sheet or segment.
 - Session comparison over time.
 - More detailed practice duration rules.
-- Sync conflict handling for sessions.
 
 ## Product Value
 
 - Make practice history more useful over time.
 - Enable segment-level tracking and review.
 - Support richer dashboards and goals.
-- Prepare for cross-device continuity.
+Cross-device continuity and merge behavior are deferred to v2.
 
 ## Required v0 Boundaries to Preserve
 
@@ -48,7 +46,6 @@ This module extends v0 Practice Session into more structured, analytics-ready, s
 - Segment session model.
 - Goal completion model.
 - Session analytics service.
-- Sync merge policy.
 - Analysis attachment model.
 
 ## Testing Implications
@@ -56,13 +53,11 @@ This module extends v0 Practice Session into more structured, analytics-ready, s
 - Event timeline tests need deterministic event sequences.
 - Segment sessions need E2E from segment practice through review.
 - Goal tracking needs completion and partial completion tests.
-- Sync merge needs conflict fixtures.
 - Date and timezone behavior must be explicitly tested.
 
 ## Risks
 
 - Detailed timelines can make simple practice feel over-instrumented.
-- Sync merging can create duplicate or conflicting sessions.
 - Segment sessions can drift toward DAW-like complexity.
 - Analytics can imply precision that v0 data does not support.
 

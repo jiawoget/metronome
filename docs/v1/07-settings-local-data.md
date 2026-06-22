@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This module extends v0 local settings and cleanup into account, sync, storage, and more advanced user preference management.
+This module extends v0 local settings and cleanup into storage, device, import/export, and more advanced local preference management.
 
 ## Builds On
 
@@ -14,12 +14,6 @@ This module extends v0 local settings and cleanup into account, sync, storage, a
 
 ## Candidate v1 Features
 
-- Account settings.
-- Cloud sync settings.
-- Device sync status.
-- Supabase-backed user data.
-- Cross-device settings sync.
-- Cross-device sheet and recording sync.
 - Advanced audio device selection.
 - Theme system.
 - Notification settings.
@@ -31,9 +25,10 @@ This module extends v0 local settings and cleanup into account, sync, storage, a
 ## Product Value
 
 - Give users control as the app stores more practice history.
-- Support cross-device workflows after local-first behavior is stable.
 - Make cleanup and storage management more precise.
 - Allow richer personalization without bloating v0.
+
+Account, cloud sync, cross-device settings, and device sync status are deferred to v2.
 
 ## Required v0 Boundaries to Preserve
 
@@ -44,9 +39,6 @@ This module extends v0 local settings and cleanup into account, sync, storage, a
 
 ## Possible Architecture Changes
 
-- Account/auth service.
-- Sync service.
-- Device sync status model.
 - Storage breakdown service.
 - Selective cleanup service.
 - Data import/export service.
@@ -55,7 +47,6 @@ This module extends v0 local settings and cleanup into account, sync, storage, a
 
 ## Testing Implications
 
-- Sync tests need offline, conflict, and restore scenarios.
 - Selective cleanup tests need per-data-type artifact checks.
 - Import/export tests need file integrity checks.
 - Device selection tests need browser capability fallbacks.
@@ -63,7 +54,6 @@ This module extends v0 local settings and cleanup into account, sync, storage, a
 
 ## Risks
 
-- Cloud sync can complicate local-first guarantees.
 - Selective cleanup can create dangling references if data contracts are weak.
 - Import/export can create compatibility issues.
 - Advanced device settings may behave differently across browsers.
@@ -76,3 +66,5 @@ Promote v1 Settings/Data features only after:
 - v0 cleanup is verified.
 - Sheet, recording, reference, marker, and session data contracts are stable.
 - The selected feature has a clear data migration and test strategy.
+
+Cloud sync promotion criteria live in `docs/v2`.

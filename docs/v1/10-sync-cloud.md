@@ -1,77 +1,25 @@
-# Sync / Cloud v1 Roadmap
+# Sync / Cloud Deferred To v2
 
 ## Purpose
 
-This v1-only module collects account, cloud storage, and cross-device sync work.
+This file remains as a v1 redirect so older roadmap references do not hide the scope decision.
 
-v0 must remain local-first and usable without login.
+Account, cloud storage, cross-device sync, backup/restore, and conflict handling are not v1 implementation work. They are tracked in `docs/v2`.
 
-## Builds On
+## v1 Boundary
 
-- v0 local data persistence is stable.
-- v0 Settings can clear all local data.
-- v0 sheets, recordings, references, markers, and sessions have clear local data contracts.
-- v0 practice loop works without cloud services.
+v1 must preserve local-first contracts so v2 sync can layer on top later:
 
-## Candidate v1 Features
-
-- User login.
-- Supabase-backed cloud sync.
-- Cross-device settings sync.
-- Cross-device sheet metadata sync.
-- Recording artifact upload.
-- Reference artifact upload where appropriate.
-- Practice history sync.
-- Device sync status.
-- Conflict handling.
-- Backup and restore.
-
-## Product Value
-
-- Let users continue practice across devices.
-- Protect practice history and recordings from local browser storage loss.
-- Enable richer long-term practice history.
-
-## Required v0 Boundaries to Preserve
-
-- Local-first practice loop remains available without login.
-- Sync is a layer over local data, not a replacement for it.
-- UI should not directly call cloud APIs.
+- Practice remains usable without login.
+- Local settings, sheets, recordings, references, markers, sessions, segments, and takes stay authoritative on the current device.
+- UI code does not call cloud APIs directly.
 - Local cleanup remains available.
-- Cloud sync must not silently delete local user data.
+- No v1 feature should silently delete local user data in preparation for future sync.
 
-## Possible Architecture Changes
+## v2 Documents
 
-- Auth service.
-- Sync service.
-- Cloud repository adapters.
-- Artifact upload/download service.
-- Conflict resolution model.
-- Sync status model.
-- Migration model from local-only to local-plus-cloud.
+See:
 
-## Testing Implications
-
-- Sync tests need offline and online scenarios.
-- Conflict tests need same record changed on two devices.
-- Upload tests need artifact integrity verification.
-- Restore tests need local empty state plus remote data.
-- Logout tests need clear data ownership behavior.
-- E2E tests must still use real browser interaction.
-
-## Risks
-
-- Sync can break local-first guarantees if introduced too early.
-- Large audio artifacts can create storage and bandwidth issues.
-- Conflict resolution can create duplicate sessions or recordings.
-- Auth flows can distract from core practice experience.
-
-## Promotion Criteria
-
-Promote v1 sync/cloud only after:
-
-- v0 local data contracts are verified.
-- v0 cleanup behavior is verified.
-- Recording and sheet artifact persistence are stable.
-- A concrete sync conflict policy is agreed.
-- The selected sync feature has deterministic integration and E2E tests.
+- `docs/v2/00-overview.md`
+- `docs/v2/roadmap.md`
+- `docs/v2/module-status.json`

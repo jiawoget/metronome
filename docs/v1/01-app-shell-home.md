@@ -22,7 +22,6 @@ This module extends the v0 practice dashboard into a richer long-term practice c
 - Advanced notifications.
 - Recent activity timeline.
 - More detailed continue-practice recommendations.
-- Cross-device resume after cloud sync exists.
 
 ## Product Value
 
@@ -44,12 +43,10 @@ This module extends the v0 practice dashboard into a richer long-term practice c
 - Goal or plan domain model.
 - Notification service.
 - Command palette state and routing.
-- Sync-aware continue-practice service after cloud sync exists.
 
 ## Testing Implications
 
 - E2E tests for goal creation and dashboard navigation.
-- Cross-device resume tests after sync exists.
 - Regression tests ensuring primary v0 entries remain visible.
 - Visual checks for dashboard density and mobile layout.
 
@@ -58,7 +55,7 @@ This module extends the v0 practice dashboard into a richer long-term practice c
 - Dashboard complexity could obscure fast practice entry.
 - Analytics could imply precision the app does not yet support.
 - Notifications and goals may create product weight before the practice loop is strong.
-- Cross-device resume depends on sync correctness.
+Cross-device resume is deferred to v2.
 
 ## Promotion Criteria
 

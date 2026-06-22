@@ -2,7 +2,7 @@
 
 ## Purpose
 
-v1 evolves the app from a local-first practice tool into a more complete practice system.
+v1 evolves the app from a local-first practice tool into a more complete local practice system.
 
 This folder exists so future-facing work does not get mixed into v0 module contracts. When a feature is useful but not part of v0, it should be documented here instead of being implemented early.
 
@@ -10,8 +10,6 @@ This folder exists so future-facing work does not get mixed into v0 module contr
 
 v1 may deepen the app in these areas:
 
-- Account and cloud sync.
-- Cross-device practice history.
 - More complete Practice Segment workflows.
 - More structured review and comparison.
 - More advanced metronome training modes.
@@ -19,6 +17,8 @@ v1 may deepen the app in these areas:
 - Reference alignment and comparison.
 - Audio analysis experiments.
 - WASM-backed performance paths.
+
+Account, cloud sync, cross-device resume, backup/restore, and sync conflict handling are deferred to `docs/v2`.
 
 ## Relationship to v0
 
@@ -51,7 +51,13 @@ If a v0 implementer finds a tempting future feature, it should be added to the r
 07-settings-local-data.md
 08-practice-session.md
 09-audio-analysis.md
-10-sync-cloud.md
 ```
 
-The first eight files mirror v0 modules. The final two cover broader v1 systems that should not shape v0 too early.
+Deferred cloud/sync work lives in:
+
+```text
+../v2/00-overview.md
+../v2/roadmap.md
+```
+
+The first eight files mirror v0 modules. `09-audio-analysis.md` covers broader v1 infrastructure that should stay behind service boundaries.

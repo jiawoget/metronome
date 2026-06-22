@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This v1-only module collects future audio analysis work that should not shape v0 implementation too early.
+This v1 module defines bounded audio analysis infrastructure that should not shape v0 implementation too early.
 
 v0 may preserve adapter boundaries for analysis, but it must not implement automatic analysis features unless explicitly promoted.
 
@@ -16,17 +16,13 @@ v0 may preserve adapter boundaries for analysis, but it must not implement autom
 ## Candidate v1 Features
 
 - Peak precomputation for faster waveform rendering.
-- Onset detection.
-- Timing deviation analysis.
-- BPM detection.
-- Pitch detection experiments.
-- Audio alignment experiments.
+- Onset detection infrastructure.
 - Reference-to-recording comparison support.
+- Analysis result boundaries for future review features.
 
 ## Product Value
 
 - Make waveform rendering faster and more reliable.
-- Help users understand timing issues.
 - Prepare for future assisted practice feedback.
 - Enable more precise comparison once reference and recording foundations are stable.
 
@@ -48,9 +44,7 @@ v0 may preserve adapter boundaries for analysis, but it must not implement autom
 ## Testing Implications
 
 - Analysis tests need controlled audio fixtures.
-- Timing analysis needs known onset fixtures.
-- BPM detection needs fixture tracks with known tempo.
-- Pitch detection needs known frequency fixtures.
+- Onset infrastructure needs known onset fixtures.
 - WASM adapters need parity tests against expected results.
 - E2E tests must avoid treating analysis as authoritative unless accuracy criteria are defined.
 
@@ -69,3 +63,5 @@ Promote v1 audio analysis only after:
 - Controlled fixture sets exist.
 - Accuracy tolerances are defined.
 - The selected analysis feature has a clear product decision and failure state.
+
+User-facing timing deviation feedback, BPM detection, pitch detection, automatic scoring, and productized audio alignment are deferred to `docs/v2`.

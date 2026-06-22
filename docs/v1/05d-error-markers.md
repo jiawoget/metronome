@@ -18,10 +18,11 @@ This module extends v0 timestamp-based manual markers into richer, more practice
 - Markers attached to Practice Segments.
 - Marker categories.
 - Severity levels.
-- Automatic mistake suggestions.
 - Marker waveform overlay.
 - Marker on sheet overlay.
 - Marker grouping by section or practice session.
+
+Automatic mistake suggestions are deferred to v2.
 
 ## Product Value
 
@@ -34,7 +35,7 @@ This module extends v0 timestamp-based manual markers into richer, more practice
 
 - Timestamp-based markers remain valid.
 - Markers remain scoped to recordings.
-- Manual marker creation remains available even if automatic suggestions exist later.
+- Manual marker creation remains available and primary.
 - Seek behavior must continue to use playback service boundaries.
 
 ## Possible Architecture Changes
@@ -42,7 +43,6 @@ This module extends v0 timestamp-based manual markers into richer, more practice
 - Bar-aware marker model.
 - Practice Segment marker relation.
 - Marker category metadata.
-- Analysis suggestion model.
 - Sheet overlay coordinate model.
 - Waveform overlay rendering.
 
@@ -50,14 +50,12 @@ This module extends v0 timestamp-based manual markers into richer, more practice
 
 - Bar-aware markers need fixtures with known bar positions.
 - Segment markers need segment setup and persistence tests.
-- Automatic suggestions need controlled audio fixtures and false-positive checks.
 - Overlay features need visual and coordinate tests across zoom/resize.
 - E2E tests must still use real browser interaction.
 
 ## Risks
 
 - Bar-aware markers can imply score understanding before it is reliable.
-- Automatic suggestions may feel authoritative even when uncertain.
 - Overlays can clutter the Sheet Practice workspace.
 
 ## Promotion Criteria
