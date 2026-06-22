@@ -204,7 +204,12 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   await expect(page.getByText("Metronome stopped.")).toBeVisible();
 
   let sessions = await getPracticeSessions(page);
-  const quickSession = sessions.find((session) => session.sourceType === "quick");
+  const quickSession = sessions.find(
+    (session) =>
+      session.sourceType === "quick" &&
+      session.recordingCount === 0 &&
+      session.latestRecordingId === null
+  );
 
   expect(quickSession).toMatchObject({
     sourceType: "quick",
@@ -212,6 +217,7 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
     recordingCount: 0,
     latestRecordingId: null
   });
+  expect(quickSession?.id).toBeTruthy();
 
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Continue Practice" })).toHaveAttribute("href", "/quick-metronome");
@@ -224,10 +230,21 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   await expect(page.getByText(/^Recording saved/)).toBeVisible();
 
   sessions = await getPracticeSessions(page);
-  const quickWithRecording = sessions.find((session) => session.sourceType === "quick");
+  const quickWithRecording = sessions.find(
+    (session) =>
+      session.sourceType === "quick" &&
+      session.recordingCount === 1 &&
+      typeof session.latestRecordingId === "string" &&
+      session.latestRecordingId.length > 0
+  );
 
-  expect(quickWithRecording?.recordingCount).toBe(1);
-  expect(quickWithRecording?.latestRecordingId).toBeTruthy();
+  expect(quickWithRecording).toMatchObject({
+    sourceType: "quick",
+    sheetId: null,
+    recordingCount: 1
+  });
+  expect(quickWithRecording?.id).not.toBe(quickSession?.id);
+  expect(sessions.filter((session) => session.sourceType === "quick")).toHaveLength(2);
 
   const sheetId = await importSheet(page);
 

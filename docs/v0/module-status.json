@@ -1279,7 +1279,7 @@
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
-                                                 "completedAt":  "2026-06-22T07:05:35Z",
+                                                 "completedAt":  "2026-06-22T07:09:36Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/practice-session-service.test.ts tests/unit/quick-metronome-session.test.ts tests/unit/home-dashboard.test.tsx tests/unit/settings-service.test.ts tests/unit/sheet-practice-recording.test.ts tests/unit/sheet-practice-controls.test.tsx -> PASS; 6 test files passed, 41 tests passed",
@@ -1288,7 +1288,9 @@
                                                      "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
                                                      "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/practice-session-service.test.ts tests/unit/quick-metronome-session.test.ts tests/unit/sheet-practice-controls.test.tsx tests/unit/sheet-practice-recording.test.ts tests/unit/home-dashboard.test.tsx tests/unit/settings-service.test.ts -> PASS; 6 test files passed, 42 tests passed",
                                                      "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/practice-session.spec.ts -> PASS; 1 chromium test passed with concrete Today Summary expectations and distinct quick/sheet history entries",
-                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS"
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                     "Re-review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/practice-session.spec.ts -> PASS; 1 chromium test passed after deterministic quick recording-linked session selector",
+                                                     "Re-review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/practice-session-service.test.ts -> PASS; 1 test file passed, 17 tests passed"
                                                                ],
                                                  "handoffNotes":  [
                                                      "Assigned feature: 08-practice-session.",
@@ -1304,6 +1306,7 @@
                                                      "Strict review fix: Quick Metronome no longer exposes a duplicate quick PracticeSession type or createQuickPracticeSession factory; quick recordings accept the canonical domain PracticeSession id, and legacy quick session reads are bounded to the global repository adapter.",
                                                      "Strict review fix: Sheet controls rollback now treats a newly created session as the rollback target instead of restoring an older ended session when the service correctly creates fresh history.",
                                                      "Strict review fix: Tests now cover later-day activity against old sessions, active-session reuse, missing-sheet Continue Practice recovery, invalid sheet guard, recording-without-session rejection, and concrete Today Summary browser assertions.",
+                                                     "Re-review fix: Practice-session E2E now selects the later quick session by concrete recording metadata instead of the first quick row, and asserts it is distinct from the metronome-only quick session.",
                                                      "Implementation commit hash is reported in the final handoff response because a git commit cannot contain its own final object hash without changing that hash."
                                                                   ],
                                                  "changedAreas":  [
@@ -1319,7 +1322,8 @@
                                                      "Strict review fix: src/services/practice-session/service.ts constrains active-session reuse to unended sessions from the same browser-local day",
                                                      "Strict review fix: src/lib/quick-metronome/session.ts and src/lib/quick-metronome/types.ts retire the duplicate quick session model and factory",
                                                      "Strict review fix: src/infrastructure/db/global-practice-session-repository.ts clearly bounds legacy quick session reads to the adapter path",
-                                                     "Strict review fix: tests/unit/practice-session-service.test.ts and tests/e2e/practice-session.spec.ts add regression coverage for new-session history entries, stale sheet recovery, recording sessionId rejection, and concrete summary values"
+                                                     "Strict review fix: tests/unit/practice-session-service.test.ts and tests/e2e/practice-session.spec.ts add regression coverage for new-session history entries, stale sheet recovery, recording sessionId rejection, and concrete summary values",
+                                                     "Re-review fix: tests/e2e/practice-session.spec.ts uses deterministic quick session selectors for metronome-only and recording-linked sessions"
                                                                   ],
                                                  "knownRisks":  [
                                                      "Quick recording audio artifacts still live in the existing v0 localStorage recording artifact store; the global Practice Session service now owns session metadata, while artifact migration to IndexedDB remains outside 08 scope.",
