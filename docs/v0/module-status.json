@@ -461,7 +461,7 @@
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
-                                                 "completedAt":  "2026-06-22T01:41:47Z",
+                                                 "completedAt":  "2026-06-22T01:50:04Z",
                                                  "selfTests":  [
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
@@ -469,7 +469,15 @@
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-practice-integration.spec.ts -> PASS; 1 chromium parent integration test passed",
                                                      "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 14 chromium tests passed",
-                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free"
+                                                     "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 18 test files passed, 91 tests passed",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-practice-integration.spec.ts -> PASS; 1 chromium parent integration test passed with desktop, tablet, and narrow mobile layout checks at initial open, recording/marker render, reload, and Continue Practice return",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-viewer.spec.ts -> PASS; reran after one transient full-suite PDF canvas blank result",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 14 chromium tests passed on rerun",
+                                                     "Strict review fix: source /home/stonepia/.nvm/nvm.sh && nvm use 24 && node port bind check for 127.0.0.1:3101 -> PASS; port 3101 free"
                                                                ],
                                                  "handoffNotes":  [
                                                      "Assigned feature: 05-sheet-practice parent integration.",
@@ -478,17 +486,20 @@
                                                      "Verified submodule status refs used for this parent handoff: 05a dc2276bfbef585a08365a49946ba42df4df01b04, 05e 1e7b9a77897b8f2d4871654a4f894bf7d88e4b90, 05b 06d5763d72b61d9dfdcb1dd13c78c5eaa4e67a4d, 05c 3ffbe09315028ee1b54e441cee74db33248b8b2c, 05d 9b81f9b0ce6064370aaa53917d4e6a0fb26ffdf4.",
                                                      "Existing Sheet Practice composition already opens from Sheet Library into /sheet-practice/[sheetId], keeps the real sheet viewer above bottom controls, wires active sheet session context, saves sheet-linked recordings, shows latest recording replay/waveform, and wires manual recording-scoped error markers.",
                                                      "Added a focused parent integrated Playwright path that imports a real image sheet, opens Sheet Practice from Sheet Library, verifies sheet visibility/layout, exercises metronome/session activity, records controlled synthetic audio, replays latest recording, adds and seeks a manual marker, reloads persistence, and uses Home Continue Practice to return to the same sheet.",
-                                                     "No production submodule rewrite was needed for the parent; no reference-system advanced behavior, automatic analysis, current-bar behavior, bar detection, or automatic mistake detection was added."
+                                                     "No production submodule rewrite was needed for the parent; no reference-system advanced behavior, automatic analysis, current-bar behavior, bar detection, or automatic mistake detection was added.",
+                                                     "Strict review fix: strengthened the parent integration layout evidence so desktop, tablet, and narrow mobile viewports are checked at initial open, after recording/marker UI renders, after reload, and after Home Continue Practice returns to the sheet.",
+                                                     "Strict review fix: layout evidence no longer scrolls controls into view before measuring; it records sheet image visibility, viewer dimensions, controls dimensions, document order, no viewer/control overlap, desktop/tablet controls intersection, and mobile scroll reachability before a separate controls operability scroll."
                                                                   ],
                                                  "changedAreas":  [
-                                                     "tests/e2e/sheet-practice-integration.spec.ts adds the parent Sheet Practice integrated browser path and persistence checks",
+                                                     "tests/e2e/sheet-practice-integration.spec.ts adds the parent Sheet Practice integrated browser path, persistence checks, and strict desktop/tablet/mobile layout evidence that does not depend on pre-measurement control scrolling",
                                                      "docs/v0/module-status.json records the 05-sheet-practice implementation handoff and self-test evidence"
                                                                   ],
                                                  "knownRisks":  [
                                                      "This is an implementation handoff only; a separate verification agent must still run the parent verification pass before 05-sheet-practice can become verified.",
                                                      "The parent path relies on the existing latest-sheet-recording surface from 05c/05d; full multi-take selection remains outside the v0 parent integration scope.",
                                                      "The integrated E2E uses Chromium with a controlled synthetic Web Audio microphone stream, matching existing 05c evidence but still browser-API dependent.",
-                                                     "Playwright webServer exited after E2E; the final local bind check confirmed 127.0.0.1:3101 was free."
+                                                     "Playwright webServer exited after E2E; the final local bind check confirmed 127.0.0.1:3101 was free.",
+                                                     "One full-suite run produced a transient existing sheet-viewer PDF canvas non-empty failure; targeted sheet-viewer rerun passed, and the subsequent full-suite rerun passed 14 chromium tests."
                                                                 ],
                                                  "commitHash":  null
                           },

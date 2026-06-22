@@ -24,6 +24,20 @@ type SavedSheetRecording = {
   trustedPeaks: number[];
 };
 
+type LayoutViewport = {
+  name: string;
+  width: number;
+  height: number;
+  expectControlsInInitialViewport: boolean;
+  minViewerHeight: number;
+};
+
+const layoutViewports: LayoutViewport[] = [
+  { name: "desktop", width: 1280, height: 820, expectControlsInInitialViewport: true, minViewerHeight: 220 },
+  { name: "tablet", width: 1024, height: 768, expectControlsInInitialViewport: true, minViewerHeight: 220 },
+  { name: "mobile", width: 390, height: 844, expectControlsInInitialViewport: false, minViewerHeight: 160 }
+];
+
 async function deleteDatabase(page: Page, databaseName: string) {
   await page.evaluate(
     (name: string) =>
@@ -202,32 +216,90 @@ async function decodeRecording(page: Page, recordingId: string) {
   );
 }
 
-async function expectSheetVisibleAndControlsUncovered(page: Page) {
+async function expectSheetPriorityLayout(page: Page, viewport: LayoutViewport, phase: string) {
   const sheetImage = page.getByRole("img", { name: /Integrated Practice Sheet page 1/ });
 
+  await page.setViewportSize({ width: viewport.width, height: viewport.height });
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expect(sheetImage).toBeVisible();
   await expect(page.getByTestId("sheet-viewer-scroll")).toBeVisible();
   await expect(page.getByTestId("sheet-practice-controls")).toBeVisible();
-  await page.getByTestId("sheet-practice-controls").scrollIntoViewIfNeeded();
-  await expect(page.getByRole("button", { name: "Start metronome" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start recording" })).toBeVisible();
 
   const layout = await page.evaluate(() => {
     const viewer = document.querySelector("[data-testid='sheet-viewer-scroll']")?.getBoundingClientRect();
     const controls = document.querySelector("[data-testid='sheet-practice-controls']")?.getBoundingClientRect();
+    const sheet = document.querySelector("img[alt='Integrated Practice Sheet page 1']")?.getBoundingClientRect();
 
-    return viewer && controls
+    return viewer && controls && sheet
       ? {
-          viewerBottom: viewer.bottom,
+          sheetVisibleHeight: Math.max(0, Math.min(sheet.bottom, window.innerHeight) - Math.max(sheet.top, 0)),
+          sheetVisibleWidth: Math.max(0, Math.min(sheet.right, window.innerWidth) - Math.max(sheet.left, 0)),
+          viewerHeight: viewer.height,
+          viewerWidth: viewer.width,
+          viewerBottomDocument: viewer.bottom + window.scrollY,
+          controlsTopDocument: controls.top + window.scrollY,
+          controlsHeight: controls.height,
+          controlsWidth: controls.width,
+          controlsVisibleHeight: Math.max(0, Math.min(controls.bottom, window.innerHeight) - Math.max(controls.top, 0)),
           controlsTop: controls.top,
-          viewportHeight: window.innerHeight
+          documentHeight: document.documentElement.scrollHeight,
+          viewportHeight: window.innerHeight,
+          viewportWidth: window.innerWidth
         }
       : null;
   });
 
   expect(layout).not.toBeNull();
-  expect(layout?.controlsTop).toBeGreaterThanOrEqual((layout?.viewerBottom ?? 0) - 1);
-  expect(layout?.controlsTop).toBeLessThan((layout?.viewportHeight ?? 0) - 48);
+  expect(layout?.viewerWidth, `${phase} ${viewport.name}: viewer has width`).toBeGreaterThan(240);
+  expect(layout?.viewerHeight, `${phase} ${viewport.name}: viewer has height`).toBeGreaterThan(
+    viewport.minViewerHeight
+  );
+  expect(layout?.sheetVisibleWidth, `${phase} ${viewport.name}: sheet image intersects viewport`).toBeGreaterThan(80);
+  expect(layout?.sheetVisibleHeight, `${phase} ${viewport.name}: sheet image intersects viewport`).toBeGreaterThan(80);
+  expect(
+    layout?.controlsTopDocument,
+    `${phase} ${viewport.name}: controls are laid out after the sheet viewer without overlaying it`
+  ).toBeGreaterThanOrEqual((layout?.viewerBottomDocument ?? 0) - 1);
+  expect(layout?.controlsWidth, `${phase} ${viewport.name}: controls have width`).toBeGreaterThan(240);
+  expect(layout?.controlsHeight, `${phase} ${viewport.name}: controls have height`).toBeGreaterThan(120);
+
+  if (viewport.expectControlsInInitialViewport) {
+    expect(
+      layout?.controlsVisibleHeight,
+      `${phase} ${viewport.name}: bottom controls intersect the initial viewport`
+    ).toBeGreaterThan(48);
+    expect(
+      layout?.controlsTop,
+      `${phase} ${viewport.name}: bottom controls are not pushed entirely below the viewport`
+    ).toBeLessThan((layout?.viewportHeight ?? 0) - 48);
+  } else {
+    expect(
+      layout?.documentHeight,
+      `${phase} ${viewport.name}: mobile layout remains scrollable to controls`
+    ).toBeGreaterThan(layout?.viewportHeight ?? 0);
+  }
+}
+
+async function expectControlsOperableAfterLayoutEvidence(page: Page, phase: string, viewport: LayoutViewport) {
+  await page.getByTestId("sheet-practice-controls").scrollIntoViewIfNeeded();
+  await expect(
+    page.getByRole("button", { name: "Start metronome" }),
+    `${phase} ${viewport.name}: metronome control is reachable`
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Start recording" }),
+    `${phase} ${viewport.name}: recording control is reachable`
+  ).toBeVisible();
+}
+
+async function expectIntegratedLayoutAcrossViewports(page: Page, phase: string) {
+  for (const viewport of layoutViewports) {
+    await expectSheetPriorityLayout(page, viewport, phase);
+    await expectControlsOperableAfterLayoutEvidence(page, phase, viewport);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.evaluate(() => window.scrollTo(0, 0));
 }
 
 test("sheet practice parent integration opens from library and preserves sheet, session, recording, marker, and continue context", async ({
@@ -275,7 +347,7 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   await expect(page.getByRole("heading", { name: "Integrated Practice Sheet" })).toBeVisible();
   await expect(page.getByRole("spinbutton", { name: "BPM" })).toHaveValue("84");
   await expect(page.getByLabel("Time signature")).toHaveValue("4/4");
-  await expectSheetVisibleAndControlsUncovered(page);
+  await expectIntegratedLayoutAcrossViewports(page, "initial open");
   await expect(page.getByTestId("sheet-session-id")).toHaveText("none");
   expect(await getPracticeSnapshot(page)).toMatchObject({ sessions: [] });
 
@@ -344,6 +416,7 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   await page.getByRole("textbox", { name: "Marker note" }).fill("Integrated marker");
   await page.getByRole("button", { name: "Mark Error" }).click();
   await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Integrated marker");
+  await expectIntegratedLayoutAcrossViewports(page, "recording and marker UI");
   await page.getByRole("button", { name: /Seek to marker 0:00/ }).click();
   await page.waitForFunction((recordingId) => {
     const e2eWindow = window as Window & {
@@ -361,7 +434,7 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   await page.reload();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
   await expect(page.getByRole("heading", { name: "Integrated Practice Sheet" })).toBeVisible();
-  await expectSheetVisibleAndControlsUncovered(page);
+  await expectIntegratedLayoutAcrossViewports(page, "reload");
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
   await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Integrated marker");
 
@@ -384,6 +457,7 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   await expect(page.getByRole("heading", { name: "Integrated Practice Sheet" })).toBeVisible();
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
   await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Integrated marker");
+  await expectIntegratedLayoutAcrossViewports(page, "continue practice return");
 
   await expect(page.getByText(/reference/i)).toHaveCount(0);
   await expect(page.getByText(/automatic|analysis|bar detection|current bar|mistake detection/i)).toHaveCount(0);
