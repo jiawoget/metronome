@@ -475,29 +475,50 @@
 
                                                                 ],
                                                  "commitHash":  null
-                                             },
+                          },
                           "verification":  {
                                                "requiredSeparateAgent":  true,
-                                               "agent":  null,
-                                               "completedAt":  null,
-                                               "result":  null,
+                                               "agent":  "GPT-5.4 Mini",
+                                               "completedAt":  "2026-06-22T01:07:52Z",
+                                               "result":  "PASS",
                                                "acceptanceCriteria":  [
-
+                                                                      "PASS: Sheet Practice can start recording and stop recording.",
+                                                                      "PASS: Recording can start while the metronome is stopped and while it is playing.",
+                                                                      "PASS: Stopping recording does not stop metronome playback, and stopping metronome does not stop recording.",
+                                                                      "PASS: Stopping recording creates a non-empty artifact, and synthetic input decodes correctly without truncation or corruption.",
+                                                                      "PASS: Recording metadata type is sheet, and sheetId/sessionId match the active sheet context.",
+                                                                      "PASS: Latest replay in Sheet Practice uses the real saved artifact.",
+                                                                      "PASS: Waveform is derived from artifact or trusted peaks, is non-empty, finite, non-zero, and stays visible through play/pause, resize, and repeated sampling.",
+                                                                      "PASS: Recording metadata persists after reload and the recording is visible from Recordings or the latest-recording outlet.",
+                                                                      "PASS: Microphone denial and bad artifact states surface clear errors.",
+                                                                      "PASS: Practice Again from Recordings returns to Sheet Practice, creates a new recording/session, and does not overwrite the original recording."
                                                                       ],
                                                "e2eEvidence":  [
-
+                                                                "tests/e2e/sheet-recording-review.spec.ts: real Chromium interaction verified synthetic sheet recording, latest replay, waveform stability, reload persistence, Practice Again immutability, permission denial, and bad artifact handling.",
+                                                                "tests/e2e/recordings-review.spec.ts: real Chromium interaction verified saved sheet recordings are visible, playable, searchable, deletable, and route back into Sheet Practice via Practice Again.",
+                                                                "npm run test:e2e -- tests/e2e/sheet-recording-review.spec.ts tests/e2e/recordings-review.spec.ts -> 3 chromium tests passed.",
+                                                                "npm run test:e2e -> 12 chromium tests passed, including sheet-recording-review and recordings-review coverage plus adjacent regressions."
                                                                ],
                                                "specializedEvidence":  [
-
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm install -> up to date, audited 481 packages, found 0 vulnerabilities.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm audit -> found 0 vulnerabilities.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run lint -> PASS.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run typecheck -> PASS.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -> PASS; 17 test files passed, 82 tests passed.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run build -> PASS; Next.js production build completed with /sheet-practice and /sheet-practice/[sheetId] dynamic routes.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run playwright:install -> PASS; Chromium fallback download completed with the expected unsupported-OS warning.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-recording-review.spec.ts tests/e2e/recordings-review.spec.ts -> PASS; 3 chromium tests passed.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -> PASS; 12 chromium tests passed."
                                                                        ],
                                                "persistenceEvidence":  [
-
+                                                                        "Reload preserved the latest sheet recording metadata and the replayable artifact remained visible in the Sheet Practice and Recordings paths.",
+                                                                        "Practice Again created a fresh recording/session and left the source recording metadata and audio artifact unchanged.",
+                                                                        "Final-save-failure regressions stayed fixed: no metadata-only latest recording or session latestRecordingId remained when save rollback paths were exercised."
                                                                        ],
-                                               "consoleStatus":  null,
+                                               "consoleStatus":  "PASS; the targeted and full Playwright runs reported no console errors or page errors on the tested flows.",
                                                "issues":  [
-
-                                                          ],
-                                               "commitHash":  null
+                                                         ],
+                                               "commitHash":  "3ffbe09315028ee1b54e441cee74db33248b8b2c"
                                            }
                       },
                                                                                         {
@@ -861,7 +882,7 @@
                       },
                       {
                           "module":  "05c-sheet-recording-review",
-                          "status":  "implementation_done",
+                          "status":  "verified",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
