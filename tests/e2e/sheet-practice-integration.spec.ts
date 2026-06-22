@@ -459,7 +459,7 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Integrated marker");
   await expectIntegratedLayoutAcrossViewports(page, "continue practice return");
 
-  await expect(page.getByText(/reference/i)).toHaveCount(0);
+  await expect(page.getByTestId("reference-panel")).toBeVisible();
   await expect(page.getByText(/automatic|analysis|bar detection|current bar|mistake detection/i)).toHaveCount(0);
   expect(consoleErrors).toEqual([]);
 });

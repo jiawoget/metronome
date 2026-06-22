@@ -153,7 +153,7 @@ async function expectPdfCanvasRendered(page: Page) {
 
   await expect(canvas).toBeVisible();
 
-  const canvasStats = await canvas.evaluate((node) => {
+  const getCanvasStats = () => canvas.evaluate((node) => {
     const canvasElement = node as HTMLCanvasElement;
     const context = canvasElement.getContext("2d");
 
@@ -182,9 +182,13 @@ async function expectPdfCanvasRendered(page: Page) {
     };
   });
 
-  expect(canvasStats.width).toBeGreaterThan(100);
-  expect(canvasStats.height).toBeGreaterThan(100);
-  expect(canvasStats.changedPixels).toBeGreaterThan(100);
+  await expect.poll(async () => (await getCanvasStats()).width).toBeGreaterThan(100);
+  await expect.poll(async () => (await getCanvasStats()).height).toBeGreaterThan(100);
+  await expect
+    .poll(async () => (await getCanvasStats()).changedPixels, {
+      message: "PDF canvas should contain non-white painted pixels after PDF.js rendering completes"
+    })
+    .toBeGreaterThan(100);
 
   return canvas;
 }
