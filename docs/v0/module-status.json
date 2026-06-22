@@ -1275,7 +1275,7 @@
                       },
                       {
                           "module":  "08-practice-session",
-                          "status":  "implementation_done",
+                          "status":  "needs_fix",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
@@ -1335,26 +1335,39 @@
                                              },
                           "verification":  {
                                                "requiredSeparateAgent":  true,
-                                               "agent":  null,
-                                               "completedAt":  null,
-                                               "result":  null,
+                                               "agent":  "GPT-5.4 Mini",
+                                               "completedAt":  "2026-06-22T15:16:00Z",
+                                               "result":  "FAIL",
                                                "acceptanceCriteria":  [
-
+                                                                      "PASS: Quick session creation, sourceType quick, and no sheetId were covered by unit tests and the real browser practice-session flow.",
+                                                                      "PASS: Sheet session creation, sourceType sheet, valid sheetId guard, and invalid sheet rejection were covered by unit tests; the browser practice-session flow exercised the sheet route with a real imported sheet.",
+                                                                      "PASS: Session without recording, recording creation requiring sessionId, recording count/latest updates, and duration/endedAt persistence passed in unit tests and the browser practice-session flow.",
+                                                                      "PASS: Recent session, Continue Practice to Quick Metronome, Today Summary browser-local-day exclusion, reload persistence, and Clear All Local Data passed in the browser practice-session flow.",
+                                                                      "PASS: Future reference-trigger decoupling and error markers not directly linked to sessions were covered by the practice-session service tests and error-marker repository tests.",
+                                                                      "FAIL: Missing sheet recovery / not-found state and the repeated sheet practice browser path did not complete a clean pass because the existing sheet-practice-session browser spec observed two persisted sheet sessions after repeated activity where it expected one."
                                                                       ],
                                                "e2eEvidence":  [
-
+                                                                "tests/e2e/practice-session.spec.ts: 1 chromium test passed covering quick session creation, quick recording link, sheet session creation, Continue Practice quick/sheet targets, Today Summary local-day boundary, reload persistence, Clear All Local Data, and console/pageerror capture.",
+                                                                "tests/e2e/sheet-practice-session.spec.ts: failed at expect(snapshot.sessions).toHaveLength(1) after repeated sheet activity; the snapshot contained two sheet sessions for the same sheetId instead of one.",
+                                                                "tests/e2e/quick-metronome.spec.ts: 2 chromium tests passed as supporting coverage for quick recording and permission-denial paths."
                                                                ],
                                                "specializedEvidence":  [
-
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/practice-session-service.test.ts tests/unit/quick-metronome-session.test.ts tests/unit/sheet-practice-recording.test.ts tests/unit/sheet-practice-controls.test.tsx tests/unit/home-dashboard.test.tsx tests/unit/settings-service.test.ts -> PASS; 6 test files passed, 42 tests passed.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/practice-session.spec.ts -> PASS; 1 chromium test passed.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/sheet-practice-session.spec.ts tests/e2e/quick-metronome.spec.ts -> 2 chromium tests passed, 1 chromium test failed on duplicate sheet-session persistence.",
+                                                                        "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/sheet-practice-error-markers.test.tsx tests/unit/recordings-review-repository.test.ts tests/unit/recordings-review-history.test.ts -> PASS; 3 test files passed, 27 tests passed."
                                                                        ],
                                                "persistenceEvidence":  [
-
+                                                                        "Reload preserved the quick and sheet session data and Today Summary values in tests/e2e/practice-session.spec.ts.",
+                                                                        "Clear All Local Data removed persisted sessions and practice history, and the cleared state survived reload in tests/e2e/practice-session.spec.ts.",
+                                                                        "The failed sheet-practice-session spec showed duplicate persisted sheet sessions after repeated activity, which blocked a full verification of the sheet-not-found tail of the flow."
                                                                        ],
-                                               "consoleStatus":  null,
+                                               "consoleStatus":  "PASS for the successful browser and unit flows; the failing sheet-practice-session run ended on an assertion mismatch before its final console check, and no runtime console/page errors were reported in the passing flows.",
                                                "issues":  [
-
+                                                           "tests/e2e/sheet-practice-session.spec.ts failed because repeated sheet activity produced two persisted sheet sessions for the same sheetId where the spec expected one.",
+                                                           "That failure prevented a clean end-to-end verification of the missing-sheet recovery / not-found tail in the same browser flow."
                                                           ],
-                                               "commitHash":  null
+                                               "commitHash":  "780ba15fcd783368d413e35ff1307b39d77abdc9"
                                            }
                       }
                   ],
