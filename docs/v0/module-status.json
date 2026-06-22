@@ -1089,7 +1089,7 @@
                       },
                       {
                           "module":  "06-reference-system",
-                          "status":  "implementation_done",
+                          "status":  "verified",
                           "implementation":  {
                                                  "requiredSeparateAgent":  true,
                                                  "agent":  "GPT-5.5 High",
@@ -1148,26 +1148,42 @@
                                              },
                           "verification":  {
                                                "requiredSeparateAgent":  true,
-                                               "agent":  null,
-                                               "completedAt":  null,
-                                               "result":  null,
+                                               "agent":  "GPT-5.4 Mini",
+                                               "completedAt":  "2026-06-22T06:21:13Z",
+                                               "result":  "PASS",
                                                "acceptanceCriteria":  [
-
+                                                                      "PASS: Real browser E2E covered local audio upload, decode, play, pause, currentTime advance/stop, and volume adjustment.",
+                                                                      "PASS: Local audio reference persisted after reload and remained playable.",
+                                                                      "PASS: Bilibili search ran through visible UI with deterministic fixture results and selectable save flow.",
+                                                                      "PASS: Bilibili URL save and invalid URL error state were exercised through the UI.",
+                                                                      "PASS: Failed Bilibili search showed a clear error state.",
+                                                                      "PASS: Reference playback did not stop active recording or active metronome.",
+                                                                      "PASS: Reference playback triggered sheet session activity.",
+                                                                      "PASS: Desktop, tablet-like, and narrow mobile layouts stayed usable without blocking core controls.",
+                                                                      "PASS: No out-of-scope controls such as A-B loop, playback speed, offset, download, extraction, or analysis were exposed.",
+                                                                      "PASS: Browser console and pageerror checks stayed clean during the tested flows."
                                                                       ],
                                                "e2eEvidence":  [
-
+                                                                "Playwright browser test: tests/e2e/reference-system.spec.ts exercised Sheet Practice in Chromium at 1280x860, 1024x768, and 390x844.",
+                                                                "Uploaded a real generated 1.2s 440Hz WAV fixture, verified playback currentTime advanced while playing, paused playback, and confirmed the paused currentTime delta stayed under tolerance.",
+                                                                "Saved a deterministic Bilibili search result through the visible UI, reloaded, and confirmed the selected reference persisted by sheetId.",
+                                                                "Saved a pasted Bilibili URL, reloaded, and verified the active reference restored with the expected BVID.",
+                                                                "Triggered invalid URL and failed-search states through the visible UI and confirmed the error messages appeared.",
+                                                                "Started real recording and metronome flows before playing the reference and confirmed both remained active."
                                                                ],
                                                "specializedEvidence":  [
-
+                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:unit -- tests/unit/reference-domain.test.ts tests/unit/reference-service.test.ts tests/unit/bilibili-search-adapter.test.ts -> PASS; 3 files passed, 13 tests passed.",
+                                                                       "source /home/stonepia/.nvm/nvm.sh && nvm use 24 && npm run test:e2e -- tests/e2e/reference-system.spec.ts -> PASS; 1 chromium test passed with console/pageerror capture."
                                                                        ],
                                                "persistenceEvidence":  [
-
+                                                                       "Reload after local audio save restored the active local reference for the same sheetId.",
+                                                                       "Reload after Bilibili search selection and URL save restored the active Bilibili reference for the same sheetId."
                                                                        ],
-                                               "consoleStatus":  null,
+                                               "consoleStatus":  "PASS; no console.error or pageerror entries were captured during the tested flows.",
                                                "issues":  [
-
+                                                                
                                                           ],
-                                               "commitHash":  null
+                                               "commitHash":  "6c7c82b043456bd0b1dd00f6cc00f1efac7fa55f"
                                            }
                       },
                       {
