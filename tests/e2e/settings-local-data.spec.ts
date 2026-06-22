@@ -376,6 +376,14 @@ test("settings persist and clear all local data across reloads", async ({ page }
   await page.getByLabel("Metronome volume").fill("55");
   await page.getByLabel("Reference default volume").fill("45");
 
+  await expect.poll(() => getSettingsValue(page)).toMatchObject({
+    defaultBpm: 142,
+    defaultTimeSignature: "6/8",
+    defaultSubdivision: "sixteenth",
+    metronomeVolume: 55,
+    referenceDefaultVolume: 45
+  });
+
   await page.reload();
   await expect(page.getByTestId("settings-default-bpm")).toHaveValue("142");
   await expect(page.getByTestId("settings-time-signature")).toHaveValue("6/8");
