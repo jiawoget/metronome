@@ -121,6 +121,14 @@ describe("recordings review history helpers", () => {
     expect(() =>
       validateErrorMarkerInput({
         recordingId: "sheet-1",
+        timestampMs: -0.4,
+        durationMs: 1_000,
+        note: null
+      })
+    ).toThrow("within the recording");
+    expect(() =>
+      validateErrorMarkerInput({
+        recordingId: "sheet-1",
         timestampMs: 1_001,
         durationMs: 1_000,
         note: null
@@ -169,6 +177,20 @@ describe("recordings review history helpers", () => {
 
     expect(normalizeErrorMarkerNote("  missed shift  ")).toBe("missed shift");
     expect(normalizeErrorMarkerNote("   ")).toBeNull();
+    expect(
+      createErrorMarker({
+        id: "marker-fractional-start",
+        recordingId: "sheet-1",
+        timestampMs: 0.4,
+        durationMs: 2_000,
+        note: null
+      })
+    ).toEqual({
+      id: "marker-fractional-start",
+      recordingId: "sheet-1",
+      timestampMs: 0,
+      note: null
+    });
     expect(
       createErrorMarker({
         id: "marker-created",

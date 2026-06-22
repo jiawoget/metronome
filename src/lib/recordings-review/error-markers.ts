@@ -41,16 +41,24 @@ export function normalizeErrorMarkerNote(note: string | null | undefined) {
 }
 
 export function validateErrorMarkerInput(input: ErrorMarkerValidationInput) {
-  const timestampMs = Math.round(input.timestampMs);
-  const durationMs = Math.round(input.durationMs);
-
-  if (!Number.isFinite(timestampMs)) {
+  if (!Number.isFinite(input.timestampMs)) {
     throw new Error("Choose a valid recording timestamp.");
   }
 
-  if (!Number.isFinite(durationMs)) {
+  if (input.timestampMs < 0) {
+    throw new Error("Marker time must be within the recording.");
+  }
+
+  if (!Number.isFinite(input.durationMs) || input.durationMs <= 0) {
     throw new Error("Recording duration is unavailable.");
   }
+
+  if (input.timestampMs > input.durationMs) {
+    throw new Error("Marker time must be within the recording.");
+  }
+
+  const timestampMs = Math.round(input.timestampMs);
+  const durationMs = Math.round(input.durationMs);
 
   const result = markerInputSchema.safeParse({
     recordingId: input.recordingId ?? "",
@@ -64,14 +72,6 @@ export function validateErrorMarkerInput(input: ErrorMarkerValidationInput) {
   }
 
   const normalized = result.data;
-
-  if (normalized.durationMs <= 0) {
-    throw new Error("Recording duration is unavailable.");
-  }
-
-  if (normalized.timestampMs > normalized.durationMs) {
-    throw new Error("Marker time must be within the recording.");
-  }
 
   return normalized;
 }
