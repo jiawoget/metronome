@@ -10,7 +10,10 @@ type SheetLibraryDatabaseSchema = {
   artifacts: Table<SheetArtifact, string>;
 };
 
-class SheetLibraryDexieDatabase extends Dexie implements SheetLibraryDatabaseSchema {
+class SheetLibraryDexieDatabase
+  extends Dexie
+  implements SheetLibraryDatabaseSchema
+{
   sheets!: Table<ImportedSheet, string>;
   artifacts!: Table<SheetArtifact, string>;
 
@@ -48,6 +51,24 @@ export const sheetLibraryRepository: SheetLibraryRepository = {
       await db.sheets.put(sheet);
       await db.artifacts.put(artifact, sheet.id);
     });
+  },
+
+  async updateSheetMetadata(sheetId, metadata, updatedAt) {
+    const sheet = await getDatabase().sheets.get(sheetId);
+
+    if (!sheet) {
+      return null;
+    }
+
+    const updatedSheet = {
+      ...sheet,
+      ...metadata,
+      updatedAt
+    };
+
+    await getDatabase().sheets.put(updatedSheet);
+
+    return updatedSheet;
   },
 
   async updateLastPracticedAt(sheetId, practicedAt) {

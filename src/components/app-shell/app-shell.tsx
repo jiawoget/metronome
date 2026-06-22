@@ -3,32 +3,145 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { EyeOff, RotateCcw } from "lucide-react";
-import type { ReactNode } from "react";
-import { useState } from "react";
+import type { MouseEvent, ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  ACTIVE_RECORDING_NAVIGATION_EVENT,
+  type ActiveRecordingNavigationEventDetail
+} from "@/lib/recording-navigation-guard";
 import { topLevelNavItems } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [areDiagnosticsHidden, setAreDiagnosticsHidden] = useState(false);
+  const [activeRecordings, setActiveRecordings] = useState<
+    Record<string, string>
+  >({});
+  const [navigationGuardMessage, setNavigationGuardMessage] = useState<
+    string | null
+  >(null);
+  const activeRecordingLabels = useMemo(
+    () => Object.values(activeRecordings),
+    [activeRecordings]
+  );
+  const hasActiveRecording = activeRecordingLabels.length > 0;
+
+  useEffect(() => {
+    const handleActiveRecordingChange = (event: Event) => {
+      const detail = (
+        event as CustomEvent<ActiveRecordingNavigationEventDetail>
+      ).detail;
+
+      if (!detail?.sourceId) {
+        return;
+      }
+
+      setActiveRecordings((current) => {
+        const next = { ...current };
+
+        if (detail.active) {
+          next[detail.sourceId] = detail.label;
+        } else {
+          delete next[detail.sourceId];
+        }
+
+        return next;
+      });
+
+      if (!detail.active) {
+        setNavigationGuardMessage(null);
+      }
+    };
+
+    window.addEventListener(
+      ACTIVE_RECORDING_NAVIGATION_EVENT,
+      handleActiveRecordingChange
+    );
+
+    return () => {
+      window.removeEventListener(
+        ACTIVE_RECORDING_NAVIGATION_EVENT,
+        handleActiveRecordingChange
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasActiveRecording) {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasActiveRecording]);
+
+  function handleNavigationClickCapture(event: MouseEvent<HTMLDivElement>) {
+    if (
+      !hasActiveRecording ||
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    const target = event.target;
+    const anchor = target instanceof Element ? target.closest("a[href]") : null;
+
+    if (!anchor) {
+      return;
+    }
+
+    const href = anchor.getAttribute("href");
+
+    if (!href || href.startsWith("#")) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    setNavigationGuardMessage(
+      `Navigation blocked while ${activeRecordingLabels[0] ?? "a recording"} is active. Stop and save the recording before changing pages.`
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div
+      className="bg-background text-foreground min-h-screen"
+      onClickCapture={handleNavigationClickCapture}
+    >
       <div className="mx-auto flex min-h-screen w-full max-w-[1440px]">
         <aside
           aria-label="Primary sections"
           data-testid="desktop-sidebar"
-          className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-border bg-card px-4 py-5 lg:flex lg:flex-col"
+          className="border-border bg-card sticky top-0 hidden h-screen w-64 shrink-0 border-r px-4 py-5 lg:flex lg:flex-col"
         >
-          <Link href="/" className="mb-7 flex items-center gap-3 rounded-md px-2 py-1.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground">
+          <Link
+            href="/"
+            className="mb-7 flex items-center gap-3 rounded-md px-2 py-1.5"
+          >
+            <span className="bg-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-full text-base font-bold">
               M
             </span>
             <span>
               <span className="block text-base font-semibold">Metronome</span>
-              <span className="block text-xs font-medium text-muted-foreground">Practice v0</span>
+              <span className="text-muted-foreground block text-xs font-medium">
+                Practice v0
+              </span>
             </span>
           </Link>
 
@@ -36,7 +149,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             {topLevelNavItems.map((item) => {
               const Icon = item.icon;
               const isActive =
-                item.href === pathname || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+                item.href === pathname ||
+                (item.href !== "/" && pathname.startsWith(`${item.href}/`));
 
               return (
                 <Link
@@ -44,8 +158,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex min-h-12 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    isActive && "bg-primary text-primary-foreground shadow-soft hover:bg-primary hover:text-primary-foreground"
+                    "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex min-h-12 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                    isActive &&
+                      "bg-primary text-primary-foreground shadow-soft hover:bg-primary hover:text-primary-foreground"
                   )}
                 >
                   <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -63,13 +178,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
+          <header className="border-border bg-background/95 sticky top-0 z-20 border-b px-4 py-3 backdrop-blur lg:hidden">
             <div className="flex items-center justify-between gap-3">
               <Link href="/" className="flex items-center gap-2 rounded-md">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                <span className="bg-primary text-primary-foreground flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold">
                   M
                 </span>
-                <span className="text-sm font-semibold">Metronome Practice</span>
+                <span className="text-sm font-semibold">
+                  Metronome Practice
+                </span>
               </Link>
               <MobileDiagnostics
                 hidden={areDiagnosticsHidden}
@@ -79,20 +196,33 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="flex-1 px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:pb-8 lg:pt-8">{children}</main>
+          <main className="flex-1 px-4 pt-5 pb-28 sm:px-6 lg:px-8 lg:pt-8 lg:pb-8">
+            {children}
+          </main>
         </div>
       </div>
+
+      {navigationGuardMessage ? (
+        <div
+          role="alert"
+          data-testid="active-recording-navigation-guard"
+          className="border-destructive/30 bg-destructive/10 text-destructive shadow-soft fixed right-4 bottom-24 left-4 z-40 rounded-md border px-4 py-3 text-sm font-medium lg:right-4 lg:bottom-4 lg:left-auto lg:max-w-md"
+        >
+          {navigationGuardMessage}
+        </div>
+      ) : null}
 
       <nav
         aria-label="Mobile primary sections"
         data-testid="mobile-bottom-nav"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card px-1.5 py-2 shadow-soft lg:hidden"
+        className="border-border bg-card shadow-soft fixed inset-x-0 bottom-0 z-30 border-t px-1.5 py-2 lg:hidden"
       >
         <div className="mx-auto grid max-w-xl grid-cols-6 gap-1">
           {topLevelNavItems.map((item) => {
             const Icon = item.icon;
             const isActive =
-              item.href === pathname || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+              item.href === pathname ||
+              (item.href !== "/" && pathname.startsWith(`${item.href}/`));
 
             return (
               <Link
@@ -101,8 +231,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 aria-label={item.label}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[11px] font-medium leading-none text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  isActive && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+                  "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[11px] leading-none font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                  isActive &&
+                    "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
                 )}
               >
                 <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -130,13 +261,18 @@ function DiagnosticsPanel({
       <div
         aria-label="Diagnostics hidden"
         data-testid="diagnostics-restore"
-        className="mt-5 rounded-md border border-dashed border-border bg-background px-3 py-3 text-sm"
+        className="border-border bg-background mt-5 rounded-md border border-dashed px-3 py-3 text-sm"
       >
         <p className="font-medium">Diagnostics hidden</p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-xs leading-5">
           Devtools are hidden for this session. Restore them whenever needed.
         </p>
-        <Button type="button" variant="secondary" className="mt-3 w-full" onClick={onRestore}>
+        <Button
+          type="button"
+          variant="secondary"
+          className="mt-3 w-full"
+          onClick={onRestore}
+        >
           <RotateCcw className="h-4 w-4" aria-hidden="true" />
           Restore diagnostics
         </Button>
@@ -148,12 +284,14 @@ function DiagnosticsPanel({
     <div
       aria-label="Global status diagnostics"
       data-testid="diagnostics-panel"
-      className="mt-5 rounded-md border border-border bg-background px-3 py-3 text-sm"
+      className="border-border bg-background mt-5 rounded-md border px-3 py-3 text-sm"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-medium">Diagnostics</p>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">No recording or playback active.</p>
+          <p className="text-muted-foreground mt-1 text-xs leading-5">
+            No recording or playback active.
+          </p>
         </div>
         <Button
           type="button"
@@ -197,7 +335,7 @@ function MobileDiagnostics({
   return (
     <div
       aria-label="Global status diagnostics"
-      className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs"
+      className="border-border bg-card flex items-center gap-1 rounded-md border px-2 py-1 text-xs"
     >
       <span>Idle</span>
       <Button

@@ -8,6 +8,7 @@ export class RecordingWaveformPlaybackAdapter {
   private waveSurfer: WaveSurfer | null = null;
   private recordingId: string | null = null;
   private unsubscribeTimeUpdate: (() => void) | null = null;
+  private unsubscribeInteraction: (() => void) | null = null;
 
   async load(container: HTMLElement, recording: ReviewRecording) {
     this.destroy();
@@ -29,11 +30,23 @@ export class RecordingWaveformPlaybackAdapter {
       progressColor: "#8a5bd3",
       cursorColor: "#1f1a14",
       normalize: true,
-      interact: false
+      interact: true
     });
-    this.unsubscribeTimeUpdate = this.waveSurfer.on("timeupdate", (currentTimeSeconds) => {
-      this.dispatchTimeUpdate(currentTimeSeconds * 1_000);
-    });
+    this.unsubscribeTimeUpdate = this.waveSurfer.on(
+      "timeupdate",
+      (currentTimeSeconds) => {
+        this.dispatchTimeUpdate(currentTimeSeconds * 1_000);
+      }
+    );
+    this.unsubscribeInteraction = this.waveSurfer.on(
+      "interaction",
+      (currentTimeSeconds) => {
+        const currentTimeMs = Math.round(currentTimeSeconds * 1_000);
+
+        this.dispatchTimeUpdate(currentTimeMs);
+        this.dispatchSeekEvent(currentTimeMs);
+      }
+    );
 
     await new Promise<void>((resolve, reject) => {
       const waveSurfer = this.waveSurfer;
@@ -44,7 +57,9 @@ export class RecordingWaveformPlaybackAdapter {
       }
 
       waveSurfer.once("ready", () => resolve());
-      waveSurfer.once("error", () => reject(new Error("Waveform playback could not load this artifact.")));
+      waveSurfer.once("error", () =>
+        reject(new Error("Waveform playback could not load this artifact."))
+      );
     });
   }
 
@@ -92,6 +107,8 @@ export class RecordingWaveformPlaybackAdapter {
   destroy() {
     this.unsubscribeTimeUpdate?.();
     this.unsubscribeTimeUpdate = null;
+    this.unsubscribeInteraction?.();
+    this.unsubscribeInteraction = null;
 
     if (this.waveSurfer) {
       this.waveSurfer.destroy();

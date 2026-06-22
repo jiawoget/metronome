@@ -13,7 +13,11 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { formatPracticeDuration, type PracticeSession, type SheetRecordingMetadata } from "@/domain/practice";
+import {
+  formatPracticeDuration,
+  type PracticeSession,
+  type SheetRecordingMetadata
+} from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import { LatestSheetRecording } from "@/components/sheet-practice/recording/latest-sheet-recording";
 import {
@@ -28,7 +32,10 @@ import {
   parseSubdivision,
   parseTimeSignature
 } from "@/lib/quick-metronome/control";
-import { BrowserMetronomeService, type MetronomeTick } from "@/lib/quick-metronome/metronome-service";
+import {
+  BrowserMetronomeService,
+  type MetronomeTick
+} from "@/lib/quick-metronome/metronome-service";
 import {
   MAX_BPM,
   MIN_BPM,
@@ -38,6 +45,7 @@ import {
 } from "@/lib/quick-metronome/types";
 import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
+import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
 import { BrowserSheetRecordingService } from "@/lib/sheet-practice/recording-service";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import type { PracticeSessionService } from "@/services/practice-session";
@@ -47,9 +55,13 @@ import {
   formatUnsupportedTimeSignatureMessage
 } from "@/components/sheet-practice/controls/practice-control-state";
 
-export const SHEET_RECORDING_HARNESS_EVENT = "sheet-practice-controls:set-recording-harness-active";
+export const SHEET_RECORDING_HARNESS_EVENT =
+  "sheet-practice-controls:set-recording-harness-active";
 
-type SheetPracticeMetronomeService = Pick<BrowserMetronomeService, "onTick" | "update" | "start" | "stop">;
+type SheetPracticeMetronomeService = Pick<
+  BrowserMetronomeService,
+  "onTick" | "update" | "start" | "stop"
+>;
 
 type SheetPracticeSessionService = Pick<
   PracticeSessionService,
@@ -139,23 +151,45 @@ export function SheetPracticeControls({
       }),
     [defaultBpm, defaultTimeSignature]
   );
-  const metronomeService = useMemo(() => createMetronomeService(), [createMetronomeService]);
-  const sheetRecordingService = useMemo(() => createSheetRecordingService(), [createSheetRecordingService]);
-  const [settings, setSettings] = useState<MetronomeSettings>(initialState.settings);
+  const metronomeService = useMemo(
+    () => createMetronomeService(),
+    [createMetronomeService]
+  );
+  const sheetRecordingService = useMemo(
+    () => createSheetRecordingService(),
+    [createSheetRecordingService]
+  );
+  const [settings, setSettings] = useState<MetronomeSettings>(
+    initialState.settings
+  );
   const [recordingHarnessActive, setRecordingHarnessActive] = useState(false);
-  const [recordingState, setRecordingState] = useState<"idle" | "recording" | "saving">("idle");
-  const [consumedSourceRecordingId, setConsumedSourceRecordingId] = useState<string | null>(null);
+  const [recordingState, setRecordingState] = useState<
+    "idle" | "recording" | "saving"
+  >("idle");
+  const [consumedSourceRecordingId, setConsumedSourceRecordingId] = useState<
+    string | null
+  >(null);
   const [lastTick, setLastTick] = useState<MetronomeTick | null>(null);
   const [session, setSession] = useState<PracticeSession | null>(null);
   const [recordings, setRecordings] = useState<SheetRecordingMetadata[]>([]);
-  const [latestSheetRecording, setLatestSheetRecording] = useState<ReviewRecording | null>(null);
-  const [message, setMessage] = useState("Ready. Viewing the sheet has not started practice.");
+  const [latestSheetRecording, setLatestSheetRecording] =
+    useState<ReviewRecording | null>(null);
+  const [message, setMessage] = useState(
+    "Ready. Viewing the sheet has not started practice."
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isSheetRecording = recordingState === "recording";
   const isRecordingActive = isSheetRecording || recordingHarnessActive;
+  useActiveRecordingNavigationGuard(
+    `sheet-practice-recording-${sheetId}`,
+    recordingState !== "idle",
+    recordingState === "saving" ? "sheet recording save" : "sheet recording"
+  );
 
   const unsupportedTimeSignatureMessage = initialState.unsupportedTimeSignature
-    ? formatUnsupportedTimeSignatureMessage(initialState.unsupportedTimeSignature)
+    ? formatUnsupportedTimeSignatureMessage(
+        initialState.unsupportedTimeSignature
+      )
     : null;
 
   const refreshSession = useCallback(async () => {
@@ -163,8 +197,12 @@ export function SheetPracticeControls({
     const allRecordings = await sessionService.listRecordingMetadata();
 
     setSession(recentSession);
-    setRecordings(allRecordings.filter((recording) => recording.sheetId === sheetId));
-    setLatestSheetRecording(sheetRecordingService.getLatestSheetRecording(sheetId));
+    setRecordings(
+      allRecordings.filter((recording) => recording.sheetId === sheetId)
+    );
+    setLatestSheetRecording(
+      sheetRecordingService.getLatestSheetRecording(sheetId)
+    );
   }, [sessionService, sheetId, sheetRecordingService]);
 
   useEffect(() => {
@@ -206,17 +244,20 @@ export function SheetPracticeControls({
     }));
   }
 
-  const { bpmDraft, setBpmDraft, commitBpmInput, stepBpmInput } = useMetronomeBpmDraft(
-    settings.bpm,
-    (nextBpm) => updateSettings({ bpm: nextBpm })
-  );
-  const shouldCreatePracticeAgainSession = Boolean(sourceRecordingId) && consumedSourceRecordingId !== sourceRecordingId;
+  const { bpmDraft, setBpmDraft, commitBpmInput, stepBpmInput } =
+    useMetronomeBpmDraft(settings.bpm, (nextBpm) =>
+      updateSettings({ bpm: nextBpm })
+    );
+  const shouldCreatePracticeAgainSession =
+    Boolean(sourceRecordingId) &&
+    consumedSourceRecordingId !== sourceRecordingId;
 
-  const ensureMetronomeSession = useCallback(async (): Promise<SheetMetronomeStartContext | null> => {
-    const existingSheetSession = shouldCreatePracticeAgainSession
-      ? null
-      : await sessionService.getRecentSheetSession(sheetId);
-    const nextSession = await sessionService.ensureSheetSession({
+  const ensureMetronomeSession =
+    useCallback(async (): Promise<SheetMetronomeStartContext | null> => {
+      const existingSheetSession = shouldCreatePracticeAgainSession
+        ? null
+        : await sessionService.getRecentSheetSession(sheetId);
+      const nextSession = await sessionService.ensureSheetSession({
         sheetId,
         trigger: "metronome",
         bpm: settings.bpm,
@@ -224,20 +265,30 @@ export function SheetPracticeControls({
         forceNewSession: shouldCreatePracticeAgainSession
       });
 
-    if (!nextSession) {
-      return null;
-    }
+      if (!nextSession) {
+        return null;
+      }
 
-    return {
-      session: nextSession,
-      rollback:
-        existingSheetSession === null || nextSession.id !== existingSheetSession.id
-          ? { kind: "end-created-session" }
-          : existingSheetSession.endedAt
-            ? { kind: "restore-previous-session", previousSession: existingSheetSession }
-            : { kind: "none" }
-    };
-  }, [sessionService, settings.bpm, settings.timeSignature, sheetId, shouldCreatePracticeAgainSession]);
+      return {
+        session: nextSession,
+        rollback:
+          existingSheetSession === null ||
+          nextSession.id !== existingSheetSession.id
+            ? { kind: "end-created-session" }
+            : existingSheetSession.endedAt
+              ? {
+                  kind: "restore-previous-session",
+                  previousSession: existingSheetSession
+                }
+              : { kind: "none" }
+      };
+    }, [
+      sessionService,
+      settings.bpm,
+      settings.timeSignature,
+      sheetId,
+      shouldCreatePracticeAgainSession
+    ]);
   const handleCountdownStarted = useCallback(() => {
     setMessage("Countdown running.");
   }, []);
@@ -250,33 +301,44 @@ export function SheetPracticeControls({
       if (context?.session && shouldCreatePracticeAgainSession) {
         setConsumedSourceRecordingId(sourceRecordingId);
       }
-      setMessage(isRecordingActive ? "Metronome playing; recording stays active." : "Metronome playing.");
+      setMessage(
+        isRecordingActive
+          ? "Metronome playing; recording stays active."
+          : "Metronome playing."
+      );
     },
     [isRecordingActive, shouldCreatePracticeAgainSession, sourceRecordingId]
   );
   const handleStartFailed = useCallback(
     async (error: unknown, context: SheetMetronomeStartContext | null) => {
       if (context?.rollback.kind === "end-created-session") {
-        const endedSession = await sessionService.endPracticeSession(context.session.id);
+        const endedSession = await sessionService.endPracticeSession(
+          context.session.id
+        );
 
         setSession(endedSession);
       } else if (context?.rollback.kind === "restore-previous-session") {
-        const restoredSession = await sessionService.restorePracticeSessionSnapshot(
-          context.rollback.previousSession
-        );
+        const restoredSession =
+          await sessionService.restorePracticeSessionSnapshot(
+            context.rollback.previousSession
+          );
 
         setSession(restoredSession);
       } else if (context?.session) {
         setSession(context.session);
       }
 
-      setErrorMessage(error instanceof Error ? error.message : "Metronome playback failed.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Metronome playback failed."
+      );
     },
     [sessionService]
   );
   const handleStopped = useCallback(async () => {
     if (session) {
-      const nextSession = await sessionService.updateSheetSessionDuration(session.id);
+      const nextSession = await sessionService.updateSheetSessionDuration(
+        session.id
+      );
 
       setSession(nextSession);
     }
@@ -334,14 +396,22 @@ export function SheetPracticeControls({
       setSession(nextSession);
       setConsumedSourceRecordingId(sourceRecordingId);
       setRecordingState("recording");
-      setMessage(isPlaying ? "Recording while metronome plays." : "Recording without metronome.");
+      setMessage(
+        isPlaying
+          ? "Recording while metronome plays."
+          : "Recording without metronome."
+      );
     } catch (error) {
       if (captureStarted) {
         await sheetRecordingService.discardCapture();
       }
 
       setRecordingState("idle");
-      setErrorMessage(error instanceof Error ? error.message : "Recording failed before it could start.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Recording failed before it could start."
+      );
     }
   }
 
@@ -361,13 +431,21 @@ export function SheetPracticeControls({
       const allRecordings = await sessionService.listRecordingMetadata();
 
       setSession(nextSession);
-      setRecordings(allRecordings.filter((recording) => recording.sheetId === sheetId));
+      setRecordings(
+        allRecordings.filter((recording) => recording.sheetId === sheetId)
+      );
       setLatestSheetRecording(result.recording);
       setRecordingState("idle");
-      setMessage(isPlaying ? "Recording saved; metronome is still playing." : "Recording saved.");
+      setMessage(
+        isPlaying
+          ? "Recording saved; metronome is still playing."
+          : "Recording saved."
+      );
     } catch (error) {
       setRecordingState("idle");
-      setErrorMessage(error instanceof Error ? error.message : "Recording could not be saved.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Recording could not be saved."
+      );
     }
   }
 
@@ -381,7 +459,9 @@ export function SheetPracticeControls({
     }
 
     const handleRecordingHarnessEvent = (event: Event) => {
-      const active = Boolean((event as CustomEvent<{ active?: boolean }>).detail?.active);
+      const active = Boolean(
+        (event as CustomEvent<{ active?: boolean }>).detail?.active
+      );
 
       setRecordingHarnessActive(active);
       setMessage(
@@ -394,17 +474,30 @@ export function SheetPracticeControls({
             : "Recording harness stopped."
       );
 
-      if (!active && !isSheetRecording && transportState !== "playing" && session) {
-        void sessionService.updateSheetSessionDuration(session.id).then((nextSession) => {
-          setSession(nextSession);
-        });
+      if (
+        !active &&
+        !isSheetRecording &&
+        transportState !== "playing" &&
+        session
+      ) {
+        void sessionService
+          .updateSheetSessionDuration(session.id)
+          .then((nextSession) => {
+            setSession(nextSession);
+          });
       }
     };
 
-    window.addEventListener(SHEET_RECORDING_HARNESS_EVENT, handleRecordingHarnessEvent);
+    window.addEventListener(
+      SHEET_RECORDING_HARNESS_EVENT,
+      handleRecordingHarnessEvent
+    );
 
     return () => {
-      window.removeEventListener(SHEET_RECORDING_HARNESS_EVENT, handleRecordingHarnessEvent);
+      window.removeEventListener(
+        SHEET_RECORDING_HARNESS_EVENT,
+        handleRecordingHarnessEvent
+      );
     };
   }, [isSheetRecording, session, sessionService, transportState]);
 
@@ -412,34 +505,77 @@ export function SheetPracticeControls({
     <section
       aria-labelledby="sheet-practice-controls-title"
       data-testid="sheet-practice-controls"
-      className="shrink-0 rounded-lg border border-border bg-card shadow-soft"
+      className="border-border bg-card shadow-soft shrink-0 rounded-lg border"
     >
       <div className="grid gap-3 p-3 lg:grid-cols-[minmax(16rem,0.9fr)_minmax(22rem,1.35fr)_minmax(16rem,0.9fr)] lg:items-stretch">
-        <div className="flex min-w-0 flex-col justify-between gap-3 rounded-md border border-border bg-muted p-3">
+        <div className="border-border bg-muted flex min-w-0 flex-col justify-between gap-3 rounded-md border p-3">
           <div>
-            <h2 id="sheet-practice-controls-title" className="text-lg font-semibold tracking-normal">
+            <h2
+              id="sheet-practice-controls-title"
+              className="text-lg font-semibold tracking-normal"
+            >
               Practice Controls
             </h2>
-            <p className="mt-1 truncate text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            <p className="text-muted-foreground mt-1 truncate text-xs font-semibold tracking-[0.08em] uppercase">
               {sheetName}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <StatusTile label="Metronome" value={isCounting ? `Counting ${countdownRemaining}` : isPlaying ? "Playing" : "Stopped"} testId="sheet-metronome-state" />
-            <StatusTile label="Recording" value={recordingState === "saving" ? "saving" : isRecordingActive ? "active" : "stopped"} testId="sheet-recording-state" />
-            <StatusTile label="Session" value={session?.sourceType ?? "none"} testId="sheet-session-source" />
-            <StatusTile label="Sheet" value={session?.sheetId ?? sheetId} testId="sheet-session-sheet-id" />
-            <StatusTile label="Duration" value={session ? formatPracticeDuration(session.durationMs) : "0:00"} testId="sheet-session-duration" />
+            <StatusTile
+              label="Metronome"
+              value={
+                isCounting
+                  ? `Counting ${countdownRemaining}`
+                  : isPlaying
+                    ? "Playing"
+                    : "Stopped"
+              }
+              testId="sheet-metronome-state"
+            />
+            <StatusTile
+              label="Recording"
+              value={
+                recordingState === "saving"
+                  ? "saving"
+                  : isRecordingActive
+                    ? "active"
+                    : "stopped"
+              }
+              testId="sheet-recording-state"
+            />
+            <StatusTile
+              label="Session"
+              value={session?.sourceType ?? "none"}
+              testId="sheet-session-source"
+            />
+            <StatusTile
+              label="Sheet"
+              value={session?.sheetId ?? sheetId}
+              testId="sheet-session-sheet-id"
+            />
+            <StatusTile
+              label="Duration"
+              value={
+                session ? formatPracticeDuration(session.durationMs) : "0:00"
+              }
+              testId="sheet-session-duration"
+            />
           </div>
         </div>
 
-        <div className="grid gap-3 rounded-md border border-border bg-background p-3 md:grid-cols-[minmax(13rem,0.85fr)_1fr]">
+        <div className="border-border bg-background grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(13rem,0.85fr)_1fr]">
           <div>
             <label htmlFor="sheet-bpm" className="text-sm font-medium">
               BPM
             </label>
             <div className="mt-2 grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] gap-2">
-              <Button type="button" variant="secondary" size="icon" aria-label="Decrease BPM" onClick={() => stepBpmInput(-1)}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                aria-label="Decrease BPM"
+                onClick={() => stepBpmInput(-1)}
+              >
                 <ChevronDown className="h-4 w-4" aria-hidden="true" />
               </Button>
               <input
@@ -458,13 +594,19 @@ export function SheetPracticeControls({
                     event.currentTarget.blur();
                   }
                 }}
-                className="h-10 min-w-0 rounded-md border border-border bg-background px-2 text-center text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="border-border bg-background focus-visible:ring-ring h-10 min-w-0 rounded-md border px-2 text-center text-lg font-semibold focus-visible:ring-2 focus-visible:outline-none"
               />
-              <Button type="button" variant="secondary" size="icon" aria-label="Increase BPM" onClick={() => stepBpmInput(1)}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                aria-label="Increase BPM"
+                onClick={() => stepBpmInput(1)}
+              >
                 <ChevronUp className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            <p className="text-muted-foreground mt-2 text-sm leading-6">
               Tick interval {Math.round(getTickIntervalMs(settings))} ms.
             </p>
           </div>
@@ -483,7 +625,9 @@ export function SheetPracticeControls({
               label="Time signature"
               value={settings.timeSignature}
               disabled={arePreRunSettingsLocked}
-              onChange={(value) => updateSettings({ timeSignature: parseTimeSignature(value) })}
+              onChange={(value) =>
+                updateSettings({ timeSignature: parseTimeSignature(value) })
+              }
               options={TIME_SIGNATURES.map((timeSignature) => ({
                 value: timeSignature,
                 label: timeSignature
@@ -493,7 +637,9 @@ export function SheetPracticeControls({
               label="Subdivision"
               value={settings.subdivision}
               disabled={arePreRunSettingsLocked}
-              onChange={(value) => updateSettings({ subdivision: parseSubdivision(value) })}
+              onChange={(value) =>
+                updateSettings({ subdivision: parseSubdivision(value) })
+              }
               options={SUBDIVISIONS.map((subdivision) => ({
                 value: subdivision,
                 label: subdivisionLabels[subdivision]
@@ -503,7 +649,9 @@ export function SheetPracticeControls({
               label="Countdown"
               value={String(settings.countdownBeats)}
               disabled={arePreRunSettingsLocked}
-              onChange={(value) => updateSettings({ countdownBeats: parseCountdownBeats(value) })}
+              onChange={(value) =>
+                updateSettings({ countdownBeats: parseCountdownBeats(value) })
+              }
               options={COUNTDOWN_OPTIONS.map((beats) => ({
                 value: String(beats),
                 label: beats === 0 ? "Off" : `${beats} beats`
@@ -512,8 +660,12 @@ export function SheetPracticeControls({
           </div>
 
           {arePreRunSettingsLocked ? (
-            <p role="status" className="text-sm leading-6 text-muted-foreground md:col-span-2">
-              Meter, subdivision, accent, and countdown are locked while the metronome is running. Stop playback to change them.
+            <p
+              role="status"
+              className="text-muted-foreground text-sm leading-6 md:col-span-2"
+            >
+              Meter, subdivision, accent, and countdown are locked while the
+              metronome is running. Stop playback to change them.
             </p>
           ) : null}
 
@@ -524,10 +676,14 @@ export function SheetPracticeControls({
                 <Button
                   key={accentMode}
                   type="button"
-                  variant={settings.accent === accentMode ? "default" : "secondary"}
+                  variant={
+                    settings.accent === accentMode ? "default" : "secondary"
+                  }
                   aria-pressed={settings.accent === accentMode}
                   disabled={arePreRunSettingsLocked}
-                  onClick={() => updateSettings({ accent: parseAccentMode(accentMode) })}
+                  onClick={() =>
+                    updateSettings({ accent: parseAccentMode(accentMode) })
+                  }
                 >
                   <Circle className="h-4 w-4" aria-hidden="true" />
                   {accentLabels[accentMode]}
@@ -537,9 +693,14 @@ export function SheetPracticeControls({
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col justify-between gap-3 rounded-md border border-border bg-background p-3">
+        <div className="border-border bg-background flex min-w-0 flex-col justify-between gap-3 rounded-md border p-3">
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" onClick={handleStartMetronome} disabled={isPlaying || isCounting} aria-label="Start metronome">
+            <Button
+              type="button"
+              onClick={handleStartMetronome}
+              disabled={isPlaying || isCounting}
+              aria-label="Start metronome"
+            >
               <Play className="h-4 w-4" aria-hidden="true" />
               Play
             </Button>
@@ -576,19 +737,41 @@ export function SheetPracticeControls({
           </div>
 
           <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-            <StatusTile label="Last tick" value={lastTick ? `#${lastTick.tickIndex + 1}` : "None"} testId="sheet-last-tick" />
-            <StatusTile label="Accent tick" value={lastTick?.accented ? "Yes" : "No"} testId="sheet-accent-tick" />
-            <StatusTile label="Session id" value={session?.id ?? "none"} testId="sheet-session-id" />
-            <StatusTile label="Recordings" value={String(recordings.length)} testId="sheet-recording-count" />
+            <StatusTile
+              label="Last tick"
+              value={lastTick ? `#${lastTick.tickIndex + 1}` : "None"}
+              testId="sheet-last-tick"
+            />
+            <StatusTile
+              label="Accent tick"
+              value={lastTick?.accented ? "Yes" : "No"}
+              testId="sheet-accent-tick"
+            />
+            <StatusTile
+              label="Session id"
+              value={session?.id ?? "none"}
+              testId="sheet-session-id"
+            />
+            <StatusTile
+              label="Recordings"
+              value={String(recordings.length)}
+              testId="sheet-recording-count"
+            />
           </div>
 
-          <div aria-live="polite" className="rounded-md border border-border bg-muted px-3 py-2 text-sm">
+          <div
+            aria-live="polite"
+            className="border-border bg-muted rounded-md border px-3 py-2 text-sm"
+          >
             <div className="flex items-start gap-2">
-              <Radio className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+              <Radio
+                className="text-accent mt-0.5 h-4 w-4 shrink-0"
+                aria-hidden="true"
+              />
               <p className="font-medium">{message}</p>
             </div>
             {errorMessage ? (
-              <p role="alert" className="mt-2 font-medium text-destructive">
+              <p role="alert" className="text-destructive mt-2 font-medium">
                 {errorMessage}
               </p>
             ) : null}
@@ -596,10 +779,11 @@ export function SheetPracticeControls({
           <LatestSheetRecording recording={latestSheetRecording} />
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-3 border-t border-border px-3 py-2 text-xs text-muted-foreground">
+      <div className="border-border text-muted-foreground flex flex-wrap items-center gap-3 border-t px-3 py-2 text-xs">
         <span className="inline-flex items-center gap-1">
           <Timer className="h-3.5 w-3.5" aria-hidden="true" />
-          Defaults: {initialState.settings.bpm} BPM, {initialState.settings.timeSignature}
+          Defaults: {initialState.settings.bpm} BPM,{" "}
+          {initialState.settings.timeSignature}
         </span>
       </div>
     </section>
@@ -632,7 +816,7 @@ function LabeledSelect({
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -644,10 +828,20 @@ function LabeledSelect({
   );
 }
 
-function StatusTile({ label, value, testId }: { label: string; value: string; testId?: string }) {
+function StatusTile({
+  label,
+  value,
+  testId
+}: {
+  label: string;
+  value: string;
+  testId?: string;
+}) {
   return (
-    <div className="min-w-0 rounded-md border border-border bg-muted px-3 py-2">
-      <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>
+    <div className="border-border bg-muted min-w-0 rounded-md border px-3 py-2">
+      <p className="text-muted-foreground truncate text-xs font-medium">
+        {label}
+      </p>
       <p className="mt-1 truncate font-semibold" data-testid={testId}>
         {value}
       </p>

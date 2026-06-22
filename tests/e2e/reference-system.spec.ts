@@ -40,7 +40,9 @@ function createReferenceWavBuffer() {
   buffer.writeUInt32LE(dataSize, 40);
 
   for (let index = 0; index < sampleCount; index += 1) {
-    const sample = Math.round(Math.sin((2 * Math.PI * 440 * index) / sampleRate) * 0.35 * 32767);
+    const sample = Math.round(
+      Math.sin((2 * Math.PI * 440 * index) / sampleRate) * 0.35 * 32767
+    );
 
     buffer.writeInt16LE(sample, 44 + index * 2);
   }
@@ -64,12 +66,17 @@ async function deleteDatabase(page: Page, databaseName: string) {
 
 async function clearDatabases(page: Page) {
   await page.goto("/sheet-library");
-  await page.evaluate((storageKey) => window.localStorage.removeItem(storageKey), recordingHistoryStorageKey);
+  await page.evaluate(
+    (storageKey) => window.localStorage.removeItem(storageKey),
+    recordingHistoryStorageKey
+  );
   await deleteDatabase(page, sheetDbName);
   await deleteDatabase(page, referenceDbName);
   await deleteDatabase(page, practiceDbName);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet Library" })
+  ).toBeVisible();
 }
 
 async function installSyntheticMicrophone(page: Page, frequencyHz = 440) {
@@ -85,7 +92,8 @@ async function installSyntheticMicrophone(page: Page, frequencyHz = 440) {
         getUserMedia: async () => {
           const audioWindow = window as Window &
             typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-          const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+          const AudioContextConstructor =
+            audioWindow.AudioContext || audioWindow.webkitAudioContext;
 
           if (!AudioContextConstructor) {
             throw new Error("Web Audio is not available in this browser.");
@@ -101,7 +109,11 @@ async function installSyntheticMicrophone(page: Page, frequencyHz = 440) {
           oscillator.connect(gain);
           gain.connect(destination);
           oscillator.start();
-          e2eWindow.__referenceSyntheticAudioNodes?.push({ audioContext, oscillator, gain });
+          e2eWindow.__referenceSyntheticAudioNodes?.push({
+            audioContext,
+            oscillator,
+            gain
+          });
 
           return destination.stream;
         }
@@ -112,24 +124,32 @@ async function installSyntheticMicrophone(page: Page, frequencyHz = 440) {
 
 async function importSheet(page: Page) {
   await page.goto("/sheet-library");
-  await page.getByLabel("File").setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
+  await page
+    .getByLabel("File")
+    .setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
   await expect(page.getByText(/^Ready:/)).toBeVisible();
   await page.getByLabel("Name").fill("Reference Contract Sheet");
   await page.getByLabel("BPM").fill("84");
   await page.getByLabel("Time signature").fill("4/4");
   await page.getByRole("button", { name: "Save Imported Sheet" }).click();
-  await expect(page.getByRole("heading", { name: "Reference Contract Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Reference Contract Sheet" })
+  ).toBeVisible();
 
   const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
   const href = await link.getAttribute("href");
-  const sheetId = new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
+  const sheetId =
+    new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
 
   expect(sheetId).toBeTruthy();
 
   return { link, sheetId };
 }
 
-async function getReferenceSnapshot(page: Page, databaseName = referenceDbName) {
+async function getReferenceSnapshot(
+  page: Page,
+  databaseName = referenceDbName
+) {
   return page.evaluate(
     (name) =>
       new Promise<{
@@ -160,9 +180,16 @@ async function getReferenceSnapshot(page: Page, databaseName = referenceDbName) 
             return;
           }
 
-          const transaction = database.transaction(["references", "artifacts"], "readonly");
-          const referencesRequest = transaction.objectStore("references").getAll();
-          const artifactsRequest = transaction.objectStore("artifacts").getAll();
+          const transaction = database.transaction(
+            ["references", "artifacts"],
+            "readonly"
+          );
+          const referencesRequest = transaction
+            .objectStore("references")
+            .getAll();
+          const artifactsRequest = transaction
+            .objectStore("artifacts")
+            .getAll();
 
           transaction.oncomplete = () => {
             database.close();
@@ -180,7 +207,13 @@ async function getReferenceSnapshot(page: Page, databaseName = referenceDbName) 
 
 async function getPracticeSnapshot(page: Page) {
   return page.evaluate(
-    ({ databaseName, storageKey }: { databaseName: string; storageKey: string }) =>
+    ({
+      databaseName,
+      storageKey
+    }: {
+      databaseName: string;
+      storageKey: string;
+    }) =>
       new Promise<{
         sessions: Array<{
           id: string;
@@ -231,7 +264,9 @@ async function getPracticeSnapshot(page: Page) {
   );
 }
 
-test("reference system saves local audio and Bilibili references through Sheet Practice", async ({ page }) => {
+test("reference system saves local audio and Bilibili references through Sheet Practice", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -252,7 +287,9 @@ test("reference system saves local audio and Bilibili references through Sheet P
     testWindow.__referenceSystemUseFixtureSearch = true;
     testWindow.__referenceAudioSnapshots = [];
     window.addEventListener("reference-audio:state-change", (event) => {
-      testWindow.__referenceAudioSnapshots?.push((event as CustomEvent<ReferenceAudioSnapshot>).detail);
+      testWindow.__referenceAudioSnapshots?.push(
+        (event as CustomEvent<ReferenceAudioSnapshot>).detail
+      );
     });
   });
   await installSyntheticMicrophone(page);
@@ -263,10 +300,16 @@ test("reference system saves local audio and Bilibili references through Sheet P
 
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
-  await expect(page.getByRole("heading", { name: "Reference Contract Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Reference Contract Sheet" })
+  ).toBeVisible();
   await expect(page.getByTestId("reference-panel")).toBeVisible();
-  await expect(page.getByTestId("active-reference-title")).toHaveText("No active reference");
-  await expect(page.getByText(/Download|Extract|A-B loop|Playback speed|Offset/i)).toHaveCount(0);
+  await expect(page.getByTestId("active-reference-title")).toHaveText(
+    "No active reference"
+  );
+  await expect(
+    page.getByText(/Download|Extract|A-B loop|Playback speed|Offset/i)
+  ).toHaveCount(0);
 
   await page.getByLabel("Local title").fill("Tone Reference");
   await page.getByLabel("Local audio file").setInputFiles({
@@ -275,8 +318,12 @@ test("reference system saves local audio and Bilibili references through Sheet P
     buffer: createReferenceWavBuffer()
   });
   await page.getByRole("button", { name: "Save local reference" }).click();
-  await expect(page.getByTestId("active-reference-title")).toHaveText("Tone Reference");
-  await expect(page.getByTestId("active-reference-summary")).toContainText("reference-tone.wav");
+  await expect(page.getByTestId("active-reference-title")).toHaveText(
+    "Tone Reference"
+  );
+  await expect(page.getByTestId("active-reference-summary")).toContainText(
+    "reference-tone.wav"
+  );
   await expect(page.getByTestId("reference-count")).toContainText("1");
 
   let snapshot = await getReferenceSnapshot(page);
@@ -297,17 +344,23 @@ test("reference system saves local audio and Bilibili references through Sheet P
 
   await page.getByRole("button", { name: "Play local reference" }).click();
   await expect(page.getByText("Local reference playing.")).toBeVisible();
-  await expect(page.getByTestId("reference-playback-state")).toHaveText("playing");
+  await expect(page.getByTestId("reference-playback-state")).toHaveText(
+    "playing"
+  );
   await expect(page.getByTestId("sheet-session-source")).toContainText("sheet");
   await page.waitForFunction(() => {
-    const testWindow = window as Window & { __referenceAudioSnapshots?: ReferenceAudioSnapshot[] };
+    const testWindow = window as Window & {
+      __referenceAudioSnapshots?: ReferenceAudioSnapshot[];
+    };
 
     return (testWindow.__referenceAudioSnapshots ?? []).some(
-      (audioSnapshot) => audioSnapshot.state === "playing" && audioSnapshot.currentTime > 0.05
+      (audioSnapshot) =>
+        audioSnapshot.state === "playing" && audioSnapshot.currentTime > 0.05
     );
   });
   const referenceOnlyPracticeSnapshot = await getPracticeSnapshot(page);
-  const referenceSessionId = referenceOnlyPracticeSnapshot.sessions[0]?.id ?? "";
+  const referenceSessionId =
+    referenceOnlyPracticeSnapshot.sessions[0]?.id ?? "";
 
   expect(referenceSessionId).toBeTruthy();
   expect(referenceOnlyPracticeSnapshot.sessions).toHaveLength(1);
@@ -323,7 +376,9 @@ test("reference system saves local audio and Bilibili references through Sheet P
   await expect(page.getByTestId("reference-volume-state")).toHaveText("35");
   await page.getByRole("button", { name: "Pause local reference" }).click();
   await expect(page.getByText("Local reference paused.")).toBeVisible();
-  await expect(page.getByTestId("reference-playback-state")).toHaveText("paused");
+  await expect(page.getByTestId("reference-playback-state")).toHaveText(
+    "paused"
+  );
   const pausedTime = await page
     .getByTestId("reference-current-time")
     .textContent()
@@ -337,11 +392,17 @@ test("reference system saves local audio and Bilibili references through Sheet P
   expect(timeAfterPause - pausedTime).toBeLessThan(0.08);
 
   await page.reload();
-  await expect(page.getByTestId("active-reference-title")).toHaveText("Tone Reference");
+  await expect(page.getByTestId("active-reference-title")).toHaveText(
+    "Tone Reference"
+  );
   await page.getByRole("button", { name: "Play local reference" }).click();
-  await expect(page.getByTestId("reference-playback-state")).toHaveText("playing");
+  await expect(page.getByTestId("reference-playback-state")).toHaveText(
+    "playing"
+  );
   await page.getByRole("button", { name: "Pause local reference" }).click();
-  await expect(page.getByTestId("sheet-session-id")).toHaveText(referenceSessionId);
+  await expect(page.getByTestId("sheet-session-id")).toHaveText(
+    referenceSessionId
+  );
   expect(await getPracticeSnapshot(page)).toMatchObject({
     sessions: [
       {
@@ -357,18 +418,28 @@ test("reference system saves local audio and Bilibili references through Sheet P
 
   await page.getByRole("button", { name: "Start recording" }).click();
   await expect(page.getByText("Recording without metronome.")).toBeVisible();
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "active"
+  );
   await page.getByRole("button", { name: "Start metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText(/Playing|Counting/);
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    /Playing|Counting/
+  );
   await page.getByRole("button", { name: "Play local reference" }).click();
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText(/Playing|Counting/);
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "active"
+  );
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    /Playing|Counting/
+  );
   await page.getByRole("button", { name: "Pause local reference" }).click();
   await page.getByRole("button", { name: "Stop metronome" }).click();
   await page.waitForTimeout(350);
   await page.getByRole("button", { name: "Stop recording" }).click();
   await expect(page.getByText("Recording saved.")).toBeVisible();
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "stopped"
+  );
   await expect(page.getByTestId("sheet-recording-count")).toContainText("1");
   const practiceSnapshotAfterRecording = await getPracticeSnapshot(page);
 
@@ -379,7 +450,11 @@ test("reference system saves local audio and Bilibili references through Sheet P
     sheetId,
     recordingCount: 1
   });
-  expect(practiceSnapshotAfterRecording.recordings.filter((recording) => recording.sheetId === sheetId)).toEqual([
+  expect(
+    practiceSnapshotAfterRecording.recordings.filter(
+      (recording) => recording.sheetId === sheetId
+    )
+  ).toEqual([
     expect.objectContaining({
       type: "sheet",
       sessionId: referenceSessionId,
@@ -392,43 +467,83 @@ test("reference system saves local audio and Bilibili references through Sheet P
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByTestId("reference-panel").scrollIntoViewIfNeeded();
   await expect(page.getByTestId("reference-panel")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save local reference" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Save local reference" })
+  ).toBeVisible();
   await page.setViewportSize({ width: 1280, height: 860 });
 
   await page.getByPlaceholder("Search Bilibili").fill("canon");
   await page.getByRole("button", { name: "Search Bilibili" }).click();
   await expect(page.getByTestId("bilibili-search-results")).toBeVisible();
-  await page.getByRole("button", { name: /Canon in D guitar practice reference/ }).click();
+  await page
+    .getByRole("button", { name: /Canon in D guitar practice reference/ })
+    .click();
   await page.getByRole("button", { name: "Save selected result" }).click();
-  await expect(page.getByText("Bilibili search result saved as the active reference.")).toBeVisible();
-  await expect(page.getByTestId("active-reference-title")).toHaveText("Canon in D guitar practice reference");
-  await expect(page.getByRole("link", { name: "Open Bilibili reference" })).toHaveAttribute(
-    "href",
-    "https://www.bilibili.com/video/BV1ab411c7dE"
+  await expect(
+    page.getByText("Bilibili search result saved as the active reference.")
+  ).toBeVisible();
+  await expect(page.getByTestId("active-reference-title")).toHaveText(
+    "Canon in D guitar practice reference"
   );
+  await expect(
+    page.getByRole("link", { name: "Open Bilibili reference" })
+  ).toHaveAttribute("href", "https://www.bilibili.com/video/BV1ab411c7dE");
 
   await page.reload();
-  await expect(page.getByTestId("active-reference-title")).toHaveText("Canon in D guitar practice reference");
-  await expect(page.getByTestId("active-reference-summary")).toContainText("BV1ab411c7dE");
+  await expect(page.getByTestId("active-reference-title")).toHaveText(
+    "Canon in D guitar practice reference"
+  );
+  await expect(page.getByTestId("active-reference-summary")).toContainText(
+    "BV1ab411c7dE"
+  );
 
   await page.getByLabel("URL title").fill("Pasted Bilibili");
-  await page.getByRole("textbox", { name: "Bilibili URL" }).fill("https://www.bilibili.com/video/BV1XY411P7mn");
+  await page
+    .getByRole("textbox", { name: "Bilibili URL" })
+    .fill("https://www.bilibili.com/video/BV1XY411P7mn");
   await page.getByRole("button", { name: "Save Bilibili URL" }).click();
-  await expect(page.getByText("Bilibili URL saved as the active reference.")).toBeVisible();
-  await expect(page.getByTestId("active-reference-title")).toHaveText("Pasted Bilibili");
-  await expect(page.getByTestId("active-reference-summary")).toContainText("BV1XY411P7mn");
+  await expect(
+    page.getByText("Bilibili URL saved as the active reference.")
+  ).toBeVisible();
+  await expect(page.getByTestId("active-reference-title")).toHaveText(
+    "Pasted Bilibili"
+  );
+  await expect(page.getByTestId("active-reference-summary")).toContainText(
+    "BV1XY411P7mn"
+  );
 
-  await page.getByRole("textbox", { name: "Bilibili URL" }).fill("https://example.com/video/BV1XY411P7mn");
+  await page
+    .getByRole("textbox", { name: "Bilibili URL" })
+    .fill("https://example.com/video/BV1XY411P7mn");
   await page.getByRole("button", { name: "Save Bilibili URL" }).click();
-  await expect(page.getByText("Enter a Bilibili video URL like https://www.bilibili.com/video/BV...")).toBeVisible();
+  await expect(
+    page.getByText(
+      "Enter a Bilibili video URL like https://www.bilibili.com/video/BV..."
+    )
+  ).toBeVisible();
 
   await page.getByPlaceholder("Search Bilibili").fill("force failure");
   await page.getByRole("button", { name: "Search Bilibili" }).click();
-  await expect(page.getByText("Bilibili search failed. Keep your query and try again.")).toBeVisible();
+  await expect(
+    page.getByText("Bilibili search failed. Keep your query and try again.")
+  ).toBeVisible();
+  await expect(page.getByTestId("bilibili-search-fallback")).toContainText(
+    "Use Bilibili web search in a new tab"
+  );
+  await expect(
+    page.getByRole("link", { name: "Open Bilibili web search" })
+  ).toHaveAttribute(
+    "href",
+    "https://search.bilibili.com/all?keyword=force%20failure"
+  );
 
   snapshot = await getReferenceSnapshot(page);
-  expect(snapshot.references.filter((reference) => reference.sheetId === sheetId)).toHaveLength(3);
-  expect(snapshot.references.filter((reference) => reference.isActive)).toMatchObject([
+  expect(
+    snapshot.references.filter((reference) => reference.sheetId === sheetId)
+  ).toHaveLength(3);
+  expect(
+    snapshot.references.filter((reference) => reference.isActive)
+  ).toMatchObject([
     {
       kind: "bilibili",
       title: "Pasted Bilibili",

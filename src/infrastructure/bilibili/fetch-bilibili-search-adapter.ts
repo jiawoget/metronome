@@ -2,7 +2,10 @@ import {
   createBilibiliSearchResult,
   type BilibiliSearchResult
 } from "@/domain/reference";
-import type { BilibiliSearchAdapter, ReferenceResult } from "@/services/reference";
+import type {
+  BilibiliSearchAdapter,
+  ReferenceResult
+} from "@/services/reference";
 
 type BilibiliApiVideoResult = {
   title?: unknown;
@@ -27,9 +30,14 @@ type FetchBilibiliSearchAdapterOptions = {
 };
 
 const defaultEndpoint = "https://api.bilibili.com/x/web-interface/search/type";
+const liveSearchUnavailableMessage =
+  "Live Bilibili API search is unavailable. Use Bilibili web search or paste a video URL.";
 
 function stripHtml(value: string) {
-  return value.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  return value
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function formatDuration(value: unknown) {
@@ -74,7 +82,9 @@ function getResultUrl(result: BilibiliApiVideoResult) {
   return null;
 }
 
-export function normalizeBilibiliApiResults(results: unknown): BilibiliSearchResult[] {
+export function normalizeBilibiliApiResults(
+  results: unknown
+): BilibiliSearchResult[] {
   if (!Array.isArray(results)) {
     return [];
   }
@@ -87,7 +97,8 @@ export function normalizeBilibiliApiResults(results: unknown): BilibiliSearchRes
 
       const video = result as BilibiliApiVideoResult;
       const url = getResultUrl(video);
-      const title = typeof video.title === "string" ? stripHtml(video.title) : "";
+      const title =
+        typeof video.title === "string" ? stripHtml(video.title) : "";
 
       if (!url || title.length === 0) {
         return null;
@@ -96,7 +107,8 @@ export function normalizeBilibiliApiResults(results: unknown): BilibiliSearchRes
       return createBilibiliSearchResult({
         title,
         url,
-        author: typeof video.author === "string" ? stripHtml(video.author) : null,
+        author:
+          typeof video.author === "string" ? stripHtml(video.author) : null,
         durationLabel: formatDuration(video.duration),
         thumbnailUrl: normalizeThumbnail(video.pic)
       });
@@ -108,12 +120,17 @@ export class FetchBilibiliSearchAdapter implements BilibiliSearchAdapter {
   private readonly fetchImpl: typeof fetch;
   private readonly endpoint: string;
 
-  constructor({ fetchImpl = fetch, endpoint = defaultEndpoint }: FetchBilibiliSearchAdapterOptions = {}) {
+  constructor({
+    fetchImpl = fetch,
+    endpoint = defaultEndpoint
+  }: FetchBilibiliSearchAdapterOptions = {}) {
     this.fetchImpl = fetchImpl;
     this.endpoint = endpoint;
   }
 
-  async search(query: string): Promise<ReferenceResult<BilibiliSearchResult[]>> {
+  async search(
+    query: string
+  ): Promise<ReferenceResult<BilibiliSearchResult[]>> {
     const url = new URL(this.endpoint);
 
     url.searchParams.set("search_type", "video");
@@ -131,14 +148,14 @@ export class FetchBilibiliSearchAdapter implements BilibiliSearchAdapter {
     } catch {
       return {
         ok: false,
-        message: "Bilibili search is unavailable. Check the network and try again."
+        message: liveSearchUnavailableMessage
       };
     }
 
     if (!response.ok) {
       return {
         ok: false,
-        message: "Bilibili search is unavailable. Check the network and try again."
+        message: liveSearchUnavailableMessage
       };
     }
 
@@ -157,7 +174,8 @@ export class FetchBilibiliSearchAdapter implements BilibiliSearchAdapter {
       return {
         ok: false,
         message:
-          typeof payload.message === "string" && payload.message.trim().length > 0
+          typeof payload.message === "string" &&
+          payload.message.trim().length > 0
             ? `Bilibili search failed: ${payload.message.trim()}`
             : "Bilibili search failed. Keep your query and try again."
       };

@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { ImportedSheet, SheetArtifact, SheetArtifactStatus } from "@/domain/sheet";
+import type {
+  ImportedSheet,
+  SheetArtifact,
+  SheetArtifactStatus
+} from "@/domain/sheet";
 import {
   createSheetLibraryService,
   type SheetImportAdapter,
@@ -21,6 +25,23 @@ function createMemoryRepository(): SheetLibraryRepository {
     async saveSheet(sheet, artifact) {
       sheets.set(sheet.id, sheet);
       artifacts.set(sheet.id, artifact);
+    },
+    async updateSheetMetadata(sheetId, metadata, updatedAt) {
+      const sheet = sheets.get(sheetId);
+
+      if (!sheet) {
+        return null;
+      }
+
+      const updatedSheet = {
+        ...sheet,
+        ...metadata,
+        updatedAt
+      };
+
+      sheets.set(sheetId, updatedSheet);
+
+      return updatedSheet;
     },
     async updateLastPracticedAt(sheetId, practicedAt) {
       const sheet = sheets.get(sheetId);
@@ -64,7 +85,9 @@ function createAdapter(
   };
 }
 
-const pdfFile = new File(["%PDF-1.4"], "real-sheet.pdf", { type: "application/pdf" });
+const pdfFile = new File(["%PDF-1.4"], "real-sheet.pdf", {
+  type: "application/pdf"
+});
 const imageFile = new File(["png"], "real-sheet.png", { type: "image/png" });
 
 describe("sheet library service", () => {
@@ -187,7 +210,8 @@ describe("sheet library service", () => {
       repository: createMemoryRepository(),
       importAdapter: createAdapter({
         ok: false,
-        message: "Unsupported file type. Upload one PDF or one or more PNG/JPG image files."
+        message:
+          "Unsupported file type. Upload one PDF or one or more PNG/JPG image files."
       })
     });
 
@@ -203,7 +227,8 @@ describe("sheet library service", () => {
 
     expect(result).toEqual({
       ok: false,
-      message: "Unsupported file type. Upload one PDF or one or more PNG/JPG image files."
+      message:
+        "Unsupported file type. Upload one PDF or one or more PNG/JPG image files."
     });
     expect(await service.listSheets()).toEqual([]);
   });
@@ -256,6 +281,136 @@ describe("sheet library service", () => {
     expect((await service.listSheets())[0].artifactStatus).toEqual({
       readable: false,
       label: "PDF artifact page count mismatch"
+    });
+  });
+
+  it("updates sheet metadata through validation and repository boundaries without replacing artifacts", async () => {
+    const repository = createMemoryRepository();
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: createAdapter({
+        ok: true,
+        preview: {
+          kind: "pdf",
+          pageCount: 1,
+          imageCount: 0,
+          imageDimensions: [],
+          mimeTypes: ["application/pdf"],
+          sizeBytes: pdfFile.size,
+          originalFileNames: [pdfFile.name],
+          files: [
+            {
+              name: pdfFile.name,
+              mimeType: pdfFile.type,
+              sizeBytes: pdfFile.size,
+              pageNumber: 1,
+              blob: pdfFile,
+              width: null,
+              height: null
+            }
+          ]
+        }
+      }),
+      now: () => new Date("2026-06-21T10:00:00.000Z"),
+      createId: () => "sheet-edit"
+    });
+
+    await service.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Original",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    const result = await service.updateSheetMetadata({
+      sheetId: "sheet-edit",
+      metadata: {
+        name: "Edited Etude",
+        category: "scale",
+        bpm: 144,
+        timeSignature: "7/8"
+      }
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      sheet: {
+        id: "sheet-edit",
+        name: "Edited Etude",
+        category: "scale",
+        bpm: 144,
+        timeSignature: "7/8",
+        updatedAt: "2026-06-21T10:00:00.000Z"
+      }
+    });
+    expect(await service.getArtifact("sheet-edit")).toMatchObject({
+      sheetId: "sheet-edit",
+      kind: "pdf"
+    });
+  });
+
+  it("rejects invalid metadata edits without changing the saved sheet", async () => {
+    const repository = createMemoryRepository();
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: createAdapter({
+        ok: true,
+        preview: {
+          kind: "image",
+          pageCount: 1,
+          imageCount: 1,
+          imageDimensions: [{ width: 2, height: 2 }],
+          mimeTypes: ["image/png"],
+          sizeBytes: imageFile.size,
+          originalFileNames: [imageFile.name],
+          files: [
+            {
+              name: imageFile.name,
+              mimeType: imageFile.type,
+              sizeBytes: imageFile.size,
+              pageNumber: 1,
+              blob: imageFile,
+              width: 2,
+              height: 2
+            }
+          ]
+        }
+      }),
+      createId: () => "sheet-invalid-edit"
+    });
+
+    await service.importSheet({
+      files: [imageFile],
+      metadata: {
+        name: "Valid",
+        category: "song",
+        bpm: 100,
+        timeSignature: "4/4"
+      }
+    });
+
+    await expect(
+      service.updateSheetMetadata({
+        sheetId: "sheet-invalid-edit",
+        metadata: {
+          name: "",
+          category: "song",
+          bpm: 12,
+          timeSignature: "bad"
+        }
+      })
+    ).resolves.toEqual({
+      ok: false,
+      message:
+        "Sheet name is required. BPM must be at least 30. Use a time signature like 4/4, 3/4, or 6/8."
+    });
+    expect(await service.getSheet("sheet-invalid-edit")).toMatchObject({
+      name: "Valid",
+      bpm: 100,
+      timeSignature: "4/4"
     });
   });
 });

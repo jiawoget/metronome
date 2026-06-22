@@ -24,8 +24,14 @@ async function expectVisibleDerivedWaveform({
   const waveform = page.getByTestId("derived-waveform");
 
   await expect(waveform, `${label}: waveform container visible`).toBeVisible();
-  await expect(waveform, `${label}: waveform source`).toHaveAttribute("data-waveform-source", source);
-  await expect(waveform, `${label}: waveform peak count`).toHaveAttribute("data-peak-count", String(peakCount));
+  await expect(waveform, `${label}: waveform source`).toHaveAttribute(
+    "data-waveform-source",
+    source
+  );
+  await expect(waveform, `${label}: waveform peak count`).toHaveAttribute(
+    "data-peak-count",
+    String(peakCount)
+  );
 
   const evidence = await waveform.evaluate((element): WaveformEvidence => {
     const bounds = element.getBoundingClientRect();
@@ -56,21 +62,49 @@ async function expectVisibleDerivedWaveform({
     };
   });
 
-  expect(evidence.width, `${label}: waveform has layout width`).toBeGreaterThan(160);
-  expect(evidence.height, `${label}: waveform has layout height`).toBeGreaterThan(40);
-  expect(evidence.visibleBarCount, `${label}: all waveform bars are visible`).toBe(peakCount);
-  expect(evidence.nonZeroBarCount, `${label}: all waveform bars have nonzero height`).toBe(peakCount);
-  expect(Math.max(...evidence.barHeights), `${label}: waveform bars have visible height`).toBeGreaterThan(7);
+  expect(evidence.width, `${label}: waveform has layout width`).toBeGreaterThan(
+    160
+  );
+  expect(
+    evidence.height,
+    `${label}: waveform has layout height`
+  ).toBeGreaterThan(40);
+  expect(
+    evidence.visibleBarCount,
+    `${label}: all waveform bars are visible`
+  ).toBe(peakCount);
+  expect(
+    evidence.nonZeroBarCount,
+    `${label}: all waveform bars have nonzero height`
+  ).toBe(peakCount);
+  expect(
+    Math.max(...evidence.barHeights),
+    `${label}: waveform bars have visible height`
+  ).toBeGreaterThan(7);
 
   return evidence;
 }
 
-function expectStableWaveform(before: WaveformEvidence, after: WaveformEvidence, label: string) {
+function expectStableWaveform(
+  before: WaveformEvidence,
+  after: WaveformEvidence,
+  label: string
+) {
   expect(after.source, `${label}: source stays stable`).toBe(before.source);
-  expect(after.peakCount, `${label}: peak count stays stable`).toBe(before.peakCount);
-  expect(after.visibleBarCount, `${label}: visible bar count stays stable`).toBe(before.visibleBarCount);
-  expect(after.nonZeroBarCount, `${label}: nonzero bar count stays stable`).toBe(before.nonZeroBarCount);
-  expect(after.barHeights, `${label}: bar geometry stays stable`).toEqual(before.barHeights);
+  expect(after.peakCount, `${label}: peak count stays stable`).toBe(
+    before.peakCount
+  );
+  expect(
+    after.visibleBarCount,
+    `${label}: visible bar count stays stable`
+  ).toBe(before.visibleBarCount);
+  expect(
+    after.nonZeroBarCount,
+    `${label}: nonzero bar count stays stable`
+  ).toBe(before.nonZeroBarCount);
+  expect(after.barHeights, `${label}: bar geometry stays stable`).toEqual(
+    before.barHeights
+  );
 }
 
 test("recordings review lists, filters, plays, continues, deletes, and handles bad audio", async ({
@@ -95,12 +129,21 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     const e2eWindow = window as Window & {
       __recordingsPlaybackEvents?: unknown[];
       __recordingsPlaybackRejections?: string[];
+      __recordingsSeekEvents?: {
+        recordingId: string;
+        timestampMs: number;
+        currentTimeMs: number;
+      }[];
     };
 
     e2eWindow.__recordingsPlaybackEvents = [];
     e2eWindow.__recordingsPlaybackRejections = [];
+    e2eWindow.__recordingsSeekEvents = [];
     window.addEventListener("recordings-review:playback", (event) => {
       e2eWindow.__recordingsPlaybackEvents?.push((event as CustomEvent).detail);
+    });
+    window.addEventListener("recordings-review:seek", (event) => {
+      e2eWindow.__recordingsSeekEvents?.push((event as CustomEvent).detail);
     });
     window.addEventListener("unhandledrejection", (event) => {
       e2eWindow.__recordingsPlaybackRejections?.push(String(event.reason));
@@ -111,7 +154,8 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
         getUserMedia: async () => {
           const audioWindow = window as Window &
             typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-          const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+          const AudioContextConstructor =
+            audioWindow.AudioContext || audioWindow.webkitAudioContext;
 
           if (!AudioContextConstructor) {
             throw new Error("Web Audio is not available in this browser.");
@@ -167,8 +211,13 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
       view.setUint32(40, dataSize, true);
 
       for (let index = 0; index < sampleCount; index += 1) {
-        const sample = Math.sin((2 * Math.PI * frequencyHz * index) / sampleRate) * 0.35;
-        view.setInt16(44 + index * 2, Math.max(-1, Math.min(1, sample)) * 0x7fff, true);
+        const sample =
+          Math.sin((2 * Math.PI * frequencyHz * index) / sampleRate) * 0.35;
+        view.setInt16(
+          44 + index * 2,
+          Math.max(-1, Math.min(1, sample)) * 0x7fff,
+          true
+        );
       }
 
       let binary = "";
@@ -366,12 +415,17 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await expect(page.getByTestId("recording-row-sheet-beta")).toBeVisible();
   const decodedArtifactEvidence = await page.evaluate(async () => {
     async function decodeRecording(recordingId: string) {
-      const rawValue = window.localStorage.getItem("metronome-practice:v0:quick-recordings");
+      const rawValue = window.localStorage.getItem(
+        "metronome-practice:v0:quick-recordings"
+      );
       const parsed = rawValue ? JSON.parse(rawValue) : null;
-      const recording = parsed.recordings.find((item: { id: string }) => item.id === recordingId);
+      const recording = parsed.recordings.find(
+        (item: { id: string }) => item.id === recordingId
+      );
       const audioWindow = window as Window &
         typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-      const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+      const AudioContextConstructor =
+        audioWindow.AudioContext || audioWindow.webkitAudioContext;
 
       if (!AudioContextConstructor || !recording.audioDataUrl) {
         throw new Error(`Cannot decode ${recordingId}.`);
@@ -380,7 +434,9 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
       const response = await fetch(recording.audioDataUrl);
       const arrayBuffer = await response.arrayBuffer();
       const audioContext = new AudioContextConstructor();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+      const audioBuffer = await audioContext.decodeAudioData(
+        arrayBuffer.slice(0)
+      );
       const samples = audioBuffer.getChannelData(0);
       let peakAmplitude = 0;
       let sumSquares = 0;
@@ -410,15 +466,21 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   expect(decodedArtifactEvidence.quick.decodedDurationMs).toBeLessThan(1_050);
   expect(decodedArtifactEvidence.quick.peakAmplitude).toBeGreaterThan(0.2);
   expect(decodedArtifactEvidence.quick.rmsAmplitude).toBeGreaterThan(0.1);
-  expect(decodedArtifactEvidence.sheet.decodedDurationMs).toBeGreaterThan(1_150);
+  expect(decodedArtifactEvidence.sheet.decodedDurationMs).toBeGreaterThan(
+    1_150
+  );
   expect(decodedArtifactEvidence.sheet.decodedDurationMs).toBeLessThan(1_250);
   expect(decodedArtifactEvidence.sheet.peakAmplitude).toBeGreaterThan(0.2);
   expect(decodedArtifactEvidence.sheet.rmsAmplitude).toBeGreaterThan(0.1);
 
   const originalQuickAlphaSnapshot = await page.evaluate(() => {
-    const rawValue = window.localStorage.getItem("metronome-practice:v0:quick-recordings");
+    const rawValue = window.localStorage.getItem(
+      "metronome-practice:v0:quick-recordings"
+    );
     const parsed = rawValue ? JSON.parse(rawValue) : null;
-    const recording = parsed.recordings.find((item: { id: string }) => item.id === "quick-alpha");
+    const recording = parsed.recordings.find(
+      (item: { id: string }) => item.id === "quick-alpha"
+    );
 
     return {
       id: recording.id,
@@ -448,8 +510,12 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
 
   await page.getByTestId("recording-row-quick-alpha").click();
   await expect(page.getByTestId("recording-details")).toBeVisible();
-  await expect(page.getByTestId("recording-details").getByText("120")).toBeVisible();
-  await expect(page.getByTestId("recording-details").getByText("4/4")).toBeVisible();
+  await expect(
+    page.getByTestId("recording-details").getByText("120")
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("recording-details").getByText("4/4")
+  ).toBeVisible();
   const quickWaveformBeforePlayback = await expectVisibleDerivedWaveform({
     page,
     source: "decoded-audio",
@@ -458,8 +524,63 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   });
   await expect(page.getByTestId("recording-duration-warning")).toBeHidden();
   await expect(page.getByTestId("error-marker-list")).toContainText("0:01");
-  await expect(page.getByTestId("error-marker-list")).toContainText("Early entrance");
-  await expect(page.getByTestId("error-marker-list")).toContainText("Late accent");
+  await expect(page.getByTestId("error-marker-list")).toContainText(
+    "Early entrance"
+  );
+  await expect(page.getByTestId("error-marker-list")).toContainText(
+    "Late accent"
+  );
+  await page
+    .getByTestId("error-marker-list")
+    .getByRole("button", { name: "Seek to marker 0:01" })
+    .first()
+    .click();
+  await page.waitForFunction(() => {
+    const e2eWindow = window as Window & {
+      __recordingsSeekEvents?: {
+        recordingId: string;
+        timestampMs: number;
+        currentTimeMs: number;
+      }[];
+    };
+
+    return e2eWindow.__recordingsSeekEvents?.some(
+      (event) =>
+        event.recordingId === "quick-alpha" &&
+        event.timestampMs === 500 &&
+        Math.abs(event.currentTimeMs - 500) <= 80
+    );
+  });
+  await expect(
+    page.getByTestId("recording-error-marker-message")
+  ).toContainText("Playback moved to 0:01.");
+
+  const quickWaveformAdapter = page.getByTestId("waveform-adapter");
+
+  await expect(quickWaveformAdapter).toHaveAttribute(
+    "data-playback-ready",
+    "true"
+  );
+  const quickSeekSurface = page.getByTestId("waveform-adapter-seek-surface");
+  const quickWaveformBox = await quickSeekSurface.boundingBox();
+
+  expect(quickWaveformBox).not.toBeNull();
+  await quickSeekSurface.click({
+    position: {
+      x: (quickWaveformBox?.width ?? 0) * 0.75,
+      y: (quickWaveformBox?.height ?? 0) / 2
+    }
+  });
+  await expect
+    .poll(async () =>
+      Number(await quickWaveformAdapter.getAttribute("data-current-time-ms"))
+    )
+    .toBeGreaterThan(590);
+  await expect
+    .poll(async () =>
+      Number(await quickWaveformAdapter.getAttribute("data-current-time-ms"))
+    )
+    .toBeLessThan(910);
 
   await page.getByRole("button", { name: "Play Recording" }).click();
   await expect(page.getByTestId("recording-playback-status")).toBeVisible();
@@ -469,7 +590,8 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     };
 
     return e2eWindow.__recordingsPlaybackEvents?.some(
-      (event) => event.recordingId === "quick-alpha" && event.state === "playing"
+      (event) =>
+        event.recordingId === "quick-alpha" && event.state === "playing"
     );
   });
   await page.getByRole("button", { name: "Pause Recording" }).click();
@@ -496,12 +618,18 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await expect(page.getByText(/^Recording saved/)).toBeVisible();
 
   const continuedRecordingEvidence = await page.evaluate(() => {
-    const rawValue = window.localStorage.getItem("metronome-practice:v0:quick-recordings");
+    const rawValue = window.localStorage.getItem(
+      "metronome-practice:v0:quick-recordings"
+    );
     const parsed = rawValue ? JSON.parse(rawValue) : null;
-    const original = parsed.recordings.find((recording: { id: string }) => recording.id === "quick-alpha");
+    const original = parsed.recordings.find(
+      (recording: { id: string }) => recording.id === "quick-alpha"
+    );
     const continued = parsed.recordings.find(
       (recording: { id: string; type: string; origin: string }) =>
-        recording.id !== "quick-alpha" && recording.type === "quick" && recording.origin === "user"
+        recording.id !== "quick-alpha" &&
+        recording.type === "quick" &&
+        recording.origin === "user"
     );
 
     return {
@@ -530,17 +658,24 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
             id: continued.id,
             durationMs: continued.durationMs,
             sessionId: continued.sessionId,
-            decodedDurationMs: continued.artifactAnalysis?.decodedDurationMs ?? null,
+            decodedDurationMs:
+              continued.artifactAnalysis?.decodedDurationMs ?? null,
             isSilent: continued.artifactAnalysis?.isSilent ?? null
           }
         : null
     };
   });
 
-  expect(continuedRecordingEvidence.original).toEqual(originalQuickAlphaSnapshot);
+  expect(continuedRecordingEvidence.original).toEqual(
+    originalQuickAlphaSnapshot
+  );
   expect(continuedRecordingEvidence.continued?.id).not.toBe("quick-alpha");
-  expect(continuedRecordingEvidence.continued?.sessionId).not.toBe("session-quick-1");
-  expect(continuedRecordingEvidence.continued?.decodedDurationMs).toBeGreaterThan(600);
+  expect(continuedRecordingEvidence.continued?.sessionId).not.toBe(
+    "session-quick-1"
+  );
+  expect(
+    continuedRecordingEvidence.continued?.decodedDurationMs
+  ).toBeGreaterThan(600);
   expect(
     Math.abs(
       (continuedRecordingEvidence.continued?.durationMs ?? 0) -
@@ -552,8 +687,12 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await page.goto("/recordings");
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Alpha");
   await expect(page.getByTestId("recording-row-quick-alpha")).toBeVisible();
-  await page.getByRole("textbox", { name: "Search recordings" }).fill("Quick metronome");
-  await page.getByTestId(`recording-row-${continuedRecordingEvidence.continued?.id}`).click();
+  await page
+    .getByRole("textbox", { name: "Search recordings" })
+    .fill("Quick metronome");
+  await page
+    .getByTestId(`recording-row-${continuedRecordingEvidence.continued?.id}`)
+    .click();
   await expectVisibleDerivedWaveform({
     page,
     source: "decoded-audio",
@@ -568,7 +707,9 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await expect(page.getByTestId("recording-row-sheet-beta")).toBeVisible();
   await expect(page.getByText("Alpha quick take")).toBeHidden();
   await page.getByTestId("recording-row-sheet-beta").click();
-  await expect(page.getByTestId("recording-details").getByText("Moonlight Etude")).toBeVisible();
+  await expect(
+    page.getByTestId("recording-details").getByText("Moonlight Etude")
+  ).toBeVisible();
   const sheetWaveformBeforePlayback = await expectVisibleDerivedWaveform({
     page,
     source: "trusted-peaks",
@@ -596,12 +737,20 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     label: "sheet-beta after playback"
   });
 
-  expectStableWaveform(sheetWaveformBeforePlayback, sheetWaveformAfterPlayback, "sheet-beta playback interaction");
+  expectStableWaveform(
+    sheetWaveformBeforePlayback,
+    sheetWaveformAfterPlayback,
+    "sheet-beta playback interaction"
+  );
   await page.getByRole("link", { name: "Practice Again" }).click();
-  await expect(page).toHaveURL(/\/sheet-practice\?recordingId=sheet-beta&sheetId=sheet-42/);
+  await expect(page).toHaveURL(
+    /\/sheet-practice\?recordingId=sheet-beta&sheetId=sheet-42/
+  );
 
   await page.goto("/recordings");
-  await page.getByRole("textbox", { name: "Search recordings" }).fill("Duration mismatch");
+  await page
+    .getByRole("textbox", { name: "Search recordings" })
+    .fill("Duration mismatch");
   await page.getByLabel("Type filter").selectOption("all");
   await page.getByTestId("recording-row-mismatch-delta").click();
   await expect(page.getByTestId("recording-duration-warning")).toContainText(
@@ -619,17 +768,23 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await page.reload();
   await expect(page.getByText("Alpha quick take")).toBeHidden();
   const deletedEvidence = await page.evaluate(() => {
-    const rawValue = window.localStorage.getItem("metronome-practice:v0:quick-recordings");
+    const rawValue = window.localStorage.getItem(
+      "metronome-practice:v0:quick-recordings"
+    );
     const parsed = rawValue ? JSON.parse(rawValue) : null;
 
     return {
-      hasDeletedRecording: parsed.recordings.some((recording: { id: string }) => recording.id === "quick-alpha"),
+      hasDeletedRecording: parsed.recordings.some(
+        (recording: { id: string }) => recording.id === "quick-alpha"
+      ),
       hasDeletedMarker: parsed.errorMarkers.some(
-        (marker: { recordingId: string }) => marker.recordingId === "quick-alpha"
+        (marker: { recordingId: string }) =>
+          marker.recordingId === "quick-alpha"
       ),
       deletedArtifact:
-        parsed.recordings.find((recording: { id: string }) => recording.id === "quick-alpha")
-          ?.audioDataUrl ?? null
+        parsed.recordings.find(
+          (recording: { id: string }) => recording.id === "quick-alpha"
+        )?.audioDataUrl ?? null
     };
   });
 
@@ -641,29 +796,49 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
 
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Broken");
   await page.getByTestId("recording-row-bad-gamma").click();
-  await expect(page.getByTestId("recording-artifact-error")).toContainText("cannot be decoded");
+  await expect(page.getByTestId("recording-artifact-error")).toContainText(
+    "cannot be decoded"
+  );
   await expect(page.getByTestId("derived-waveform")).toBeHidden();
-  await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Play Recording" })
+  ).toBeDisabled();
 
-  await page.getByRole("textbox", { name: "Search recordings" }).fill("Trusted peaks missing");
+  await page
+    .getByRole("textbox", { name: "Search recordings" })
+    .fill("Trusted peaks missing");
   await page.getByTestId("recording-row-trusted-missing").click();
   await expect(page.getByTestId("recording-artifact-error")).toContainText(
     "no accessible audio artifact"
   );
   await expect(page.getByTestId("derived-waveform")).toBeHidden();
-  await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Play Recording" })
+  ).toBeDisabled();
 
-  await page.getByRole("textbox", { name: "Search recordings" }).fill("Trusted peaks bad");
+  await page
+    .getByRole("textbox", { name: "Search recordings" })
+    .fill("Trusted peaks bad");
   await page.getByTestId("recording-row-trusted-bad").click();
-  await expect(page.getByTestId("recording-artifact-error")).toContainText("cannot be decoded");
+  await expect(page.getByTestId("recording-artifact-error")).toContainText(
+    "cannot be decoded"
+  );
   await expect(page.getByTestId("derived-waveform")).toBeHidden();
-  await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Play Recording" })
+  ).toBeDisabled();
 
-  await page.getByRole("textbox", { name: "Search recordings" }).fill("Invalid waveform peaks");
+  await page
+    .getByRole("textbox", { name: "Search recordings" })
+    .fill("Invalid waveform peaks");
   await page.getByTestId("recording-row-invalid-peaks-epsilon").click();
-  await expect(page.getByTestId("recording-artifact-error")).toContainText("invalid waveform peak data");
+  await expect(page.getByTestId("recording-artifact-error")).toContainText(
+    "invalid waveform peak data"
+  );
   await expect(page.getByTestId("derived-waveform")).toBeHidden();
-  await expect(page.getByRole("button", { name: "Play Recording" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Play Recording" })
+  ).toBeDisabled();
 
   const playbackRejections = await page.evaluate(() => {
     const e2eWindow = window as Window & {

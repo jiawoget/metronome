@@ -8,7 +8,8 @@ import type {
   ImportSheetInput,
   SheetImportAdapter,
   SheetLibraryRepository,
-  SheetLibraryService
+  SheetLibraryService,
+  UpdateSheetMetadataInput
 } from "@/services/sheet-library/types";
 
 type SheetLibraryServiceOptions = {
@@ -103,6 +104,36 @@ export function createSheetLibraryService({
       return {
         ok: true,
         sheet: await toListItem(sheet)
+      };
+    },
+
+    async updateSheetMetadata({ sheetId, metadata }: UpdateSheetMetadataInput) {
+      const metadataResult = validateSheetMetadata(metadata);
+
+      if (!metadataResult.ok) {
+        return {
+          ok: false,
+          message: metadataResult.errors.join(" ")
+        };
+      }
+
+      const updatedSheet = await repository.updateSheetMetadata(
+        sheetId,
+        metadataResult.value,
+        now().toISOString()
+      );
+
+      if (!updatedSheet) {
+        return {
+          ok: false,
+          message:
+            "Sheet metadata could not be updated because the sheet was not found."
+        };
+      }
+
+      return {
+        ok: true,
+        sheet: await toListItem(updatedSheet)
       };
     },
 

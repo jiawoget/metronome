@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PracticeSession } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
+import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
 import {
   ACCENT_MODES,
   COUNTDOWN_OPTIONS,
@@ -30,11 +31,17 @@ import {
   parseAccentMode,
   parseCountdownBeats,
   parseSubdivision,
-  parseTimeSignature,
+  parseTimeSignature
 } from "@/lib/quick-metronome/control";
-import { BrowserMetronomeService, type MetronomeTick } from "@/lib/quick-metronome/metronome-service";
+import {
+  BrowserMetronomeService,
+  type MetronomeTick
+} from "@/lib/quick-metronome/metronome-service";
 import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
-import { BrowserRecordingService, RecordingPermissionError } from "@/lib/quick-metronome/recording-service";
+import {
+  BrowserRecordingService,
+  RecordingPermissionError
+} from "@/lib/quick-metronome/recording-service";
 import { createQuickRecording } from "@/lib/quick-metronome/session";
 import {
   DEFAULT_METRONOME_SETTINGS,
@@ -65,9 +72,13 @@ const accentLabels: Record<AccentMode, string> = {
 export function QuickMetronomeExperience() {
   const metronomeService = useMemo(() => new BrowserMetronomeService(), []);
   const recordingService = useMemo(() => new BrowserRecordingService(), []);
-  const [settings, setSettings] = useState<MetronomeSettings>(DEFAULT_METRONOME_SETTINGS);
+  const [settings, setSettings] = useState<MetronomeSettings>(
+    DEFAULT_METRONOME_SETTINGS
+  );
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
-  const [currentSession, setCurrentSession] = useState<PracticeSession | null>(null);
+  const [currentSession, setCurrentSession] = useState<PracticeSession | null>(
+    null
+  );
   const [lastTick, setLastTick] = useState<MetronomeTick | null>(null);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [message, setMessage] = useState("Ready.");
@@ -97,10 +108,10 @@ export function QuickMetronomeExperience() {
     }));
   }
 
-  const { bpmDraft, setBpmDraft, commitBpmInput, stepBpmInput } = useMetronomeBpmDraft(
-    settings.bpm,
-    (nextBpm) => updateSettings({ bpm: nextBpm })
-  );
+  const { bpmDraft, setBpmDraft, commitBpmInput, stepBpmInput } =
+    useMetronomeBpmDraft(settings.bpm, (nextBpm) =>
+      updateSettings({ bpm: nextBpm })
+    );
 
   const handleCountdownStarted = useCallback(() => {
     setMessage("Countdown running.");
@@ -116,23 +127,36 @@ export function QuickMetronomeExperience() {
     setCurrentSession(session);
     setMessage("Metronome playing.");
   }, []);
-  const handleStartFailed = useCallback(async (error: unknown, session: PracticeSession | null) => {
-    if (session) {
-      await browserPracticeSessionService.endPracticeSession(session.id);
-    }
+  const handleStartFailed = useCallback(
+    async (error: unknown, session: PracticeSession | null) => {
+      if (session) {
+        await browserPracticeSessionService.endPracticeSession(session.id);
+      }
 
-    setErrorMessage(error instanceof Error ? error.message : "Metronome playback failed.");
-  }, []);
+      setErrorMessage(
+        error instanceof Error ? error.message : "Metronome playback failed."
+      );
+    },
+    []
+  );
   const handleStopped = useCallback(async () => {
     if (currentSession) {
       const nextSession = isRecording
-        ? await browserPracticeSessionService.updatePracticeSessionDuration(currentSession.id)
-        : await browserPracticeSessionService.endPracticeSession(currentSession.id);
+        ? await browserPracticeSessionService.updatePracticeSessionDuration(
+            currentSession.id
+          )
+        : await browserPracticeSessionService.endPracticeSession(
+            currentSession.id
+          );
 
       setCurrentSession(nextSession);
     }
 
-    setMessage(isRecording ? "Metronome stopped; recording is still active." : "Metronome stopped.");
+    setMessage(
+      isRecording
+        ? "Metronome stopped; recording is still active."
+        : "Metronome stopped."
+    );
   }, [currentSession, isRecording]);
   const {
     transportState,
@@ -151,6 +175,11 @@ export function QuickMetronomeExperience() {
     onStopped: handleStopped
   });
   const arePreRunSettingsLocked = isPlaying || isCounting;
+  useActiveRecordingNavigationGuard(
+    "quick-metronome-recording",
+    recordingState !== "idle",
+    recordingState === "saving" ? "quick recording save" : "quick recording"
+  );
   const handleStartMetronome = useCallback(() => {
     setErrorMessage(null);
     void startMetronome();
@@ -161,15 +190,21 @@ export function QuickMetronomeExperience() {
 
     try {
       await recordingService.start();
-      const session = currentSession ?? await browserPracticeSessionService.ensureQuickSession({
-        trigger: "recording",
-        bpm: settings.bpm,
-        timeSignature: settings.timeSignature
-      });
+      const session =
+        currentSession ??
+        (await browserPracticeSessionService.ensureQuickSession({
+          trigger: "recording",
+          bpm: settings.bpm,
+          timeSignature: settings.timeSignature
+        }));
 
       setCurrentSession(session);
       setRecordingState("recording");
-      setMessage(isPlaying ? "Recording while metronome plays." : "Recording without metronome.");
+      setMessage(
+        isPlaying
+          ? "Recording while metronome plays."
+          : "Recording without metronome."
+      );
     } catch (error) {
       setRecordingState("idle");
       setErrorMessage(
@@ -202,29 +237,46 @@ export function QuickMetronomeExperience() {
       }
 
       const recording = createQuickRecording({ artifact, session, settings });
-      const savedRecording = quickRecordingRepository.saveQuickRecording(recording);
-      const nextSession = await browserPracticeSessionService.linkRecordingToSession({
-        sessionId: session.id,
-        recordingId: savedRecording.id
-      });
+      const savedRecording =
+        quickRecordingRepository.saveQuickRecording(recording);
+      const nextSession =
+        await browserPracticeSessionService.linkRecordingToSession({
+          sessionId: session.id,
+          recordingId: savedRecording.id
+        });
 
       if (!nextSession) {
         throw new Error("Recording requires an active practice session.");
       }
 
-      setCurrentSession(isPlaying ? nextSession : await browserPracticeSessionService.endPracticeSession(nextSession.id));
+      setCurrentSession(
+        isPlaying
+          ? nextSession
+          : await browserPracticeSessionService.endPracticeSession(
+              nextSession.id
+            )
+      );
       setRecordingState("idle");
       setRecordingVersion((version) => version + 1);
-      setMessage(isPlaying ? "Recording saved; metronome is still playing." : "Recording saved.");
+      setMessage(
+        isPlaying
+          ? "Recording saved; metronome is still playing."
+          : "Recording saved."
+      );
     } catch (error) {
       setRecordingState("idle");
-      setErrorMessage(error instanceof Error ? error.message : "Recording could not be saved.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Recording could not be saved."
+      );
     }
   }
 
   function handleTapTempo() {
     const now = performance.now();
-    const recentTaps = [...tapTimes.filter((tapTime) => now - tapTime <= 2_000), now].slice(-5);
+    const recentTaps = [
+      ...tapTimes.filter((tapTime) => now - tapTime <= 2_000),
+      now
+    ].slice(-5);
     const nextBpm = calculateTapTempo(recentTaps);
 
     setTapTimes(recentTaps);
@@ -239,29 +291,44 @@ export function QuickMetronomeExperience() {
   }
 
   return (
-    <section aria-labelledby="quick-metronome-title" className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-      <header className="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
+    <section
+      aria-labelledby="quick-metronome-title"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-5"
+    >
+      <header className="border-border flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-[0.08em] uppercase">
             Quick Practice
           </p>
-          <h1 id="quick-metronome-title" className="text-3xl font-semibold tracking-normal sm:text-4xl">
+          <h1
+            id="quick-metronome-title"
+            className="text-3xl font-semibold tracking-normal sm:text-4xl"
+          >
             Quick Metronome
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Start a timed metronome, capture a quick take, replay it, and keep it as an unlinked quick recording.
+          <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
+            Start a timed metronome, capture a quick take, replay it, and keep
+            it as an unlinked quick recording.
           </p>
         </div>
         <div
           aria-live="polite"
-          className="flex min-h-12 items-center gap-3 rounded-md border border-border bg-card px-4 py-3 text-sm shadow-soft"
+          className="border-border bg-card shadow-soft flex min-h-12 items-center gap-3 rounded-md border px-4 py-3 text-sm"
         >
           <span
-            className={isPlaying ? "h-2.5 w-2.5 rounded-full bg-green-600" : "h-2.5 w-2.5 rounded-full bg-muted-foreground"}
+            className={
+              isPlaying
+                ? "h-2.5 w-2.5 rounded-full bg-green-600"
+                : "bg-muted-foreground h-2.5 w-2.5 rounded-full"
+            }
             aria-hidden="true"
           />
           <span className="font-medium">
-            {isCounting ? `Countdown ${countdownRemaining}` : isPlaying ? "Playing" : "Stopped"}
+            {isCounting
+              ? `Countdown ${countdownRemaining}`
+              : isPlaying
+                ? "Playing"
+                : "Stopped"}
             {isRecording ? " + Recording" : ""}
           </span>
         </div>
@@ -271,7 +338,7 @@ export function QuickMetronomeExperience() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Timer className="h-5 w-5 text-accent" aria-hidden="true" />
+              <Timer className="text-accent h-5 w-5" aria-hidden="true" />
               Tempo and Meter
             </CardTitle>
           </CardHeader>
@@ -307,7 +374,7 @@ export function QuickMetronomeExperience() {
                         event.currentTarget.blur();
                       }
                     }}
-                    className="h-10 min-w-0 rounded-md border border-border bg-background px-3 text-center text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="border-border bg-background focus-visible:ring-ring h-10 min-w-0 rounded-md border px-3 text-center text-lg font-semibold focus-visible:ring-2 focus-visible:outline-none"
                   />
                   <Button
                     type="button"
@@ -320,11 +387,15 @@ export function QuickMetronomeExperience() {
                   </Button>
                 </div>
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                  <Button type="button" variant="secondary" onClick={handleTapTempo}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleTapTempo}
+                  >
                     <Activity className="h-4 w-4" aria-hidden="true" />
                     Tap Tempo
                   </Button>
-                  <p className="text-sm leading-6 text-muted-foreground">
+                  <p className="text-muted-foreground text-sm leading-6">
                     Tick interval {Math.round(getTickIntervalMs(settings))} ms.
                   </p>
                 </div>
@@ -335,7 +406,9 @@ export function QuickMetronomeExperience() {
                   label="Time signature"
                   value={settings.timeSignature}
                   disabled={arePreRunSettingsLocked}
-                  onChange={(value) => updateSettings({ timeSignature: parseTimeSignature(value) })}
+                  onChange={(value) =>
+                    updateSettings({ timeSignature: parseTimeSignature(value) })
+                  }
                   options={TIME_SIGNATURES.map((timeSignature) => ({
                     value: timeSignature,
                     label: timeSignature
@@ -345,7 +418,9 @@ export function QuickMetronomeExperience() {
                   label="Subdivision"
                   value={settings.subdivision}
                   disabled={arePreRunSettingsLocked}
-                  onChange={(value) => updateSettings({ subdivision: parseSubdivision(value) })}
+                  onChange={(value) =>
+                    updateSettings({ subdivision: parseSubdivision(value) })
+                  }
                   options={SUBDIVISIONS.map((subdivision) => ({
                     value: subdivision,
                     label: subdivisionLabels[subdivision]
@@ -355,7 +430,11 @@ export function QuickMetronomeExperience() {
                   label="Countdown"
                   value={String(settings.countdownBeats)}
                   disabled={arePreRunSettingsLocked}
-                  onChange={(value) => updateSettings({ countdownBeats: parseCountdownBeats(value) })}
+                  onChange={(value) =>
+                    updateSettings({
+                      countdownBeats: parseCountdownBeats(value)
+                    })
+                  }
                   options={COUNTDOWN_OPTIONS.map((beats) => ({
                     value: String(beats),
                     label: beats === 0 ? "Off" : `${beats} beats`
@@ -364,8 +443,12 @@ export function QuickMetronomeExperience() {
               </div>
 
               {arePreRunSettingsLocked ? (
-                <p role="status" className="text-sm leading-6 text-muted-foreground">
-                  Meter, subdivision, accent, and countdown are locked while the metronome is running. Stop playback to change them.
+                <p
+                  role="status"
+                  className="text-muted-foreground text-sm leading-6"
+                >
+                  Meter, subdivision, accent, and countdown are locked while the
+                  metronome is running. Stop playback to change them.
                 </p>
               ) : null}
 
@@ -376,10 +459,14 @@ export function QuickMetronomeExperience() {
                     <Button
                       key={accentMode}
                       type="button"
-                      variant={settings.accent === accentMode ? "default" : "secondary"}
+                      variant={
+                        settings.accent === accentMode ? "default" : "secondary"
+                      }
                       aria-pressed={settings.accent === accentMode}
                       disabled={arePreRunSettingsLocked}
-                      onClick={() => updateSettings({ accent: parseAccentMode(accentMode) })}
+                      onClick={() =>
+                        updateSettings({ accent: parseAccentMode(accentMode) })
+                      }
                     >
                       <Circle className="h-4 w-4" aria-hidden="true" />
                       {accentLabels[accentMode]}
@@ -394,7 +481,7 @@ export function QuickMetronomeExperience() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Radio className="h-5 w-5 text-accent" aria-hidden="true" />
+              <Radio className="text-accent h-5 w-5" aria-hidden="true" />
               Transport and Recording
             </CardTitle>
           </CardHeader>
@@ -443,16 +530,39 @@ export function QuickMetronomeExperience() {
               </div>
 
               <div className="grid gap-3 text-sm sm:grid-cols-2">
-                <StatusTile label="Metronome" value={isCounting ? "Counting" : isPlaying ? "Playing" : "Stopped"} />
-                <StatusTile label="Recording" value={recordingState === "saving" ? "Saving" : isRecording ? "Recording" : "Idle"} />
-                <StatusTile label="Last tick" value={lastTick ? `#${lastTick.tickIndex + 1}` : "None"} />
-                <StatusTile label="Accent tick" value={lastTick?.accented ? "Yes" : "No"} />
+                <StatusTile
+                  label="Metronome"
+                  value={
+                    isCounting ? "Counting" : isPlaying ? "Playing" : "Stopped"
+                  }
+                />
+                <StatusTile
+                  label="Recording"
+                  value={
+                    recordingState === "saving"
+                      ? "Saving"
+                      : isRecording
+                        ? "Recording"
+                        : "Idle"
+                  }
+                />
+                <StatusTile
+                  label="Last tick"
+                  value={lastTick ? `#${lastTick.tickIndex + 1}` : "None"}
+                />
+                <StatusTile
+                  label="Accent tick"
+                  value={lastTick?.accented ? "Yes" : "No"}
+                />
               </div>
 
-              <div aria-live="polite" className="rounded-md border border-border bg-muted px-3 py-3 text-sm">
+              <div
+                aria-live="polite"
+                className="border-border bg-muted rounded-md border px-3 py-3 text-sm"
+              >
                 <p className="font-medium">{message}</p>
                 {errorMessage ? (
-                  <p role="alert" className="mt-2 font-medium text-destructive">
+                  <p role="alert" className="text-destructive mt-2 font-medium">
                     {errorMessage}
                   </p>
                 ) : null}
@@ -495,7 +605,7 @@ function LabeledSelect({
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -509,8 +619,8 @@ function LabeledSelect({
 
 function StatusTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-border bg-muted px-3 py-3">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+    <div className="border-border bg-muted rounded-md border px-3 py-3">
+      <p className="text-muted-foreground text-xs font-medium">{label}</p>
       <p className="mt-1 font-semibold">{value}</p>
     </div>
   );

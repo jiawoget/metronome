@@ -10,7 +10,7 @@ describe("fetch Bilibili search adapter", () => {
     expect(
       normalizeBilibiliApiResults([
         {
-          title: "<em class=\"keyword\">Canon</em> reference",
+          title: '<em class="keyword">Canon</em> reference',
           arcurl: "https://www.bilibili.com/video/BV1ab411c7dE",
           author: " Practice Room ",
           duration: 222,
@@ -110,12 +110,18 @@ describe("fetch Bilibili search adapter", () => {
       }).search("canon")
     ).resolves.toEqual({
       ok: false,
-      message: "Bilibili search is unavailable. Check the network and try again."
+      message:
+        "Live Bilibili API search is unavailable. Use Bilibili web search or paste a video URL."
     });
 
     await expect(
       new FetchBilibiliSearchAdapter({
-        fetchImpl: vi.fn(async () => new Response(JSON.stringify({ code: -1, message: "blocked" }), { status: 200 }))
+        fetchImpl: vi.fn(
+          async () =>
+            new Response(JSON.stringify({ code: -1, message: "blocked" }), {
+              status: 200
+            })
+        )
       }).search("canon")
     ).resolves.toEqual({
       ok: false,
@@ -133,7 +139,12 @@ describe("fetch Bilibili search adapter", () => {
 
     await expect(
       new FetchBilibiliSearchAdapter({
-        fetchImpl: vi.fn(async () => new Response(JSON.stringify({ code: 0, data: { result: [] } }), { status: 200 }))
+        fetchImpl: vi.fn(
+          async () =>
+            new Response(JSON.stringify({ code: 0, data: { result: [] } }), {
+              status: 200
+            })
+        )
       }).search("canon")
     ).resolves.toEqual({
       ok: false,

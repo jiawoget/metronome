@@ -55,7 +55,9 @@ function getReferenceSummary(reference: SheetReference | null) {
     return `${reference.fileName} · ${formatDuration(reference.durationMs)}`;
   }
 
-  return [reference.bvid, reference.durationLabel, reference.author].filter(Boolean).join(" · ");
+  return [reference.bvid, reference.durationLabel, reference.author]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function createDefaultAudioPlayer() {
@@ -70,16 +72,26 @@ export function ReferencePanel({
 }: ReferencePanelProps) {
   const audioPlayer = useMemo(() => createAudioPlayer(), [createAudioPlayer]);
   const [references, setReferences] = useState<SheetReference[]>([]);
-  const [activeReference, setActiveReference] = useState<SheetReference | null>(null);
+  const [activeReference, setActiveReference] = useState<SheetReference | null>(
+    null
+  );
   const [localTitle, setLocalTitle] = useState("");
   const [localFile, setLocalFile] = useState<File | null>(null);
   const [bilibiliUrl, setBilibiliUrl] = useState("");
   const [bilibiliTitle, setBilibiliTitle] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<BilibiliSearchResult[]>([]);
-  const [selectedResult, setSelectedResult] = useState<BilibiliSearchResult | null>(null);
+  const [searchResults, setSearchResults] = useState<BilibiliSearchResult[]>(
+    []
+  );
+  const [selectedResult, setSelectedResult] =
+    useState<BilibiliSearchResult | null>(null);
+  const [fallbackSearchUrl, setFallbackSearchUrl] = useState<string | null>(
+    null
+  );
   const [isSearching, setIsSearching] = useState(false);
-  const [message, setMessage] = useState("References are saved locally for this sheet.");
+  const [message, setMessage] = useState(
+    "References are saved locally for this sheet."
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [playbackState, setPlaybackState] = useState<PlaybackState>({
     state: "idle",
@@ -118,18 +130,26 @@ export function ReferencePanel({
 
     let active = true;
 
-    void referenceService.getLocalAudioArtifact(activeReference.id).then((artifact) => {
-      if (!active) {
-        return;
-      }
+    void referenceService
+      .getLocalAudioArtifact(activeReference.id)
+      .then((artifact) => {
+        if (!active) {
+          return;
+        }
 
-      if (artifact) {
-        audioPlayer.load(activeReference, artifact);
-        setPlaybackState((current) => ({ ...current, state: "paused", currentTime: 0 }));
-      } else {
-        setErrorMessage("Local audio artifact is missing. Add the file again.");
-      }
-    });
+        if (artifact) {
+          audioPlayer.load(activeReference, artifact);
+          setPlaybackState((current) => ({
+            ...current,
+            state: "paused",
+            currentTime: 0
+          }));
+        } else {
+          setErrorMessage(
+            "Local audio artifact is missing. Add the file again."
+          );
+        }
+      });
 
     return () => {
       active = false;
@@ -154,7 +174,10 @@ export function ReferencePanel({
     window.addEventListener("reference-audio:state-change", handleAudioState);
 
     return () => {
-      window.removeEventListener("reference-audio:state-change", handleAudioState);
+      window.removeEventListener(
+        "reference-audio:state-change",
+        handleAudioState
+      );
       audioPlayer.dispose();
     };
   }, [audioPlayer]);
@@ -216,6 +239,7 @@ export function ReferencePanel({
     setErrorMessage(null);
     setIsSearching(true);
     setSelectedResult(null);
+    setFallbackSearchUrl(null);
 
     const result = await referenceService.searchBilibili(searchQuery);
 
@@ -224,11 +248,19 @@ export function ReferencePanel({
     if (!result.ok) {
       setSearchResults([]);
       setErrorMessage(result.message);
+      setFallbackSearchUrl(
+        searchQuery.trim().length >= 2
+          ? `https://search.bilibili.com/all?keyword=${encodeURIComponent(searchQuery.trim())}`
+          : null
+      );
       return;
     }
 
     setSearchResults(result.value);
-    setMessage(`Bilibili search returned ${result.value.length} result${result.value.length === 1 ? "" : "s"}.`);
+    setFallbackSearchUrl(null);
+    setMessage(
+      `Bilibili search returned ${result.value.length} result${result.value.length === 1 ? "" : "s"}.`
+    );
   }
 
   async function saveSelectedBilibiliResult() {
@@ -281,25 +313,36 @@ export function ReferencePanel({
     await refresh();
   }
 
-  const localReference = activeReference?.kind === "local-audio" ? (activeReference as LocalAudioReference) : null;
+  const localReference =
+    activeReference?.kind === "local-audio"
+      ? (activeReference as LocalAudioReference)
+      : null;
 
   return (
     <aside
       aria-labelledby="reference-panel-title"
       data-testid="reference-panel"
-      className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-soft"
+      className="border-border bg-card shadow-soft flex min-h-0 flex-col overflow-hidden rounded-lg border"
     >
-      <div className="border-b border-border px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">06 Reference System</p>
-        <h2 id="reference-panel-title" className="mt-1 text-lg font-semibold tracking-normal">
+      <div className="border-border border-b px-4 py-3">
+        <p className="text-muted-foreground text-xs font-semibold tracking-[0.08em] uppercase">
+          06 Reference System
+        </p>
+        <h2
+          id="reference-panel-title"
+          className="mt-1 text-lg font-semibold tracking-normal"
+        >
           References
         </h2>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4">
-        <section aria-label="Active reference" className="rounded-md border border-border bg-muted p-3">
+        <section
+          aria-label="Active reference"
+          className="border-border bg-muted rounded-md border p-3"
+        >
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
+            <span className="bg-primary/15 text-primary mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md">
               {activeReference?.kind === "bilibili" ? (
                 <Video className="h-4 w-4" aria-hidden="true" />
               ) : (
@@ -307,10 +350,16 @@ export function ReferencePanel({
               )}
             </span>
             <div className="min-w-0">
-              <p data-testid="active-reference-title" className="truncate font-medium">
+              <p
+                data-testid="active-reference-title"
+                className="truncate font-medium"
+              >
                 {activeReference?.title ?? "No active reference"}
               </p>
-              <p data-testid="active-reference-summary" className="mt-1 text-sm leading-6 text-muted-foreground">
+              <p
+                data-testid="active-reference-summary"
+                className="text-muted-foreground mt-1 text-sm leading-6"
+              >
                 {getReferenceSummary(activeReference)}
               </p>
             </div>
@@ -349,22 +398,34 @@ export function ReferencePanel({
                   step={0.05}
                   value={playbackState.volume}
                   onChange={(event) => changeVolume(event.target.value)}
-                  className="w-full accent-primary"
+                  className="accent-primary w-full"
                 />
               </label>
               <div className="grid grid-cols-3 gap-2 text-xs">
-                <StatusPill label="State" value={playbackState.state} testId="reference-playback-state" />
-                <StatusPill label="Time" value={playbackState.currentTime.toFixed(2)} testId="reference-current-time" />
-                <StatusPill label="Volume" value={Math.round(playbackState.volume * 100).toString()} testId="reference-volume-state" />
+                <StatusPill
+                  label="State"
+                  value={playbackState.state}
+                  testId="reference-playback-state"
+                />
+                <StatusPill
+                  label="Time"
+                  value={playbackState.currentTime.toFixed(2)}
+                  testId="reference-current-time"
+                />
+                <StatusPill
+                  label="Volume"
+                  value={Math.round(playbackState.volume * 100).toString()}
+                  testId="reference-volume-state"
+                />
               </div>
             </div>
           ) : null}
 
           {activeReference?.kind === "bilibili" ? (
-            <div className="mt-3 rounded-md border border-border bg-background p-3">
-              <p className="text-sm leading-6 text-muted-foreground">
-                Bilibili references open in the original player to keep practice playback isolated from third-party
-                page scripts.
+            <div className="border-border bg-background mt-3 rounded-md border p-3">
+              <p className="text-muted-foreground text-sm leading-6">
+                Bilibili references open in the original player to keep practice
+                playback isolated from third-party page scripts.
               </p>
               <Button asChild variant="secondary" className="mt-3 w-full">
                 <a href={activeReference.url} target="_blank" rel="noreferrer">
@@ -376,8 +437,14 @@ export function ReferencePanel({
           ) : null}
         </section>
 
-        <section aria-labelledby="local-reference-title" className="grid gap-3 rounded-md border border-border p-3">
-          <h3 id="local-reference-title" className="text-sm font-semibold tracking-normal">
+        <section
+          aria-labelledby="local-reference-title"
+          className="border-border grid gap-3 rounded-md border p-3"
+        >
+          <h3
+            id="local-reference-title"
+            className="text-sm font-semibold tracking-normal"
+          >
             Local Audio
           </h3>
           <label className="grid gap-1 text-sm font-medium">
@@ -385,7 +452,7 @@ export function ReferencePanel({
             <input
               value={localTitle}
               onChange={(event) => setLocalTitle(event.target.value)}
-              className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="border-border bg-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
               placeholder="Optional title"
             />
           </label>
@@ -395,8 +462,10 @@ export function ReferencePanel({
               aria-label="Local audio file"
               type="file"
               accept="audio/*,.mp3,.wav,.ogg,.aac,.m4a,.webm"
-              onChange={(event) => setLocalFile(event.target.files?.[0] ?? null)}
-              className="min-h-10 rounded-md border border-border bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1 file:text-sm file:font-medium"
+              onChange={(event) =>
+                setLocalFile(event.target.files?.[0] ?? null)
+              }
+              className="border-border bg-background file:bg-muted min-h-10 rounded-md border px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:px-3 file:py-1 file:text-sm file:font-medium"
             />
           </label>
           <Button type="button" onClick={() => void saveLocalReference()}>
@@ -405,8 +474,14 @@ export function ReferencePanel({
           </Button>
         </section>
 
-        <section aria-labelledby="bilibili-search-title" className="grid gap-3 rounded-md border border-border p-3">
-          <h3 id="bilibili-search-title" className="text-sm font-semibold tracking-normal">
+        <section
+          aria-labelledby="bilibili-search-title"
+          className="border-border grid gap-3 rounded-md border p-3"
+        >
+          <h3
+            id="bilibili-search-title"
+            className="text-sm font-semibold tracking-normal"
+          >
             Bilibili Search
           </h3>
           <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
@@ -417,14 +492,41 @@ export function ReferencePanel({
               id="bilibili-search-input"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              className="h-10 min-w-0 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="border-border bg-background focus-visible:ring-ring h-10 min-w-0 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
               placeholder="Search Bilibili"
             />
-            <Button type="button" size="icon" aria-label="Search Bilibili" onClick={() => void searchBilibili()}>
+            <Button
+              type="button"
+              size="icon"
+              aria-label="Search Bilibili"
+              onClick={() => void searchBilibili()}
+            >
               <Search className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
-          {isSearching ? <p className="text-sm text-muted-foreground">Searching...</p> : null}
+          {isSearching ? (
+            <p className="text-muted-foreground text-sm">Searching...</p>
+          ) : null}
+          {fallbackSearchUrl ? (
+            <div
+              data-testid="bilibili-search-fallback"
+              className="border-border bg-muted rounded-md border px-3 py-3 text-sm"
+            >
+              <p className="font-medium">
+                Live API search did not return usable results.
+              </p>
+              <p className="text-muted-foreground mt-1 leading-6">
+                Use Bilibili web search in a new tab, then paste a selected
+                video URL below.
+              </p>
+              <Button asChild variant="secondary" className="mt-3 w-full">
+                <a href={fallbackSearchUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  Open Bilibili web search
+                </a>
+              </Button>
+            </div>
+          ) : null}
           {searchResults.length > 0 ? (
             <div className="grid gap-2" data-testid="bilibili-search-results">
               {searchResults.map((result) => (
@@ -433,24 +535,38 @@ export function ReferencePanel({
                   type="button"
                   aria-pressed={selectedResult?.id === result.id}
                   onClick={() => setSelectedResult(result)}
-                  className="rounded-md border border-border bg-background p-3 text-left text-sm transition-colors hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10"
+                  className="border-border bg-background hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10 rounded-md border p-3 text-left text-sm transition-colors"
                 >
-                  <span className="block truncate font-medium">{result.title}</span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {[result.bvid, result.durationLabel, result.author].filter(Boolean).join(" · ")}
+                  <span className="block truncate font-medium">
+                    {result.title}
+                  </span>
+                  <span className="text-muted-foreground mt-1 block text-xs">
+                    {[result.bvid, result.durationLabel, result.author]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
                 </button>
               ))}
             </div>
           ) : null}
-          <Button type="button" variant="secondary" onClick={() => void saveSelectedBilibiliResult()}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void saveSelectedBilibiliResult()}
+          >
             <Video className="h-4 w-4" aria-hidden="true" />
             Save selected result
           </Button>
         </section>
 
-        <section aria-labelledby="bilibili-url-title" className="grid gap-3 rounded-md border border-border p-3">
-          <h3 id="bilibili-url-title" className="text-sm font-semibold tracking-normal">
+        <section
+          aria-labelledby="bilibili-url-title"
+          className="border-border grid gap-3 rounded-md border p-3"
+        >
+          <h3
+            id="bilibili-url-title"
+            className="text-sm font-semibold tracking-normal"
+          >
             Bilibili URL
           </h3>
           <label className="grid gap-1 text-sm font-medium">
@@ -458,7 +574,7 @@ export function ReferencePanel({
             <input
               value={bilibiliTitle}
               onChange={(event) => setBilibiliTitle(event.target.value)}
-              className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="border-border bg-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
               placeholder="Optional title"
             />
           </label>
@@ -468,23 +584,33 @@ export function ReferencePanel({
               aria-label="Bilibili URL"
               value={bilibiliUrl}
               onChange={(event) => setBilibiliUrl(event.target.value)}
-              className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="border-border bg-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
               placeholder="https://www.bilibili.com/video/BV..."
             />
           </label>
-          <Button type="button" variant="secondary" onClick={() => void saveBilibiliUrlReference()}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void saveBilibiliUrlReference()}
+          >
             <Link2 className="h-4 w-4" aria-hidden="true" />
             Save Bilibili URL
           </Button>
         </section>
 
-        <div aria-live="polite" className="rounded-md border border-border bg-muted px-3 py-2 text-sm">
+        <div
+          aria-live="polite"
+          className="border-border bg-muted rounded-md border px-3 py-2 text-sm"
+        >
           <p className="font-medium">{message}</p>
-          <p data-testid="reference-count" className="mt-1 text-xs text-muted-foreground">
+          <p
+            data-testid="reference-count"
+            className="text-muted-foreground mt-1 text-xs"
+          >
             Saved references {references.length}
           </p>
           {errorMessage ? (
-            <p role="alert" className="mt-2 font-medium text-destructive">
+            <p role="alert" className="text-destructive mt-2 font-medium">
               {errorMessage}
             </p>
           ) : null}
@@ -494,10 +620,18 @@ export function ReferencePanel({
   );
 }
 
-function StatusPill({ label, value, testId }: { label: string; value: string; testId: string }) {
+function StatusPill({
+  label,
+  value,
+  testId
+}: {
+  label: string;
+  value: string;
+  testId: string;
+}) {
   return (
-    <div className="rounded-md border border-border bg-background px-2 py-1">
-      <p className="text-[0.7rem] font-medium text-muted-foreground">{label}</p>
+    <div className="border-border bg-background rounded-md border px-2 py-1">
+      <p className="text-muted-foreground text-[0.7rem] font-medium">{label}</p>
       <p data-testid={testId} className="mt-0.5 truncate font-semibold">
         {value}
       </p>
