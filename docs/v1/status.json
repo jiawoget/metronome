@@ -393,7 +393,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P1-05 segment-repository",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P1-06 segment-selector-read-ui",
