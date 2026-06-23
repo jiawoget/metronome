@@ -21,6 +21,7 @@ import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { BrowserSheetRecordingService } from "@/lib/sheet-practice/recording-service";
 import { browserMeasureGridService } from "@/infrastructure/db/browser-measure-grid-service";
 import { MeasureGridCalibrationPanel } from "@/components/sheet-practice/measure-grid/measure-grid-calibration-panel";
+import { PracticeSegmentSelectorPanel } from "@/components/sheet-practice/segments/practice-segment-selector-panel";
 import { MetronomeSettingsPanel } from "@/components/sheet-practice/controls/metronome-settings-panel";
 import {
   createSheetPracticeControlInitialState,
@@ -66,6 +67,7 @@ export function SheetPracticeControls({
   createSheetRecordingService = createBrowserSheetRecordingService,
   sessionService = browserPracticeSessionService,
   measureGridService = browserMeasureGridService,
+  practiceSegmentService,
   currentMeasureGridTimestampMs = null
 }: SheetPracticeControlsProps) {
   const initialState = useMemo(
@@ -477,7 +479,12 @@ export function SheetPracticeControls({
           stopSheetRecording={() => void stopSheetRecording()}
         />
       </div>
-      <div className="border-border border-t px-3 py-3">
+      <div className="border-border grid gap-3 border-t px-3 py-3 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(24rem,1.15fr)]">
+        <PracticeSegmentSelectorPanel
+          sheetId={sheetId}
+          practiceSegmentService={practiceSegmentService}
+          measureGridService={measureGridService}
+        />
         <MeasureGridCalibrationPanel
           sheetId={sheetId}
           defaultBpm={defaultBpm}

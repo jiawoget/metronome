@@ -8,7 +8,14 @@ import {
   formatUnsupportedTimeSignatureMessage
 } from "@/components/sheet-practice/controls/practice-control-state";
 import { SheetPracticeControls } from "@/components/sheet-practice/controls/sheet-practice-controls";
-import type { PracticeSession } from "@/domain/practice";
+import {
+  createPracticeSegmentGridAssociation,
+  type MeasureGrid,
+  type PracticeSegment,
+  type PracticeSession
+} from "@/domain/practice";
+import type { MeasureGridService } from "@/services/measure-grid";
+import type { PracticeSegmentService } from "@/services/practice-segments";
 import type { PracticeSessionService } from "@/services/practice-session";
 import {
   BrowserMetronomeService,
@@ -88,6 +95,23 @@ function createSheetSession(overrides: Partial<PracticeSession> = {}): PracticeS
   };
 }
 
+function createMeasureGridService(grid: MeasureGrid | null = null) {
+  return {
+    getGrid: vi.fn(async () => grid),
+    saveGrid: vi.fn(async (_sheetId: string, nextGrid: MeasureGrid) => nextGrid),
+    clearGrid: vi.fn(async () => undefined)
+  } satisfies MeasureGridService;
+}
+
+function createPracticeSegmentService(segments: PracticeSegment[] = []) {
+  return {
+    listSegments: vi.fn(async () => segments),
+    getSegment: vi.fn(async () => null),
+    saveSegment: vi.fn(async (segment: PracticeSegment) => segment),
+    deleteSegment: vi.fn(async () => undefined)
+  } satisfies PracticeSegmentService;
+}
+
 describe("sheet practice controls state", () => {
   it("initializes metronome settings from sheet defaults", () => {
     expect(createSheetPracticeMetronomeSettings({ bpm: 72, timeSignature: "3/4" })).toEqual({
@@ -139,6 +163,50 @@ describe("sheet practice controls state", () => {
       screen.getByText("Sheet meter 5/4 is not supported by the v0 metronome; using 4/4.")
     ).toBeVisible();
     expect(screen.getByLabelText("Time signature")).toHaveValue("4/4");
+  });
+
+  it("composes the practice segment selector with injected services", async () => {
+    const grid: MeasureGrid = {
+      bpm: 96,
+      timeSignature: "4/4",
+      pickupBeats: 0,
+      measureOneOffsetMs: 1_000
+    };
+    const segmentService = createPracticeSegmentService([
+      {
+        id: "segment-alpha",
+        sheetId: "sheet-alpha",
+        name: "Opening phrase",
+        range: {
+          startMeasure: 5,
+          endMeasure: 12
+        },
+        targetBpm: 96,
+        notes: null,
+        grid: createPracticeSegmentGridAssociation(grid)
+      }
+    ]);
+    const measureGridService = createMeasureGridService(grid);
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={84}
+        defaultTimeSignature="4/4"
+        sessionService={createIdleSessionService()}
+        measureGridService={measureGridService}
+        practiceSegmentService={segmentService}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("1 saved");
+    });
+    expect(screen.getByTestId("practice-segment-selector-panel")).toBeVisible();
+    expect(screen.getByText("Opening phrase")).toBeVisible();
+    expect(segmentService.listSegments).toHaveBeenCalledWith("sheet-alpha");
+    expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
   });
 });
 
