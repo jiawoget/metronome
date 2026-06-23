@@ -1,5 +1,7 @@
 ﻿# v1 Development Plan
 
+For day-to-day scheduling, start with docs/v1/START-HERE.md. This file is the detailed planning reference.
+
 ## Purpose
 
 v1 planning starts by turning roadmap ideas into implementation-ready feature contracts before product code changes begin.
@@ -145,4 +147,5 @@ verification_in_progress
 ```
 
 The planning pass may set features to `contract_ready`. Implementation and verification passes may update only their assigned feature.
+
 

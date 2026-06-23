@@ -1,5 +1,9 @@
 ﻿# v1 Scheduler Handoff
 
+Start with `docs/v1/START-HERE.md`.
+
+This file is a handoff supplement, not the daily scheduling entrypoint.
+
 ## Current State
 
 The planning pass has produced:
@@ -10,8 +14,10 @@ The planning pass has produced:
   - `docs/v1/remaining-feature-contracts.md`
 - Acceptance packs: `docs/v1/acceptance-packs.md`
 - Implementation slice rules: `docs/v1/implementation-slices/README.md`
+- Product feature to slice map: `docs/v1/implementation-slices/product-feature-map.md`
 - Pack 1 slices: `docs/v1/implementation-slices/01-practice-segment-mvp.md`
 - Later pack slice backlogs:
+  - `docs/v1/implementation-slices/00-planning-foundation.md`
   - `docs/v1/implementation-slices/02-segment-take-review.md`
   - `docs/v1/implementation-slices/03-sessions-continue-practice.md`
   - `docs/v1/implementation-slices/04-practice-controls-upgrade.md`
@@ -24,6 +30,8 @@ The planning pass has produced:
 - Contract review report: `docs/v1/contract-review-report.md`
 
 No product implementation code should be assumed complete from this planning work.
+
+For normal scheduling, do not load every file listed above. Use the minimal role-specific doc bundles in `docs/v1/START-HERE.md`.
 
 ## Scheduling Rule
 
@@ -111,10 +119,12 @@ Open a sheet
 - `docs/v1/status.json` is the only v1 status source of truth.
 - Product feature readiness lives under `product.modules`.
 - Acceptance pack and slice implementation status lives under `implementation.packs`.
+- `docs/v1/implementation-slices/product-feature-map.md` connects product module docs to slice files.
 - `docs/v1/implementation-slices/README.md` defines model budget tiers and escalation rules.
 - `P1-01 measure-grid-types-and-math` is currently `coding_done`.
 - `P1-02 measure-grid-repository` is currently `planning_ready`.
 - Later Pack 1 slices should be promoted to `ready_for_coding` only after dependency slices are verified.
 - Pack 2-9 slice files are backlog-level. Before any later pack starts, refine that pack to Pack 1 detail level and assign model tiers.
 - Do not start Pack 2 until Pack 1 is accepted unless the user explicitly reprioritizes.
+
 

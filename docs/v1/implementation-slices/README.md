@@ -1,5 +1,9 @@
 ﻿# v1 Implementation Slices
 
+Start with `docs/v1/START-HERE.md`.
+
+This file is a detailed reference for slice lifecycle, model tiers, and backlog structure.
+
 ## Purpose
 
 Implementation slices are the units assigned to fresh planning/coding/review/verification agents.
@@ -16,6 +20,14 @@ Product Feature Contract
 ```
 
 The user accepts packs. Agents implement slices.
+
+When starting from a product module file or feature id, use:
+
+```text
+docs/v1/implementation-slices/product-feature-map.md
+```
+
+This map is the bridge between files such as `docs/v1/01-app-shell-home.md` and the implementation slice backlog.
 
 ## Slice Size Rules
 
@@ -84,6 +96,7 @@ docs/v1/implementation-slices/01-practice-segment-mvp.md
 Backlog slice files for later packs live alongside Pack 1:
 
 ```text
+docs/v1/implementation-slices/00-planning-foundation.md
 docs/v1/implementation-slices/02-segment-take-review.md
 docs/v1/implementation-slices/03-sessions-continue-practice.md
 docs/v1/implementation-slices/04-practice-controls-upgrade.md
@@ -261,4 +274,5 @@ For every subagent prompt:
 - Include explicit out-of-scope bullets.
 - For review and verification agents, pass the implementation commit hash and changed files.
 - Do not ask verification agents to re-review unrelated source unless boundary inspection is part of the slice.
+
 

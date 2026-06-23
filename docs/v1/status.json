@@ -354,6 +354,24 @@
     "implementation":  {
                            "packs":  [
                                          {
+                                             "pack":  "pack-0-design-planning-foundation",
+                                             "status":  "not_started",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "P0-01 design-style-analytics-visuals",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P0-02 design-style-segment-visual-states",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P0-03 design-style-review-comparison-views",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
+                                         },
+                                         {
                                              "pack":  "pack-1-practice-segment-mvp",
                                              "status":  "slicing_ready",
                                              "slices":  [
@@ -442,6 +460,18 @@
                                                             {
                                                                 "slice":  "P2-08 waveform-comparison-ui",
                                                                 "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P2-09 recordings-tags-favorites-archive",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P2-10 recordings-recording-comparison",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P2-11 recordings-audio-export",
+                                                                "status":  "not_started"
                                                             }
                                                         ]
                                          },
@@ -487,6 +517,34 @@
                                                             },
                                                             {
                                                                 "slice":  "P3-10 goal-completion-evaluator",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-11 home-dashboard-analytics-source",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-12 home-dashboard-analytics-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-13 home-practice-streaks",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-14 home-goal-management-domain-repository",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-15 home-goal-management-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-16 home-command-palette",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-17 practice-session-session-comparison",
                                                                 "status":  "not_started"
                                                             }
                                                         ]

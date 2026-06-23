@@ -1,5 +1,7 @@
 ﻿# v1 Agent Implementation Rules
 
+Start with `docs/v1/START-HERE.md` for day-to-day scheduling. This file is the detailed rules reference.
+
 ## Purpose
 
 These rules define how v1 feature contracts are implemented and verified. They intentionally follow the v0 process so v1 does not become broad, unverified scope creep.
@@ -8,7 +10,9 @@ These rules define how v1 feature contracts are implemented and verified. They i
 
 Implementation and verification agents must read repository documents, not rely on chat history.
 
-For v1 work, required documents are:
+For v1 work, use the minimal role-specific bundles in `docs/v1/START-HERE.md`.
+
+Detailed reference documents are:
 
 - `docs/v1/development-plan.md`
 - `docs/v1/feature-inventory.md`
@@ -198,4 +202,5 @@ Verification must fail if:
 - User-facing UI ignores the reference image or v1 UI design requirements.
 - The feature implements v2 scope.
 - A previously verified core v0 workflow is broken.
+
 

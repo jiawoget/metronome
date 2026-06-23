@@ -35,7 +35,18 @@ The user can review repeated takes for a sheet or segment, mark useful takes, an
 - Compare selected takes with waveform evidence.
 - No automatic scoring.
 
+### P2-09 `recordings-tags-favorites-archive`
+- Source feature: `recordings.tags-favorites-archive`
+- Add local recording organization metadata and filters.
+
+### P2-10 `recordings-recording-comparison`
+- Source feature: `recordings.recording-comparison`
+- Compare selected recordings using real metadata and waveform evidence where available.
+
+### P2-11 `recordings-audio-export`
+- Source feature: `recordings.audio-export`
+- Export real local recording artifacts safely.
+
 ## Scheduling Notes
 
 Do not start Pack 2 until Pack 1 is accepted unless the user reprioritizes.
-
