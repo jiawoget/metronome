@@ -19,7 +19,7 @@ Summary, local-day aggregation, persistence, and clear-data integration.
 - Home hook/UI: `src/hooks/use-practice-session-dashboard.ts`,
   `src/components/home/home-dashboard.tsx`
 - Quick integration: `src/components/quick-metronome/quick-metronome-experience.tsx`
-- Sheet integration: `src/components/sheet-practice/session/*`,
+- Sheet integration and test-injected recording harness boundary:
   `src/components/sheet-practice/controls/sheet-practice-controls.tsx`
 
 ## Technologies And Boundaries

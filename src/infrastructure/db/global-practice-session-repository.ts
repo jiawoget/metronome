@@ -4,12 +4,18 @@ import {
   sortSessionsByRecentActivity,
   type PracticeSession
 } from "@/domain/practice";
+import { parseTimeSignature } from "@/lib/quick-metronome/control";
+import type { TimeSignature } from "@/lib/quick-metronome/types";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import type { PracticeSessionRepository } from "@/services/practice-session";
 
 function hasStringId(value: unknown): value is { id: string } {
-  return !!value && typeof value === "object" && typeof (value as { id?: unknown }).id === "string";
+  return (
+    !!value &&
+    typeof value === "object" &&
+    typeof (value as { id?: unknown }).id === "string"
+  );
 }
 
 function getSessionString(value: unknown, key: string) {
@@ -20,6 +26,20 @@ function getSessionString(value: unknown, key: string) {
   const nextValue = (value as Record<string, unknown>)[key];
 
   return typeof nextValue === "string" ? nextValue : null;
+}
+
+function parseOptionalTimeSignature(value: unknown): TimeSignature | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const parsed = parseTimeSignature(value);
+
+  return parsed === value ? parsed : null;
+}
+
+function getLegacyRecordingTimeSignature(value: unknown) {
+  return typeof value === "string" ? value : null;
 }
 
 function getQuickSessionSettings(value: unknown) {
@@ -38,20 +58,28 @@ function getQuickSessionSettings(value: unknown) {
 
   return {
     bpm: typeof bpm === "number" ? bpm : null,
-    timeSignature:
-      timeSignature === "2/4" || timeSignature === "3/4" || timeSignature === "4/4" || timeSignature === "6/8"
-        ? timeSignature
-        : null
+    timeSignature: parseOptionalTimeSignature(timeSignature)
   };
 }
 
-function getLatestRecordingForSession(recordings: ReviewRecording[], sessionId: string) {
-  return recordings
-    .filter((recording) => recording.sessionId === sessionId)
-    .sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt))[0] ?? null;
+function getLatestRecordingForSession(
+  recordings: ReviewRecording[],
+  sessionId: string
+) {
+  return (
+    recordings
+      .filter((recording) => recording.sessionId === sessionId)
+      .sort(
+        (first, second) =>
+          Date.parse(second.createdAt) - Date.parse(first.createdAt)
+      )[0] ?? null
+  );
 }
 
-function legacyQuickSessionToPracticeSession(value: unknown, recordings: ReviewRecording[]) {
+function legacyQuickSessionToPracticeSession(
+  value: unknown,
+  recordings: ReviewRecording[]
+) {
   if (!hasStringId(value)) {
     return null;
   }
@@ -84,8 +112,13 @@ function legacyQuickSessionToPracticeSession(value: unknown, recordings: ReviewR
     endedAt,
     durationMs: Math.max(0, Math.round(durationMs)),
     bpm: settings?.bpm ?? latestRecording?.settings.bpm ?? null,
-    timeSignature: settings?.timeSignature ?? latestRecording?.settings.timeSignature ?? null,
-    recordingCount: recordings.filter((recording) => recording.sessionId === value.id).length,
+    timeSignature:
+      settings?.timeSignature ??
+      getLegacyRecordingTimeSignature(latestRecording?.settings.timeSignature) ??
+      null,
+    recordingCount: recordings.filter(
+      (recording) => recording.sessionId === value.id
+    ).length,
     latestRecordingId: latestRecording?.id ?? null,
     updatedAt
   });
@@ -95,11 +128,15 @@ function listLegacyQuickPracticeSessions() {
   const snapshot = recordingHistoryRepository.getSnapshot();
 
   return snapshot.sessions
-    .map((session) => legacyQuickSessionToPracticeSession(session, snapshot.recordings))
+    .map((session) =>
+      legacyQuickSessionToPracticeSession(session, snapshot.recordings)
+    )
     .filter((session): session is PracticeSession => session !== null);
 }
 
-export function createGlobalPracticeSessionRepository(sheetRepository: PracticeSessionRepository): PracticeSessionRepository {
+export function createGlobalPracticeSessionRepository(
+  sheetRepository: PracticeSessionRepository
+): PracticeSessionRepository {
   async function listSessions() {
     return sortSessionsByRecentActivity([
       ...(await sheetRepository.listSessions()),
@@ -113,7 +150,9 @@ export function createGlobalPracticeSessionRepository(sheetRepository: PracticeS
     async getSession(sessionId) {
       return (
         (await sheetRepository.getSession(sessionId)) ??
-        listLegacyQuickPracticeSessions().find((session) => session.id === sessionId) ??
+        listLegacyQuickPracticeSessions().find(
+          (session) => session.id === sessionId
+        ) ??
         null
       );
     },
@@ -139,8 +178,10 @@ export function createGlobalPracticeSessionRepository(sheetRepository: PracticeS
     },
 
     subscribe(listener) {
-      const unsubscribeSheet = sheetRepository.subscribe?.(listener) ?? (() => undefined);
-      const unsubscribeRecording = recordingHistoryRepository.subscribe(listener);
+      const unsubscribeSheet =
+        sheetRepository.subscribe?.(listener) ?? (() => undefined);
+      const unsubscribeRecording =
+        recordingHistoryRepository.subscribe(listener);
 
       return () => {
         unsubscribeSheet();

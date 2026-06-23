@@ -5,9 +5,7 @@ import {
   measureGridSchema,
   measureRangeSchema,
   parseMeasureGrid,
-  parseMeasureRange,
   validateMeasureGrid,
-  validateMeasureRange,
   type MeasureGrid,
   type MeasureRange,
   type MeasureRangeMs
@@ -113,32 +111,13 @@ export function validatePracticeSegmentGridAssociation(
 }
 
 export function parsePracticeSegment(value: unknown): PracticeSegment | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
+  const result = practiceSegmentSchema.safeParse(value);
 
-  const candidate = value as Record<string, unknown>;
-  const parsedRange = parseMeasureRange(candidate.range);
-
-  if (!parsedRange) {
-    return null;
-  }
-
-  const result = practiceSegmentSchema.safeParse({
-    ...candidate,
-    range: parsedRange
-  });
-
-  return result.success ? { ...result.data, range: parsedRange } : null;
+  return result.success ? result.data : null;
 }
 
 export function validatePracticeSegment(value: PracticeSegment): PracticeSegment {
-  const validatedRange = validateMeasureRange(value.range);
-
-  return practiceSegmentSchema.parse({
-    ...value,
-    range: validatedRange
-  });
+  return practiceSegmentSchema.parse(value);
 }
 
 export function getMeasureGridVersion(grid: MeasureGrid): string {
@@ -167,7 +146,7 @@ export function getPracticeSegmentGridStatus(
 ): PracticeSegmentGridStatus {
   const parsedSegment = parsePracticeSegment(segment);
 
-  if (!parsedSegment || parsePracticeSegmentGridAssociation(parsedSegment.grid) === null) {
+  if (!parsedSegment) {
     return "invalid-association";
   }
 

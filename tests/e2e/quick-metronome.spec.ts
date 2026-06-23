@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { installSyntheticMicrophone } from "./fixtures/audio";
+import { RECORDING_HISTORY_STORAGE_KEY } from "./fixtures/storage";
 
 type MetronomeTrace = {
   tickIndex: number;
@@ -39,6 +41,7 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
     consoleErrors.push(error.message);
   });
 
+  await installSyntheticMicrophone(page, 440, 0.2);
   await page.addInitScript(() => {
     if (!window.sessionStorage.getItem("quick-metronome-e2e-ready")) {
       window.localStorage.clear();
@@ -57,32 +60,6 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
       return originalPlay.call(this).catch(() => Promise.resolve());
     };
 
-    Object.defineProperty(navigator, "mediaDevices", {
-      configurable: true,
-      value: {
-        getUserMedia: async () => {
-          const audioWindow = window as Window &
-            typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-          const AudioContextConstructor =
-            audioWindow.AudioContext || audioWindow.webkitAudioContext;
-          if (!AudioContextConstructor) {
-            throw new Error("Web Audio is not available in this browser.");
-          }
-          const audioContext = new AudioContextConstructor();
-          const destination = audioContext.createMediaStreamDestination();
-          const oscillator = audioContext.createOscillator();
-          const gain = audioContext.createGain();
-
-          oscillator.frequency.value = 440;
-          gain.gain.value = 0.2;
-          oscillator.connect(gain);
-          gain.connect(destination);
-          oscillator.start();
-
-          return destination.stream;
-        }
-      }
-    });
   });
 
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -320,14 +297,14 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   await expect(page.getByTestId("latest-recording")).toBeVisible();
   await expect(page.getByText("quick").first()).toBeVisible();
   await expect(page.getByText("No sheet linked.")).toBeVisible();
-  const latestRecording = await page.evaluate(() => {
+  const latestRecording = await page.evaluate((storageKey) => {
     const rawValue = window.localStorage.getItem(
-      "metronome-practice:v0:quick-recordings"
+      storageKey
     );
     const parsed = rawValue ? JSON.parse(rawValue) : null;
 
     return parsed?.recordings?.[0] ?? null;
-  });
+  }, RECORDING_HISTORY_STORAGE_KEY);
 
   expect(latestRecording.type).toBe("quick");
   expect(latestRecording.sheetId).toBeNull();
@@ -351,9 +328,9 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   );
   expect(latestRecording.artifactAnalysis.isSilent).toBe(false);
 
-  const decodedEvidence = await page.evaluate(async () => {
+  const decodedEvidence = await page.evaluate(async (storageKey) => {
     const rawValue = window.localStorage.getItem(
-      "metronome-practice:v0:quick-recordings"
+      storageKey
     );
     const parsed = rawValue ? JSON.parse(rawValue) : null;
     const recording = parsed.recordings[0];
@@ -399,7 +376,7 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
           ? positiveZeroCrossings / audioBuffer.duration
           : null
     } satisfies DecodedRecordingEvidence;
-  });
+  }, RECORDING_HISTORY_STORAGE_KEY);
 
   expect(decodedEvidence.decodedDurationMs).toBeGreaterThan(600);
   expect(decodedEvidence.rmsAmplitude).toBeGreaterThan(0.02);

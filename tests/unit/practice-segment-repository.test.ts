@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import Dexie, { type Table } from "dexie";
 
 import {
-  createPracticeSegmentGridAssociation,
   getPracticeSegmentGridStatus,
   type MeasureGrid,
   type PracticeSegment
@@ -13,34 +13,38 @@ import {
   resetPracticeSegmentDatabaseConnectionForTests,
   seedPracticeSegmentRecordForTests
 } from "@/infrastructure/db/browser-practice-segment-service";
+import { PRACTICE_SEGMENT_DB_NAME } from "@/infrastructure/storage/storage-contracts";
 import { createPracticeSegmentService, type PracticeSegmentRepository } from "@/services/practice-segments";
+import { buildMeasureGrid, buildPracticeSegment, TEST_ISO_DATE } from "./factories/practice";
 
-const baseGrid: MeasureGrid = {
-  bpm: 96,
-  timeSignature: "4/4",
-  pickupBeats: 0,
-  measureOneOffsetMs: 500
-};
-
+const baseGrid = buildMeasureGrid();
 const staleGrid: MeasureGrid = {
-  ...baseGrid,
+  ...buildMeasureGrid(),
   bpm: 108
 };
 
 function buildSegment(overrides: Partial<PracticeSegment> = {}): PracticeSegment {
-  return {
-    id: "segment-1",
-    sheetId: "sheet-alpha",
-    name: "Bridge",
-    range: {
-      startMeasure: 5,
-      endMeasure: 12
-    },
-    targetBpm: 96,
-    notes: "Focus on clean shifts",
-    grid: createPracticeSegmentGridAssociation(baseGrid),
-    ...overrides
-  };
+  return buildPracticeSegment(overrides);
+}
+
+type LegacyPersistedPracticeSegmentRecord = {
+  key: string;
+  sheetId: string;
+  segmentId: string;
+  segment: PracticeSegment;
+  updatedAt: string;
+};
+
+class LegacyPracticeSegmentDexieDatabase extends Dexie {
+  segments!: Table<LegacyPersistedPracticeSegmentRecord, string>;
+
+  constructor() {
+    super(PRACTICE_SEGMENT_DB_NAME);
+
+    this.version(1).stores({
+      segments: "key, sheetId, segmentId, updatedAt"
+    });
+  }
 }
 
 function createMemoryPracticeSegmentRepository(
@@ -441,34 +445,6 @@ describe("practice segment browser repository", () => {
     await expect(browserPracticeSegmentRepository.listSegments("a")).resolves.toEqual([secondSegment]);
   });
 
-  it("reads legacy separator-key rows and replaces them with the structured key on save", async () => {
-    const legacySegment = buildSegment({
-      id: "segment-legacy"
-    });
-    const updatedSegment = buildSegment({
-      id: "segment-legacy",
-      name: "Legacy Updated"
-    });
-
-    await seedPracticeSegmentRecordForTests("sheet-alpha", "segment-legacy", {
-      key: "sheet-alpha::segment-legacy",
-      segment: legacySegment,
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
-
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-legacy")).resolves.toEqual(
-      legacySegment
-    );
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([legacySegment]);
-
-    await browserPracticeSegmentRepository.saveSegment(updatedSegment);
-
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-legacy")).resolves.toEqual(
-      updatedSegment
-    );
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([updatedSegment]);
-  });
-
   it("updates and replaces the same sheet and segment row", async () => {
     const updatedSegment = buildSegment({
       name: "Bridge Rework",
@@ -565,6 +541,51 @@ describe("practice segment browser repository", () => {
     ]);
   });
 
+  it("migrates legacy v1 key-path rows into the compound-key segments store", async () => {
+    const legacyDatabase = new LegacyPracticeSegmentDexieDatabase();
+    const legacySegment = buildSegment();
+
+    await legacyDatabase.segments.bulkPut([
+      {
+        key: JSON.stringify([legacySegment.sheetId, legacySegment.id]),
+        sheetId: legacySegment.sheetId,
+        segmentId: legacySegment.id,
+        segment: legacySegment,
+        updatedAt: TEST_ISO_DATE
+      },
+      {
+        key: JSON.stringify(["sheet-alpha", "segment-corrupt"]),
+        sheetId: "sheet-alpha",
+        segmentId: "segment-corrupt",
+        segment: buildSegment({
+          id: "segment-corrupt",
+          sheetId: "sheet-bravo"
+        }),
+        updatedAt: TEST_ISO_DATE
+      }
+    ]);
+    legacyDatabase.close();
+    resetPracticeSegmentDatabaseConnectionForTests();
+
+    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([legacySegment]);
+    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(
+      legacySegment
+    );
+    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-corrupt")).resolves.toBeNull();
+
+    const updatedSegment = buildSegment({
+      name: "Migrated Segment Updated",
+      notes: "Saved after migration"
+    });
+
+    await expect(browserPracticeSegmentRepository.saveSegment(updatedSegment)).resolves.toBeUndefined();
+    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(
+      updatedSegment
+    );
+    await expect(browserPracticeSegmentRepository.deleteSegment("sheet-alpha", "segment-1")).resolves.toBeUndefined();
+    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([]);
+  });
+
   it("reads a valid segment with a stale grid association without requiring a current grid lookup", async () => {
     const segment = buildSegment();
 
@@ -633,19 +654,7 @@ describe("practice segment browser repository", () => {
       sheetId: "sheet-alpha",
       segmentId: "segment-no-segment",
       value: {
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "row with mismatched persisted key",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-bad-key",
-      value: {
-        key: JSON.stringify(["sheet-alpha", "segment-other"]),
-        segment: buildSegment({
-          id: "segment-bad-key"
-        }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
+        updatedAt: TEST_ISO_DATE
       }
     },
     {
@@ -657,7 +666,7 @@ describe("practice segment browser repository", () => {
           id: "segment-bad-sheet",
           sheetId: "sheet-bravo"
         }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
+        updatedAt: TEST_ISO_DATE
       }
     },
     {
@@ -668,77 +677,7 @@ describe("practice segment browser repository", () => {
         segment: buildSegment({
           id: "segment-other"
         }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "segment missing id",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-missing-id",
-      value: {
-        segment: {
-          ...buildSegment({
-            id: "segment-missing-id"
-          }),
-          id: ""
-        },
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "segment missing sheet id",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-missing-sheet",
-      value: {
-        segment: {
-          ...buildSegment({
-            id: "segment-missing-sheet"
-          }),
-          sheetId: ""
-        },
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "empty name",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-empty-name",
-      value: {
-        segment: buildSegment({
-          id: "segment-empty-name",
-          name: "   "
-        }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "range start 0",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-start-zero",
-      value: {
-        segment: buildSegment({
-          id: "segment-start-zero",
-          range: {
-            startMeasure: 0,
-            endMeasure: 12
-          }
-        }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "fractional range start",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-start-fractional",
-      value: {
-        segment: buildSegment({
-          id: "segment-start-fractional",
-          range: {
-            startMeasure: 1.5,
-            endMeasure: 12
-          }
-        }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
+        updatedAt: TEST_ISO_DATE
       }
     },
     {
@@ -753,213 +692,41 @@ describe("practice segment browser repository", () => {
             endMeasure: 5
           }
         }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
+        updatedAt: TEST_ISO_DATE
       }
     },
     {
-      name: "target bpm below minimum",
+      name: "invalid grid association",
       sheetId: "sheet-alpha",
-      segmentId: "segment-bpm-low",
-      value: {
-        segment: buildSegment({
-          id: "segment-bpm-low",
-          targetBpm: 29
-        }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "target bpm above maximum",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-bpm-high",
-      value: {
-        segment: buildSegment({
-          id: "segment-bpm-high",
-          targetBpm: 301
-        }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "fractional target bpm",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-bpm-fractional",
-      value: {
-        segment: buildSegment({
-          id: "segment-bpm-fractional",
-          targetBpm: 96.5
-        }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "string target bpm",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-bpm-string",
+      segmentId: "segment-grid-invalid",
       value: {
         segment: {
           ...buildSegment({
-            id: "segment-bpm-string"
+            id: "segment-grid-invalid"
           }),
-          targetBpm: "96"
-        },
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "NaN target bpm",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-bpm-nan",
-      value: {
-        segment: {
-          ...buildSegment({
-            id: "segment-bpm-nan"
-          }),
-          targetBpm: Number.NaN
-        },
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "notes over max length",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-notes-long",
-      value: {
-        segment: buildSegment({
-          id: "segment-notes-long",
-          notes: "n".repeat(1001)
-        }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "non-string notes",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-notes-number",
-      value: {
-        segment: {
-          ...buildSegment({
-            id: "segment-notes-number"
-          }),
-          notes: 42
-        },
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "missing grid association",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-grid-missing",
-      value: {
-        segment: {
-          ...buildSegment({
-            id: "segment-grid-missing"
-          }),
-          grid: null
-        },
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "empty measure grid version",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-grid-version-empty",
-      value: {
-        segment: buildSegment({
-          id: "segment-grid-version-empty",
           grid: {
             measureGridVersion: " ",
-            measureGridSnapshot: baseGrid
+            measureGridSnapshot: {
+              bpm: 96,
+              timeSignature: "4/4",
+              pickupBeats: 0,
+              measureOneOffsetMs: 500
+            }
           }
+        },
+        updatedAt: TEST_ISO_DATE
+      }
+    },
+    {
+      name: "invalid segment payload",
+      sheetId: "sheet-alpha",
+      segmentId: "segment-invalid-payload",
+      value: {
+        segment: buildSegment({
+          id: "segment-invalid-payload",
+          name: " "
         }),
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "grid snapshot missing offset",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-grid-missing-offset",
-      value: {
-        segment: {
-          ...buildSegment({
-            id: "segment-grid-missing-offset"
-          }),
-          grid: {
-            measureGridVersion: buildSegment().grid.measureGridVersion,
-            measureGridSnapshot: {
-              bpm: 96,
-              timeSignature: "4/4",
-              pickupBeats: 0
-            }
-          }
-        },
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "unsupported time signature",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-grid-bad-signature",
-      value: {
-        segment: {
-          ...buildSegment({
-            id: "segment-grid-bad-signature"
-          }),
-          grid: {
-            measureGridVersion: buildSegment().grid.measureGridVersion,
-            measureGridSnapshot: {
-              bpm: 96,
-              timeSignature: "5/4",
-              pickupBeats: 0,
-              measureOneOffsetMs: 500
-            }
-          }
-        },
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "invalid pickup beats",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-grid-bad-pickup",
-      value: {
-        segment: {
-          ...buildSegment({
-            id: "segment-grid-bad-pickup"
-          }),
-          grid: {
-            measureGridVersion: buildSegment().grid.measureGridVersion,
-            measureGridSnapshot: {
-              bpm: 96,
-              timeSignature: "3/4",
-              pickupBeats: 3,
-              measureOneOffsetMs: 500
-            }
-          }
-        },
-        updatedAt: "2026-06-23T10:00:00.000Z"
-      }
-    },
-    {
-      name: "invalid grid bpm",
-      sheetId: "sheet-alpha",
-      segmentId: "segment-grid-bad-bpm",
-      value: {
-        segment: {
-          ...buildSegment({
-            id: "segment-grid-bad-bpm"
-          }),
-          grid: {
-            measureGridVersion: buildSegment().grid.measureGridVersion,
-            measureGridSnapshot: {
-              bpm: 29,
-              timeSignature: "4/4",
-              pickupBeats: 0,
-              measureOneOffsetMs: 500
-            }
-          }
-        },
-        updatedAt: "2026-06-23T10:00:00.000Z"
+        updatedAt: TEST_ISO_DATE
       }
     }
   ])("returns safe absence for malformed persisted row: $name", async ({ sheetId, segmentId, value }) => {
@@ -973,11 +740,11 @@ describe("practice segment browser repository", () => {
 
     await browserPracticeSegmentRepository.saveSegment(validSegment);
     await seedPracticeSegmentRecordForTests("sheet-alpha", "segment-bad", {
-      key: JSON.stringify(["sheet-alpha", "segment-other"]),
       segment: buildSegment({
-        id: "segment-bad"
+        id: "segment-bad",
+        sheetId: "sheet-bravo"
       }),
-      updatedAt: "2026-06-23T10:00:00.000Z"
+      updatedAt: TEST_ISO_DATE
     });
 
     await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([validSegment]);

@@ -1,14 +1,20 @@
 import { z } from "zod";
 
-import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice/types";
+import type {
+  PracticeSession,
+  SheetRecordingMetadata
+} from "@/domain/practice/types";
+import { TIME_SIGNATURES } from "@/lib/quick-metronome/control";
 
-const isoDateSchema = z.iso.datetime({ offset: true }).refine((value) => new Date(value).toISOString() === value, {
-  message: "Expected a strict ISO datetime with a real calendar date."
-});
+const isoDateSchema = z.iso
+  .datetime({ offset: true })
+  .refine((value) => new Date(value).toISOString() === value, {
+    message: "Expected a strict ISO datetime with a real calendar date."
+  });
 
-const practiceTimeSignatureSchema = z.enum(["2/4", "3/4", "4/4", "6/8"]);
+const practiceTimeSignatureSchema = z.enum(TIME_SIGNATURES);
 
-export const practiceSessionSchema = z
+const practiceSessionSchema = z
   .object({
     id: z.string().trim().min(1),
     sourceType: z.enum(["quick", "sheet"]),
@@ -39,7 +45,10 @@ export const practiceSessionSchema = z
       });
     }
 
-    if (session.endedAt && Date.parse(session.endedAt) < Date.parse(session.startedAt)) {
+    if (
+      session.endedAt &&
+      Date.parse(session.endedAt) < Date.parse(session.startedAt)
+    ) {
       context.addIssue({
         code: "custom",
         path: ["endedAt"],
@@ -48,7 +57,7 @@ export const practiceSessionSchema = z
     }
   });
 
-export const sheetRecordingMetadataSchema = z.object({
+const sheetRecordingMetadataSchema = z.object({
   id: z.string().trim().min(1),
   type: z.literal("sheet"),
   sessionId: z.string().trim().min(1),
@@ -66,16 +75,22 @@ export function parsePracticeSession(value: unknown): PracticeSession | null {
   return result.success ? result.data : null;
 }
 
-export function parseSheetRecordingMetadata(value: unknown): SheetRecordingMetadata | null {
+export function parseSheetRecordingMetadata(
+  value: unknown
+): SheetRecordingMetadata | null {
   const result = sheetRecordingMetadataSchema.safeParse(value);
 
   return result.success ? result.data : null;
 }
 
-export function validatePracticeSession(value: PracticeSession): PracticeSession {
+export function validatePracticeSession(
+  value: PracticeSession
+): PracticeSession {
   return practiceSessionSchema.parse(value);
 }
 
-export function validateSheetRecordingMetadata(value: SheetRecordingMetadata): SheetRecordingMetadata {
+export function validateSheetRecordingMetadata(
+  value: SheetRecordingMetadata
+): SheetRecordingMetadata {
   return sheetRecordingMetadataSchema.parse(value);
 }

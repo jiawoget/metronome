@@ -4,7 +4,7 @@ import { formatTimestamp } from "@/lib/recordings-review/format";
 import type { RecordingErrorMarker } from "@/lib/recordings-review/types";
 
 export const MAX_ERROR_MARKER_NOTE_LENGTH = 160;
-export const ERROR_MARKER_SEEK_TOLERANCE_MS = 80;
+const ERROR_MARKER_SEEK_TOLERANCE_MS = 80;
 
 export type ErrorMarkerValidationInput = {
   recordingId: string | null | undefined;

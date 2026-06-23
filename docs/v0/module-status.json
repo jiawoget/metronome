@@ -859,7 +859,7 @@
                                                                   ],
                                                  "knownRisks":  [
                                                      "The recording-active state is intentionally test-injected harness state only; production UI does not expose recording controls until 05c implements real sheet recording UI/audio/metadata.",
-                                                     "The old 05e SheetPracticeSessionHarness component remains in the tree for historical contract context but is no longer composed in the active Sheet Practice viewer.",
+                                                     "The old 05e SheetPracticeSessionHarness component has been removed; historical contract context now lives in the module docs and active recording-independence coverage uses the test-injected harness boundary inside SheetPracticeControls.",
                                                      "The v0 metronome supports only 2/4, 3/4, 4/4, and 6/8; other imported sheet meters show an explicit fallback to 4/4 until the shared metronome contract supports more meters.",
                                                      "Mobile layout keeps controls usable through page scrolling; the full detailed controls panel is taller than a narrow viewport by design rather than compressing all settings into one screen.",
                                                      "Port cleanup was confirmed with an unsandboxed one-shot bind check because sandboxed Node port binding returned EPERM."
@@ -1322,7 +1322,7 @@
                                                      "src/hooks/use-practice-session-dashboard and src/components/home/home-dashboard.tsx wire Home Continue Practice and Today Summary to the service aggregation with stable test ids",
                                                      "src/components/quick-metronome/quick-metronome-experience.tsx uses the practice-session service for quick session creation, duration/end persistence, and quick recording count/latest updates",
                                                      "src/lib/quick-metronome/persistence.ts and src/lib/quick-metronome/session.ts keep quick recording artifact storage but stop creating duplicate new quick session history there",
-                                                     "src/components/sheet-practice/session/sheet-practice-session-harness.tsx passes the active sessionId for sheet recording metadata",
+                                                     "src/components/sheet-practice/controls/sheet-practice-controls.tsx owns the active Sheet Practice session and recording harness boundary for sheet recording metadata tests",
                                                      "tests/unit/practice-session-service.test.ts covers quick and sheet session rules, invalid sheet guard, recording sessionId requirement, count/latest updates, recent/Continue targets, duration/endedAt, Today Summary local-day boundary, clearable repository behavior, and trigger independence",
                                                      "tests/unit/quick-metronome-session.test.ts covers quick recording artifact storage without duplicate new session history",
                                                      "tests/e2e/practice-session.spec.ts covers real browser quick, sheet, Continue Practice, Today Summary, reload persistence, recording link, clear-data, and console/pageerror checks",

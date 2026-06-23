@@ -9,11 +9,14 @@ import {
   type MeasureGrid
 } from "@/domain/practice";
 import { browserMeasureGridService } from "@/infrastructure/db/browser-measure-grid-service";
-import type { MetronomeSettings, TimeSignature } from "@/lib/quick-metronome/types";
+import { TIME_SIGNATURES } from "@/lib/quick-metronome/control";
+import type {
+  MetronomeSettings,
+  TimeSignature
+} from "@/lib/quick-metronome/types";
 import type { MeasureGridService } from "@/services/measure-grid";
 import { Button } from "@/components/ui/button";
 
-const GRID_TIME_SIGNATURES: TimeSignature[] = ["2/4", "3/4", "4/4", "6/8"];
 const MIN_GRID_BPM = 30;
 const MAX_GRID_BPM = 300;
 
@@ -39,10 +42,13 @@ export type MeasureGridCalibrationPanelProps = {
   fallbackSettings: Pick<MetronomeSettings, "bpm" | "timeSignature">;
   currentTimestampMs?: number | null;
   measureGridService?: MeasureGridService;
+  onGridSaved?: (grid: MeasureGrid) => void;
 };
 
-function isSupportedTimeSignature(value: string | null): value is TimeSignature {
-  return value !== null && GRID_TIME_SIGNATURES.includes(value as TimeSignature);
+function isSupportedTimeSignature(
+  value: string | null
+): value is TimeSignature {
+  return value !== null && TIME_SIGNATURES.includes(value as TimeSignature);
 }
 
 function isValidIntegerString(value: string) {
@@ -76,7 +82,10 @@ function createDefaultDraft({
   defaultBpm,
   defaultTimeSignature,
   fallbackSettings
-}: Pick<MeasureGridCalibrationPanelProps, "defaultBpm" | "defaultTimeSignature" | "fallbackSettings">): MeasureGridDraft {
+}: Pick<
+  MeasureGridCalibrationPanelProps,
+  "defaultBpm" | "defaultTimeSignature" | "fallbackSettings"
+>): MeasureGridDraft {
   const bpm =
     typeof defaultBpm === "number" &&
     Number.isInteger(defaultBpm) &&
@@ -113,16 +122,23 @@ function validateDraft(draft: MeasureGridDraft): DraftValidation {
   }
 
   if (!hasOffset) {
-    errors.measureOneOffsetMs = "Set or enter a measure 1 offset before saving.";
+    errors.measureOneOffsetMs =
+      "Set or enter a measure 1 offset before saving.";
   } else if (measureOneOffsetMs === null || measureOneOffsetMs < 0) {
-    errors.measureOneOffsetMs = "Measure 1 offset must be a non-negative integer in milliseconds.";
+    errors.measureOneOffsetMs =
+      "Measure 1 offset must be a non-negative integer in milliseconds.";
   }
 
   if (!isSupportedTimeSignature(draft.timeSignature)) {
     errors.timeSignature = "Choose a supported grid time signature.";
   }
 
-  if (Object.keys(errors).length > 0 || bpm === null || pickupBeats === null || measureOneOffsetMs === null) {
+  if (
+    Object.keys(errors).length > 0 ||
+    bpm === null ||
+    pickupBeats === null ||
+    measureOneOffsetMs === null
+  ) {
     return { grid: null, errors, hasOffset };
   }
 
@@ -142,7 +158,8 @@ function validateDraft(draft: MeasureGridDraft): DraftValidation {
       grid: null,
       errors: {
         ...errors,
-        measureOneOffsetMs: errors.measureOneOffsetMs ?? "Measure grid values are invalid."
+        measureOneOffsetMs:
+          errors.measureOneOffsetMs ?? "Measure grid values are invalid."
       },
       hasOffset
     };
@@ -198,7 +215,8 @@ export function MeasureGridCalibrationPanel({
   defaultTimeSignature,
   fallbackSettings,
   currentTimestampMs = null,
-  measureGridService = browserMeasureGridService
+  measureGridService = browserMeasureGridService,
+  onGridSaved
 }: MeasureGridCalibrationPanelProps) {
   const idPrefix = useId();
   const defaultDraft = useMemo(
@@ -213,7 +231,9 @@ export function MeasureGridCalibrationPanel({
   const [draft, setDraft] = useState<MeasureGridDraft>(defaultDraft);
   const [savedGrid, setSavedGrid] = useState<MeasureGrid | null>(null);
   const [loadedSheetId, setLoadedSheetId] = useState<string | null>(null);
-  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
+    "loading"
+  );
   const [saveState, setSaveState] = useState<"idle" | "saving">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -242,7 +262,11 @@ export function MeasureGridCalibrationPanel({
         setDraft(defaultDraft);
         setLoadedSheetId(sheetId);
         setLoadState("error");
-        setErrorMessage(error instanceof Error ? error.message : "Measure grid could not be loaded.");
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Measure grid could not be loaded."
+        );
       });
 
     return () => {
@@ -253,14 +277,22 @@ export function MeasureGridCalibrationPanel({
   const effectiveLoadState = loadedSheetId === sheetId ? loadState : "loading";
   const effectiveDraft = loadedSheetId === sheetId ? draft : defaultDraft;
   const effectiveSavedGrid = loadedSheetId === sheetId ? savedGrid : null;
-  const validation = useMemo(() => validateDraft(effectiveDraft), [effectiveDraft]);
+  const validation = useMemo(
+    () => validateDraft(effectiveDraft),
+    [effectiveDraft]
+  );
   const status = getStatus({ savedGrid: effectiveSavedGrid, validation });
   const canUseCurrentTimestamp =
     typeof currentTimestampMs === "number" &&
     Number.isFinite(currentTimestampMs) &&
     currentTimestampMs >= 0;
-  const canSave = effectiveLoadState !== "loading" && saveState !== "saving" && validation.grid !== null;
-  const offsetValue = validation.grid?.measureOneOffsetMs ?? parseIntegerDraft(effectiveDraft.measureOneOffsetMs);
+  const canSave =
+    effectiveLoadState !== "loading" &&
+    saveState !== "saving" &&
+    validation.grid !== null;
+  const offsetValue =
+    validation.grid?.measureOneOffsetMs ??
+    parseIntegerDraft(effectiveDraft.measureOneOffsetMs);
   const timestampReasonId = `${idPrefix}-timestamp-reason`;
   const bpmErrorId = `${idPrefix}-bpm-error`;
   const pickupErrorId = `${idPrefix}-pickup-error`;
@@ -285,12 +317,20 @@ export function MeasureGridCalibrationPanel({
     setErrorMessage(null);
 
     try {
-      const nextSavedGrid = await measureGridService.saveGrid(sheetId, nextValidation.grid);
+      const nextSavedGrid = await measureGridService.saveGrid(
+        sheetId,
+        nextValidation.grid
+      );
 
       setSavedGrid(nextSavedGrid);
       setDraft(createDraftFromGrid(nextSavedGrid));
+      onGridSaved?.(nextSavedGrid);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Measure grid could not be saved.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Measure grid could not be saved."
+      );
     } finally {
       setSaveState("idle");
     }
@@ -304,11 +344,17 @@ export function MeasureGridCalibrationPanel({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 id="measure-grid-title" className="text-sm font-semibold tracking-normal">
+          <h3
+            id="measure-grid-title"
+            className="text-sm font-semibold tracking-normal"
+          >
             Measure grid
           </h3>
           <p className="text-muted-foreground mt-1 text-xs">
-            Offset source: {canUseCurrentTimestamp ? "current playback timestamp" : "manual entry"}
+            Offset source:{" "}
+            {canUseCurrentTimestamp
+              ? "current playback timestamp"
+              : "manual entry"}
           </p>
         </div>
         <span
@@ -338,24 +384,35 @@ export function MeasureGridCalibrationPanel({
             className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
           />
           {validation.errors.bpm ? (
-            <p id={bpmErrorId} role="alert" className="text-destructive mt-1 text-xs font-medium">
+            <p
+              id={bpmErrorId}
+              role="alert"
+              className="text-destructive mt-1 text-xs font-medium"
+            >
               {validation.errors.bpm}
             </p>
           ) : null}
         </div>
 
         <div className="min-w-0">
-          <label htmlFor={`${idPrefix}-time-signature`} className="text-sm font-medium">
+          <label
+            htmlFor={`${idPrefix}-time-signature`}
+            className="text-sm font-medium"
+          >
             Grid time signature
           </label>
           <select
             id={`${idPrefix}-time-signature`}
             aria-label="Grid time signature"
             value={effectiveDraft.timeSignature}
-            onChange={(event) => updateDraft({ timeSignature: event.target.value as TimeSignature })}
+            onChange={(event) =>
+              updateDraft({
+                timeSignature: event.target.value as TimeSignature
+              })
+            }
             className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
           >
-            {GRID_TIME_SIGNATURES.map((timeSignature) => (
+            {TIME_SIGNATURES.map((timeSignature) => (
               <option key={timeSignature} value={timeSignature}>
                 {timeSignature}
               </option>
@@ -370,16 +427,24 @@ export function MeasureGridCalibrationPanel({
           <input
             id={`${idPrefix}-pickup`}
             aria-label="Pickup beats"
-            aria-describedby={validation.errors.pickupBeats ? pickupErrorId : undefined}
+            aria-describedby={
+              validation.errors.pickupBeats ? pickupErrorId : undefined
+            }
             type="number"
             min={0}
             step={1}
             value={effectiveDraft.pickupBeats}
-            onChange={(event) => updateDraft({ pickupBeats: event.target.value })}
+            onChange={(event) =>
+              updateDraft({ pickupBeats: event.target.value })
+            }
             className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
           />
           {validation.errors.pickupBeats ? (
-            <p id={pickupErrorId} role="alert" className="text-destructive mt-1 text-xs font-medium">
+            <p
+              id={pickupErrorId}
+              role="alert"
+              className="text-destructive mt-1 text-xs font-medium"
+            >
               {validation.errors.pickupBeats}
             </p>
           ) : null}
@@ -392,18 +457,28 @@ export function MeasureGridCalibrationPanel({
           <input
             id={`${idPrefix}-offset`}
             aria-label="Measure 1 offset"
-            aria-describedby={validation.errors.measureOneOffsetMs ? offsetErrorId : undefined}
+            aria-describedby={
+              validation.errors.measureOneOffsetMs ? offsetErrorId : undefined
+            }
             type="number"
             min={0}
             step={1}
             placeholder="ms"
             value={effectiveDraft.measureOneOffsetMs}
-            onChange={(event) => updateDraft({ measureOneOffsetMs: event.target.value })}
+            onChange={(event) =>
+              updateDraft({ measureOneOffsetMs: event.target.value })
+            }
             className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
           />
-          <p className="text-muted-foreground mt-1 text-xs">Current: {formatOffset(offsetValue)}</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Current: {formatOffset(offsetValue)}
+          </p>
           {validation.errors.measureOneOffsetMs ? (
-            <p id={offsetErrorId} role="alert" className="text-destructive mt-1 text-xs font-medium">
+            <p
+              id={offsetErrorId}
+              role="alert"
+              className="text-destructive mt-1 text-xs font-medium"
+            >
               {validation.errors.measureOneOffsetMs}
             </p>
           ) : null}
@@ -414,17 +489,25 @@ export function MeasureGridCalibrationPanel({
             type="button"
             variant="secondary"
             disabled={!canUseCurrentTimestamp}
-            aria-describedby={!canUseCurrentTimestamp ? timestampReasonId : undefined}
+            aria-describedby={
+              !canUseCurrentTimestamp ? timestampReasonId : undefined
+            }
             onClick={() => {
               if (canUseCurrentTimestamp) {
-                updateDraft({ measureOneOffsetMs: String(Math.round(currentTimestampMs)) });
+                updateDraft({
+                  measureOneOffsetMs: String(Math.round(currentTimestampMs))
+                });
               }
             }}
           >
             <Crosshair className="h-4 w-4" aria-hidden="true" />
             Set measure 1 here
           </Button>
-          <Button type="button" disabled={!canSave} onClick={() => void saveGrid()}>
+          <Button
+            type="button"
+            disabled={!canSave}
+            onClick={() => void saveGrid()}
+          >
             <Save className="h-4 w-4" aria-hidden="true" />
             {saveState === "saving" ? "Saving..." : "Save grid"}
           </Button>
@@ -432,7 +515,10 @@ export function MeasureGridCalibrationPanel({
       </div>
 
       {!canUseCurrentTimestamp ? (
-        <p id={timestampReasonId} className="text-muted-foreground mt-2 text-xs">
+        <p
+          id={timestampReasonId}
+          className="text-muted-foreground mt-2 text-xs"
+        >
           No playback timestamp available.
         </p>
       ) : null}

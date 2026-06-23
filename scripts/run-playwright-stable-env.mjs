@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const playwrightBin = fileURLToPath(
-  new URL("../node_modules/playwright/cli.js", import.meta.url)
+  new URL("../node_modules/@playwright/test/cli.js", import.meta.url)
 );
 
 const args = process.argv.slice(2);

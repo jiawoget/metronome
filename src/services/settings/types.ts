@@ -31,10 +31,6 @@ export type StorageSummaryService = {
   getSummary: () => Promise<LocalDataSummary>;
 };
 
-export type LocalDataCleanupSource = {
-  clearLocalData: () => Promise<void>;
-};
-
 export type LocalDataCleanupService = {
   clearAllLocalData: () => Promise<void>;
 };

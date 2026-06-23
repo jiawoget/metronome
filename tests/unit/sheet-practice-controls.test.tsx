@@ -208,6 +208,76 @@ describe("sheet practice controls state", () => {
     expect(segmentService.listSegments).toHaveBeenCalledWith("sheet-alpha");
     expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
   });
+
+  it("refreshes segment grid status after saving a new measure grid without a reload", async () => {
+    const user = userEvent.setup();
+    let activeGrid: MeasureGrid = {
+      bpm: 84,
+      timeSignature: "3/4",
+      pickupBeats: 1,
+      measureOneOffsetMs: 500
+    };
+    const currentGrid: MeasureGrid = {
+      bpm: 96,
+      timeSignature: "4/4",
+      pickupBeats: 0,
+      measureOneOffsetMs: 1_000
+    };
+    const measureGridService: MeasureGridService = {
+      getGrid: vi.fn(async () => activeGrid),
+      saveGrid: vi.fn(async (_sheetId, nextGrid) => {
+        activeGrid = nextGrid;
+
+        return nextGrid;
+      }),
+      clearGrid: vi.fn(async () => undefined)
+    };
+    const segmentService = createPracticeSegmentService([
+      {
+        id: "segment-alpha",
+        sheetId: "sheet-alpha",
+        name: "Opening phrase",
+        range: {
+          startMeasure: 5,
+          endMeasure: 12
+        },
+        targetBpm: 96,
+        notes: null,
+        grid: createPracticeSegmentGridAssociation(currentGrid)
+      }
+    ]);
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={96}
+        defaultTimeSignature="4/4"
+        sessionService={createIdleSessionService()}
+        measureGridService={measureGridService}
+        practiceSegmentService={segmentService}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("practice-segment-status-segment-alpha")).toHaveTextContent("Grid changed");
+    });
+
+    await user.clear(screen.getByRole("spinbutton", { name: "Grid BPM" }));
+    await user.type(screen.getByRole("spinbutton", { name: "Grid BPM" }), "96");
+    await user.selectOptions(screen.getByLabelText("Grid time signature"), "4/4");
+    await user.clear(screen.getByRole("spinbutton", { name: "Pickup beats" }));
+    await user.type(screen.getByRole("spinbutton", { name: "Pickup beats" }), "0");
+    await user.clear(screen.getByRole("spinbutton", { name: "Measure 1 offset" }));
+    await user.type(screen.getByRole("spinbutton", { name: "Measure 1 offset" }), "1000");
+    await user.click(screen.getByRole("button", { name: "Save grid" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("practice-segment-status-segment-alpha")).toHaveTextContent("Ready");
+    });
+    expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
+    expect(measureGridService.saveGrid).toHaveBeenCalledWith("sheet-alpha", currentGrid);
+  });
 });
 
 describe("sheet practice controls metronome reuse", () => {

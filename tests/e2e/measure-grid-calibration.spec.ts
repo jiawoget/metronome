@@ -1,55 +1,19 @@
 import { expect, test, type Page } from "@playwright/test";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { importTestSheet } from "./fixtures/sheets";
+import {
+  clearDatabases,
+  clearRecordingHistory,
+  MEASURE_GRID_DB_NAME,
+  PRACTICE_SESSION_DB_NAME,
+  SHEET_LIBRARY_DB_NAME
+} from "./fixtures/storage";
 
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
-const sheetDbName = "metronome-practice-v0-sheet-library";
-const practiceDbName = "metronome-practice-v0-practice-sessions";
-const measureGridDbName = "metronome-practice-v1-measure-grids";
-const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
-
-async function deleteDatabase(page: Page, databaseName: string) {
-  await page.evaluate(
-    (name: string) =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(name);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => resolve();
-      }),
-    databaseName
-  );
-}
-
-async function clearDatabases(page: Page) {
+async function clearState(page: Page) {
   await page.goto("/sheet-library");
-  await page.evaluate((storageKey) => window.localStorage.removeItem(storageKey), recordingHistoryStorageKey);
-  await deleteDatabase(page, sheetDbName);
-  await deleteDatabase(page, practiceDbName);
-  await deleteDatabase(page, measureGridDbName);
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME, MEASURE_GRID_DB_NAME]);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
-}
-
-async function importSheet(page: Page, name: string) {
-  await page.goto("/sheet-library");
-  await page.getByLabel("File").setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
-  await expect(page.getByText(/^Ready:/)).toBeVisible();
-  await page.getByLabel("Name").fill(name);
-  await page.getByLabel("BPM").fill("72");
-  await page.getByLabel("Time signature").fill("4/4");
-  await page.getByRole("button", { name: "Save Imported Sheet" }).click();
-  await expect(page.getByRole("heading", { name })).toBeVisible();
-
-  const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
-  const href = await link.getAttribute("href");
-  const sheetId = new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
-
-  expect(sheetId).toBeTruthy();
-
-  return { link, sheetId };
 }
 
 async function readMeasureGrid(page: Page, sheetId: string) {
@@ -78,7 +42,7 @@ async function readMeasureGrid(page: Page, sheetId: string) {
           transaction.onerror = () => reject(transaction.error);
         };
       }),
-    { databaseName: measureGridDbName, targetSheetId: sheetId }
+    { databaseName: MEASURE_GRID_DB_NAME, targetSheetId: sheetId }
   );
 }
 
@@ -122,8 +86,8 @@ test("measure grid calibration saves, reloads, isolates sheets, and uses manual 
   });
 
   await page.setViewportSize({ width: 1280, height: 820 });
-  await clearDatabases(page);
-  const firstSheet = await importSheet(page, "Measure Grid Sheet A");
+  await clearState(page);
+  const firstSheet = await importTestSheet(page, { name: "Measure Grid Sheet A" });
 
   await firstSheet.link.click();
   await expect(page.getByRole("heading", { name: "Measure Grid Sheet A" })).toBeVisible();
@@ -195,7 +159,7 @@ test("measure grid calibration saves, reloads, isolates sheets, and uses manual 
   });
   await page.getByRole("spinbutton", { name: "Measure 1 offset" }).fill("1250");
 
-  const secondSheet = await importSheet(page, "Measure Grid Sheet B");
+  const secondSheet = await importTestSheet(page, { name: "Measure Grid Sheet B" });
 
   await secondSheet.link.click();
   await expect(page.getByRole("heading", { name: "Measure Grid Sheet B" })).toBeVisible();

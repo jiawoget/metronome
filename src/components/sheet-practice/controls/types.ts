@@ -4,12 +4,12 @@ import type { PracticeSegmentService } from "@/services/practice-segments";
 import type { BrowserMetronomeService } from "@/lib/quick-metronome/metronome-service";
 import type { BrowserSheetRecordingService } from "@/lib/sheet-practice/recording-service";
 
-export type SheetPracticeMetronomeService = Pick<
+type SheetPracticeMetronomeService = Pick<
   BrowserMetronomeService,
   "onTick" | "update" | "start" | "stop"
 >;
 
-export type SheetPracticeSessionService = Pick<
+type SheetPracticeSessionService = Pick<
   PracticeSessionService,
   | "ensureSheetSession"
   | "restorePracticeSessionSnapshot"
@@ -23,7 +23,7 @@ export type SheetPracticeSessionService = Pick<
   | "subscribe"
 >;
 
-export type SheetPracticeRecordingService = Pick<
+type SheetPracticeRecordingService = Pick<
   BrowserSheetRecordingService,
   | "startCapture"
   | "stopAndSave"

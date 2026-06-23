@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-export type TopLevelRouteId =
+type TopLevelRouteId =
   | "home"
   | "quick-metronome"
   | "sheet-library"

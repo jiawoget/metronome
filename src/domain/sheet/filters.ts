@@ -15,7 +15,7 @@ export function formatPageCount(sheet: Pick<ImportedSheet, "kind" | "pageCount" 
   return sheet.imageCount === 1 ? "1 image" : `${sheet.imageCount} images`;
 }
 
-export function matchesSheetSearch(sheet: ImportedSheet, query: string) {
+function matchesSheetSearch(sheet: ImportedSheet, query: string) {
   const normalizedQuery = query.trim().toLowerCase();
 
   if (!normalizedQuery) {

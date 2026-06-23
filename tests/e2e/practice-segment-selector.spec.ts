@@ -1,14 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
-const sheetDbName = "metronome-practice-v0-sheet-library";
-const practiceDbName = "metronome-practice-v0-practice-sessions";
-const measureGridDbName = "metronome-practice-v1-measure-grids";
-const practiceSegmentDbName = "metronome-practice-v1-practice-segments";
-const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
+import { importTestSheet } from "./fixtures/sheets";
+import {
+  clearDatabases,
+  clearRecordingHistory,
+  MEASURE_GRID_DB_NAME,
+  PRACTICE_SEGMENT_DB_NAME,
+  PRACTICE_SESSION_DB_NAME,
+  SHEET_LIBRARY_DB_NAME
+} from "./fixtures/storage";
 
 type SeedMeasureGrid = {
   bpm: number;
@@ -17,48 +16,17 @@ type SeedMeasureGrid = {
   measureOneOffsetMs: number;
 };
 
-async function deleteDatabase(page: Page, databaseName: string) {
-  await page.evaluate(
-    (name: string) =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(name);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => resolve();
-      }),
-    databaseName
-  );
-}
-
-async function clearDatabases(page: Page) {
+async function clearState(page: Page) {
   await page.goto("/sheet-library");
-  await page.evaluate((storageKey) => window.localStorage.removeItem(storageKey), recordingHistoryStorageKey);
-  await deleteDatabase(page, sheetDbName);
-  await deleteDatabase(page, practiceDbName);
-  await deleteDatabase(page, measureGridDbName);
-  await deleteDatabase(page, practiceSegmentDbName);
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [
+    SHEET_LIBRARY_DB_NAME,
+    PRACTICE_SESSION_DB_NAME,
+    MEASURE_GRID_DB_NAME,
+    PRACTICE_SEGMENT_DB_NAME
+  ]);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
-}
-
-async function importSheet(page: Page, name: string) {
-  await page.goto("/sheet-library");
-  await page.getByLabel("File").setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
-  await expect(page.getByText(/^Ready:/)).toBeVisible();
-  await page.getByLabel("Name").fill(name);
-  await page.getByLabel("BPM").fill("72");
-  await page.getByLabel("Time signature").fill("4/4");
-  await page.getByRole("button", { name: "Save Imported Sheet" }).click();
-  await expect(page.getByRole("heading", { name })).toBeVisible();
-
-  const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
-  const href = await link.getAttribute("href");
-  const sheetId = new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
-
-  expect(sheetId).toBeTruthy();
-
-  return { link, sheetId };
 }
 
 function gridVersion(grid: SeedMeasureGrid) {
@@ -74,18 +42,18 @@ async function seedMeasureGrid(page: Page, sheetId: string, grid: SeedMeasureGri
   await page.evaluate(
     ({ databaseName, targetSheetId, targetGrid }: { databaseName: string; targetSheetId: string; targetGrid: SeedMeasureGrid }) =>
       new Promise<void>((resolve, reject) => {
-        const openRequest = indexedDB.open(databaseName, 1);
+        const openRequest = indexedDB.open(databaseName);
 
-        openRequest.onupgradeneeded = () => {
-          const database = openRequest.result;
-
-          if (!database.objectStoreNames.contains("grids")) {
-            database.createObjectStore("grids", { keyPath: "sheetId" }).createIndex("updatedAt", "updatedAt");
-          }
-        };
         openRequest.onerror = () => reject(openRequest.error);
         openRequest.onsuccess = () => {
           const database = openRequest.result;
+
+          if (!database.objectStoreNames.contains("grids")) {
+            database.close();
+            reject(new Error("Measure grid seed requires the current grids store."));
+            return;
+          }
+
           const transaction = database.transaction(["grids"], "readwrite");
 
           transaction.objectStore("grids").put({
@@ -100,8 +68,33 @@ async function seedMeasureGrid(page: Page, sheetId: string, grid: SeedMeasureGri
           transaction.onerror = () => reject(transaction.error);
         };
       }),
-    { databaseName: measureGridDbName, targetSheetId: sheetId, targetGrid: grid }
+    { databaseName: MEASURE_GRID_DB_NAME, targetSheetId: sheetId, targetGrid: grid }
   );
+}
+
+async function initializePracticeSegmentDatabase(page: Page, sheetId: string) {
+  await page.goto(`/sheet-practice/${sheetId}`);
+  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("0 saved");
+  await page.evaluate((databaseName) => {
+    return new Promise<void>((resolve, reject) => {
+      const openRequest = indexedDB.open(databaseName);
+
+      openRequest.onerror = () => reject(openRequest.error);
+      openRequest.onsuccess = () => {
+        const database = openRequest.result;
+        const hasCurrentStore = database.objectStoreNames.contains("segments");
+
+        database.close();
+
+        if (!hasCurrentStore) {
+          reject(new Error("Practice segment seed requires the current segments store."));
+          return;
+        }
+
+        resolve();
+      };
+    });
+  }, PRACTICE_SEGMENT_DB_NAME);
 }
 
 async function seedPracticeSegment({
@@ -146,27 +139,21 @@ async function seedPracticeSegment({
       version: string;
     }) =>
       new Promise<void>((resolve, reject) => {
-        const openRequest = indexedDB.open(databaseName, 1);
+        const openRequest = indexedDB.open(databaseName);
 
-        openRequest.onupgradeneeded = () => {
-          const database = openRequest.result;
-
-          if (!database.objectStoreNames.contains("segments")) {
-            const store = database.createObjectStore("segments", { keyPath: "key" });
-
-            store.createIndex("sheetId", "sheetId");
-            store.createIndex("segmentId", "segmentId");
-            store.createIndex("updatedAt", "updatedAt");
-          }
-        };
         openRequest.onerror = () => reject(openRequest.error);
         openRequest.onsuccess = () => {
           const database = openRequest.result;
+
+          if (!database.objectStoreNames.contains("segments")) {
+            database.close();
+            reject(new Error("Practice segment seed requires the current segments store."));
+            return;
+          }
+
           const transaction = database.transaction(["segments"], "readwrite");
-          const key = JSON.stringify([targetSheetId, targetSegmentId]);
 
           transaction.objectStore("segments").put({
-            key,
             sheetId: targetSheetId,
             segmentId: targetSegmentId,
             segment: {
@@ -194,7 +181,7 @@ async function seedPracticeSegment({
         };
       }),
     {
-      databaseName: practiceSegmentDbName,
+      databaseName: PRACTICE_SEGMENT_DB_NAME,
       targetSheetId: sheetId,
       targetSegmentId: segmentId,
       segmentName: name,
@@ -265,11 +252,12 @@ test("practice segment selector lists, selects, reloads, scopes by sheet, and st
   });
 
   await page.setViewportSize({ width: 1280, height: 820 });
-  await clearDatabases(page);
-  const sheetA = await importSheet(page, "Segment Selector Sheet A");
-  const sheetB = await importSheet(page, "Segment Selector Sheet B");
-  const sheetEmpty = await importSheet(page, "Segment Selector Empty Sheet");
+  await clearState(page);
+  const sheetA = await importTestSheet(page, { name: "Segment Selector Sheet A" });
+  const sheetB = await importTestSheet(page, { name: "Segment Selector Sheet B" });
+  const sheetEmpty = await importTestSheet(page, { name: "Segment Selector Empty Sheet" });
 
+  await initializePracticeSegmentDatabase(page, sheetA.sheetId);
   await seedMeasureGrid(page, sheetA.sheetId, currentGrid);
   await seedPracticeSegment({
     page,
@@ -320,6 +308,15 @@ test("practice segment selector lists, selects, reloads, scopes by sheet, and st
   await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Measures 5-12");
   await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Target 96 BPM");
   await expect(page.getByTestId("practice-segment-active-status")).toContainText("Ready");
+
+  await page.getByRole("spinbutton", { name: "Grid BPM" }).fill(String(staleAssociationGrid.bpm));
+  await page.getByLabel("Grid time signature").selectOption(staleAssociationGrid.timeSignature);
+  await page.getByRole("spinbutton", { name: "Pickup beats" }).fill(String(staleAssociationGrid.pickupBeats));
+  await page.getByRole("spinbutton", { name: "Measure 1 offset" }).fill(String(staleAssociationGrid.measureOneOffsetMs));
+  await page.getByRole("button", { name: "Save grid" }).click();
+  await expect(page.getByTestId("measure-grid-status")).toContainText("Calibrated");
+  await expect(page.getByTestId("practice-segment-status-segment-a-stale")).toContainText("Ready");
+  await expect(page.getByTestId("practice-segment-status-segment-a-current")).toContainText("Grid changed");
 
   await page.reload();
   await expect(page.getByTestId("practice-segment-selector-status")).toContainText("2 saved");

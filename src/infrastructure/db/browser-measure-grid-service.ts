@@ -3,13 +3,12 @@
 import Dexie, { type Table } from "dexie";
 
 import { parseMeasureGrid, validateMeasureGrid, type MeasureGrid } from "@/domain/practice";
+import { MEASURE_GRID_DB_NAME } from "@/infrastructure/storage/storage-contracts";
 import {
   createMeasureGridService,
   normalizeMeasureGridSheetId,
   type MeasureGridRepository
 } from "@/services/measure-grid";
-
-export const MEASURE_GRID_DB_NAME = "metronome-practice-v1-measure-grids";
 
 type PersistedMeasureGridRecord = {
   sheetId: string;

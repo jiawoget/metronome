@@ -1,7 +1,5 @@
 import { DEFAULT_USER_SETTINGS, normalizeSettingsPatch, normalizeUserSettings } from "@/domain/settings";
 import type {
-  LocalDataCleanupService,
-  LocalDataCleanupSource,
   SettingsRepository,
   StorageSummaryService,
   StorageSummarySource,
@@ -55,14 +53,6 @@ export function createStorageSummaryService(source: StorageSummarySource): Stora
         counts,
         storageEstimate
       };
-    }
-  };
-}
-
-export function createLocalDataCleanupService(source: LocalDataCleanupSource): LocalDataCleanupService {
-  return {
-    clearAllLocalData() {
-      return source.clearLocalData();
     }
   };
 }

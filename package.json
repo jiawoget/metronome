@@ -38,11 +38,9 @@
     "tailwind-merge": "^3.6.0",
     "tone": "^15.1.22",
     "wavesurfer.js": "^7.12.8",
-    "zod": "^4.4.3",
-    "zustand": "^5.0.14"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.5",
     "@playwright/test": "^1.61.0",
     "@tailwindcss/postcss": "^4.3.1",
     "@testing-library/jest-dom": "^6.9.1",

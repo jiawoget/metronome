@@ -684,6 +684,47 @@ describe("practice session service", () => {
     });
   });
 
+  it("filters legacy quick sessions that inherit an unsupported recording meter", async () => {
+    const sheetRepository = createMemorySessionRepository();
+    const globalRepository = createGlobalPracticeSessionRepository(sheetRepository);
+
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [
+          {
+            id: "legacy-quick-session",
+            sourceType: "quick",
+            startedAt: "2026-06-21T12:05:00.000Z",
+            endedAt: "2026-06-21T12:06:00.000Z"
+          }
+        ],
+        recordings: [
+          {
+            id: "legacy-quick-recording",
+            type: "quick",
+            sessionId: "legacy-quick-session",
+            sheetId: null,
+            createdAt: "2026-06-21T12:06:00.000Z",
+            durationMs: 60_000,
+            sizeBytes: 1024,
+            mimeType: "audio/webm",
+            settings: {
+              bpm: 120,
+              timeSignature: "5/4"
+            }
+          }
+        ],
+        errorMarkers: []
+      })
+    );
+
+    await expect(globalRepository.listSessions()).resolves.toEqual([]);
+    await expect(
+      globalRepository.getSession("legacy-quick-session")
+    ).resolves.toBeNull();
+  });
+
   it("keeps metronome, recording, and future reference trigger states independent", () => {
     const stopped = {
       metronomeActive: false,

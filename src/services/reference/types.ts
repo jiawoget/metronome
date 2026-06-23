@@ -16,7 +16,7 @@ export type ReferenceResult<T> =
       message: string;
     };
 
-export type LocalAudioInspection = {
+type LocalAudioInspection = {
   durationMs: number;
 };
 

@@ -9,8 +9,9 @@ import {
   sortErrorMarkers,
   type CreateErrorMarkerInput
 } from "@/lib/recordings-review/error-markers";
+import { RECORDING_HISTORY_STORAGE_KEY } from "@/infrastructure/storage/storage-contracts";
 
-export const RECORDINGS_STORAGE_KEY = "metronome-practice:v0:quick-recordings";
+export const RECORDINGS_STORAGE_KEY = RECORDING_HISTORY_STORAGE_KEY;
 const STORE_EVENT = "recordings-review-change";
 const QUICK_STORE_EVENT = "quick-metronome-recordings-change";
 

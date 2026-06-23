@@ -6,10 +6,10 @@ import {
   validatePracticeSession,
   type PracticeSession
 } from "@/domain/practice";
+import { PRACTICE_SESSION_DB_NAME } from "@/infrastructure/storage/storage-contracts";
 import type { PracticeSessionRepository } from "@/services/practice-session";
 
-export const PRACTICE_SESSION_DB_NAME = "metronome-practice-v0-practice-sessions";
-export const PRACTICE_SESSION_STORE_EVENT = "practice-session-change";
+const PRACTICE_SESSION_STORE_EVENT = "practice-session-change";
 
 type PracticeSessionDatabaseSchema = {
   sessions: Table<PracticeSession, string>;
@@ -104,8 +104,3 @@ export const practiceSessionRepository: PracticeSessionRepository = {
     };
   }
 };
-
-export async function clearPracticeSessionDatabaseForTests() {
-  await getDatabase().delete();
-  database = null;
-}

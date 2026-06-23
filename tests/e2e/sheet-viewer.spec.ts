@@ -3,9 +3,11 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { SHEET_LIBRARY_DB_NAME } from "./fixtures/storage";
+
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
-const dbName = "metronome-practice-v0-sheet-library";
+const dbName = SHEET_LIBRARY_DB_NAME;
 
 type SeedSheetOptions = {
   id: string;

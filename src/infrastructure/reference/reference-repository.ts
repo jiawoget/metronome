@@ -6,10 +6,10 @@ import {
   type LocalAudioReferenceArtifact,
   type SheetReference
 } from "@/domain/reference";
+import { REFERENCE_DB_NAME } from "@/infrastructure/storage/storage-contracts";
 import type { ReferenceRepository } from "@/services/reference";
 
-export const REFERENCE_DB_NAME = "metronome-practice-v0-references";
-export const REFERENCE_STORE_EVENT = "reference-store-change";
+const REFERENCE_STORE_EVENT = "reference-store-change";
 
 type ReferenceDatabaseSchema = {
   references: Table<SheetReference, string>;
@@ -128,8 +128,3 @@ export const referenceRepository: ReferenceRepository = {
     };
   }
 };
-
-export async function clearReferenceDatabaseForTests() {
-  await getDatabase().delete();
-  database = null;
-}

@@ -1,4 +1,4 @@
-export type PracticeSourceType = "quick" | "sheet";
+type PracticeSourceType = "quick" | "sheet";
 
 export type PracticeActivityTrigger = "metronome" | "recording" | "reference";
 

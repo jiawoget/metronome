@@ -93,31 +93,47 @@ export function validateMeasureRange(value: MeasureRange): MeasureRange {
   return measureRangeSchema.parse(value);
 }
 
-export function getMeasureDurationMs(grid: MeasureGrid) {
-  const validatedGrid = validateMeasureGrid(grid);
+function getMeasureDurationMsFromValidatedGrid(validatedGrid: MeasureGrid) {
   const { numerator, denominator } = getTimeSignatureParts(validatedGrid.timeSignature);
   const beatDurationMs = (60_000 / validatedGrid.bpm) * (4 / denominator);
 
   return Math.round(numerator * beatDurationMs);
 }
 
-export function getMeasureStartMs(grid: MeasureGrid, measureNumber: number) {
+export function getMeasureDurationMs(grid: MeasureGrid) {
   const validatedGrid = validateMeasureGrid(grid);
+
+  return getMeasureDurationMsFromValidatedGrid(validatedGrid);
+}
+
+function getMeasureStartMsFromValidatedGrid(validatedGrid: MeasureGrid, measureNumber: number) {
   const validatedMeasureNumber = validateMeasureNumber(measureNumber);
   const measureIndex = validatedMeasureNumber - 1;
 
-  return validatedGrid.measureOneOffsetMs + getMeasureDurationMs(validatedGrid) * measureIndex;
+  return validatedGrid.measureOneOffsetMs + getMeasureDurationMsFromValidatedGrid(validatedGrid) * measureIndex;
+}
+
+export function getMeasureStartMs(grid: MeasureGrid, measureNumber: number) {
+  return getMeasureStartMsFromValidatedGrid(validateMeasureGrid(grid), measureNumber);
 }
 
 export function getMeasureEndMs(grid: MeasureGrid, measureNumber: number) {
-  return getMeasureStartMs(grid, measureNumber) + getMeasureDurationMs(grid);
+  const validatedGrid = validateMeasureGrid(grid);
+
+  return (
+    getMeasureStartMsFromValidatedGrid(validatedGrid, measureNumber) +
+    getMeasureDurationMsFromValidatedGrid(validatedGrid)
+  );
 }
 
 export function getMeasureRangeMs(grid: MeasureGrid, range: MeasureRange): MeasureRangeMs {
+  const validatedGrid = validateMeasureGrid(grid);
   const validatedRange = validateMeasureRange(range);
 
   return {
-    startMs: getMeasureStartMs(grid, validatedRange.startMeasure),
-    endMs: getMeasureEndMs(grid, validatedRange.endMeasure)
+    startMs: getMeasureStartMsFromValidatedGrid(validatedGrid, validatedRange.startMeasure),
+    endMs:
+      getMeasureStartMsFromValidatedGrid(validatedGrid, validatedRange.endMeasure) +
+      getMeasureDurationMsFromValidatedGrid(validatedGrid)
   };
 }

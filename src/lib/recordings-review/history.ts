@@ -36,7 +36,7 @@ export function getContinuePracticeHref(recording: ReviewRecording) {
   return `/quick-metronome?recordingId=${encodeURIComponent(recording.id)}`;
 }
 
-export function getVisibleMetadata(recording: ReviewRecording) {
+function getVisibleMetadata(recording: ReviewRecording) {
   return [
     getRecordingDisplayName(recording),
     recording.type,

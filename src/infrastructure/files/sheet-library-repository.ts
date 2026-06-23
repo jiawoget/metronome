@@ -1,9 +1,8 @@
 import Dexie, { type Table } from "dexie";
 
 import type { ImportedSheet, SheetArtifact } from "@/domain/sheet";
+import { SHEET_LIBRARY_DB_NAME } from "@/infrastructure/storage/storage-contracts";
 import type { SheetLibraryRepository } from "@/services/sheet-library";
-
-export const SHEET_LIBRARY_DB_NAME = "metronome-practice-v0-sheet-library";
 
 type SheetLibraryDatabaseSchema = {
   sheets: Table<ImportedSheet, string>;
@@ -107,8 +106,3 @@ export const sheetLibraryRepository: SheetLibraryRepository = {
     });
   }
 };
-
-export async function clearSheetLibraryDatabaseForTests() {
-  await getDatabase().delete();
-  database = null;
-}

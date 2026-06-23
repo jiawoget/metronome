@@ -14,6 +14,8 @@ import {
 import { topLevelNavItems } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
+type TopLevelNavItem = (typeof topLevelNavItems)[number];
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [areDiagnosticsHidden, setAreDiagnosticsHidden] = useState(false);
@@ -241,28 +243,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
 
           <nav className="flex flex-1 flex-col gap-1">
-            {topLevelNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                item.href === pathname ||
-                (item.href !== "/" && pathname.startsWith(`${item.href}/`));
-
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex min-h-12 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
-                    isActive &&
-                      "bg-primary text-primary-foreground shadow-soft hover:bg-primary hover:text-primary-foreground"
-                  )}
-                >
-                  <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+            {topLevelNavItems.map((item) => (
+              <PrimaryNavLink
+                key={item.id}
+                item={item}
+                pathname={pathname}
+                variant="desktop"
+              />
+            ))}
           </nav>
 
           <DiagnosticsPanel
@@ -313,32 +301,65 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="border-border bg-card shadow-soft fixed inset-x-0 bottom-0 z-30 border-t px-1.5 py-2 lg:hidden"
       >
         <div className="mx-auto grid max-w-xl grid-cols-6 gap-1">
-          {topLevelNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              item.href === pathname ||
-              (item.href !== "/" && pathname.startsWith(`${item.href}/`));
-
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                aria-label={item.label}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[11px] leading-none font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
-                  isActive &&
-                    "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
-                )}
-              >
-                <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                <span className="max-w-full truncate">{item.shortLabel}</span>
-              </Link>
-            );
-          })}
+          {topLevelNavItems.map((item) => (
+            <PrimaryNavLink
+              key={item.id}
+              item={item}
+              pathname={pathname}
+              variant="mobile"
+            />
+          ))}
         </div>
       </nav>
     </div>
+  );
+}
+
+function PrimaryNavLink({
+  item,
+  pathname,
+  variant
+}: {
+  item: TopLevelNavItem;
+  pathname: string;
+  variant: "desktop" | "mobile";
+}) {
+  const Icon = item.icon;
+  const isActive =
+    item.href === pathname ||
+    (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+
+  if (variant === "desktop") {
+    return (
+      <Link
+        href={item.href}
+        aria-current={isActive ? "page" : undefined}
+        className={cn(
+          "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex min-h-12 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+          isActive &&
+            "bg-primary text-primary-foreground shadow-soft hover:bg-primary hover:text-primary-foreground"
+        )}
+      >
+        <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+        <span>{item.label}</span>
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href={item.href}
+      aria-label={item.label}
+      aria-current={isActive ? "page" : undefined}
+      className={cn(
+        "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[11px] leading-none font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+        isActive &&
+          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+      )}
+    >
+      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+      <span className="max-w-full truncate">{item.shortLabel}</span>
+    </Link>
   );
 }
 

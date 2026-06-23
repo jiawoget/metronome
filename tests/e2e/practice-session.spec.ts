@@ -2,11 +2,17 @@ import { expect, test, type Page } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  PRACTICE_SESSION_DB_NAME,
+  RECORDING_HISTORY_STORAGE_KEY,
+  SHEET_LIBRARY_DB_NAME
+} from "./fixtures/storage";
+
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
-const sheetDbName = "metronome-practice-v0-sheet-library";
-const practiceDbName = "metronome-practice-v0-practice-sessions";
-const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
+const sheetDbName = SHEET_LIBRARY_DB_NAME;
+const practiceDbName = PRACTICE_SESSION_DB_NAME;
+const recordingHistoryStorageKey = RECORDING_HISTORY_STORAGE_KEY;
 
 type SessionSnapshot = Array<{
   id: string;

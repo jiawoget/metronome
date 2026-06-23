@@ -7,7 +7,7 @@ import type {
   TodayPracticeSummary
 } from "@/domain/practice";
 
-export type SheetSessionContext = {
+type SheetSessionContext = {
   id: string;
   name: string;
   bpm: number | null;

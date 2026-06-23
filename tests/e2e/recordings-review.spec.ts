@@ -1,4 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import {
+  createWavDataUrl,
+  decodeRecordingHistoryAudio,
+  installSyntheticMicrophone
+} from "./fixtures/audio";
+import { readRecordingHistory, seedRecordingHistory } from "./fixtures/storage";
 
 type WaveformEvidence = {
   source: string | null;
@@ -14,14 +20,16 @@ async function expectVisibleDerivedWaveform({
   page,
   source,
   peakCount,
-  label
+  label,
+  testId = "derived-waveform"
 }: {
-  page: import("@playwright/test").Page;
+  page: Page;
   source: "decoded-audio" | "trusted-peaks";
   peakCount: number;
   label: string;
+  testId?: string;
 }) {
-  const waveform = page.getByTestId("derived-waveform");
+  const waveform = page.getByTestId(testId);
 
   await expect(waveform, `${label}: waveform container visible`).toBeVisible();
   await expect(waveform, `${label}: waveform source`).toHaveAttribute(
@@ -121,6 +129,7 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     consoleErrors.push(error.message);
   });
 
+  await installSyntheticMicrophone(page, 440, 0.2);
   await page.addInitScript(() => {
     if (!window.sessionStorage.getItem("recordings-review-e2e-ready")) {
       window.localStorage.clear();
@@ -148,319 +157,191 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     window.addEventListener("unhandledrejection", (event) => {
       e2eWindow.__recordingsPlaybackRejections?.push(String(event.reason));
     });
-    Object.defineProperty(navigator, "mediaDevices", {
-      configurable: true,
-      value: {
-        getUserMedia: async () => {
-          const audioWindow = window as Window &
-            typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-          const AudioContextConstructor =
-            audioWindow.AudioContext || audioWindow.webkitAudioContext;
-
-          if (!AudioContextConstructor) {
-            throw new Error("Web Audio is not available in this browser.");
-          }
-
-          const audioContext = new AudioContextConstructor();
-          const destination = audioContext.createMediaStreamDestination();
-          const oscillator = audioContext.createOscillator();
-          const gain = audioContext.createGain();
-
-          oscillator.frequency.value = 440;
-          gain.gain.value = 0.2;
-          oscillator.connect(gain);
-          gain.connect(destination);
-          oscillator.start();
-
-          return destination.stream;
-        }
-      }
-    });
   });
 
   await page.goto("/recordings");
   await expect(page.getByRole("heading", { name: "Recordings" })).toBeVisible();
   await expect(page.getByTestId("recordings-empty-state")).toBeVisible();
 
-  await page.evaluate(() => {
-    function createWavDataUrl(frequencyHz: number, durationSeconds: number) {
-      const sampleRate = 8_000;
-      const sampleCount = Math.floor(sampleRate * durationSeconds);
-      const dataSize = sampleCount * 2;
-      const buffer = new ArrayBuffer(44 + dataSize);
-      const view = new DataView(buffer);
+  const quickArtifact = await createWavDataUrl(page, 440, 1);
+  const sheetArtifact = await createWavDataUrl(page, 330, 1.2);
+  const mismatchArtifact = await createWavDataUrl(page, 220, 1);
+  const invalidPeaksArtifact = await createWavDataUrl(page, 260, 1);
 
-      function writeString(offset: number, value: string) {
-        for (let index = 0; index < value.length; index += 1) {
-          view.setUint8(offset + index, value.charCodeAt(index));
+  await seedRecordingHistory(page, {
+    sessions: [
+      { id: "session-quick-1", sourceType: "quick" },
+      { id: "session-sheet-1", sourceType: "sheet" }
+    ],
+    recordings: [
+      {
+        id: "quick-alpha",
+        type: "quick",
+        origin: "user",
+        name: "Alpha quick take",
+        sessionId: "session-quick-1",
+        sheetId: null,
+        createdAt: "2026-06-21T09:00:00.000Z",
+        durationMs: quickArtifact.durationMs,
+        sizeBytes: quickArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: quickArtifact.dataUrl,
+        artifactAnalysis: {
+          decodedDurationMs: quickArtifact.durationMs,
+          sampleRate: 8_000,
+          peakAmplitude: 0.35,
+          rmsAmplitude: 0.24,
+          estimatedFrequencyHz: 440,
+          isSilent: false
+        },
+        settings: {
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-beta",
+        type: "sheet",
+        origin: "user",
+        name: "Beta sheet take",
+        sessionId: "session-sheet-1",
+        sheetId: "sheet-42",
+        sheetName: "Moonlight Etude",
+        createdAt: "2026-06-21T10:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        artifactAnalysis: {
+          decodedDurationMs: sheetArtifact.durationMs,
+          sampleRate: 8_000,
+          peakAmplitude: 0.35,
+          rmsAmplitude: 0.24,
+          estimatedFrequencyHz: 330,
+          isSilent: false
+        },
+        trustedPeaks: [0.1, 0.4, 0.9, 0.45, 0.2],
+        settings: {
+          bpm: 96,
+          timeSignature: "3/4"
+        }
+      },
+      {
+        id: "bad-gamma",
+        type: "quick",
+        origin: "user",
+        name: "Broken audio take",
+        sessionId: "session-quick-1",
+        sheetId: null,
+        createdAt: "2026-06-21T11:00:00.000Z",
+        durationMs: 900,
+        sizeBytes: 12,
+        mimeType: "audio/wav",
+        audioDataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
+        settings: {
+          bpm: 72,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "trusted-missing",
+        type: "sheet",
+        origin: "user",
+        name: "Trusted peaks missing artifact",
+        sessionId: "session-sheet-1",
+        sheetId: "sheet-42",
+        sheetName: "Moonlight Etude",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: 1_000,
+        sizeBytes: 0,
+        mimeType: "audio/wav",
+        audioDataUrl: null,
+        trustedPeaks: [0.1, 0.7, 0.2],
+        settings: {
+          bpm: 96,
+          timeSignature: "3/4"
+        }
+      },
+      {
+        id: "trusted-bad",
+        type: "sheet",
+        origin: "user",
+        name: "Trusted peaks bad artifact",
+        sessionId: "session-sheet-1",
+        sheetId: "sheet-42",
+        sheetName: "Moonlight Etude",
+        createdAt: "2026-06-21T13:00:00.000Z",
+        durationMs: 1_000,
+        sizeBytes: 12,
+        mimeType: "audio/wav",
+        audioDataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
+        trustedPeaks: [0.1, 0.7, 0.2],
+        settings: {
+          bpm: 96,
+          timeSignature: "3/4"
+        }
+      },
+      {
+        id: "mismatch-delta",
+        type: "quick",
+        origin: "user",
+        name: "Duration mismatch take",
+        sessionId: "session-quick-1",
+        sheetId: null,
+        createdAt: "2026-06-21T14:00:00.000Z",
+        durationMs: 4_000,
+        sizeBytes: mismatchArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: mismatchArtifact.dataUrl,
+        settings: {
+          bpm: 88,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "invalid-peaks-epsilon",
+        type: "sheet",
+        origin: "user",
+        name: "Invalid waveform peaks take",
+        sessionId: "session-sheet-1",
+        sheetId: "sheet-42",
+        sheetName: "Moonlight Etude",
+        createdAt: "2026-06-21T15:00:00.000Z",
+        durationMs: invalidPeaksArtifact.durationMs,
+        sizeBytes: invalidPeaksArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: invalidPeaksArtifact.dataUrl,
+        trustedPeaks: [0, 0],
+        settings: {
+          bpm: 96,
+          timeSignature: "3/4"
         }
       }
-
-      writeString(0, "RIFF");
-      view.setUint32(4, 36 + dataSize, true);
-      writeString(8, "WAVE");
-      writeString(12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, 1, true);
-      view.setUint32(24, sampleRate, true);
-      view.setUint32(28, sampleRate * 2, true);
-      view.setUint16(32, 2, true);
-      view.setUint16(34, 16, true);
-      writeString(36, "data");
-      view.setUint32(40, dataSize, true);
-
-      for (let index = 0; index < sampleCount; index += 1) {
-        const sample =
-          Math.sin((2 * Math.PI * frequencyHz * index) / sampleRate) * 0.35;
-        view.setInt16(
-          44 + index * 2,
-          Math.max(-1, Math.min(1, sample)) * 0x7fff,
-          true
-        );
+    ],
+    errorMarkers: [
+      {
+        id: "marker-late",
+        recordingId: "quick-alpha",
+        timestampMs: 900,
+        note: "Late accent"
+      },
+      {
+        id: "marker-early",
+        recordingId: "quick-alpha",
+        timestampMs: 500,
+        note: "Early entrance"
       }
-
-      let binary = "";
-      const bytes = new Uint8Array(buffer);
-
-      for (let index = 0; index < bytes.length; index += 1) {
-        binary += String.fromCharCode(bytes[index]);
-      }
-
-      return {
-        dataUrl: `data:audio/wav;base64,${window.btoa(binary)}`,
-        sizeBytes: bytes.length,
-        durationMs: durationSeconds * 1_000
-      };
-    }
-
-    const quickArtifact = createWavDataUrl(440, 1);
-    const sheetArtifact = createWavDataUrl(330, 1.2);
-    const mismatchArtifact = createWavDataUrl(220, 1);
-    const invalidPeaksArtifact = createWavDataUrl(260, 1);
-
-    window.localStorage.setItem(
-      "metronome-practice:v0:quick-recordings",
-      JSON.stringify({
-        sessions: [
-          { id: "session-quick-1", sourceType: "quick" },
-          { id: "session-sheet-1", sourceType: "sheet" }
-        ],
-        recordings: [
-          {
-            id: "quick-alpha",
-            type: "quick",
-            origin: "user",
-            name: "Alpha quick take",
-            sessionId: "session-quick-1",
-            sheetId: null,
-            createdAt: "2026-06-21T09:00:00.000Z",
-            durationMs: quickArtifact.durationMs,
-            sizeBytes: quickArtifact.sizeBytes,
-            mimeType: "audio/wav",
-            audioDataUrl: quickArtifact.dataUrl,
-            artifactAnalysis: {
-              decodedDurationMs: quickArtifact.durationMs,
-              sampleRate: 8_000,
-              peakAmplitude: 0.35,
-              rmsAmplitude: 0.24,
-              estimatedFrequencyHz: 440,
-              isSilent: false
-            },
-            settings: {
-              bpm: 120,
-              timeSignature: "4/4"
-            }
-          },
-          {
-            id: "sheet-beta",
-            type: "sheet",
-            origin: "user",
-            name: "Beta sheet take",
-            sessionId: "session-sheet-1",
-            sheetId: "sheet-42",
-            sheetName: "Moonlight Etude",
-            createdAt: "2026-06-21T10:00:00.000Z",
-            durationMs: sheetArtifact.durationMs,
-            sizeBytes: sheetArtifact.sizeBytes,
-            mimeType: "audio/wav",
-            audioDataUrl: sheetArtifact.dataUrl,
-            artifactAnalysis: {
-              decodedDurationMs: sheetArtifact.durationMs,
-              sampleRate: 8_000,
-              peakAmplitude: 0.35,
-              rmsAmplitude: 0.24,
-              estimatedFrequencyHz: 330,
-              isSilent: false
-            },
-            trustedPeaks: [0.1, 0.4, 0.9, 0.45, 0.2],
-            settings: {
-              bpm: 96,
-              timeSignature: "3/4"
-            }
-          },
-          {
-            id: "bad-gamma",
-            type: "quick",
-            origin: "user",
-            name: "Broken audio take",
-            sessionId: "session-quick-1",
-            sheetId: null,
-            createdAt: "2026-06-21T11:00:00.000Z",
-            durationMs: 900,
-            sizeBytes: 12,
-            mimeType: "audio/wav",
-            audioDataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
-            settings: {
-              bpm: 72,
-              timeSignature: "4/4"
-            }
-          },
-          {
-            id: "trusted-missing",
-            type: "sheet",
-            origin: "user",
-            name: "Trusted peaks missing artifact",
-            sessionId: "session-sheet-1",
-            sheetId: "sheet-42",
-            sheetName: "Moonlight Etude",
-            createdAt: "2026-06-21T12:00:00.000Z",
-            durationMs: 1_000,
-            sizeBytes: 0,
-            mimeType: "audio/wav",
-            audioDataUrl: null,
-            trustedPeaks: [0.1, 0.7, 0.2],
-            settings: {
-              bpm: 96,
-              timeSignature: "3/4"
-            }
-          },
-          {
-            id: "trusted-bad",
-            type: "sheet",
-            origin: "user",
-            name: "Trusted peaks bad artifact",
-            sessionId: "session-sheet-1",
-            sheetId: "sheet-42",
-            sheetName: "Moonlight Etude",
-            createdAt: "2026-06-21T13:00:00.000Z",
-            durationMs: 1_000,
-            sizeBytes: 12,
-            mimeType: "audio/wav",
-            audioDataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
-            trustedPeaks: [0.1, 0.7, 0.2],
-            settings: {
-              bpm: 96,
-              timeSignature: "3/4"
-            }
-          },
-          {
-            id: "mismatch-delta",
-            type: "quick",
-            origin: "user",
-            name: "Duration mismatch take",
-            sessionId: "session-quick-1",
-            sheetId: null,
-            createdAt: "2026-06-21T14:00:00.000Z",
-            durationMs: 4_000,
-            sizeBytes: mismatchArtifact.sizeBytes,
-            mimeType: "audio/wav",
-            audioDataUrl: mismatchArtifact.dataUrl,
-            settings: {
-              bpm: 88,
-              timeSignature: "4/4"
-            }
-          },
-          {
-            id: "invalid-peaks-epsilon",
-            type: "sheet",
-            origin: "user",
-            name: "Invalid waveform peaks take",
-            sessionId: "session-sheet-1",
-            sheetId: "sheet-42",
-            sheetName: "Moonlight Etude",
-            createdAt: "2026-06-21T15:00:00.000Z",
-            durationMs: invalidPeaksArtifact.durationMs,
-            sizeBytes: invalidPeaksArtifact.sizeBytes,
-            mimeType: "audio/wav",
-            audioDataUrl: invalidPeaksArtifact.dataUrl,
-            trustedPeaks: [0, 0],
-            settings: {
-              bpm: 96,
-              timeSignature: "3/4"
-            }
-          }
-        ],
-        errorMarkers: [
-          {
-            id: "marker-late",
-            recordingId: "quick-alpha",
-            timestampMs: 900,
-            note: "Late accent"
-          },
-          {
-            id: "marker-early",
-            recordingId: "quick-alpha",
-            timestampMs: 500,
-            note: "Early entrance"
-          }
-        ]
-      })
-    );
+    ]
   });
 
   await page.reload();
   await expect(page.getByTestId("recordings-list")).toBeVisible();
   await expect(page.getByText("Alpha quick take")).toBeVisible();
   await expect(page.getByTestId("recording-row-sheet-beta")).toBeVisible();
-  const decodedArtifactEvidence = await page.evaluate(async () => {
-    async function decodeRecording(recordingId: string) {
-      const rawValue = window.localStorage.getItem(
-        "metronome-practice:v0:quick-recordings"
-      );
-      const parsed = rawValue ? JSON.parse(rawValue) : null;
-      const recording = parsed.recordings.find(
-        (item: { id: string }) => item.id === recordingId
-      );
-      const audioWindow = window as Window &
-        typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-      const AudioContextConstructor =
-        audioWindow.AudioContext || audioWindow.webkitAudioContext;
-
-      if (!AudioContextConstructor || !recording.audioDataUrl) {
-        throw new Error(`Cannot decode ${recordingId}.`);
-      }
-
-      const response = await fetch(recording.audioDataUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioContext = new AudioContextConstructor();
-      const audioBuffer = await audioContext.decodeAudioData(
-        arrayBuffer.slice(0)
-      );
-      const samples = audioBuffer.getChannelData(0);
-      let peakAmplitude = 0;
-      let sumSquares = 0;
-
-      for (let index = 0; index < samples.length; index += 1) {
-        const sample = samples[index] ?? 0;
-        peakAmplitude = Math.max(peakAmplitude, Math.abs(sample));
-        sumSquares += sample * sample;
-      }
-
-      await audioContext.close();
-
-      return {
-        decodedDurationMs: audioBuffer.duration * 1_000,
-        peakAmplitude,
-        rmsAmplitude: Math.sqrt(sumSquares / Math.max(1, samples.length))
-      };
-    }
-
-    return {
-      quick: await decodeRecording("quick-alpha"),
-      sheet: await decodeRecording("sheet-beta")
-    };
-  });
+  const decodedArtifactEvidence = {
+    quick: await decodeRecordingHistoryAudio(page, "quick-alpha"),
+    sheet: await decodeRecordingHistoryAudio(page, "sheet-beta")
+  };
 
   expect(decodedArtifactEvidence.quick.decodedDurationMs).toBeGreaterThan(950);
   expect(decodedArtifactEvidence.quick.decodedDurationMs).toBeLessThan(1_050);
@@ -473,34 +354,33 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   expect(decodedArtifactEvidence.sheet.peakAmplitude).toBeGreaterThan(0.2);
   expect(decodedArtifactEvidence.sheet.rmsAmplitude).toBeGreaterThan(0.1);
 
-  const originalQuickAlphaSnapshot = await page.evaluate(() => {
-    const rawValue = window.localStorage.getItem(
-      "metronome-practice:v0:quick-recordings"
-    );
-    const parsed = rawValue ? JSON.parse(rawValue) : null;
-    const recording = parsed.recordings.find(
-      (item: { id: string }) => item.id === "quick-alpha"
-    );
+  const originalSnapshot = await readRecordingHistory(page);
+  const originalRecording = originalSnapshot.recordings.find(
+    (item: { id: string }) => item.id === "quick-alpha"
+  );
 
-    return {
-      id: recording.id,
-      type: recording.type,
-      origin: recording.origin,
-      name: recording.name,
-      sessionId: recording.sessionId,
-      sheetId: recording.sheetId,
-      createdAt: recording.createdAt,
-      durationMs: recording.durationMs,
-      sizeBytes: recording.sizeBytes,
-      mimeType: recording.mimeType,
-      audioDataUrl: recording.audioDataUrl,
-      artifactAnalysis: recording.artifactAnalysis,
-      settings: {
-        bpm: recording.settings.bpm,
-        timeSignature: recording.settings.timeSignature
-      }
-    };
-  });
+  if (!originalRecording) {
+    throw new Error("Expected quick-alpha recording to be seeded.");
+  }
+
+  const originalQuickAlphaSnapshot = {
+    id: originalRecording.id,
+    type: originalRecording.type,
+    origin: originalRecording.origin,
+    name: originalRecording.name,
+    sessionId: originalRecording.sessionId,
+    sheetId: originalRecording.sheetId,
+    createdAt: originalRecording.createdAt,
+    durationMs: originalRecording.durationMs,
+    sizeBytes: originalRecording.sizeBytes,
+    mimeType: originalRecording.mimeType,
+    audioDataUrl: originalRecording.audioDataUrl,
+    artifactAnalysis: originalRecording.artifactAnalysis,
+    settings: {
+      bpm: originalRecording.settings.bpm,
+      timeSignature: originalRecording.settings.timeSignature
+    }
+  };
 
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Alpha");
   await expect(page.getByTestId("recording-row-quick-alpha")).toBeVisible();
@@ -617,54 +497,48 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await page.getByRole("button", { name: "Stop recording" }).click();
   await expect(page.getByText(/^Recording saved/)).toBeVisible();
 
-  const continuedRecordingEvidence = await page.evaluate(() => {
-    const rawValue = window.localStorage.getItem(
-      "metronome-practice:v0:quick-recordings"
-    );
-    const parsed = rawValue ? JSON.parse(rawValue) : null;
-    const original = parsed.recordings.find(
-      (recording: { id: string }) => recording.id === "quick-alpha"
-    );
-    const continued = parsed.recordings.find(
-      (recording: { id: string; type: string; origin: string }) =>
-        recording.id !== "quick-alpha" &&
-        recording.type === "quick" &&
-        recording.origin === "user"
-    );
-
-    return {
-      original: original
-        ? {
-            id: original.id,
-            type: original.type,
-            origin: original.origin,
-            name: original.name,
-            sessionId: original.sessionId,
-            sheetId: original.sheetId,
-            createdAt: original.createdAt,
-            durationMs: original.durationMs,
-            sizeBytes: original.sizeBytes,
-            mimeType: original.mimeType,
-            audioDataUrl: original.audioDataUrl,
-            artifactAnalysis: original.artifactAnalysis,
-            settings: {
-              bpm: original.settings.bpm,
-              timeSignature: original.settings.timeSignature
-            }
+  const continuedSnapshot = await readRecordingHistory(page);
+  const originalAfterContinue = continuedSnapshot.recordings.find(
+    (recording: { id: string }) => recording.id === "quick-alpha"
+  );
+  const continued = continuedSnapshot.recordings.find(
+    (recording: { id: string; type: string; origin: string }) =>
+      recording.id !== "quick-alpha" &&
+      recording.type === "quick" &&
+      recording.origin === "user"
+  );
+  const continuedRecordingEvidence = {
+    original: originalAfterContinue
+      ? {
+          id: originalAfterContinue.id,
+          type: originalAfterContinue.type,
+          origin: originalAfterContinue.origin,
+          name: originalAfterContinue.name,
+          sessionId: originalAfterContinue.sessionId,
+          sheetId: originalAfterContinue.sheetId,
+          createdAt: originalAfterContinue.createdAt,
+          durationMs: originalAfterContinue.durationMs,
+          sizeBytes: originalAfterContinue.sizeBytes,
+          mimeType: originalAfterContinue.mimeType,
+          audioDataUrl: originalAfterContinue.audioDataUrl,
+          artifactAnalysis: originalAfterContinue.artifactAnalysis,
+          settings: {
+            bpm: originalAfterContinue.settings.bpm,
+            timeSignature: originalAfterContinue.settings.timeSignature
           }
-        : null,
-      continued: continued
-        ? {
-            id: continued.id,
-            durationMs: continued.durationMs,
-            sessionId: continued.sessionId,
-            decodedDurationMs:
-              continued.artifactAnalysis?.decodedDurationMs ?? null,
-            isSilent: continued.artifactAnalysis?.isSilent ?? null
-          }
-        : null
-    };
-  });
+        }
+      : null,
+    continued: continued
+      ? {
+          id: continued.id,
+          durationMs: continued.durationMs,
+          sessionId: continued.sessionId,
+          decodedDurationMs:
+            continued.artifactAnalysis?.decodedDurationMs ?? null,
+          isSilent: continued.artifactAnalysis?.isSilent ?? null
+        }
+      : null
+  };
 
   expect(continuedRecordingEvidence.original).toEqual(
     originalQuickAlphaSnapshot
@@ -767,26 +641,19 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
 
   await page.reload();
   await expect(page.getByText("Alpha quick take")).toBeHidden();
-  const deletedEvidence = await page.evaluate(() => {
-    const rawValue = window.localStorage.getItem(
-      "metronome-practice:v0:quick-recordings"
-    );
-    const parsed = rawValue ? JSON.parse(rawValue) : null;
-
-    return {
-      hasDeletedRecording: parsed.recordings.some(
+  const afterDeleteSnapshot = await readRecordingHistory(page);
+  const deletedEvidence = {
+    hasDeletedRecording: afterDeleteSnapshot.recordings.some(
+      (recording: { id: string }) => recording.id === "quick-alpha"
+    ),
+    hasDeletedMarker: afterDeleteSnapshot.errorMarkers.some(
+      (marker: { recordingId: string }) => marker.recordingId === "quick-alpha"
+    ),
+    deletedArtifact:
+      afterDeleteSnapshot.recordings.find(
         (recording: { id: string }) => recording.id === "quick-alpha"
-      ),
-      hasDeletedMarker: parsed.errorMarkers.some(
-        (marker: { recordingId: string }) =>
-          marker.recordingId === "quick-alpha"
-      ),
-      deletedArtifact:
-        parsed.recordings.find(
-          (recording: { id: string }) => recording.id === "quick-alpha"
-        )?.audioDataUrl ?? null
-    };
-  });
+      )?.audioDataUrl ?? null
+  };
 
   expect(deletedEvidence).toEqual({
     hasDeletedRecording: false,

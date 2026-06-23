@@ -8,13 +8,11 @@ import {
   type SheetRecordingMetadata
 } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
-import { clampBpm } from "@/lib/quick-metronome/control";
 import {
   BrowserMetronomeService,
   type MetronomeTick
 } from "@/lib/quick-metronome/metronome-service";
-import type { MetronomeSettings } from "@/lib/quick-metronome/types";
-import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
+import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
@@ -31,7 +29,7 @@ import { PracticeStatusPanel } from "@/components/sheet-practice/controls/practi
 import { TransportActionsPanel } from "@/components/sheet-practice/controls/transport-actions-panel";
 import type { SheetPracticeControlsProps } from "@/components/sheet-practice/controls/types";
 
-export const SHEET_RECORDING_HARNESS_EVENT =
+const SHEET_RECORDING_HARNESS_EVENT =
   "sheet-practice-controls:set-recording-harness-active";
 
 type SheetMetronomeStartContext = {
@@ -86,9 +84,14 @@ export function SheetPracticeControls({
     () => createSheetRecordingService(),
     [createSheetRecordingService]
   );
-  const [settings, setSettings] = useState<MetronomeSettings>(
-    initialState.settings
-  );
+  const {
+    settings,
+    bpmDraft,
+    setBpmDraft,
+    commitBpmInput,
+    stepBpmInput,
+    updateSettings
+  } = useMetronomeSettingsState(initialState.settings);
   const [recordingHarnessActive, setRecordingHarnessActive] = useState(false);
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "saving"
@@ -101,6 +104,7 @@ export function SheetPracticeControls({
   const [recordings, setRecordings] = useState<SheetRecordingMetadata[]>([]);
   const [latestSheetRecording, setLatestSheetRecording] =
     useState<ReviewRecording | null>(null);
+  const [measureGridRevision, setMeasureGridRevision] = useState(0);
   const [message, setMessage] = useState(
     "Ready. Viewing the sheet has not started practice."
   );
@@ -161,21 +165,6 @@ export function SheetPracticeControls({
     };
   }, [refreshSession, sessionService, sheetRecordingService]);
 
-  function updateSettings(nextSettings: Partial<MetronomeSettings>) {
-    setSettings((currentSettings) => ({
-      ...currentSettings,
-      ...nextSettings,
-      bpm:
-        nextSettings.bpm === undefined
-          ? currentSettings.bpm
-          : clampBpm(nextSettings.bpm)
-    }));
-  }
-
-  const { bpmDraft, setBpmDraft, commitBpmInput, stepBpmInput } =
-    useMetronomeBpmDraft(settings.bpm, (nextBpm) =>
-      updateSettings({ bpm: nextBpm })
-    );
   const shouldCreatePracticeAgainSession =
     Boolean(sourceRecordingId) &&
     consumedSourceRecordingId !== sourceRecordingId;
@@ -484,6 +473,7 @@ export function SheetPracticeControls({
           sheetId={sheetId}
           practiceSegmentService={practiceSegmentService}
           measureGridService={measureGridService}
+          measureGridRevision={measureGridRevision}
         />
         <MeasureGridCalibrationPanel
           sheetId={sheetId}
@@ -492,6 +482,7 @@ export function SheetPracticeControls({
           fallbackSettings={initialState.settings}
           currentTimestampMs={currentMeasureGridTimestampMs}
           measureGridService={measureGridService}
+          onGridSaved={() => setMeasureGridRevision((revision) => revision + 1)}
         />
       </div>
       <div className="border-border text-muted-foreground flex flex-wrap items-center gap-3 border-t px-3 py-2 text-xs">

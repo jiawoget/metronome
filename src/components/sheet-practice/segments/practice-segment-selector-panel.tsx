@@ -17,6 +17,7 @@ export type PracticeSegmentSelectorPanelProps = {
   sheetId: string;
   practiceSegmentService?: PracticeSegmentService;
   measureGridService?: MeasureGridService;
+  measureGridRevision?: number;
 };
 
 type LoadState = "loading" | "ready" | "error";
@@ -93,7 +94,8 @@ function getSegmentStatus(segment: PracticeSegment, currentGrid: MeasureGrid | n
 export function PracticeSegmentSelectorPanel({
   sheetId,
   practiceSegmentService = browserPracticeSegmentService,
-  measureGridService = browserMeasureGridService
+  measureGridService = browserMeasureGridService,
+  measureGridRevision = 0
 }: PracticeSegmentSelectorPanelProps) {
   const [loadResult, setLoadResult] = useState<SegmentSelectorLoadResult>({
     sheetId: null,
@@ -153,7 +155,7 @@ export function PracticeSegmentSelectorPanel({
     return () => {
       isActive = false;
     };
-  }, [measureGridService, practiceSegmentService, sheetId]);
+  }, [measureGridRevision, measureGridService, practiceSegmentService, sheetId]);
 
   const isLoadedSheet = loadResult.sheetId === sheetId;
   const effectiveLoadState = isLoadedSheet ? loadResult.loadState : "loading";

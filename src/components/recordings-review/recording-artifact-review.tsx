@@ -60,7 +60,7 @@ export type RecordingPlaybackControls = {
   seekToMs: (timestampMs: number) => RecordingSeekResult;
 };
 
-export type RecordingSeekResult = {
+type RecordingSeekResult = {
   targetTimeMs: number;
   currentTimeMs: number;
 };
@@ -184,34 +184,6 @@ export function RecordingArtifactReview({
   }, [adapter, artifactState.status, onPlaybackControlsChange, recording]);
 
   useEffect(() => {
-    const updateCurrentTime = (nextCurrentTimeMs: number) => {
-      setCurrentTimeMs(nextCurrentTimeMs);
-      onPlaybackTimeChange?.(nextCurrentTimeMs);
-    };
-    if (!onPlaybackTimeChange) {
-      const handleTimeUpdate = (event: Event) => {
-        const detail = (
-          event as CustomEvent<{ recordingId?: string; currentTimeMs?: number }>
-        ).detail;
-
-        if (
-          detail?.recordingId === recording.id &&
-          typeof detail.currentTimeMs === "number"
-        ) {
-          setCurrentTimeMs(detail.currentTimeMs);
-        }
-      };
-
-      window.addEventListener("recordings-review:timeupdate", handleTimeUpdate);
-
-      return () => {
-        window.removeEventListener(
-          "recordings-review:timeupdate",
-          handleTimeUpdate
-        );
-      };
-    }
-
     const handleTimeUpdate = (event: Event) => {
       const detail = (
         event as CustomEvent<{ recordingId?: string; currentTimeMs?: number }>
@@ -221,7 +193,8 @@ export function RecordingArtifactReview({
         detail?.recordingId === recording.id &&
         typeof detail.currentTimeMs === "number"
       ) {
-        updateCurrentTime(detail.currentTimeMs);
+        setCurrentTimeMs(detail.currentTimeMs);
+        onPlaybackTimeChange?.(detail.currentTimeMs);
       }
     };
 

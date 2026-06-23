@@ -9,13 +9,12 @@ import {
   seedMeasureGridRecordForTests
 } from "@/infrastructure/db/browser-measure-grid-service";
 import { createMeasureGridService, type MeasureGridRepository } from "@/services/measure-grid";
+import { buildMeasureGrid, TEST_ISO_DATE } from "./factories/practice";
 
-const baseGrid: MeasureGrid = {
+const baseGrid: MeasureGrid = buildMeasureGrid({
   bpm: 120,
-  timeSignature: "4/4",
-  pickupBeats: 0,
   measureOneOffsetMs: 0
-};
+});
 
 function createMemoryMeasureGridRepository(initialEntries: Array<[string, MeasureGrid]> = []): MeasureGridRepository {
   const grids = new Map(initialEntries);
@@ -326,7 +325,7 @@ describe("measure grid browser repository", () => {
   it("returns safe absence for a true non-object persisted row", async () => {
     await seedMeasureGridRecordForTests("sheet-non-object", {
       grid: savedGrid,
-      updatedAt: "2026-06-23T10:00:00.000Z"
+      updatedAt: TEST_ISO_DATE
     });
 
     const originalGet = IDBObjectStore.prototype.get;
@@ -358,110 +357,46 @@ describe("measure grid browser repository", () => {
     }
   });
 
-  it("returns safe absence for malformed persisted rows", async () => {
-    await seedMeasureGridRecordForTests("sheet-no-grid", {
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
-    await seedMeasureGridRecordForTests("sheet-missing-offset", {
-      grid: {
-        bpm: 120,
-        timeSignature: "4/4",
-        pickupBeats: 0
-      },
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
-    await seedMeasureGridRecordForTests("sheet-bad-signature", {
-      grid: {
-        bpm: 120,
-        timeSignature: "5/4",
-        pickupBeats: 0,
-        measureOneOffsetMs: 0
-      },
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
-    await seedMeasureGridRecordForTests("sheet-low-bpm", {
-      grid: {
-        bpm: 29,
-        timeSignature: "4/4",
-        pickupBeats: 0,
-        measureOneOffsetMs: 0
-      },
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
-    await seedMeasureGridRecordForTests("sheet-high-bpm", {
-      grid: {
-        bpm: 301,
-        timeSignature: "4/4",
-        pickupBeats: 0,
-        measureOneOffsetMs: 0
-      },
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
-    await seedMeasureGridRecordForTests("sheet-fractional-bpm", {
-      grid: {
-        bpm: 120.5,
-        timeSignature: "4/4",
-        pickupBeats: 0,
-        measureOneOffsetMs: 0
-      },
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
-    await seedMeasureGridRecordForTests("sheet-bad-pickup", {
-      grid: {
-        bpm: 120,
-        timeSignature: "3/4",
-        pickupBeats: 3,
-        measureOneOffsetMs: 0
-      },
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
-    await seedMeasureGridRecordForTests("sheet-fractional-pickup", {
-      grid: {
-        bpm: 120,
-        timeSignature: "4/4",
-        pickupBeats: 0.5,
-        measureOneOffsetMs: 0
-      },
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
-    await seedMeasureGridRecordForTests("sheet-bad-offset", {
-      grid: {
-        bpm: 120,
-        timeSignature: "4/4",
-        pickupBeats: 0,
-        measureOneOffsetMs: -1
-      },
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
-    await seedMeasureGridRecordForTests("sheet-nan-offset", {
-      grid: {
-        bpm: 120,
-        timeSignature: "4/4",
-        pickupBeats: 0,
-        measureOneOffsetMs: Number.NaN
-      },
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
-    await seedMeasureGridRecordForTests("sheet-fractional-offset", {
-      grid: {
-        bpm: 120,
-        timeSignature: "4/4",
-        pickupBeats: 0,
-        measureOneOffsetMs: 12.5
-      },
-      updatedAt: "2026-06-23T10:00:00.000Z"
-    });
+  it.each([
+    {
+      sheetId: "sheet-no-grid",
+      value: { updatedAt: TEST_ISO_DATE }
+    },
+    {
+      sheetId: "sheet-missing-offset",
+      value: {
+        grid: {
+          bpm: 120,
+          timeSignature: "4/4",
+          pickupBeats: 0
+        },
+        updatedAt: TEST_ISO_DATE
+      }
+    },
+    {
+      sheetId: "sheet-bad-pickup",
+      value: {
+        grid: {
+          ...baseGrid,
+          timeSignature: "3/4",
+          pickupBeats: 3
+        },
+        updatedAt: TEST_ISO_DATE
+      }
+    },
+    {
+      sheetId: "sheet-bad-offset",
+      value: {
+        grid: {
+          ...baseGrid,
+          measureOneOffsetMs: -1
+        },
+        updatedAt: TEST_ISO_DATE
+      }
+    }
+  ])("returns safe absence for malformed persisted row $sheetId", async ({ sheetId, value }) => {
+    await seedMeasureGridRecordForTests(sheetId, value);
 
-    await expect(browserMeasureGridRepository.getGrid("sheet-no-grid")).resolves.toBeNull();
-    await expect(browserMeasureGridRepository.getGrid("sheet-missing-offset")).resolves.toBeNull();
-    await expect(browserMeasureGridRepository.getGrid("sheet-bad-signature")).resolves.toBeNull();
-    await expect(browserMeasureGridRepository.getGrid("sheet-low-bpm")).resolves.toBeNull();
-    await expect(browserMeasureGridRepository.getGrid("sheet-high-bpm")).resolves.toBeNull();
-    await expect(browserMeasureGridRepository.getGrid("sheet-fractional-bpm")).resolves.toBeNull();
-    await expect(browserMeasureGridRepository.getGrid("sheet-bad-pickup")).resolves.toBeNull();
-    await expect(browserMeasureGridRepository.getGrid("sheet-fractional-pickup")).resolves.toBeNull();
-    await expect(browserMeasureGridRepository.getGrid("sheet-bad-offset")).resolves.toBeNull();
-    await expect(browserMeasureGridRepository.getGrid("sheet-nan-offset")).resolves.toBeNull();
-    await expect(browserMeasureGridRepository.getGrid("sheet-fractional-offset")).resolves.toBeNull();
+    await expect(browserMeasureGridRepository.getGrid(sheetId)).resolves.toBeNull();
   });
 });
