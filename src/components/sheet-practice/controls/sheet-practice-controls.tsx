@@ -19,6 +19,8 @@ import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-trans
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { BrowserSheetRecordingService } from "@/lib/sheet-practice/recording-service";
+import { browserMeasureGridService } from "@/infrastructure/db/browser-measure-grid-service";
+import { MeasureGridCalibrationPanel } from "@/components/sheet-practice/measure-grid/measure-grid-calibration-panel";
 import { MetronomeSettingsPanel } from "@/components/sheet-practice/controls/metronome-settings-panel";
 import {
   createSheetPracticeControlInitialState,
@@ -62,7 +64,9 @@ export function SheetPracticeControls({
   sourceRecordingId = null,
   createMetronomeService = createBrowserMetronomeService,
   createSheetRecordingService = createBrowserSheetRecordingService,
-  sessionService = browserPracticeSessionService
+  sessionService = browserPracticeSessionService,
+  measureGridService = browserMeasureGridService,
+  currentMeasureGridTimestampMs = null
 }: SheetPracticeControlsProps) {
   const initialState = useMemo(
     () =>
@@ -471,6 +475,16 @@ export function SheetPracticeControls({
           stopMetronome={handleStopMetronome}
           startSheetRecording={() => void startSheetRecording()}
           stopSheetRecording={() => void stopSheetRecording()}
+        />
+      </div>
+      <div className="border-border border-t px-3 py-3">
+        <MeasureGridCalibrationPanel
+          sheetId={sheetId}
+          defaultBpm={defaultBpm}
+          defaultTimeSignature={defaultTimeSignature}
+          fallbackSettings={initialState.settings}
+          currentTimestampMs={currentMeasureGridTimestampMs}
+          measureGridService={measureGridService}
         />
       </div>
       <div className="border-border text-muted-foreground flex flex-wrap items-center gap-3 border-t px-3 py-2 text-xs">

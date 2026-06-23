@@ -1,4 +1,5 @@
 import type { PracticeSessionService } from "@/services/practice-session";
+import type { MeasureGridService } from "@/services/measure-grid";
 import type { BrowserMetronomeService } from "@/lib/quick-metronome/metronome-service";
 import type { BrowserSheetRecordingService } from "@/lib/sheet-practice/recording-service";
 
@@ -39,4 +40,6 @@ export type SheetPracticeControlsProps = {
   createMetronomeService?: () => SheetPracticeMetronomeService;
   createSheetRecordingService?: () => SheetPracticeRecordingService;
   sessionService?: SheetPracticeSessionService;
+  measureGridService?: MeasureGridService;
+  currentMeasureGridTimestampMs?: number | null;
 };

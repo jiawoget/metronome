@@ -385,7 +385,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P1-03 measure-grid-calibration-ui",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P1-04 segment-types-and-validation",
