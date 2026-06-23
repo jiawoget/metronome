@@ -23,7 +23,7 @@ const practiceTimeSignatureSchema = z.enum(["2/4", "3/4", "4/4", "6/8"]);
 
 const measureNumberSchema = z.number().finite().int().min(1);
 
-const measureRangeSchema = z
+export const measureRangeSchema = z
   .object({
     startMeasure: measureNumberSchema,
     endMeasure: measureNumberSchema
