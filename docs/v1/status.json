@@ -401,7 +401,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P1-07 segment-create-edit-delete-ui",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P1-08 recording-metadata-segment-fields",
