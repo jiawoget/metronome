@@ -126,6 +126,7 @@ The planning agent may:
 - Specify scope, out of scope, likely files, model tier, acceptance criteria, boundary conditions, and verification evidence for the assigned slice.
 - Specify a complete test coverage plan, including unit, integration, browser E2E, reload/persistence, fixture, and negative cases where applicable.
 - Limit coding agents to existing project patterns, libraries, helpers, and service boundaries; explicitly identify what must not be rebuilt from scratch.
+- Write the refined plan to `docs/v1/implementation-slices/plans/<slice-id-and-name>.md`; chat-only planning output is not enough for `ready_for_coding`.
 
 The planning agent must not mark a feature `verified`.
 

@@ -140,7 +140,7 @@ The planning agent must:
 - Read repository docs directly with `fork_context: false`.
 - Use `gpt-5.5`, medium effort, standard speed.
 - Refine only the assigned slice.
-- Produce a concise implementation-ready slice plan.
+- Produce a detailed implementation-ready planning file under `docs/v1/implementation-slices/plans/`.
 - Confirm scope, out of scope, expected files/areas, acceptance criteria, boundary conditions, verification evidence, model tier, dependencies, and handoff requirements.
 - Define a complete test coverage plan for the slice, including unit, integration, browser E2E, reload/persistence, fixture, and negative cases where applicable.
 - Constrain the coding agent to existing project patterns, libraries, helpers, and service boundaries; explicitly call out what must not be rebuilt from scratch.
@@ -165,7 +165,13 @@ Every slice agent prompt should include paths, not pasted full docs:
 - `docs/v0/design-style-guide.md` for UI work.
 - `docs/v1/ui-design.md` for UI work.
 
-Planning agent prompts should also ask for the planned slice output to be written into the slice file or a clearly named planning note, depending on the scheduler's chosen convention.
+Planning agent prompts must ask for the planned slice output to be written into a clearly named planning note under:
+
+```text
+docs/v1/implementation-slices/plans/
+```
+
+Use filenames like `P1-02-measure-grid-repository.md`. A chat-only planning response is not sufficient to move a slice from `planning_ready` to `ready_for_coding`.
 
 ## Scheduling Rule
 

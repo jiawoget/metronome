@@ -381,7 +381,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P1-02 measure-grid-repository",
-                                                                "status":  "planning_ready"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P1-03 measure-grid-calibration-ui",

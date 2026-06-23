@@ -83,6 +83,7 @@ relevant v0 module contract if needed
 
 Output:
 
+- A detailed planning file under `docs/v1/implementation-slices/plans/`.
 - Refined scope.
 - Out of scope.
 - Likely files or areas.
@@ -95,6 +96,7 @@ Output:
 - Handoff notes.
 
 Planning agent must not edit product code.
+Planning agent output must be durable and file-based; a chat-only handoff is not enough to move a slice to `ready_for_coding`.
 
 ### Coding Agent
 
