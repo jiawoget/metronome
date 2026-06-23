@@ -1,8 +1,8 @@
-# v1 Feature Inventory
+﻿# v1 Feature Inventory
 
 ## Purpose
 
-This inventory defines the v1 feature set before implementation. A feature listed here is not implementation-ready until it has a full v0-style contract and is marked `contract_ready` in `docs/v1/module-status.json`.
+This inventory defines the v1 feature set before implementation. A feature listed here is not implementation-ready until it has a full v0-style contract and is marked `contract_ready` under `product.modules` in `docs/v1/status.json`.
 
 ## Core Practice Spine
 
@@ -538,3 +538,4 @@ Deferred items are tracked in `docs/v2`.
 - Automatic mistake detection and user-facing scoring.
 - Guitar Pro and MusicXML import.
 - Automatic BPM or time-signature detection from imported files.
+

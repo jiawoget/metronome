@@ -1,4 +1,4 @@
-# v1 Agent Implementation Rules
+﻿# v1 Agent Implementation Rules
 
 ## Purpose
 
@@ -12,7 +12,7 @@ For v1 work, required documents are:
 
 - `docs/v1/development-plan.md`
 - `docs/v1/feature-inventory.md`
-- `docs/v1/module-status.json`
+- `docs/v1/status.json`
 - The assigned feature contract file.
 - Relevant v0 module contracts that the v1 feature builds on.
 - `docs/v0/project-structure.md`
@@ -22,25 +22,28 @@ For v1 work, required documents are:
 
 ## Subagent Lifecycle
 
-Each v1 feature must use fresh subagents.
+Each v1 implementation slice must use fresh subagents.
 
-- Create a new coding agent for each feature.
-- Do not reuse a coding agent across features.
-- Create a new review agent for each feature.
-- Create a new verification agent for each feature.
-- Close all feature agents after their assigned pass is complete.
+- Create a new planning agent for each slice.
+- Create a new coding agent for each slice.
+- Do not reuse a coding agent across slices.
+- Create a new review agent for each slice.
+- Create a new verification agent for each slice.
+- Close all slice agents after their assigned pass is complete.
 - Use `fork_context: false` so agents read repository files instead of inheriting long chat history.
-- Pass file paths, feature id, ownership boundaries, and output requirements in the prompt; do not paste full planning documents into prompts.
+- Pass file paths, slice id, feature id, ownership boundaries, and output requirements in the prompt; do not paste full planning documents into prompts.
 
 The standard lifecycle is:
 
 ```text
-Feature contract_ready
-  -> fresh coding agent implements exactly that feature
-  -> fresh review agent reviews the changed files against the contract
+Slice planning_ready
+  -> fresh planning agent refines exactly that slice
+  -> slice ready_for_coding
+  -> fresh coding agent implements exactly that planned slice
+  -> fresh review agent reviews the changed files against the planned slice and product contract
   -> coding agent fix pass if review finds issues
-  -> fresh verification agent verifies acceptance criteria
-  -> close feature agents
+  -> fresh verification agent verifies planned slice acceptance criteria
+  -> close slice agents
 ```
 
 ## Model, Effort, And Speed Defaults
@@ -54,6 +57,7 @@ Do not default every slice to the highest model. The scheduler should choose the
 Global fallback assignments, used only when a slice file does not yet specify a tier:
 
 ```text
+Planning agent: gpt-5.4-mini, high effort, standard speed
 Coding agent: gpt-5.4, high effort, standard speed
 Review agent: gpt-5.4-mini, high effort, standard speed
 Verification agent: gpt-5.4-mini, high effort, standard speed
@@ -62,6 +66,7 @@ Verification agent: gpt-5.4-mini, high effort, standard speed
 Low-risk pure logic slices should use:
 
 ```text
+Planning agent: gpt-5.4-mini, medium effort, standard speed
 Coding agent: gpt-5.4, medium effort, standard speed
 Review agent: gpt-5.4-mini, medium effort, standard speed
 Verification agent: gpt-5.4-mini, medium effort, standard speed
@@ -72,6 +77,7 @@ User-facing UI implementation should use `gpt-5.5` for the coding agent when the
 High-risk media, timing, recording, waveform, data cleanup, migration, or complex browser E2E slices should use:
 
 ```text
+Planning agent: gpt-5.4 or gpt-5.5, high effort, standard speed
 Coding agent: gpt-5.5, high effort, standard speed
 Review agent: gpt-5.4 or gpt-5.5, high effort, standard speed
 Verification agent: gpt-5.4, high effort, standard speed
@@ -110,8 +116,12 @@ The planning agent may:
 - Split large modules into smaller feature contracts.
 - Set a feature to `contract_ready` only when the full contract is written.
 - Move deferred work into `docs/v2`.
+- Refine exactly one implementation slice from `planning_ready` to `ready_for_coding`.
+- Specify scope, out of scope, likely files, model tier, acceptance criteria, and verification evidence for the assigned slice.
 
 The planning agent must not mark a feature `verified`.
+
+The planning agent must not implement product code.
 
 ## Implementation Agent
 
@@ -188,3 +198,4 @@ Verification must fail if:
 - User-facing UI ignores the reference image or v1 UI design requirements.
 - The feature implements v2 scope.
 - A previously verified core v0 workflow is broken.
+

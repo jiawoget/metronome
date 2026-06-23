@@ -1,4 +1,4 @@
-# Practice Segments v1 Feature Definition
+﻿# Practice Segments v1 Feature Definition
 
 ## Purpose
 
@@ -402,7 +402,7 @@ Verification must report FAIL if:
 `practice.measure-grid` is done only when:
 
 - The full contract is written and approved.
-- `docs/v1/module-status.json` marks `practice.measure-grid` as `contract_ready` before implementation starts.
+- `docs/v1/status.json` marks `practice.measure-grid` as `contract_ready` before implementation starts.
 - A fresh coding agent implements only this feature.
 - The implementation handoff is complete.
 - A fresh review agent reviews the changed files against this contract.
@@ -844,7 +844,7 @@ Verification must report FAIL if:
 `practice.practice-segments` is done only when:
 
 - The full contract is written and approved.
-- `docs/v1/module-status.json` marks `practice.practice-segments` as `contract_ready` before implementation starts.
+- `docs/v1/status.json` marks `practice.practice-segments` as `contract_ready` before implementation starts.
 - `practice.measure-grid` is available as the dependency for derived timing.
 - A fresh coding agent implements only this feature.
 - The implementation handoff is complete.
@@ -1243,7 +1243,7 @@ Verification must report FAIL if:
 `practice.segment-recording` is done only when:
 
 - The full contract is written and approved.
-- `docs/v1/module-status.json` marks `practice.segment-recording` as `contract_ready` before implementation starts.
+- `docs/v1/status.json` marks `practice.segment-recording` as `contract_ready` before implementation starts.
 - `practice.measure-grid` and `practice.practice-segments` are available as dependencies.
 - A fresh coding agent implements only this feature.
 - The implementation handoff is complete.
@@ -1647,7 +1647,7 @@ Verification must report FAIL if:
 `practice.segment-rerecording` is done only when:
 
 - The full contract is written and approved.
-- `docs/v1/module-status.json` marks `practice.segment-rerecording` as `contract_ready` before implementation starts.
+- `docs/v1/status.json` marks `practice.segment-rerecording` as `contract_ready` before implementation starts.
 - `practice.measure-grid`, `practice.practice-segments`, and `practice.segment-recording` are available as dependencies.
 - A fresh coding agent implements only this feature.
 - The implementation handoff is complete.
@@ -1802,3 +1802,4 @@ This feature must not create:
 ## Done Definition
 
 This feature is complete only when the full contract is written, all acceptance criteria pass, segment persistence is verified after reload, and a separate verification pass reports PASS.
+

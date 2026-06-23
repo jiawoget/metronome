@@ -1,0 +1,796 @@
+﻿{
+    "schemaVersion":  1,
+    "sourceOfTruth":  "docs/v1/status.json",
+    "product":  {
+                    "modules":  [
+                                    {
+                                        "module":  "design-style",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "design-style.analytics-visuals",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "design-style.segment-visual-states",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "design-style.review-comparison-views",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "01-app-shell-home",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "home.dashboard-analytics",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "home.practice-streaks",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "home.goal-management",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "home.recent-activity-timeline",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "home.continue-practice-recommendations",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "home.command-palette",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "02-quick-metronome",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "quick.auto-increase",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "quick.mute-training",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "quick.practice-templates",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "quick.warmup-routines",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "quick.tempo-progress-history",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "quick.advanced-countdown",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "03-recordings-review",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "recordings.review-grouping",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "recordings.tags-favorites-archive",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "recordings.recording-comparison",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "recordings.audio-export",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "04-sheet-library",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "library.tags-favorites",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "library.batch-import",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "library.recent-practice-summary",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "library.review-by-sheet",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "05-sheet-practice",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "practice.measure-grid",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "practice.practice-segments",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "practice.segment-recording",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "practice.segment-rerecording",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "05a-sheet-viewer",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "viewer.page-thumbnails",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "viewer.multi-page-jump",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "viewer.advanced-zoom-pan",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "viewer.assisted-page-turning",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "05b-practice-controls",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "controls.segment-tempo",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "controls.bar-aware-count-in",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "controls.per-sheet-metronome-presets",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "05c-sheet-recording-review",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "takes.multi-take-management",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "takes.active-best-take",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "takes.take-history",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "takes.waveform-comparison",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "05d-error-markers",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "markers.categories-severity",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "markers.segment-markers",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "markers.waveform-overlay",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "05e-session-integration",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "sessions.event-timeline",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "sessions.segment-sessions",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "sessions.session-history-grouping",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "sessions.goal-completion",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "06-reference-system",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "reference.ab-loop",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "reference.playback-speed",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "reference.manual-offset-alignment",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "reference.segment-binding",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "reference.waveform-display",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "07-settings-local-data",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "settings.audio-device-selection",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "settings.theme-system",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "settings.notification-settings",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "settings.data-import-export",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "settings.storage-usage-breakdown",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "settings.selective-cleanup",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "08-practice-session",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "practice-session.event-timeline",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "practice-session.segment-history",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "practice-session.session-comparison",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "practice-session.duration-rules",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    },
+                                    {
+                                        "module":  "09-audio-analysis",
+                                        "status":  "contract_ready",
+                                        "features":  [
+                                                         {
+                                                             "feature":  "analysis.engine-boundary",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "analysis.peak-precomputation",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "analysis.onset-detection-infrastructure",
+                                                             "status":  "contract_ready"
+                                                         },
+                                                         {
+                                                             "feature":  "analysis.reference-recording-support",
+                                                             "status":  "contract_ready"
+                                                         }
+                                                     ]
+                                    }
+                                ]
+                },
+    "implementation":  {
+                           "packs":  [
+                                         {
+                                             "pack":  "pack-1-practice-segment-mvp",
+                                             "status":  "slicing_ready",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "P1-01 measure-grid-types-and-math",
+                                                                "status":  "coding_done"
+                                                            },
+                                                            {
+                                                                "slice":  "P1-02 measure-grid-repository",
+                                                                "status":  "planning_ready"
+                                                            },
+                                                            {
+                                                                "slice":  "P1-03 measure-grid-calibration-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P1-04 segment-types-and-validation",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P1-05 segment-repository",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P1-06 segment-selector-read-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P1-07 segment-create-edit-delete-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P1-08 recording-metadata-segment-fields",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P1-09 recording-save-segment-context",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P1-10 rerecord-workflow-state",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P1-11 rerecord-record-again-action",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P1-12 rerecord-two-artifact-verification",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
+                                         },
+                                         {
+                                             "pack":  "pack-2-segment-take-review",
+                                             "status":  "not_started",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "P2-01 take-grouping-domain",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P2-02 take-grouping-review-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P2-03 best-active-take-metadata",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P2-04 best-active-take-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P2-05 take-history-summary",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P2-06 take-history-return-to-practice",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P2-07 waveform-comparison-source-boundary",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P2-08 waveform-comparison-ui",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
+                                         },
+                                         {
+                                             "pack":  "pack-3-sessions-continue-practice",
+                                             "status":  "not_started",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "P3-01 session-event-model",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-02 session-event-capture",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-03 segment-session-metadata",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-04 session-history-grouping",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-05 session-duration-rules",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-06 home-recent-activity-source",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-07 home-recent-activity-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-08 continue-practice-targets",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-09 continue-practice-ui-navigation",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P3-10 goal-completion-evaluator",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
+                                         },
+                                         {
+                                             "pack":  "pack-4-practice-controls-upgrade",
+                                             "status":  "not_started",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "P4-01 segment-tempo-apply-policy",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P4-02 segment-tempo-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P4-03 bar-count-in-domain",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P4-04 bar-count-in-scheduler",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P4-05 bar-count-in-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P4-06 per-sheet-presets-domain-repository",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P4-07 per-sheet-presets-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P4-08 advanced-countdown-shared-infrastructure",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
+                                         },
+                                         {
+                                             "pack":  "pack-5-library-viewer-upgrade",
+                                             "status":  "not_started",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "P5-01 library-tags-favorites-domain",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P5-02 library-tags-favorites-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P5-03 library-batch-import-orchestrator",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P5-04 library-recent-practice-summary-source",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P5-05 library-recent-practice-summary-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P5-06 library-review-by-sheet-link",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P5-07 viewer-page-thumbnails-service",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P5-08 viewer-page-thumbnails-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P5-09 viewer-page-jump",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P5-10 viewer-zoom-pan-domain",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P5-11 viewer-zoom-pan-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P5-12 viewer-assisted-page-turning",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
+                                         },
+                                         {
+                                             "pack":  "pack-6-quick-metronome-training",
+                                             "status":  "not_started",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "P6-01 auto-increase-domain",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-02 auto-increase-scheduler",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-03 auto-increase-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-04 mute-training-domain",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-05 mute-training-scheduler",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-06 mute-training-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-07 quick-templates-repository",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-08 quick-templates-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-09 warmup-routines-domain-repository",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-10 warmup-routines-runner",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-11 warmup-routines-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-12 tempo-progress-history-source",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-13 tempo-progress-history-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P6-14 quick-advanced-countdown",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
+                                         },
+                                         {
+                                             "pack":  "pack-7-reference-markers",
+                                             "status":  "not_started",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "P7-01 reference-ab-loop-domain",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P7-02 reference-ab-loop-playback",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P7-03 reference-playback-speed",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P7-04 reference-manual-offset",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P7-05 reference-segment-binding",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P7-06 reference-waveform-service",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P7-07 reference-waveform-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P7-08 marker-category-severity-domain",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P7-09 marker-category-severity-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P7-10 marker-segment-context",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P7-11 marker-waveform-overlay",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
+                                         },
+                                         {
+                                             "pack":  "pack-8-settings-local-data",
+                                             "status":  "not_started",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "P8-01 audio-device-adapter",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-02 audio-device-settings-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-03 theme-preference-provider",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-04 theme-settings-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-05 notification-preference-adapter",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-06 notification-settings-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-07 data-export-service",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-08 data-import-validation",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-09 data-import-restore-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-10 storage-usage-service",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-11 storage-usage-ui",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-12 selective-cleanup-rules",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P8-13 selective-cleanup-ui",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
+                                         },
+                                         {
+                                             "pack":  "pack-9-audio-analysis-infrastructure",
+                                             "status":  "not_started",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "P9-01 analysis-engine-interface",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P9-02 analysis-service-boundary",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P9-03 peak-precomputation-service",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P9-04 peak-cache-validation",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P9-05 onset-detection-fixtures",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P9-06 onset-detection-engine",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P9-07 reference-recording-analysis-inputs",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "P9-08 analysis-boundary-verification",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
+                                         }
+                                     ]
+                       }
+}

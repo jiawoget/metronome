@@ -1,4 +1,4 @@
-# v1 Development Plan
+﻿# v1 Development Plan
 
 ## Purpose
 
@@ -86,10 +86,10 @@ Implementation slices live under:
 docs/v1/implementation-slices/
 ```
 
-Slice status is tracked separately from product feature status in:
+All v1 status is tracked in one file:
 
 ```text
-docs/v1/implementation-slices/status.json
+docs/v1/status.json
 ```
 
 Only slices marked `ready_for_coding` may be assigned to a coding agent.
@@ -145,3 +145,4 @@ verification_in_progress
 ```
 
 The planning pass may set features to `contract_ready`. Implementation and verification passes may update only their assigned feature.
+

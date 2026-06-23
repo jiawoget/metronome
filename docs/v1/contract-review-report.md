@@ -1,8 +1,8 @@
-# v1 Contract Review Report
+﻿# v1 Contract Review Report
 
 ## Summary
 
-All v1 features in `docs/v1/module-status.json` are now promoted to `contract_ready`.
+All v1 product features in `docs/v1/status.json` are now promoted to `contract_ready`.
 
 Contract sources:
 
@@ -17,7 +17,7 @@ No product implementation code was intentionally changed.
 
 ## Status Result
 
-Every module and feature status in `docs/v1/module-status.json` is `contract_ready`.
+Every module and product feature status in `docs/v1/status.json` is `contract_ready`.
 
 Status count after planning:
 
@@ -29,7 +29,7 @@ This count includes module-level status entries and feature-level status entries
 
 ## Coverage Result
 
-The review pass checked every feature id from `docs/v1/module-status.json` against the contract source files:
+The review pass checked every feature id from `docs/v1/status.json` under `product.modules` against the contract source files:
 
 ```text
 docs/v1/05f-practice-segments.md
@@ -42,7 +42,7 @@ Coverage check result: no missing `Feature Contract` headings.
 
 - `docs/v1/05f-practice-segments.md`
 - `docs/v1/remaining-feature-contracts.md`
-- `docs/v1/module-status.json`
+- `docs/v1/status.json`
 - `docs/v1/contract-review-report.md`
 
 ## Review Focus
@@ -88,4 +88,5 @@ Do not launch implementation until the relevant contract has been reviewed and a
 - [ ] Confirm module-level statuses should also be `contract_ready`.
 - [ ] Confirm implementation should begin with the Practice Segment spine.
 - [ ] Confirm no product code changes are included in this planning pass.
+
 

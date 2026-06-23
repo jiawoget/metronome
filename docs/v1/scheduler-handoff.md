@@ -1,4 +1,4 @@
-# v1 Scheduler Handoff
+﻿# v1 Scheduler Handoff
 
 ## Current State
 
@@ -20,7 +20,7 @@ The planning pass has produced:
   - `docs/v1/implementation-slices/07-reference-markers.md`
   - `docs/v1/implementation-slices/08-settings-local-data.md`
   - `docs/v1/implementation-slices/09-audio-analysis-infrastructure.md`
-- Slice status: `docs/v1/implementation-slices/status.json`
+- Unified status: `docs/v1/status.json`
 - Contract review report: `docs/v1/contract-review-report.md`
 
 No product implementation code should be assumed complete from this planning work.
@@ -32,8 +32,10 @@ Do not assign agents to broad product features directly.
 Use this lifecycle:
 
 ```text
-Select next ready_for_coding slice
-  -> fresh coding agent implements only that slice
+Select next planning_ready slice
+  -> fresh planning agent refines only that slice
+  -> mark slice ready_for_coding
+  -> fresh coding agent implements only that planned slice
   -> fresh review agent reviews changed files against slice + product contract
   -> coding fix pass if needed
   -> fresh verification agent verifies slice acceptance criteria
@@ -42,7 +44,7 @@ Select next ready_for_coding slice
   -> present pack for user acceptance
 ```
 
-All coding/review/verification agents must:
+All planning/coding/review/verification agents must:
 
 - Use `fork_context: false`.
 - Use standard speed unless the user approves otherwise.
@@ -66,7 +68,7 @@ Source:
 
 ```text
 docs/v1/implementation-slices/01-practice-segment-mvp.md
-docs/v1/implementation-slices/status.json
+docs/v1/status.json
 docs/v1/05f-practice-segments.md
 ```
 
@@ -106,10 +108,13 @@ Open a sheet
 
 ## Important Notes
 
-- `docs/v1/module-status.json` tracks product feature contract readiness, not slice implementation readiness.
-- `docs/v1/implementation-slices/status.json` is the source of truth for implementation scheduling.
+- `docs/v1/status.json` is the only v1 status source of truth.
+- Product feature readiness lives under `product.modules`.
+- Acceptance pack and slice implementation status lives under `implementation.packs`.
 - `docs/v1/implementation-slices/README.md` defines model budget tiers and escalation rules.
-- Only `P1-01 measure-grid-types-and-math` is currently `ready_for_coding`.
+- `P1-01 measure-grid-types-and-math` is currently `coding_done`.
+- `P1-02 measure-grid-repository` is currently `planning_ready`.
 - Later Pack 1 slices should be promoted to `ready_for_coding` only after dependency slices are verified.
 - Pack 2-9 slice files are backlog-level. Before any later pack starts, refine that pack to Pack 1 detail level and assign model tiers.
 - Do not start Pack 2 until Pack 1 is accepted unless the user explicitly reprioritizes.
+
