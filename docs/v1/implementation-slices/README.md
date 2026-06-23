@@ -138,9 +138,12 @@ Do not reuse the planning agent as the coding agent.
 The planning agent must:
 
 - Read repository docs directly with `fork_context: false`.
+- Use `gpt-5.5`, medium effort, standard speed.
 - Refine only the assigned slice.
 - Produce a concise implementation-ready slice plan.
-- Confirm scope, out of scope, expected files/areas, acceptance criteria, verification evidence, model tier, dependencies, and handoff requirements.
+- Confirm scope, out of scope, expected files/areas, acceptance criteria, boundary conditions, verification evidence, model tier, dependencies, and handoff requirements.
+- Define a complete test coverage plan for the slice, including unit, integration, browser E2E, reload/persistence, fixture, and negative cases where applicable.
+- Constrain the coding agent to existing project patterns, libraries, helpers, and service boundaries; explicitly call out what must not be rebuilt from scratch.
 - Avoid product code changes.
 
 The coding agent must implement the planned slice, not reinterpret the broader product contract.
@@ -174,7 +177,9 @@ Launch coding agents only for slices marked `ready_for_coding`, after a fresh pl
 
 ## Model Budget Policy
 
-The scheduler should choose the least expensive model tier that can safely complete the slice.
+The scheduler should always use `gpt-5.5`, medium effort, standard speed for planning agents so slice boundaries and coverage expectations are strong before coding starts.
+
+For coding, review, and verification agents, the scheduler should choose the least expensive model tier that can safely complete the slice.
 
 Use standard speed for all v1 subagents unless the user explicitly approves otherwise.
 
@@ -183,7 +188,7 @@ Use standard speed for all v1 subagents unless the user explicitly approves othe
 Use for pure domain math, validation, formatting, selectors, and small non-UI utilities.
 
 ```text
-Planning agent: gpt-5.4-mini, medium effort, standard speed
+Planning agent: gpt-5.5, medium effort, standard speed
 Coding agent: gpt-5.4, medium effort, standard speed
 Review agent: gpt-5.4-mini, medium effort, standard speed
 Verification agent: gpt-5.4-mini, medium effort, standard speed
@@ -196,7 +201,7 @@ Expected token profile: low. Prefer this tier whenever there is no UI, persisten
 Use for repositories, local storage services, metadata schema changes, and integration tests without complex media artifacts.
 
 ```text
-Planning agent: gpt-5.4-mini, high effort, standard speed
+Planning agent: gpt-5.5, medium effort, standard speed
 Coding agent: gpt-5.4, high effort, standard speed
 Review agent: gpt-5.4-mini, high effort, standard speed
 Verification agent: gpt-5.4-mini, high effort, standard speed
@@ -209,7 +214,7 @@ Expected token profile: medium. Use this tier when persistence after reload or b
 Use for compact UI slices, responsive layout, route wiring, forms, and browser E2E without media capture or complex timing.
 
 ```text
-Planning agent: gpt-5.4, medium effort, standard speed
+Planning agent: gpt-5.5, medium effort, standard speed
 Coding agent: gpt-5.5, high effort, standard speed
 Review agent: gpt-5.4, medium effort, standard speed
 Verification agent: gpt-5.4-mini, high effort, standard speed
@@ -222,7 +227,7 @@ Expected token profile: medium-high. Use this tier for UI because implementation
 Use for recording artifacts, metronome timing, scheduler behavior, waveform decode, audio analysis evidence, or any slice where a false pass could leave fake media behavior.
 
 ```text
-Planning agent: gpt-5.4, high effort, standard speed
+Planning agent: gpt-5.5, medium effort, standard speed
 Coding agent: gpt-5.5, high effort, standard speed
 Review agent: gpt-5.4, high effort, standard speed
 Verification agent: gpt-5.4, high effort, standard speed
@@ -235,7 +240,7 @@ Expected token profile: high. Use this tier only when real artifact, timing, sch
 Use for import/export, backup/restore-like workflows, selective cleanup, data migration, or operations that can corrupt or delete local data.
 
 ```text
-Planning agent: gpt-5.5, high effort, standard speed
+Planning agent: gpt-5.5, medium effort, standard speed
 Coding agent: gpt-5.5, high effort, standard speed
 Review agent: gpt-5.5, high effort, standard speed
 Verification agent: gpt-5.4, high effort, standard speed

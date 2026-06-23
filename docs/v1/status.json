@@ -377,7 +377,7 @@
                                              "slices":  [
                                                             {
                                                                 "slice":  "P1-01 measure-grid-types-and-math",
-                                                                "status":  "ready_for_coding"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P1-02 measure-grid-repository",

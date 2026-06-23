@@ -54,14 +54,16 @@ Slice planning_ready
 
 Use `standard` speed/service tier for v1 subagents unless the user explicitly approves a different speed.
 
-Implementation should use the model tier assigned in the active implementation slice file under `docs/v1/implementation-slices/`.
+Planning agents should always use `gpt-5.5`, medium effort, standard speed.
 
-Do not default every slice to the highest model. The scheduler should choose the least expensive safe model tier and escalate only when the slice risk requires it.
+Implementation, review, and verification agents should use the model tier assigned in the active implementation slice file under `docs/v1/implementation-slices/`.
+
+Do not default every coding, review, or verification slice to the highest model. The scheduler should choose the least expensive safe non-planning model tier and escalate only when the slice risk requires it.
 
 Global fallback assignments, used only when a slice file does not yet specify a tier:
 
 ```text
-Planning agent: gpt-5.4-mini, high effort, standard speed
+Planning agent: gpt-5.5, medium effort, standard speed
 Coding agent: gpt-5.4, high effort, standard speed
 Review agent: gpt-5.4-mini, high effort, standard speed
 Verification agent: gpt-5.4-mini, high effort, standard speed
@@ -70,7 +72,7 @@ Verification agent: gpt-5.4-mini, high effort, standard speed
 Low-risk pure logic slices should use:
 
 ```text
-Planning agent: gpt-5.4-mini, medium effort, standard speed
+Planning agent: gpt-5.5, medium effort, standard speed
 Coding agent: gpt-5.4, medium effort, standard speed
 Review agent: gpt-5.4-mini, medium effort, standard speed
 Verification agent: gpt-5.4-mini, medium effort, standard speed
@@ -81,7 +83,7 @@ User-facing UI implementation should use `gpt-5.5` for the coding agent when the
 High-risk media, timing, recording, waveform, data cleanup, migration, or complex browser E2E slices should use:
 
 ```text
-Planning agent: gpt-5.4 or gpt-5.5, high effort, standard speed
+Planning agent: gpt-5.5, medium effort, standard speed
 Coding agent: gpt-5.5, high effort, standard speed
 Review agent: gpt-5.4 or gpt-5.5, high effort, standard speed
 Verification agent: gpt-5.4, high effort, standard speed
@@ -121,7 +123,9 @@ The planning agent may:
 - Set a feature to `contract_ready` only when the full contract is written.
 - Move deferred work into `docs/v2`.
 - Refine exactly one implementation slice from `planning_ready` to `ready_for_coding`.
-- Specify scope, out of scope, likely files, model tier, acceptance criteria, and verification evidence for the assigned slice.
+- Specify scope, out of scope, likely files, model tier, acceptance criteria, boundary conditions, and verification evidence for the assigned slice.
+- Specify a complete test coverage plan, including unit, integration, browser E2E, reload/persistence, fixture, and negative cases where applicable.
+- Limit coding agents to existing project patterns, libraries, helpers, and service boundaries; explicitly identify what must not be rebuilt from scratch.
 
 The planning agent must not mark a feature `verified`.
 

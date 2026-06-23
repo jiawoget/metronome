@@ -47,7 +47,8 @@ status.json
 - Use one fresh planning, coding, review, and verification agent per slice.
 - Use `fork_context: false` for every subagent.
 - Use standard speed.
-- Use model tiers from the assigned slice file or `docs/v1/implementation-slices/README.md`.
+- Use `gpt-5.5`, medium effort, standard speed for every planning agent.
+- Use model tiers from the assigned slice file or `docs/v1/implementation-slices/README.md` for coding, review, and verification agents.
 - UI coding uses `gpt-5.5`.
 - Recording, media, timing, waveform, cleanup, import/export, and migration work use high-risk tiers.
 - Do not implement v2 scope: cloud sync, login, cross-device resume, backup conflict merge, automatic PDF recognition, automatic score following, automatic mistake detection, or user-facing scoring.
@@ -86,8 +87,11 @@ Output:
 - Out of scope.
 - Likely files or areas.
 - Acceptance criteria.
+- Boundary conditions.
+- Test coverage plan, including unit, integration, browser E2E, reload/persistence, fixture, and negative cases where applicable.
 - Test and verification evidence.
 - Model tier.
+- Constraints on code boundaries, existing libraries/helpers to reuse, and things the coding agent must not rebuild from scratch.
 - Handoff notes.
 
 Planning agent must not edit product code.
