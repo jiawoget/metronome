@@ -11,6 +11,15 @@ The planning pass has produced:
 - Acceptance packs: `docs/v1/acceptance-packs.md`
 - Implementation slice rules: `docs/v1/implementation-slices/README.md`
 - Pack 1 slices: `docs/v1/implementation-slices/01-practice-segment-mvp.md`
+- Later pack slice backlogs:
+  - `docs/v1/implementation-slices/02-segment-take-review.md`
+  - `docs/v1/implementation-slices/03-sessions-continue-practice.md`
+  - `docs/v1/implementation-slices/04-practice-controls-upgrade.md`
+  - `docs/v1/implementation-slices/05-library-viewer-upgrade.md`
+  - `docs/v1/implementation-slices/06-quick-metronome-training.md`
+  - `docs/v1/implementation-slices/07-reference-markers.md`
+  - `docs/v1/implementation-slices/08-settings-local-data.md`
+  - `docs/v1/implementation-slices/09-audio-analysis-infrastructure.md`
 - Slice status: `docs/v1/implementation-slices/status.json`
 - Contract review report: `docs/v1/contract-review-report.md`
 
@@ -102,4 +111,5 @@ Open a sheet
 - `docs/v1/implementation-slices/README.md` defines model budget tiers and escalation rules.
 - Only `P1-01 measure-grid-types-and-math` is currently `ready_for_coding`.
 - Later Pack 1 slices should be promoted to `ready_for_coding` only after dependency slices are verified.
+- Pack 2-9 slice files are backlog-level. Before any later pack starts, refine that pack to Pack 1 detail level and assign model tiers.
 - Do not start Pack 2 until Pack 1 is accepted unless the user explicitly reprioritizes.

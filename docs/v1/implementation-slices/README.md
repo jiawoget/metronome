@@ -53,7 +53,7 @@ verification_in_progress
   -> coding_in_progress
 ```
 
-## Initial Pack Split
+## Pack Slice Files
 
 The first implementation focus should be Pack 1: Practice Segment MVP.
 
@@ -63,7 +63,29 @@ Detailed slices for Pack 1 belong in:
 docs/v1/implementation-slices/01-practice-segment-mvp.md
 ```
 
-Other packs should receive slice files only when the previous dependency pack is close to acceptance, unless the user explicitly reprioritizes.
+Backlog slice files for later packs live alongside Pack 1:
+
+```text
+docs/v1/implementation-slices/02-segment-take-review.md
+docs/v1/implementation-slices/03-sessions-continue-practice.md
+docs/v1/implementation-slices/04-practice-controls-upgrade.md
+docs/v1/implementation-slices/05-library-viewer-upgrade.md
+docs/v1/implementation-slices/06-quick-metronome-training.md
+docs/v1/implementation-slices/07-reference-markers.md
+docs/v1/implementation-slices/08-settings-local-data.md
+docs/v1/implementation-slices/09-audio-analysis-infrastructure.md
+```
+
+Pack 2-9 files are backlog-level splits. Before a later pack starts, the scheduler should refine that pack's slices to the same detail level as Pack 1, including:
+
+- Model assignment.
+- Scope.
+- Out of scope.
+- Acceptance.
+- Verification.
+- Pack-level acceptance gate.
+
+Do not mark later-pack slices `ready_for_coding` until that refinement is complete.
 
 ## Required Agent Prompt Inputs
 
