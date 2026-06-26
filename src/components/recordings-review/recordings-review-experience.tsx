@@ -360,7 +360,11 @@ function RecordingDetails({
   }
 
   return (
-    <div data-testid="recording-details" className="grid gap-5">
+    <div
+      data-testid="recording-details"
+      data-recording-id={recording.id}
+      className="grid gap-5"
+    >
       <div>
         <p className="text-muted-foreground text-xs font-semibold tracking-[0.08em] uppercase">
           {recording.type} recording

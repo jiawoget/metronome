@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { installSyntheticMicrophone } from "./fixtures/audio";
+import {
+  decodeRecordingHistoryAudio,
+  installSyntheticMicrophone
+} from "./fixtures/audio";
 import { importTestSheet } from "./fixtures/sheets";
 import {
   clearDatabases,
@@ -14,7 +17,11 @@ import {
 type PersistedSheetRecording = {
   id: string;
   type: "sheet";
+  sessionId: string;
   sheetId: string;
+  createdAt: string;
+  durationMs: number;
+  mimeType: string;
   audioDataUrl?: string | null;
   sizeBytes: number;
   trustedPeaks?: number[];
@@ -40,6 +47,27 @@ type PersistedSheetRecording = {
   } | null;
 };
 
+const expectedOpeningFocusContext = {
+  segmentName: "Opening focus",
+  range: {
+    startMeasure: 5,
+    endMeasure: 12
+  },
+  targetBpm: 96,
+  measureGridVersion:
+    "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
+  measureGridSnapshot: {
+    bpm: 96,
+    timeSignature: "4/4",
+    pickupBeats: 0,
+    measureOneOffsetMs: 1000
+  },
+  measureRangeMs: {
+    startMs: 11000,
+    endMs: 31000
+  }
+};
+
 async function clearState(page: Page) {
   await page.goto("/sheet-library");
   await clearRecordingHistory(page);
@@ -50,7 +78,9 @@ async function clearState(page: Page) {
     PRACTICE_SEGMENT_DB_NAME
   ]);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet Library" })
+  ).toBeVisible();
 }
 
 async function saveMeasureGrid(page: Page) {
@@ -59,7 +89,9 @@ async function saveMeasureGrid(page: Page) {
   await page.getByRole("spinbutton", { name: "Pickup beats" }).fill("0");
   await page.getByRole("spinbutton", { name: "Measure 1 offset" }).fill("1000");
   await page.getByRole("button", { name: "Save grid" }).click();
-  await expect(page.getByTestId("measure-grid-status")).toContainText("Calibrated");
+  await expect(page.getByTestId("measure-grid-status")).toContainText(
+    "Calibrated"
+  );
 }
 
 async function createSelectedSegment(page: Page) {
@@ -70,7 +102,9 @@ async function createSelectedSegment(page: Page) {
   await page.getByLabel("Target BPM").fill("96");
   await page.getByLabel("Segment notes").fill("Keep it even.");
   await page.getByRole("button", { name: "Save segment" }).click();
-  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Opening focus");
+  await expect(
+    page.getByTestId("practice-segment-active-summary")
+  ).toContainText("Opening focus");
 }
 
 async function renameSelectedSegmentBeforeRecording(page: Page) {
@@ -81,9 +115,15 @@ async function renameSelectedSegmentBeforeRecording(page: Page) {
   await page.getByLabel("Target BPM").fill("104");
   await page.getByLabel("Segment notes").fill("Edited before recording.");
   await page.getByRole("button", { name: "Save segment" }).click();
-  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Renamed focus");
-  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Measures 6-10");
-  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Target 104 BPM");
+  await expect(
+    page.getByTestId("practice-segment-active-summary")
+  ).toContainText("Renamed focus");
+  await expect(
+    page.getByTestId("practice-segment-active-summary")
+  ).toContainText("Measures 6-10");
+  await expect(
+    page.getByTestId("practice-segment-active-summary")
+  ).toContainText("Target 104 BPM");
 }
 
 async function recordSheetTake(page: Page) {
@@ -97,6 +137,9 @@ async function recordSheetTake(page: Page) {
 async function recordAgainTake(page: Page) {
   await page.getByRole("button", { name: "Record again" }).click();
   await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
+  await expect(page.getByRole("button", { name: "Record again" })).toHaveCount(
+    0
+  );
   await page.waitForTimeout(850);
   await page.getByRole("button", { name: "Stop recording" }).click();
   await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
@@ -107,8 +150,62 @@ async function getSheetRecordings(page: Page, sheetId: string) {
   const recordings = Array.isArray(history.recordings) ? history.recordings : [];
 
   return recordings.filter(
-    (recording: PersistedSheetRecording) => recording.type === "sheet" && recording.sheetId === sheetId
+    (recording: PersistedSheetRecording) =>
+      recording.type === "sheet" && recording.sheetId === sheetId
   ) as PersistedSheetRecording[];
+}
+
+function cloneRecording(recording: PersistedSheetRecording) {
+  return JSON.parse(JSON.stringify(recording)) as PersistedSheetRecording;
+}
+
+function expectOpeningFocusSegmentContext(recording: PersistedSheetRecording) {
+  expect(recording.segmentContext).toMatchObject(expectedOpeningFocusContext);
+  expect(recording.segmentContext?.segmentId).toBeTruthy();
+}
+
+async function expectValidArtifactEvidence(
+  page: Page,
+  recording: PersistedSheetRecording
+) {
+  expect(recording.sessionId).toBeTruthy();
+  expect(recording.createdAt).toBeTruthy();
+  expect(recording.durationMs).toBeGreaterThan(500);
+  expect(recording.mimeType).toMatch(/^audio\//);
+  expect(recording.audioDataUrl).toMatch(/^data:audio\//);
+  expect(recording.sizeBytes).toBeGreaterThan(0);
+  expect(recording.trustedPeaks?.length ?? 0).toBeGreaterThan(12);
+  expect(recording.trustedPeaks?.every((peak) => Number.isFinite(peak))).toBe(
+    true
+  );
+  expect(recording.trustedPeaks?.some((peak) => peak > 0)).toBe(true);
+
+  const decoded = await decodeRecordingHistoryAudio(page, recording.id);
+
+  expect(decoded.decodedDurationMs).toBeGreaterThan(500);
+  expect(decoded.rmsAmplitude).toBeGreaterThan(0.01);
+  expect(decoded.peakAmplitude).toBeGreaterThan(0.02);
+  expect(
+    Math.abs(recording.durationMs - decoded.decodedDurationMs)
+  ).toBeLessThanOrEqual(1);
+}
+
+function expectReloadedRecordingToMatchSnapshot(
+  recording: PersistedSheetRecording | undefined,
+  snapshot: PersistedSheetRecording
+) {
+  expect(recording).toBeTruthy();
+  expect(recording).toMatchObject({
+    id: snapshot.id,
+    sessionId: snapshot.sessionId,
+    createdAt: snapshot.createdAt,
+    durationMs: snapshot.durationMs,
+    mimeType: snapshot.mimeType,
+    audioDataUrl: snapshot.audioDataUrl,
+    sizeBytes: snapshot.sizeBytes,
+    trustedPeaks: snapshot.trustedPeaks,
+    segmentContext: snapshot.segmentContext
+  });
 }
 
 test("sheet recording persists selected segment context and keeps it after source deletion", async ({ page }) => {
@@ -169,23 +266,38 @@ test("sheet recording persists selected segment context and keeps it after sourc
 
   await page.reload();
   sheetRecordings = await getSheetRecordings(page, sheetId);
-  expect(sheetRecordings.find((recording) => recording.id === segmentRecording.id)?.segmentContext).toEqual(
-    savedContext
-  );
+  expect(
+    sheetRecordings.find((recording) => recording.id === segmentRecording.id)
+      ?.segmentContext
+  ).toEqual(savedContext);
 
   await page.getByRole("button", { name: "Delete Opening focus" }).click();
-  await page.getByRole("button", { name: "Confirm delete Opening focus" }).click();
-  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("0 saved");
-  sheetRecordings = await getSheetRecordings(page, sheetId);
-  expect(sheetRecordings.find((recording) => recording.id === segmentRecording.id)?.segmentContext).toEqual(
-    savedContext
+  await page
+    .getByRole("button", { name: "Confirm delete Opening focus" })
+    .click();
+  await expect(page.getByTestId("practice-segment-selector-status")).toContainText(
+    "0 saved"
   );
+  await expect(page.getByRole("button", { name: "Record again" })).toHaveCount(
+    0
+  );
+  sheetRecordings = await getSheetRecordings(page, sheetId);
+  expect(
+    sheetRecordings.find((recording) => recording.id === segmentRecording.id)
+      ?.segmentContext
+  ).toEqual(savedContext);
 
   await recordSheetTake(page);
   await expect(page.getByText("Recording saved.")).toBeVisible();
   sheetRecordings = await getSheetRecordings(page, sheetId);
   expect(sheetRecordings).toHaveLength(2);
-  expect(sheetRecordings.find((recording) => recording.id !== segmentRecording.id)?.segmentContext ?? null).toBeNull();
+  expect(
+    sheetRecordings.find((recording) => recording.id !== segmentRecording.id)
+      ?.segmentContext ?? null
+  ).toBeNull();
+  await expect(page.getByRole("button", { name: "Record again" })).toHaveCount(
+    0
+  );
   expect(consoleErrors).toEqual([]);
 });
 
@@ -213,44 +325,113 @@ test("Record again creates a second recording with the same selected segment con
   await saveMeasureGrid(page);
   await createSelectedSegment(page);
   await recordSheetTake(page);
-  await expect(page.getByText("Recording saved for Opening focus.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Record again" })).toBeEnabled();
+  await expect(
+    page.getByText("Recording saved for Opening focus.")
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Record again" })
+  ).toBeEnabled();
+
+  const firstSnapshot = cloneRecording(
+    (await getSheetRecordings(page, sheetId))[0]
+  );
+
+  await expectValidArtifactEvidence(page, firstSnapshot);
+  expectOpeningFocusSegmentContext(firstSnapshot);
 
   await recordAgainTake(page);
-  await expect(page.getByText("Recording saved for Opening focus.")).toBeVisible();
+  await expect(
+    page.getByText("Recording saved for Opening focus.")
+  ).toBeVisible();
 
   const sheetRecordings = await getSheetRecordings(page, sheetId);
 
   expect(sheetRecordings).toHaveLength(2);
-  const [latestRecording, firstRecording] = sheetRecordings;
+  expect(new Set(sheetRecordings.map((recording) => recording.id)).size).toBe(
+    2
+  );
 
-  expect(latestRecording.id).not.toBe(firstRecording.id);
+  const firstAfterSecond = sheetRecordings.find(
+    (recording) => recording.id === firstSnapshot.id
+  );
+  const secondRecording = sheetRecordings.find(
+    (recording) => recording.id !== firstSnapshot.id
+  );
+
+  expect(firstAfterSecond).toEqual(firstSnapshot);
+  expect(secondRecording).toBeTruthy();
   for (const recording of sheetRecordings) {
-    expect(recording.audioDataUrl).toMatch(/^data:audio\//);
-    expect(recording.sizeBytes).toBeGreaterThan(0);
-    expect(recording.trustedPeaks?.length ?? 0).toBeGreaterThan(12);
-    expect(recording.segmentContext).toMatchObject({
-      segmentName: "Opening focus",
-      range: {
-        startMeasure: 5,
-        endMeasure: 12
-      },
-      targetBpm: 96,
-      measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
-      measureGridSnapshot: {
-        bpm: 96,
-        timeSignature: "4/4",
-        pickupBeats: 0,
-        measureOneOffsetMs: 1000
-      },
-      measureRangeMs: {
-        startMs: 11000,
-        endMs: 31000
-      }
-    });
-    expect(recording.segmentContext?.segmentId).toBeTruthy();
+    await expectValidArtifactEvidence(page, recording);
+    expectOpeningFocusSegmentContext(recording);
   }
-  expect(latestRecording.segmentContext).toEqual(firstRecording.segmentContext);
+  expect(secondRecording?.id).not.toBe(firstSnapshot.id);
+  expect(secondRecording?.segmentContext).toEqual(firstSnapshot.segmentContext);
+  expect(secondRecording?.segmentContext?.segmentId).toBe(
+    firstSnapshot.segmentContext?.segmentId
+  );
+
+  if (secondRecording?.audioDataUrl !== firstSnapshot.audioDataUrl) {
+    expect(secondRecording?.audioDataUrl).not.toBe(firstSnapshot.audioDataUrl);
+  }
+
+  await page.reload();
+  await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
+
+  const reloadedRecordings = await getSheetRecordings(page, sheetId);
+
+  expect(reloadedRecordings).toHaveLength(2);
+  expectReloadedRecordingToMatchSnapshot(
+    reloadedRecordings.find((recording) => recording.id === firstSnapshot.id),
+    firstSnapshot
+  );
+  expectReloadedRecordingToMatchSnapshot(
+    reloadedRecordings.find(
+      (recording) => recording.id === secondRecording?.id
+    ),
+    secondRecording as PersistedSheetRecording
+  );
+
+  await page.goto("/recordings");
+  await page
+    .getByRole("textbox", { name: "Search recordings" })
+    .fill("Segment Rerecord Sheet");
+  await page.getByLabel("Type filter").selectOption("sheet");
+  for (const recording of [
+    firstSnapshot,
+    secondRecording as PersistedSheetRecording
+  ]) {
+    const row = page.getByTestId(`recording-row-${recording.id}`);
+    const details = page.getByTestId("recording-details");
+    const derivedWaveform = page.getByTestId("derived-waveform");
+    const waveformAdapter = page.getByTestId("waveform-adapter");
+    const waveformSource = page.getByTestId("waveform-source");
+
+    await expect(row).toBeVisible();
+    await row.click();
+    await expect(row).toHaveAttribute("aria-pressed", "true");
+    await expect(details).toHaveAttribute("data-recording-id", recording.id);
+    await expect(derivedWaveform).toHaveAttribute(
+      "data-recording-id",
+      recording.id
+    );
+    await expect
+      .poll(async () =>
+        Number(await derivedWaveform.getAttribute("data-peak-count"))
+      )
+      .toBeGreaterThan(12);
+    await expect(waveformAdapter).toHaveAttribute(
+      "data-playback-ready",
+      "true"
+    );
+    await expect(waveformSource).toHaveAttribute(
+      "data-recording-id",
+      recording.id
+    );
+    await expect(waveformSource).toContainText(
+      /decoded audio artifact|trusted peaks/
+    );
+    await expect(page.getByTestId("recording-artifact-error")).toHaveCount(0);
+  }
   expect(consoleErrors).toEqual([]);
 });
 

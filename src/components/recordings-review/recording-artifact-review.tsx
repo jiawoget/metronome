@@ -349,6 +349,7 @@ export function RecordingArtifactReview({
             />
             <p
               data-testid={sourceTestId}
+              data-recording-id={artifactState.details.recordingId}
               className="text-muted-foreground text-xs font-medium"
             >
               Waveform source:{" "}
@@ -419,6 +420,7 @@ function DerivedPeaks({
   return (
     <div
       data-testid={testId}
+      data-recording-id={details.recordingId}
       data-waveform-source={details.source}
       data-peak-count={details.peaks.length}
       className={className}

@@ -371,9 +371,9 @@
                                                             }
                                                         ]
                                          },
-                                         {
-                                             "pack":  "pack-1-practice-segment-mvp",
-                                             "status":  "slicing_ready",
+                {
+                    "pack":  "pack-1-practice-segment-mvp",
+                    "status":  "verified",
                                              "slices":  [
                                                             {
                                                                 "slice":  "P1-01 measure-grid-types-and-math",
@@ -421,7 +421,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P1-12 rerecord-two-artifact-verification",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             }
                                                         ]
                                          },
