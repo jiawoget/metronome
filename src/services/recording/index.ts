@@ -1,5 +1,5 @@
 import type { MetronomeSettings } from "@/lib/quick-metronome/types";
-import type { SheetRecordingMetadata } from "@/domain/practice";
+import type { SheetRecordingMetadata, SheetRecordingSegmentContext } from "@/domain/practice";
 import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
 import type { PracticeSessionService } from "@/services/practice-session";
 
@@ -46,6 +46,7 @@ export type SaveSheetRecordingInput = {
   sheetId: string;
   sessionId: string | null;
   settings: MetronomeSettings;
+  segmentContext?: SheetRecordingSegmentContext | null;
   forceNewSession: boolean;
   sessionService: SheetRecordingSessionService;
 };

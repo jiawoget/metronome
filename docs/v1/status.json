@@ -409,7 +409,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P1-09 recording-save-segment-context",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P1-10 rerecord-workflow-state",

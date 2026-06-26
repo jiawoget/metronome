@@ -10,6 +10,8 @@ import {
   type MeasureRange,
   type MeasureRangeMs
 } from "@/domain/practice/measure-grid";
+import { validateSheetRecordingSegmentContext } from "@/domain/practice/validation";
+import type { SheetRecordingSegmentContext } from "@/domain/practice/types";
 
 export type PracticeSegmentGridAssociation = {
   measureGridVersion: string;
@@ -171,4 +173,24 @@ export function getPracticeSegmentRangeMs(segment: PracticeSegment, grid: Measur
   const validatedSegment = validatePracticeSegment(segment);
 
   return getMeasureRangeMs(grid, validatedSegment.range);
+}
+
+export function createSheetRecordingSegmentContext(
+  segment: PracticeSegment
+): SheetRecordingSegmentContext {
+  const validatedSegment = validatePracticeSegment(segment);
+  const segmentContext: SheetRecordingSegmentContext = {
+    segmentId: validatedSegment.id,
+    segmentName: validatedSegment.name,
+    range: validatedSegment.range,
+    targetBpm: validatedSegment.targetBpm,
+    measureGridVersion: validatedSegment.grid.measureGridVersion,
+    measureGridSnapshot: validatedSegment.grid.measureGridSnapshot,
+    measureRangeMs: getMeasureRangeMs(
+      validatedSegment.grid.measureGridSnapshot,
+      validatedSegment.range
+    )
+  };
+
+  return validateSheetRecordingSegmentContext(segmentContext);
 }

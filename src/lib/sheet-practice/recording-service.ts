@@ -170,6 +170,7 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         durationMs: roundDuration(decodedDetails.decodedDurationMs),
         bpm: input.settings.bpm,
         timeSignature: input.settings.timeSignature,
+        segmentContext: input.segmentContext ?? null,
         forceNewSession: input.forceNewSession
       });
 

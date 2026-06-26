@@ -4,10 +4,13 @@ import { Timer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  createSheetRecordingSegmentContext,
   type PracticeSession,
-  type SheetRecordingMetadata
+  type SheetRecordingMetadata,
+  type SheetRecordingSegmentContext
 } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
+import { browserPracticeSegmentService } from "@/infrastructure/db/browser-practice-segment-service";
 import type { MetronomeTick } from "@/services/metronome";
 import { createBrowserMetronomeService } from "@/services/metronome/browser";
 import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
@@ -26,6 +29,7 @@ import {
 import { PracticeStatusPanel } from "@/components/sheet-practice/controls/practice-status-panel";
 import { TransportActionsPanel } from "@/components/sheet-practice/controls/transport-actions-panel";
 import type { SheetPracticeControlsProps } from "@/components/sheet-practice/controls/types";
+import { useSheetPracticeRecordingWorkflowStore } from "@/stores/sheet-practice-recording-workflow-store";
 
 const SHEET_RECORDING_HARNESS_EVENT =
   "sheet-practice-controls:set-recording-harness-active";
@@ -55,7 +59,7 @@ export function SheetPracticeControls({
   createSheetRecordingService = createBrowserSheetRecordingService,
   sessionService = browserPracticeSessionService,
   measureGridService = browserMeasureGridService,
-  practiceSegmentService,
+  practiceSegmentService = browserPracticeSegmentService,
   currentMeasureGridTimestampMs = null
 }: SheetPracticeControlsProps) {
   const initialState = useMemo(
@@ -99,8 +103,33 @@ export function SheetPracticeControls({
     "Ready. Viewing the sheet has not started practice."
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const activeRecordingWorkflowSheetId = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.sheetId
+  );
+  const activeRecordingWorkflowSegmentId = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.activeSegmentId
+  );
+  const setActiveRecordingSegment = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.setActiveSegment
+  );
+  const beginWorkflowRecording = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.beginRecording
+  );
+  const beginWorkflowSaving = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.beginSaving
+  );
+  const finishWorkflowRecording = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.finishRecording
+  );
+  const failWorkflowRecording = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.failRecording
+  );
   const isSheetRecording = recordingState === "recording";
   const isRecordingActive = isSheetRecording || recordingHarnessActive;
+  const selectedRecordingSegmentId =
+    activeRecordingWorkflowSheetId === sheetId
+      ? activeRecordingWorkflowSegmentId
+      : null;
 
   useActiveRecordingNavigationGuard(
     `sheet-practice-recording-${sheetId}`,
@@ -306,6 +335,7 @@ export function SheetPracticeControls({
       setSession(nextSession);
       setConsumedSourceRecordingId(sourceRecordingId);
       setRecordingState("recording");
+      beginWorkflowRecording(sheetId, selectedRecordingSegmentId);
       setMessage(
         isPlaying
           ? "Recording while metronome plays."
@@ -317,6 +347,12 @@ export function SheetPracticeControls({
       }
 
       setRecordingState("idle");
+      failWorkflowRecording(
+        sheetId,
+        error instanceof Error
+          ? error.message
+          : "Recording failed before it could start."
+      );
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -325,15 +361,67 @@ export function SheetPracticeControls({
     }
   }
 
+  async function resolveSelectedSegmentContext(): Promise<SheetRecordingSegmentContext | null> {
+    if (!selectedRecordingSegmentId) {
+      return null;
+    }
+
+    let selectedSegment: Awaited<ReturnType<typeof practiceSegmentService.getSegment>>;
+
+    try {
+      selectedSegment = await practiceSegmentService.getSegment(
+        sheetId,
+        selectedRecordingSegmentId
+      );
+    } catch {
+      throw new Error("Selected segment could not be loaded. Recording was not saved.");
+    }
+
+    if (selectedSegment === null) {
+      setActiveRecordingSegment(sheetId, null);
+      throw new Error("Selected segment no longer exists. Recording was not saved.");
+    }
+
+    if (selectedSegment.sheetId !== sheetId) {
+      setActiveRecordingSegment(sheetId, null);
+      throw new Error("Selected segment belongs to a different sheet. Recording was not saved.");
+    }
+
+    try {
+      return createSheetRecordingSegmentContext(selectedSegment);
+    } catch {
+      throw new Error("Selected segment timing is invalid. Recording was not saved.");
+    }
+  }
+
   async function stopSheetRecording() {
     setErrorMessage(null);
+
+    let segmentContext: SheetRecordingSegmentContext | null;
+
+    try {
+      segmentContext = await resolveSelectedSegmentContext();
+    } catch (error) {
+      const nextMessage =
+        error instanceof Error
+          ? error.message
+          : "Selected segment could not be prepared. Recording was not saved.";
+
+      failWorkflowRecording(sheetId, nextMessage);
+      setErrorMessage(nextMessage);
+
+      return;
+    }
+
     setRecordingState("saving");
+    beginWorkflowSaving(sheetId);
 
     try {
       const result = await sheetRecordingService.stopAndSave({
         sheetId,
         sessionId: session?.id ?? null,
         settings,
+        segmentContext,
         forceNewSession: false,
         sessionService
       });
@@ -346,13 +434,20 @@ export function SheetPracticeControls({
       );
       setLatestSheetRecording(result.recording);
       setRecordingState("idle");
+      finishWorkflowRecording(sheetId);
       setMessage(
         isPlaying
           ? "Recording saved; metronome is still playing."
-          : "Recording saved."
+          : segmentContext
+            ? `Recording saved for ${segmentContext.segmentName}.`
+            : "Recording saved."
       );
     } catch (error) {
       setRecordingState("idle");
+      failWorkflowRecording(
+        sheetId,
+        error instanceof Error ? error.message : "Recording could not be saved."
+      );
       setErrorMessage(
         error instanceof Error ? error.message : "Recording could not be saved."
       );

@@ -14,6 +14,7 @@ import { browserPracticeSegmentService } from "@/infrastructure/db/browser-pract
 import { browserMeasureGridService } from "@/infrastructure/db/browser-measure-grid-service";
 import type { PracticeSegmentService } from "@/services/practice-segments";
 import type { MeasureGridService } from "@/services/measure-grid";
+import { useSheetPracticeRecordingWorkflowStore } from "@/stores/sheet-practice-recording-workflow-store";
 import { Button } from "@/components/ui/button";
 
 export type PracticeSegmentSelectorPanelProps = {
@@ -244,6 +245,12 @@ export function PracticeSegmentSelectorPanel({
   measureGridRevision = 0
 }: PracticeSegmentSelectorPanelProps) {
   const idPrefix = useId();
+  const resetRecordingWorkflowForSheet = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.resetForSheet
+  );
+  const setActiveRecordingSegment = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.setActiveSegment
+  );
   const currentSheetIdRef = useRef(sheetId);
   const [loadResult, setLoadResult] = useState<SegmentSelectorLoadResult>({
     sheetId: null,
@@ -264,6 +271,7 @@ export function PracticeSegmentSelectorPanel({
     let isActive = true;
 
     currentSheetIdRef.current = sheetId;
+    resetRecordingWorkflowForSheet(sheetId);
     queueMicrotask(() => {
       if (!isActive || currentSheetIdRef.current !== sheetId) {
         return;
@@ -278,7 +286,7 @@ export function PracticeSegmentSelectorPanel({
     return () => {
       isActive = false;
     };
-  }, [sheetId]);
+  }, [resetRecordingWorkflowForSheet, sheetId]);
 
   useEffect(() => {
     let isActive = true;
@@ -318,16 +326,20 @@ export function PracticeSegmentSelectorPanel({
           return null;
         }
 
-        return nextSegments.some((segment) => segment.id === currentSelection.segmentId)
-          ? currentSelection
-          : null;
+        if (nextSegments.some((segment) => segment.id === currentSelection.segmentId)) {
+          return currentSelection;
+        }
+
+        setActiveRecordingSegment(sheetId, null);
+
+        return null;
       });
     });
 
     return () => {
       isActive = false;
     };
-  }, [measureGridRevision, measureGridService, practiceSegmentService, sheetId]);
+  }, [measureGridRevision, measureGridService, practiceSegmentService, setActiveRecordingSegment, sheetId]);
 
   const isLoadedSheet = loadResult.sheetId === sheetId;
   const effectiveLoadState = isLoadedSheet ? loadResult.loadState : "loading";
@@ -385,9 +397,13 @@ export function PracticeSegmentSelectorPanel({
         return null;
       }
 
-      return nextSegments.some((segment) => segment.id === currentSelection.segmentId)
-        ? currentSelection
-        : null;
+      if (nextSegments.some((segment) => segment.id === currentSelection.segmentId)) {
+        return currentSelection;
+      }
+
+      setActiveRecordingSegment(targetSheetId, null);
+
+      return null;
     });
 
     return nextSegments;
@@ -485,12 +501,17 @@ export function PracticeSegmentSelectorPanel({
           sheetId: targetSheetId,
           segmentId: savedSegment.id
         });
+        setActiveRecordingSegment(targetSheetId, savedSegment.id);
       } else if (!nextSegments.some((segment) => segment.id === savedSegment.id)) {
-        setSelectedSegmentKey((currentSelection) =>
-          currentSelection?.sheetId === targetSheetId && currentSelection.segmentId === savedSegment.id
-            ? null
-            : currentSelection
-        );
+        setSelectedSegmentKey((currentSelection) => {
+          if (currentSelection?.sheetId === targetSheetId && currentSelection.segmentId === savedSegment.id) {
+            setActiveRecordingSegment(targetSheetId, null);
+
+            return null;
+          }
+
+          return currentSelection;
+        });
       }
     } catch (error) {
       if (currentSheetIdRef.current === targetSheetId) {
@@ -521,11 +542,15 @@ export function PracticeSegmentSelectorPanel({
       setEditor((currentEditor) =>
         currentEditor?.mode === "edit" && currentEditor.segmentId === segment.id ? null : currentEditor
       );
-      setSelectedSegmentKey((currentSelection) =>
-        currentSelection?.sheetId === targetSheetId && currentSelection.segmentId === segment.id
-          ? null
-          : currentSelection
-      );
+      setSelectedSegmentKey((currentSelection) => {
+        if (currentSelection?.sheetId === targetSheetId && currentSelection.segmentId === segment.id) {
+          setActiveRecordingSegment(targetSheetId, null);
+
+          return null;
+        }
+
+        return currentSelection;
+      });
     } catch (error) {
       if (currentSheetIdRef.current === targetSheetId) {
         setMutationErrorMessage(getUnknownErrorMessage(error, "Segment could not be deleted."));
@@ -781,7 +806,10 @@ export function PracticeSegmentSelectorPanel({
                     type="button"
                     aria-pressed={selected}
                     data-testid={`practice-segment-row-${segment.id}`}
-                    onClick={() => setSelectedSegmentKey({ sheetId, segmentId: segment.id })}
+                    onClick={() => {
+                      setSelectedSegmentKey({ sheetId, segmentId: segment.id });
+                      setActiveRecordingSegment(sheetId, segment.id);
+                    }}
                     className="focus-visible:ring-ring min-w-0 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none"
                   >
                     <span className="flex min-w-0 flex-wrap items-center gap-2">

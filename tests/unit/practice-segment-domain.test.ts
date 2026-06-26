@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createPracticeSegmentGridAssociation,
+  createSheetRecordingSegmentContext,
   getMeasureGridVersion,
   getPracticeSegmentGridStatus,
   getPracticeSegmentRangeMs,
@@ -85,6 +86,50 @@ describe("practice segment domain", () => {
       startMs: 18_000,
       endMs: 20_500
     });
+  });
+
+  it("creates immutable sheet recording segment context from the segment grid snapshot", () => {
+    const oldGrid: MeasureGrid = {
+      bpm: 96,
+      timeSignature: "4/4",
+      pickupBeats: 0,
+      measureOneOffsetMs: 500
+    };
+    const liveGrid: MeasureGrid = {
+      bpm: 120,
+      timeSignature: "4/4",
+      pickupBeats: 0,
+      measureOneOffsetMs: 2_000
+    };
+    const segment = buildSegment({
+      id: "segment-bridge",
+      name: "Bridge before rename",
+      range: {
+        startMeasure: 2,
+        endMeasure: 3
+      },
+      targetBpm: null,
+      grid: createPracticeSegmentGridAssociation(oldGrid)
+    });
+
+    expect(createSheetRecordingSegmentContext(segment)).toEqual({
+      segmentId: "segment-bridge",
+      segmentName: "Bridge before rename",
+      range: {
+        startMeasure: 2,
+        endMeasure: 3
+      },
+      targetBpm: null,
+      measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:500",
+      measureGridSnapshot: oldGrid,
+      measureRangeMs: {
+        startMs: 3_000,
+        endMs: 8_000
+      }
+    });
+    expect(getPracticeSegmentRangeMs(segment, liveGrid)).not.toEqual(
+      createSheetRecordingSegmentContext(segment).measureRangeMs
+    );
   });
 
   it("normalizes optional notes and target BPM helpers", () => {

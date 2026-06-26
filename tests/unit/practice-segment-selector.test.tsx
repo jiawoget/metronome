@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PracticeSegmentSelectorPanel } from "@/components/sheet-practice/segments/practice-segment-selector-panel";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/domain/practice";
 import type { MeasureGridService } from "@/services/measure-grid";
 import type { PracticeSegmentService } from "@/services/practice-segments";
+import { useSheetPracticeRecordingWorkflowStore } from "@/stores/sheet-practice-recording-workflow-store";
 
 const currentGrid: MeasureGrid = {
   bpm: 96,
@@ -24,6 +25,19 @@ const staleGrid: MeasureGrid = {
   pickupBeats: 0,
   measureOneOffsetMs: 1_000
 };
+
+function resetRecordingWorkflowStore() {
+  useSheetPracticeRecordingWorkflowStore.setState({
+    sheetId: null,
+    activeSegmentId: null,
+    status: "idle",
+    error: null,
+    rerecord: {
+      readyRecordingId: null,
+      error: null
+    }
+  });
+}
 
 function createSegment(overrides: Partial<PracticeSegment> = {}): PracticeSegment {
   return {
@@ -201,6 +215,10 @@ async function fillSegmentEditor({
 }
 
 describe("PracticeSegmentSelectorPanel", () => {
+  beforeEach(() => {
+    resetRecordingWorkflowStore();
+  });
+
   it("loads to an empty state with a create affordance", async () => {
     const { practiceSegmentService, measureGridService } = await renderPanel();
 
@@ -259,6 +277,10 @@ describe("PracticeSegmentSelectorPanel", () => {
     expect(screen.getAllByText("Bridge polish").length).toBeGreaterThan(0);
     expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Active segment");
     expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Bridge polish");
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: expect.stringMatching(/^segment_/)
+    });
   });
 
   it("shows duplicate-name save rejection from the service without mutating the visible list", async () => {
@@ -391,6 +413,10 @@ describe("PracticeSegmentSelectorPanel", () => {
     expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Target 96 BPM");
     expect(screen.getByTestId("practice-segment-active-status")).toHaveTextContent("Ready");
     expect(screen.getByText("Active")).toBeVisible();
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: "segment-alpha"
+    });
     expect(practiceSegmentService.saveSegment).not.toHaveBeenCalled();
     expect(practiceSegmentService.deleteSegment).not.toHaveBeenCalled();
   });
@@ -504,6 +530,7 @@ describe("PracticeSegmentSelectorPanel", () => {
 
     expect(screen.getByTestId("practice-segment-empty-state")).toBeVisible();
     expect(screen.queryByTestId("practice-segment-active-summary")).not.toBeInTheDocument();
+    expect(useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId).toBeNull();
   });
 
   it("does not lock new-sheet controls when switching sheets while a save is unresolved", async () => {
@@ -822,6 +849,7 @@ describe("PracticeSegmentSelectorPanel", () => {
     });
     expect(screen.getByText("Choose a segment")).toBeVisible();
     expect(screen.queryByText("Active segment")).not.toBeInTheDocument();
+    expect(useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId).toBeNull();
   });
 
   it("clears active selection when switching away from a sheet and does not restore it on switch back", async () => {
@@ -868,6 +896,10 @@ describe("PracticeSegmentSelectorPanel", () => {
     });
     expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Choose a segment");
     expect(screen.getByTestId("practice-segment-active-summary")).not.toHaveTextContent("Active segment");
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-bravo",
+      activeSegmentId: null
+    });
 
     rerender(
       <PracticeSegmentSelectorPanel

@@ -199,6 +199,7 @@ describe("sheet practice recording service", () => {
       durationMs: 800,
       bpm: 88,
       timeSignature: "3/4",
+      segmentContext: null,
       forceNewSession: false
     });
     expect(result.artifactDetails.peaks.length).toBeGreaterThan(0);
@@ -238,10 +239,20 @@ describe("sheet practice recording service", () => {
       sheetId: "sheet-alpha",
       sessionId: "session-new",
       settings,
+      segmentContext,
       forceNewSession: false,
       sessionService
     });
 
+    expect(sessionService.createSheetRecordingMetadata).toHaveBeenCalledWith({
+      sheetId: "sheet-alpha",
+      sessionId: "session-new",
+      durationMs: 800,
+      bpm: 88,
+      timeSignature: "3/4",
+      segmentContext,
+      forceNewSession: false
+    });
     expect(result.metadata.segmentContext).toEqual(segmentContext);
     expect(result.recording.segmentContext).toEqual(segmentContext);
     expect(recordingHistoryRepository.getRecording("recording-sheet-1")?.segmentContext).toEqual(segmentContext);
