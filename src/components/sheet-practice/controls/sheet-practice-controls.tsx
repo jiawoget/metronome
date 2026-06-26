@@ -8,15 +8,13 @@ import {
   type SheetRecordingMetadata
 } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
-import {
-  BrowserMetronomeService,
-  type MetronomeTick
-} from "@/lib/quick-metronome/metronome-service";
+import type { MetronomeTick } from "@/services/metronome";
+import { createBrowserMetronomeService } from "@/services/metronome/browser";
 import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
-import { BrowserSheetRecordingService } from "@/lib/sheet-practice/recording-service";
+import { createBrowserSheetRecordingService } from "@/services/recording/browser";
 import { browserMeasureGridService } from "@/infrastructure/db/browser-measure-grid-service";
 import { MeasureGridCalibrationPanel } from "@/components/sheet-practice/measure-grid/measure-grid-calibration-panel";
 import { PracticeSegmentSelectorPanel } from "@/components/sheet-practice/segments/practice-segment-selector-panel";
@@ -46,14 +44,6 @@ type SheetMetronomeStartContext = {
         kind: "none";
       };
 };
-
-function createBrowserMetronomeService() {
-  return new BrowserMetronomeService();
-}
-
-function createBrowserSheetRecordingService() {
-  return new BrowserSheetRecordingService();
-}
 
 export function SheetPracticeControls({
   sheetId,

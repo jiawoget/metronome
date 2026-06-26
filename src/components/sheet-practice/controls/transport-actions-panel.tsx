@@ -1,7 +1,7 @@
 import { Mic, Octagon, Play, Radio, Square } from "lucide-react";
 
 import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
-import type { MetronomeTick } from "@/lib/quick-metronome/metronome-service";
+import type { MetronomeTick } from "@/services/metronome";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { LatestSheetRecording } from "@/components/sheet-practice/recording/latest-sheet-recording";
 import { Button } from "@/components/ui/button";

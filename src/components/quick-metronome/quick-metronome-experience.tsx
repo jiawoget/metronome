@@ -11,28 +11,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PracticeSession } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
-import {
-  calculateTapTempo
-} from "@/lib/quick-metronome/control";
-import {
-  BrowserMetronomeService,
-  type MetronomeTick
-} from "@/lib/quick-metronome/metronome-service";
+import { calculateTapTempo } from "@/lib/quick-metronome/control";
 import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
-import {
-  BrowserRecordingService,
-  RecordingPermissionError
-} from "@/lib/quick-metronome/recording-service";
 import { createQuickRecording } from "@/lib/quick-metronome/session";
 import { DEFAULT_METRONOME_SETTINGS } from "@/lib/quick-metronome/types";
 import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
+import { createBrowserMetronomeService } from "@/services/metronome/browser";
+import type { MetronomeTick } from "@/services/metronome";
+import { createBrowserRecordingCaptureService } from "@/services/recording/browser";
+import { RecordingPermissionError } from "@/services/recording";
 
 type RecordingState = "idle" | "recording" | "saving";
 
 export function QuickMetronomeExperience() {
-  const metronomeService = useMemo(() => new BrowserMetronomeService(), []);
-  const recordingService = useMemo(() => new BrowserRecordingService(), []);
+  const metronomeService = useMemo(() => createBrowserMetronomeService(), []);
+  const recordingService = useMemo(() => createBrowserRecordingCaptureService(), []);
   const {
     settings,
     bpmDraft,

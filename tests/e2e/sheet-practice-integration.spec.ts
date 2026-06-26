@@ -351,8 +351,8 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
   await expect(page.getByRole("heading", { name: "Integrated Practice Sheet" })).toBeVisible();
-  await expect(page.getByRole("spinbutton", { name: "BPM" })).toHaveValue("84");
-  await expect(page.getByLabel("Time signature")).toHaveValue("4/4");
+  await expect(page.getByRole("spinbutton", { name: /^BPM$/ })).toHaveValue("84");
+  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue("4/4");
   await expectIntegratedLayoutAcrossViewports(page, "initial open");
   await expect(page.getByTestId("sheet-session-id")).toHaveText("none");
   expect(await getPracticeSnapshot(page)).toMatchObject({ sessions: [] });

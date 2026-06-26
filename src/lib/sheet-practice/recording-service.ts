@@ -2,33 +2,16 @@ import type { SheetRecordingMetadata } from "@/domain/practice";
 import { hasUsablePeaks, loadRecordingArtifactDetails } from "@/lib/recordings-review/artifact-service";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
-import { BrowserRecordingService } from "@/lib/quick-metronome/recording-service";
 import type { MetronomeSettings, RecordingArtifact } from "@/lib/quick-metronome/types";
-import type { PracticeSessionService } from "@/services/practice-session";
+import { createBrowserRecordingCaptureService } from "@/infrastructure/audio/browser-recording-capture";
+import type {
+  RecordingCaptureService,
+  SaveSheetRecordingInput,
+  SaveSheetRecordingResult,
+  SheetRecordingService
+} from "@/services/recording";
 
-type SheetRecordingSessionService = Pick<
-  PracticeSessionService,
-  | "createSheetRecordingMetadata"
-  | "deletePracticeSessionSnapshot"
-  | "getRecentSheetSession"
-  | "restorePracticeSessionSnapshot"
->;
-
-type SheetRecordingCaptureService = Pick<BrowserRecordingService, "start" | "stop" | "isRecording">;
-
-export type SaveSheetRecordingInput = {
-  sheetId: string;
-  sessionId: string | null;
-  settings: MetronomeSettings;
-  forceNewSession: boolean;
-  sessionService: SheetRecordingSessionService;
-};
-
-export type SaveSheetRecordingResult = {
-  metadata: SheetRecordingMetadata;
-  recording: ReviewRecording;
-  artifactDetails: RecordingArtifactDetails;
-};
+export type { SaveSheetRecordingInput, SaveSheetRecordingResult } from "@/services/recording";
 
 function roundDuration(durationMs: number) {
   return Math.max(0, Math.round(durationMs));
@@ -122,8 +105,8 @@ function saveSheetReviewRecording(recording: ReviewRecording) {
   });
 }
 
-export class BrowserSheetRecordingService {
-  constructor(private readonly captureService: SheetRecordingCaptureService = new BrowserRecordingService()) {}
+export class BrowserSheetRecordingService implements SheetRecordingService {
+  constructor(private readonly captureService: RecordingCaptureService = createBrowserRecordingCaptureService()) {}
 
   get isRecording() {
     return this.captureService.isRecording;

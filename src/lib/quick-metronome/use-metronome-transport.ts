@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { BrowserMetronomeService } from "@/lib/quick-metronome/metronome-service";
 import type { MetronomeSettings } from "@/lib/quick-metronome/types";
+import type { MetronomeService } from "@/services/metronome";
 
 export type MetronomeTransportState = "stopped" | "counting" | "playing";
 
-type MetronomeTransportService = Pick<BrowserMetronomeService, "update" | "start" | "stop">;
+type MetronomeTransportService = Pick<MetronomeService, "update" | "start" | "stop">;
 
 export type UseMetronomeTransportOptions<StartContext> = {
   settings: MetronomeSettings;
