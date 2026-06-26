@@ -2,6 +2,7 @@ import type {
   ContinuePracticeTarget,
   PracticeActivityTrigger,
   PracticeSession,
+  SheetRecordingSegmentContext,
   PracticeTimeSignature,
   SheetRecordingMetadata,
   TodayPracticeSummary
@@ -59,6 +60,7 @@ export type SheetRecordingMetadataInput = {
   durationMs?: number;
   bpm?: number | null;
   timeSignature?: PracticeTimeSignature | null;
+  segmentContext?: SheetRecordingSegmentContext | null;
   forceNewSession?: boolean;
 };
 

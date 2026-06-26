@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
+import type { PracticeSession, SheetRecordingMetadata, SheetRecordingSegmentContext } from "@/domain/practice";
 import { recordingHistoryRepository, RECORDINGS_STORAGE_KEY } from "@/lib/recordings-review/repository";
 import {
   BrowserSheetRecordingService,
@@ -25,7 +25,8 @@ const metadata: SheetRecordingMetadata = {
   createdAt: "2026-06-22T06:00:00.000Z",
   durationMs: 800,
   bpm: 88,
-  timeSignature: "3/4"
+  timeSignature: "3/4",
+  segmentContext: null
 };
 
 const previousSession: PracticeSession = {
@@ -56,6 +57,30 @@ function createArtifact(overrides: Partial<RecordingArtifact> = {}): RecordingAr
       rmsAmplitude: 0.32,
       estimatedFrequencyHz: 440,
       isSilent: false
+    },
+    ...overrides
+  };
+}
+
+function createSegmentContext(overrides: Partial<SheetRecordingSegmentContext> = {}): SheetRecordingSegmentContext {
+  return {
+    segmentId: "segment-alpha",
+    segmentName: "Bridge",
+    range: {
+      startMeasure: 5,
+      endMeasure: 12
+    },
+    targetBpm: 88,
+    measureGridVersion: "bpm:88|timeSignature:3/4|pickupBeats:0|measureOneOffsetMs:1000",
+    measureGridSnapshot: {
+      bpm: 88,
+      timeSignature: "3/4",
+      pickupBeats: 0,
+      measureOneOffsetMs: 1_000
+    },
+    measureRangeMs: {
+      startMs: 9_180,
+      endMs: 25_540
     },
     ...overrides
   };
@@ -115,8 +140,12 @@ describe("sheet practice recording service", () => {
   });
 
   it("builds sheet review metadata around a real capture artifact", () => {
+    const segmentContext = createSegmentContext();
     const recording = createSheetReviewRecording({
-      metadata,
+      metadata: {
+        ...metadata,
+        segmentContext
+      },
       artifact: createArtifact(),
       settings,
       trustedPeaks: [0.25, 1]
@@ -134,6 +163,7 @@ describe("sheet practice recording service", () => {
       mimeType: "audio/webm",
       audioDataUrl: "data:audio/webm;base64,UklGRg==",
       trustedPeaks: [0.25, 1],
+      segmentContext,
       settings: {
         bpm: 88,
         timeSignature: "3/4"
@@ -187,6 +217,34 @@ describe("sheet practice recording service", () => {
       audioDataUrl: "data:audio/webm;base64,UklGRg=="
     });
     expect(persisted?.trustedPeaks?.length).toBeGreaterThan(0);
+  });
+
+  it("preserves segment context returned by the session service on final artifact save", async () => {
+    const segmentContext = createSegmentContext({ targetBpm: null });
+    const metadataWithSegment = {
+      ...metadata,
+      segmentContext
+    };
+    const capture = createCaptureService();
+    const sessionService = {
+      createSheetRecordingMetadata: vi.fn(async () => metadataWithSegment),
+      getRecentSheetSession: vi.fn(async () => previousSession),
+      deletePracticeSessionSnapshot: vi.fn(async () => undefined),
+      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
+    };
+    const service = new BrowserSheetRecordingService(capture.service);
+
+    const result = await service.stopAndSave({
+      sheetId: "sheet-alpha",
+      sessionId: "session-new",
+      settings,
+      forceNewSession: false,
+      sessionService
+    });
+
+    expect(result.metadata.segmentContext).toEqual(segmentContext);
+    expect(result.recording.segmentContext).toEqual(segmentContext);
+    expect(recordingHistoryRepository.getRecording("recording-sheet-1")?.segmentContext).toEqual(segmentContext);
   });
 
   it("rejects silent captures before creating sheet metadata", async () => {

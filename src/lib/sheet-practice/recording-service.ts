@@ -45,6 +45,7 @@ export function createSheetReviewRecording({
     audioDataUrl: artifact.dataUrl,
     artifactAnalysis: artifact.analysis,
     trustedPeaks,
+    segmentContext: metadata.segmentContext,
     settings: {
       bpm: metadata.bpm ?? settings.bpm,
       timeSignature: metadata.timeSignature ?? settings.timeSignature,

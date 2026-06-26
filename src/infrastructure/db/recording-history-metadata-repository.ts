@@ -29,7 +29,8 @@ function toSheetRecordingMetadata(
     createdAt: recording.createdAt,
     durationMs: recording.durationMs,
     bpm: recording.settings.bpm,
-    timeSignature: parseOptionalTimeSignature(recording.settings.timeSignature)
+    timeSignature: parseOptionalTimeSignature(recording.settings.timeSignature),
+    segmentContext: recording.segmentContext ?? null
   });
 
   if (!metadata) {
@@ -77,6 +78,7 @@ function toReviewRecording(
     sizeBytes: 0,
     mimeType: "metadata/session",
     audioDataUrl: null,
+    segmentContext: validRecording.segmentContext,
     settings: {
       bpm: validRecording.bpm ?? validSession.bpm ?? 96,
       timeSignature:

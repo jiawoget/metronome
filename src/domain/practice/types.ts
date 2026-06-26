@@ -1,3 +1,5 @@
+import type { MeasureGrid, MeasureRange, MeasureRangeMs } from "@/domain/practice/measure-grid";
+
 type PracticeSourceType = "quick" | "sheet";
 
 export type PracticeActivityTrigger = "metronome" | "recording" | "reference";
@@ -18,6 +20,16 @@ export type PracticeSession = {
   updatedAt: string;
 };
 
+export type SheetRecordingSegmentContext = {
+  segmentId: string;
+  segmentName: string;
+  range: MeasureRange;
+  targetBpm: number | null;
+  measureGridVersion: string;
+  measureGridSnapshot: MeasureGrid;
+  measureRangeMs: MeasureRangeMs;
+};
+
 export type SheetRecordingMetadata = {
   id: string;
   type: "sheet";
@@ -28,6 +40,7 @@ export type SheetRecordingMetadata = {
   durationMs: number;
   bpm: number | null;
   timeSignature: PracticeTimeSignature | null;
+  segmentContext: SheetRecordingSegmentContext | null;
 };
 
 export type TodayPracticeSummary = {

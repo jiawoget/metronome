@@ -1,4 +1,5 @@
 import type { MetronomeSettings, RecordingArtifactAnalysis } from "@/lib/quick-metronome/types";
+import type { SheetRecordingSegmentContext } from "@/domain/practice";
 
 export type RecordingReviewType = "quick" | "sheet";
 
@@ -24,6 +25,7 @@ export type ReviewRecording = {
   audioDataUrl?: string | null;
   artifactAnalysis?: RecordingArtifactAnalysis | null;
   trustedPeaks?: number[];
+  segmentContext?: SheetRecordingSegmentContext | null;
   settings: Pick<MetronomeSettings, "bpm" | "timeSignature"> &
     Partial<Omit<MetronomeSettings, "bpm" | "timeSignature">>;
 };

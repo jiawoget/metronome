@@ -4,6 +4,10 @@ import type {
   ReviewRecording
 } from "@/lib/recordings-review/types";
 import {
+  parseSheetRecordingSegmentContext,
+  type SheetRecordingSegmentContext
+} from "@/domain/practice";
+import {
   createErrorMarker,
   normalizePersistedErrorMarker,
   sortErrorMarkers,
@@ -54,6 +58,29 @@ function isRecording(value: unknown): value is ReviewRecording {
     Number.isFinite(recording.settings.bpm) &&
     typeof recording.settings.timeSignature === "string"
   );
+}
+
+function normalizeRecording(value: unknown): ReviewRecording | null {
+  if (!isRecording(value)) {
+    return null;
+  }
+
+  const recording = value as ReviewRecording & { segmentContext?: unknown };
+  const hasSegmentContext = Object.prototype.hasOwnProperty.call(recording, "segmentContext");
+
+  if (recording.type !== "sheet" || !hasSegmentContext) {
+    return recording;
+  }
+
+  const segmentContext: SheetRecordingSegmentContext | null =
+    recording.segmentContext === null || recording.segmentContext === undefined
+      ? null
+      : parseSheetRecordingSegmentContext(recording.segmentContext);
+
+  return {
+    ...recording,
+    segmentContext
+  };
 }
 
 function isErrorMarker(value: unknown): value is RecordingErrorMarker {
@@ -111,7 +138,11 @@ function normalizeErrorMarkersForRecordings({
 }
 
 function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | RecordingReviewSnapshot): RecordingReviewSnapshot {
-  const recordings = Array.isArray(value.recordings) ? value.recordings.filter(isRecording) : [];
+  const recordings = Array.isArray(value.recordings)
+    ? value.recordings
+        .map(normalizeRecording)
+        .filter((recording): recording is ReviewRecording => recording !== null)
+    : [];
   const markers = Array.isArray(value.errorMarkers) ? value.errorMarkers : [];
 
   return {
