@@ -261,6 +261,34 @@ describe("PracticeSegmentSelectorPanel", () => {
     expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Bridge polish");
   });
 
+  it("shows duplicate-name save rejection from the service without mutating the visible list", async () => {
+    const user = userEvent.setup();
+    const practiceSegmentService = createPracticeSegmentService({
+      segments: [createSegment({ name: "Bridge" })],
+      saveError: new Error("Segment name already exists.")
+    });
+
+    await renderPanel({ practiceSegmentService });
+    await user.click(screen.getByRole("button", { name: "New segment" }));
+    await fillSegmentEditor({
+      user,
+      name: " bridge ",
+      startMeasure: "13",
+      endMeasure: "16",
+      targetBpm: "",
+      notes: ""
+    });
+    await user.click(screen.getByRole("button", { name: "Save segment" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Segment name already exists.")).toBeVisible();
+    });
+
+    expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("1 saved");
+    expect(screen.getByText("Bridge")).toBeVisible();
+    expect(screen.getByTestId("practice-segment-editor")).toBeVisible();
+  });
+
   it("blocks create when the current grid is missing or cannot be loaded", async () => {
     const missingGridService = createMeasureGridService({ grid: null });
     const gridErrorService = createMeasureGridService({ error: new Error("grid read failed") });

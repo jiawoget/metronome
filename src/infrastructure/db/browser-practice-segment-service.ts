@@ -7,6 +7,7 @@ import { PRACTICE_SEGMENT_DB_NAME } from "@/infrastructure/storage/storage-contr
 import {
   createPracticeSegmentService,
   normalizePracticeSegmentId,
+  normalizePracticeSegmentNameForComparison,
   normalizePracticeSegmentSheetId,
   type PracticeSegmentRepository
 } from "@/services/practice-segments";
@@ -216,6 +217,42 @@ export const browserPracticeSegmentRepository: PracticeSegmentRepository = {
       segment: validatedSegment,
       updatedAt: new Date().toISOString()
     });
+  },
+
+  async saveSegmentIfNoDuplicateName(segment, normalizedName) {
+    const validatedSegment = validatePracticeSegment(segment);
+    const normalizedSheetId = normalizePracticeSegmentSheetId(validatedSegment.sheetId);
+    const normalizedSegmentId = normalizePracticeSegmentId(validatedSegment.id);
+    const db = getDatabase();
+    let didSave = false;
+
+    await db.transaction("rw", db.segments, async () => {
+      const sameSheetRecords = await db.segments.where("sheetId").equals(normalizedSheetId).toArray();
+      const hasDuplicateName = sameSheetRecords.some((record) => {
+        const parsedRecord = parsePersistedPracticeSegmentRecordIdentifiers(record);
+
+        return (
+          parsedRecord !== null &&
+          parsedRecord.normalizedSegmentId !== normalizedSegmentId &&
+          normalizePracticeSegmentNameForComparison(parsedRecord.parsedSegment.name) === normalizedName
+        );
+      });
+
+      if (hasDuplicateName) {
+        didSave = false;
+        return;
+      }
+
+      await db.segments.put({
+        sheetId: normalizedSheetId,
+        segmentId: normalizedSegmentId,
+        segment: validatedSegment,
+        updatedAt: new Date().toISOString()
+      });
+      didSave = true;
+    });
+
+    return didSave;
   },
 
   async deleteSegment(sheetId, segmentId) {

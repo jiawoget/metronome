@@ -9,7 +9,7 @@ import {
   Search,
   Video
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   clampReferenceVolume,
@@ -29,9 +29,11 @@ type ReferencePanelProps = {
   referenceService?: ReferenceService;
   sessionService?: Pick<PracticeSessionService, "ensureSheetSession">;
   createAudioPlayer?: () => BrowserLocalReferenceAudioPlayer;
+  onPlaybackTimestampChange?: (timestampMs: number | null) => void;
 };
 
 type PlaybackState = {
+  referenceId: string | null;
   state: "idle" | "playing" | "paused" | "error";
   currentTime: number;
   volume: number;
@@ -68,7 +70,8 @@ export function ReferencePanel({
   sheetId,
   referenceService = browserReferenceService,
   sessionService = browserPracticeSessionService,
-  createAudioPlayer = createDefaultAudioPlayer
+  createAudioPlayer = createDefaultAudioPlayer,
+  onPlaybackTimestampChange
 }: ReferencePanelProps) {
   const audioPlayer = useMemo(() => createAudioPlayer(), [createAudioPlayer]);
   const [references, setReferences] = useState<SheetReference[]>([]);
@@ -94,11 +97,15 @@ export function ReferencePanel({
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [playbackState, setPlaybackState] = useState<PlaybackState>({
+    referenceId: null,
     state: "idle",
     currentTime: 0,
     volume: 1,
     message: null
   });
+  const activeLocalReferenceIdRef = useRef<string | null>(null);
+  const activeLocalReferenceId =
+    activeReference?.kind === "local-audio" ? activeReference.id : null;
 
   const refresh = useCallback(async () => {
     const nextReferences = await referenceService.listReferences(sheetId);
@@ -123,12 +130,28 @@ export function ReferencePanel({
   }, [referenceService, refresh]);
 
   useEffect(() => {
+    activeLocalReferenceIdRef.current = activeLocalReferenceId;
+    onPlaybackTimestampChange?.(null);
+    const resetPlaybackStateTimeoutId = window.setTimeout(() => {
+      setPlaybackState((current) => ({
+        ...current,
+        referenceId: activeLocalReferenceId,
+        state: "idle",
+        currentTime: 0,
+        message: null
+      }));
+    }, 0);
+
     if (activeReference?.kind !== "local-audio") {
       audioPlayer.dispose();
-      return;
+      return () => {
+        window.clearTimeout(resetPlaybackStateTimeoutId);
+      };
     }
 
     let active = true;
+    const missingArtifactMessage =
+      "Local audio artifact is missing. Add the file again.";
 
     void referenceService
       .getLocalAudioArtifact(activeReference.id)
@@ -141,31 +164,76 @@ export function ReferencePanel({
           audioPlayer.load(activeReference, artifact);
           setPlaybackState((current) => ({
             ...current,
+            referenceId: activeReference.id,
             state: "paused",
-            currentTime: 0
+            currentTime: 0,
+            message: null
           }));
         } else {
-          setErrorMessage(
-            "Local audio artifact is missing. Add the file again."
-          );
+          audioPlayer.dispose();
+          onPlaybackTimestampChange?.(null);
+          setPlaybackState((current) => ({
+            ...current,
+            referenceId: activeReference.id,
+            state: "error",
+            currentTime: 0,
+            message: missingArtifactMessage
+          }));
+          setErrorMessage(missingArtifactMessage);
         }
+      })
+      .catch((error: unknown) => {
+        if (!active) {
+          return;
+        }
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Local audio artifact could not be loaded.";
+
+        audioPlayer.dispose();
+        onPlaybackTimestampChange?.(null);
+        setPlaybackState((current) => ({
+          ...current,
+          referenceId: activeReference.id,
+          state: "error",
+          currentTime: 0,
+          message
+        }));
+        setErrorMessage(message);
       });
 
     return () => {
       active = false;
+      window.clearTimeout(resetPlaybackStateTimeoutId);
+      onPlaybackTimestampChange?.(null);
     };
-  }, [activeReference, audioPlayer, referenceService]);
+  }, [activeLocalReferenceId, activeReference, audioPlayer, onPlaybackTimestampChange, referenceService]);
 
   useEffect(() => {
     const handleAudioState = (event: Event) => {
       const detail = (event as CustomEvent<PlaybackState>).detail;
+      const activeLocalReferenceId = activeLocalReferenceIdRef.current;
+
+      if (detail.referenceId && detail.referenceId !== activeLocalReferenceId) {
+        return;
+      }
 
       setPlaybackState({
+        referenceId: detail.referenceId,
         state: detail.state,
         currentTime: detail.currentTime,
         volume: detail.volume,
         message: detail.message
       });
+      onPlaybackTimestampChange?.(
+        detail.referenceId &&
+          detail.referenceId === activeLocalReferenceId &&
+          Number.isFinite(detail.currentTime)
+          ? Math.max(0, Math.round(detail.currentTime * 1_000))
+          : null
+      );
       if (detail.message) {
         setErrorMessage(detail.message);
       }
@@ -179,8 +247,9 @@ export function ReferencePanel({
         handleAudioState
       );
       audioPlayer.dispose();
+      onPlaybackTimestampChange?.(null);
     };
-  }, [audioPlayer]);
+  }, [audioPlayer, onPlaybackTimestampChange]);
 
   async function saveLocalReference() {
     setErrorMessage(null);

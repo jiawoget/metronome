@@ -278,6 +278,64 @@ describe("sheet practice controls state", () => {
     expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
     expect(measureGridService.saveGrid).toHaveBeenCalledWith("sheet-alpha", currentGrid);
   });
+
+  it("passes the current measure-grid timestamp into calibration actions", async () => {
+    const user = userEvent.setup();
+    const measureGridService = createMeasureGridService(null);
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        currentMeasureGridTimestampMs={2_432.6}
+        sessionService={createIdleSessionService()}
+        measureGridService={measureGridService}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Needs calibration");
+    });
+
+    await user.click(screen.getByRole("button", { name: "Set measure 1 here" }));
+
+    expect(screen.getByRole("spinbutton", { name: "Measure 1 offset" })).toHaveValue(2433);
+    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Unsaved changes");
+
+    await user.click(screen.getByRole("button", { name: "Save grid" }));
+
+    await waitFor(() => {
+      expect(measureGridService.saveGrid).toHaveBeenCalledWith("sheet-alpha", {
+        bpm: 72,
+        timeSignature: "4/4",
+        pickupBeats: 0,
+        measureOneOffsetMs: 2433
+      });
+    });
+  });
+
+  it("keeps measure-grid timestamp calibration disabled when the timestamp is null", async () => {
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        currentMeasureGridTimestampMs={null}
+        sessionService={createIdleSessionService()}
+        measureGridService={createMeasureGridService(null)}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Needs calibration");
+    });
+
+    expect(screen.getByRole("button", { name: "Set measure 1 here" })).toBeDisabled();
+    expect(screen.getByText("No playback timestamp available.")).toBeVisible();
+  });
 });
 
 describe("sheet practice controls metronome reuse", () => {

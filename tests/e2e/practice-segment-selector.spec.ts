@@ -147,6 +147,19 @@ test("practice segment selector creates, edits, deletes, reloads, scopes by shee
   await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Target 96 BPM");
   await expect(page.getByTestId("practice-segment-active-status")).toContainText("Ready");
 
+  await page.getByRole("button", { name: "New segment" }).click();
+  await fillSegmentEditor(page, {
+    name: " opening focus ",
+    startMeasure: 13,
+    endMeasure: 16,
+    targetBpm: null,
+    notes: ""
+  });
+  await page.getByRole("button", { name: "Save segment" }).click();
+  await expect(page.getByText("Segment name already exists.")).toBeVisible();
+  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+
   await page.reload();
   await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");
   await expect(page.getByText("Opening focus").first()).toBeVisible();

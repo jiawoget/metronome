@@ -170,6 +170,8 @@ function SheetViewerReady({
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(1);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [referencePlaybackTimestampMs, setReferencePlaybackTimestampMs] =
+    useState<number | null>(null);
 
   const pageUrl = useMemo(() => {
     if (!objectUrls) {
@@ -258,7 +260,10 @@ function SheetViewerReady({
             ) : null}
           </div>
         </section>
-        <ReferencePanel sheetId={state.sheet.id} />
+        <ReferencePanel
+          sheetId={state.sheet.id}
+          onPlaybackTimestampChange={setReferencePlaybackTimestampMs}
+        />
       </div>
       <SheetPracticeControls
         sheetId={state.sheet.id}
@@ -266,6 +271,7 @@ function SheetViewerReady({
         defaultBpm={state.sheet.bpm}
         defaultTimeSignature={state.sheet.timeSignature}
         sourceRecordingId={sourceRecordingId}
+        currentMeasureGridTimestampMs={referencePlaybackTimestampMs}
       />
     </div>
   );

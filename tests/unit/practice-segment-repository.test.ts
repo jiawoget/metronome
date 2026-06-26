@@ -7,6 +7,7 @@ import {
   type PracticeSegment
 } from "@/domain/practice";
 import {
+  browserPracticeSegmentService,
   browserPracticeSegmentRepository,
   clearPracticeSegmentDatabaseForTests,
   parsePersistedPracticeSegmentRecord,
@@ -149,6 +150,73 @@ describe("practice segment service", () => {
 
     await expect(service.saveSegment(updatedSegment)).resolves.toEqual(updatedSegment);
     await expect(service.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(updatedSegment);
+  });
+
+  it("rejects duplicate segment names on the same sheet using trimmed case-insensitive comparison", async () => {
+    const repository: PracticeSegmentRepository = {
+      listSegments: vi.fn(async () => [buildSegment({ name: "Bridge" })]),
+      getSegment: vi.fn(async () => null),
+      saveSegment: vi.fn(async () => undefined),
+      deleteSegment: vi.fn(async () => undefined)
+    };
+    const service = createPracticeSegmentService(repository);
+
+    await expect(
+      service.saveSegment(
+        buildSegment({
+          id: "segment-2",
+          name: "  bridge  "
+        })
+      )
+    ).rejects.toThrow("Segment name already exists.");
+
+    expect(repository.listSegments).toHaveBeenCalledWith("sheet-alpha");
+    expect(repository.saveSegment).not.toHaveBeenCalled();
+  });
+
+  it("allows editing an existing segment without changing its normalized name", async () => {
+    const service = createPracticeSegmentService(
+      createMemoryPracticeSegmentRepository([buildSegment({ name: "Bridge" })])
+    );
+    const updatedSegment = buildSegment({
+      name: " bridge ",
+      range: {
+        startMeasure: 6,
+        endMeasure: 9
+      }
+    });
+
+    await expect(service.saveSegment(updatedSegment)).resolves.toEqual({
+      ...updatedSegment,
+      name: "bridge"
+    });
+    await expect(service.getSegment("sheet-alpha", "segment-1")).resolves.toEqual({
+      ...updatedSegment,
+      name: "bridge"
+    });
+  });
+
+  it("allows duplicate normalized names on different sheets", async () => {
+    const service = createPracticeSegmentService(
+      createMemoryPracticeSegmentRepository([buildSegment({ name: "Bridge" })])
+    );
+    const otherSheetSegment = buildSegment({
+      id: "segment-2",
+      sheetId: "sheet-bravo",
+      name: "  bridge  "
+    });
+
+    await expect(service.saveSegment(otherSheetSegment)).resolves.toEqual({
+      ...otherSheetSegment,
+      name: "bridge"
+    });
+    await expect(service.listSegments("sheet-alpha")).resolves.toEqual([buildSegment({ name: "Bridge" })]);
+    await expect(service.listSegments("sheet-bravo")).resolves.toEqual([
+      {
+        ...otherSheetSegment,
+        name: "bridge"
+      }
+    ]);
   });
 
   it("keeps overlapping segment ids isolated by sheet", async () => {
@@ -387,6 +455,43 @@ describe("practice segment browser repository", () => {
       buildSegment(),
       secondSegment
     ]);
+  });
+
+  it("rejects duplicate names through the browser service before persistence", async () => {
+    await browserPracticeSegmentService.saveSegment(buildSegment({ name: "Bridge" }));
+
+    await expect(
+      browserPracticeSegmentService.saveSegment(
+        buildSegment({
+          id: "segment-2",
+          name: " bridge "
+        })
+      )
+    ).rejects.toThrow("Segment name already exists.");
+
+    await expect(browserPracticeSegmentService.listSegments("sheet-alpha")).resolves.toEqual([
+      buildSegment({ name: "Bridge" })
+    ]);
+  });
+
+  it("serializes concurrent duplicate-name saves through the browser service transaction", async () => {
+    const results = await Promise.allSettled([
+      browserPracticeSegmentService.saveSegment(buildSegment({ id: "segment-1", name: "Bridge" })),
+      browserPracticeSegmentService.saveSegment(buildSegment({ id: "segment-2", name: " bridge " }))
+    ]);
+    const fulfilledResults = results.filter((result) => result.status === "fulfilled");
+    const rejectedResults = results.filter((result) => result.status === "rejected");
+
+    expect(fulfilledResults).toHaveLength(1);
+    expect(rejectedResults).toHaveLength(1);
+    expect((rejectedResults[0] as PromiseRejectedResult).reason).toBeInstanceOf(Error);
+    expect((rejectedResults[0] as PromiseRejectedResult).reason.message).toBe("Segment name already exists.");
+
+    const savedSegments = await browserPracticeSegmentService.listSegments("sheet-alpha");
+
+    expect(savedSegments).toHaveLength(1);
+    expect(["segment-1", "segment-2"]).toContain(savedSegments[0]?.id);
+    expect(savedSegments[0]?.name.toLowerCase()).toBe("bridge");
   });
 
   it("isolates two sheets with overlapping segment ids", async () => {
