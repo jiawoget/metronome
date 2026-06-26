@@ -406,4 +406,37 @@ describe("sheet practice recording workflow store", () => {
       error: null
     });
   });
+
+  it("updates rerecord source to a second recording id while preserving the same segment context", () => {
+    const store = useSheetPracticeRecordingWorkflowStore.getState();
+
+    store.setActiveSegment("sheet-alpha", "segment-alpha");
+    store.finishRecording("sheet-alpha", {
+      id: "recording-alpha",
+      type: "sheet",
+      sheetId: "sheet-alpha",
+      segmentContext
+    });
+    store.beginRecording("sheet-alpha", "segment-alpha");
+    store.beginSaving("sheet-alpha");
+    store.finishRecording("sheet-alpha", {
+      id: "recording-beta",
+      type: "sheet",
+      sheetId: "sheet-alpha",
+      segmentContext
+    });
+
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      activeSegmentId: "segment-alpha",
+      status: "idle",
+      rerecord: {
+        status: "ready",
+        source: {
+          recordingId: "recording-beta",
+          sheetId: "sheet-alpha",
+          segmentContext
+        }
+      }
+    });
+  });
 });

@@ -110,6 +110,36 @@ function createMeasureGridService(grid: MeasureGrid | null = null) {
   } satisfies MeasureGridService;
 }
 
+function createTestGrid(overrides: Partial<MeasureGrid> = {}): MeasureGrid {
+  return {
+    bpm: 96,
+    timeSignature: "4/4",
+    pickupBeats: 0,
+    measureOneOffsetMs: 1_000,
+    ...overrides
+  };
+}
+
+function createTestSegment(
+  overrides: Partial<Omit<PracticeSegment, "grid">> & { grid?: PracticeSegment["grid"] } = {}
+): PracticeSegment {
+  const grid = createTestGrid();
+
+  return {
+    id: "segment-alpha",
+    sheetId: "sheet-alpha",
+    name: "Opening phrase",
+    range: {
+      startMeasure: 5,
+      endMeasure: 12
+    },
+    targetBpm: 96,
+    notes: null,
+    grid: createPracticeSegmentGridAssociation(grid),
+    ...overrides
+  };
+}
+
 function createPracticeSegmentService(segments: PracticeSegment[] = []) {
   const segmentsBySheet = new Map<string, Map<string, PracticeSegment>>();
 
@@ -160,9 +190,17 @@ function createSavedRecordingMetadata(overrides: Partial<SheetRecordingMetadata>
   };
 }
 
-function createInspectableSheetRecordingService() {
+function createInspectableSheetRecordingService({
+  recordingIds = ["recording-alpha"],
+  startCapture
+}: {
+  recordingIds?: string[];
+  startCapture?: () => Promise<void>;
+} = {}) {
   let active = false;
-  const recording = {
+  let saveIndex = 0;
+  let latestRecording: ReturnType<SheetPracticeRecordingService["getLatestSheetRecording"]> = null;
+  const baseRecording = {
     id: "recording-alpha",
     type: "sheet" as const,
     origin: "user" as const,
@@ -182,7 +220,13 @@ function createInspectableSheetRecordingService() {
     }
   };
   const service: SheetPracticeRecordingService = {
+    get isRecording() {
+      return active;
+    },
     startCapture: vi.fn(async () => {
+      if (startCapture) {
+        await startCapture();
+      }
       active = true;
     }),
     discardCapture: vi.fn(async () => {
@@ -190,18 +234,25 @@ function createInspectableSheetRecordingService() {
     }),
     stopAndSave: vi.fn(async (input) => {
       active = false;
+      const recordingId =
+        recordingIds[Math.min(saveIndex, recordingIds.length - 1)] ??
+        `recording-${saveIndex + 1}`;
+      saveIndex += 1;
       const metadata = createSavedRecordingMetadata({
+        id: recordingId,
         segmentContext: input.segmentContext ?? null
       });
+      latestRecording = {
+        ...baseRecording,
+        id: recordingId,
+        segmentContext: input.segmentContext ?? null
+      };
 
       return {
         metadata,
-        recording: {
-          ...recording,
-          segmentContext: input.segmentContext ?? null
-        },
+        recording: latestRecording,
         artifactDetails: {
-          recordingId: "recording-alpha",
+          recordingId,
           decodedDurationMs: 800,
           metadataDurationMs: 800,
           durationDifferenceMs: 0,
@@ -211,7 +262,7 @@ function createInspectableSheetRecordingService() {
         }
       };
     }),
-    getLatestSheetRecording: vi.fn(() => null),
+    getLatestSheetRecording: vi.fn(() => latestRecording),
     subscribe: vi.fn(() => () => undefined)
   };
 
@@ -305,6 +356,157 @@ describe("sheet practice controls segment recording context", () => {
     });
   });
 
+  it("records again through the existing save path with the same segment context and a new recording id", async () => {
+    const user = userEvent.setup();
+    const grid = createTestGrid();
+    const segment = createTestSegment();
+    const expectedContext = createSheetRecordingSegmentContext(segment);
+    const session = createSheetSession();
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => session),
+      getRecentSheetSession: vi.fn(async () => session)
+    };
+    const segmentService = createPracticeSegmentService([segment]);
+    const recordingService = createInspectableSheetRecordingService({
+      recordingIds: ["recording-alpha", "recording-beta"]
+    });
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createSheetRecordingService={() => recordingService.service}
+        sessionService={sessionService}
+        measureGridService={createMeasureGridService(grid)}
+        practiceSegmentService={segmentService}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Opening phrase")).toBeVisible();
+    });
+    await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    });
+    await user.click(screen.getByRole("button", { name: "Stop recording" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+    });
+    expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord.source?.recordingId).toBe(
+      "recording-alpha"
+    );
+
+    await user.click(screen.getByRole("button", { name: "Record again" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Recording again for Opening phrase.")).toBeVisible();
+    });
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    expect(screen.queryByRole("button", { name: "Record again" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Stop recording" }));
+
+    await waitFor(() => {
+      expect(recordingService.service.stopAndSave).toHaveBeenCalledTimes(2);
+    });
+    expect(recordingService.service.stopAndSave).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        segmentContext: expectedContext
+      })
+    );
+    expect(recordingService.service.stopAndSave).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        segmentContext: expectedContext
+      })
+    );
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: "segment-alpha",
+      status: "idle",
+      rerecord: {
+        status: "ready",
+        source: {
+          recordingId: "recording-beta",
+          sheetId: "sheet-alpha",
+          segmentContext: expectedContext
+        }
+      }
+    });
+    expect(recordingService.service.startCapture).toHaveBeenCalledTimes(2);
+  });
+
+  it("prevents rapid double-start for Record again", async () => {
+    const user = userEvent.setup();
+    const grid = createTestGrid();
+    const segment = createTestSegment();
+    const session = createSheetSession();
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => session),
+      getRecentSheetSession: vi.fn(async () => session)
+    };
+    const segmentService = createPracticeSegmentService([segment]);
+    let releaseRepeatStart: () => void = () => undefined;
+    const repeatStartGate = new Promise<void>((resolve) => {
+      releaseRepeatStart = resolve;
+    });
+    const gatedStartCapture = vi.fn(async () => {
+      if (gatedStartCapture.mock.calls.length > 1) {
+        await repeatStartGate;
+      }
+    });
+    const recordingService = createInspectableSheetRecordingService({
+      startCapture: gatedStartCapture
+    });
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createSheetRecordingService={() => recordingService.service}
+        sessionService={sessionService}
+        measureGridService={createMeasureGridService(grid)}
+        practiceSegmentService={segmentService}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Opening phrase")).toBeVisible();
+    });
+    await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    });
+    await user.click(screen.getByRole("button", { name: "Stop recording" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+    });
+
+    const recordAgainButton = screen.getByRole("button", { name: "Record again" });
+    void user.click(recordAgainButton);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Record again" })).toBeDisabled();
+    });
+    await user.click(recordAgainButton);
+
+    expect(recordingService.service.startCapture).toHaveBeenCalledTimes(2);
+    releaseRepeatStart();
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    });
+  });
+
   it("passes null context when no segment is selected", async () => {
     const user = userEvent.setup();
     const session = createSheetSession();
@@ -348,6 +550,7 @@ describe("sheet practice controls segment recording context", () => {
       })
     );
     expect(screen.getByText("Recording saved.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Record again" })).not.toBeInTheDocument();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: null,
@@ -358,6 +561,249 @@ describe("sheet practice controls segment recording context", () => {
         source: null,
         unavailableReason: "no-segment-context",
         error: null
+      }
+    });
+  });
+
+  it("invalidates Record again when selection changes and keeps normal recording available", async () => {
+    const user = userEvent.setup();
+    const grid = createTestGrid();
+    const openingSegment = createTestSegment();
+    const bridgeSegment = createTestSegment({
+      id: "segment-beta",
+      name: "Bridge",
+      range: {
+        startMeasure: 13,
+        endMeasure: 16
+      }
+    });
+    const session = createSheetSession();
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => session),
+      getRecentSheetSession: vi.fn(async () => session)
+    };
+    const segmentService = createPracticeSegmentService([openingSegment, bridgeSegment]);
+    const recordingService = createInspectableSheetRecordingService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createSheetRecordingService={() => recordingService.service}
+        sessionService={sessionService}
+        measureGridService={createMeasureGridService(grid)}
+        practiceSegmentService={segmentService}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Opening phrase")).toBeVisible();
+      expect(screen.getByText("Bridge")).toBeVisible();
+    });
+    await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    });
+    await user.click(screen.getByRole("button", { name: "Stop recording" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+    });
+
+    await user.click(screen.getByTestId("practice-segment-row-segment-beta"));
+
+    expect(screen.queryByRole("button", { name: "Record again" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      activeSegmentId: "segment-beta",
+      rerecord: {
+        status: "invalid",
+        source: null,
+        unavailableReason: "selection-changed"
+      }
+    });
+  });
+
+  it("does not start Record again when the source segment is missing", async () => {
+    const user = userEvent.setup();
+    const grid = createTestGrid();
+    const segment = createTestSegment();
+    const session = createSheetSession();
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => session),
+      getRecentSheetSession: vi.fn(async () => session)
+    };
+    const segmentService = createPracticeSegmentService([segment]);
+    const recordingService = createInspectableSheetRecordingService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createSheetRecordingService={() => recordingService.service}
+        sessionService={sessionService}
+        measureGridService={createMeasureGridService(grid)}
+        practiceSegmentService={segmentService}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Opening phrase")).toBeVisible();
+    });
+    await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    });
+    await user.click(screen.getByRole("button", { name: "Stop recording" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+    });
+
+    vi.mocked(segmentService.getSegment).mockResolvedValueOnce(null);
+    await user.click(screen.getByRole("button", { name: "Record again" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Record again is not available for this segment.")).toBeVisible();
+    });
+    expect(recordingService.service.startCapture).toHaveBeenCalledTimes(1);
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      activeSegmentId: null,
+      status: "error",
+      rerecord: {
+        status: "invalid",
+        source: null,
+        unavailableReason: "source-segment-missing"
+      }
+    });
+  });
+
+  it("handles Record again permission denial without stale ready or saving state", async () => {
+    const user = userEvent.setup();
+    const grid = createTestGrid();
+    const segment = createTestSegment();
+    const session = createSheetSession();
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => session),
+      getRecentSheetSession: vi.fn(async () => session)
+    };
+    const segmentService = createPracticeSegmentService([segment]);
+    const recordingService = createInspectableSheetRecordingService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createSheetRecordingService={() => recordingService.service}
+        sessionService={sessionService}
+        measureGridService={createMeasureGridService(grid)}
+        practiceSegmentService={segmentService}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Opening phrase")).toBeVisible();
+    });
+    await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    });
+    await user.click(screen.getByRole("button", { name: "Stop recording" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+    });
+
+    vi.mocked(recordingService.service.startCapture).mockRejectedValueOnce(
+      new Error("Microphone access was denied.")
+    );
+    await user.click(screen.getByRole("button", { name: "Record again" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Microphone access was denied.")).toBeVisible();
+    });
+    expect(recordingService.service.stopAndSave).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      activeSegmentId: "segment-alpha",
+      status: "error",
+      rerecord: {
+        status: "unavailable",
+        source: null,
+        unavailableReason: "no-source-recording"
+      }
+    });
+  });
+
+  it("handles Record again save failure without marking a new source", async () => {
+    const user = userEvent.setup();
+    const grid = createTestGrid();
+    const segment = createTestSegment();
+    const session = createSheetSession();
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => session),
+      getRecentSheetSession: vi.fn(async () => session)
+    };
+    const segmentService = createPracticeSegmentService([segment]);
+    const recordingService = createInspectableSheetRecordingService({
+      recordingIds: ["recording-alpha", "recording-beta"]
+    });
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createSheetRecordingService={() => recordingService.service}
+        sessionService={sessionService}
+        measureGridService={createMeasureGridService(grid)}
+        practiceSegmentService={segmentService}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Opening phrase")).toBeVisible();
+    });
+    await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    });
+    await user.click(screen.getByRole("button", { name: "Stop recording" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+    });
+
+    vi.mocked(recordingService.service.stopAndSave).mockRejectedValueOnce(
+      new Error("Repeat save failed.")
+    );
+    await user.click(screen.getByRole("button", { name: "Record again" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    });
+    await user.click(screen.getByRole("button", { name: "Stop recording" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Repeat save failed.")).toBeVisible();
+    });
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      activeSegmentId: "segment-alpha",
+      status: "error",
+      rerecord: {
+        status: "unavailable",
+        source: null,
+        unavailableReason: "no-source-recording"
       }
     });
   });

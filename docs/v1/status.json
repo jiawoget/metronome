@@ -417,7 +417,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P1-11 rerecord-record-again-action",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P1-12 rerecord-two-artifact-verification",

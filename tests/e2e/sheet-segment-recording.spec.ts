@@ -94,6 +94,14 @@ async function recordSheetTake(page: Page) {
   await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
 }
 
+async function recordAgainTake(page: Page) {
+  await page.getByRole("button", { name: "Record again" }).click();
+  await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
+  await page.waitForTimeout(850);
+  await page.getByRole("button", { name: "Stop recording" }).click();
+  await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
+}
+
 async function getSheetRecordings(page: Page, sheetId: string) {
   const history = await readRecordingHistory(page);
   const recordings = Array.isArray(history.recordings) ? history.recordings : [];
@@ -178,6 +186,71 @@ test("sheet recording persists selected segment context and keeps it after sourc
   sheetRecordings = await getSheetRecordings(page, sheetId);
   expect(sheetRecordings).toHaveLength(2);
   expect(sheetRecordings.find((recording) => recording.id !== segmentRecording.id)?.segmentContext ?? null).toBeNull();
+  expect(consoleErrors).toEqual([]);
+});
+
+test("Record again creates a second recording with the same selected segment context", async ({ page }) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+  await installSyntheticMicrophone(page, 440);
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await clearState(page);
+  const { link, sheetId } = await importTestSheet(page, {
+    name: "Segment Rerecord Sheet",
+    bpm: 96,
+    timeSignature: "4/4"
+  });
+
+  await link.click();
+  await saveMeasureGrid(page);
+  await createSelectedSegment(page);
+  await recordSheetTake(page);
+  await expect(page.getByText("Recording saved for Opening focus.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Record again" })).toBeEnabled();
+
+  await recordAgainTake(page);
+  await expect(page.getByText("Recording saved for Opening focus.")).toBeVisible();
+
+  const sheetRecordings = await getSheetRecordings(page, sheetId);
+
+  expect(sheetRecordings).toHaveLength(2);
+  const [latestRecording, firstRecording] = sheetRecordings;
+
+  expect(latestRecording.id).not.toBe(firstRecording.id);
+  for (const recording of sheetRecordings) {
+    expect(recording.audioDataUrl).toMatch(/^data:audio\//);
+    expect(recording.sizeBytes).toBeGreaterThan(0);
+    expect(recording.trustedPeaks?.length ?? 0).toBeGreaterThan(12);
+    expect(recording.segmentContext).toMatchObject({
+      segmentName: "Opening focus",
+      range: {
+        startMeasure: 5,
+        endMeasure: 12
+      },
+      targetBpm: 96,
+      measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
+      measureGridSnapshot: {
+        bpm: 96,
+        timeSignature: "4/4",
+        pickupBeats: 0,
+        measureOneOffsetMs: 1000
+      },
+      measureRangeMs: {
+        startMs: 11000,
+        endMs: 31000
+      }
+    });
+    expect(recording.segmentContext?.segmentId).toBeTruthy();
+  }
+  expect(latestRecording.segmentContext).toEqual(firstRecording.segmentContext);
   expect(consoleErrors).toEqual([]);
 });
 

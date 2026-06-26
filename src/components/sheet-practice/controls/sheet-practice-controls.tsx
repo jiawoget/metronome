@@ -1,7 +1,7 @@
 "use client";
 
 import { Timer } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createSheetRecordingSegmentContext,
@@ -49,6 +49,15 @@ type SheetMetronomeStartContext = {
       };
 };
 
+type SheetRecordingStartMode = "normal" | "record-again";
+
+function segmentContextsMatch(
+  left: SheetRecordingSegmentContext,
+  right: SheetRecordingSegmentContext
+) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 export function SheetPracticeControls({
   sheetId,
   sheetName,
@@ -87,6 +96,8 @@ export function SheetPracticeControls({
     updateSettings
   } = useMetronomeSettingsState(initialState.settings);
   const [recordingHarnessActive, setRecordingHarnessActive] = useState(false);
+  const [isStartingRecordAgain, setIsStartingRecordAgain] = useState(false);
+  const isStartingRecordingRef = useRef(false);
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "saving"
   >("idle");
@@ -129,6 +140,9 @@ export function SheetPracticeControls({
   );
   const rerecordStatus = useSheetPracticeRecordingWorkflowStore(
     (state) => state.rerecord.status
+  );
+  const rerecordSource = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.rerecord.source
   );
   const rerecordSourceRecordingId = useSheetPracticeRecordingWorkflowStore(
     (state) => state.rerecord.source?.recordingId ?? null
@@ -342,12 +356,92 @@ export function SheetPracticeControls({
     void stopMetronome();
   }, [stopMetronome]);
   const arePreRunSettingsLocked = isPlaying || isCounting;
+  const showRecordAgain =
+    activeRecordingWorkflowSheetId === sheetId &&
+    rerecordStatus === "ready" &&
+    rerecordSource !== null &&
+    rerecordSource.sheetId === sheetId &&
+    selectedRecordingSegmentId === rerecordSource.segmentContext.segmentId;
+  const canRecordAgain =
+    showRecordAgain &&
+    recordingState === "idle" &&
+    !recordingHarnessActive &&
+    !sheetRecordingService.isRecording &&
+    !isCounting &&
+    !isStartingRecordAgain;
 
-  async function startSheetRecording() {
+  async function validateRecordAgainSource() {
+    const workflowState = useSheetPracticeRecordingWorkflowStore.getState();
+    const source = workflowState.rerecord.source;
+
+    if (
+      workflowState.sheetId !== sheetId ||
+      workflowState.rerecord.status !== "ready" ||
+      !source ||
+      source.sheetId !== sheetId ||
+      workflowState.activeSegmentId !== source.segmentContext.segmentId
+    ) {
+      invalidateRerecordSource(sheetId, "selection-changed");
+      throw new Error("Record again is not available for this segment.");
+    }
+
+    const selectedSegment = await practiceSegmentService.getSegment(
+      sheetId,
+      source.segmentContext.segmentId
+    );
+
+    if (selectedSegment === null) {
+      setActiveRecordingSegment(sheetId, null);
+      invalidateRerecordSource(sheetId, "source-segment-missing");
+      throw new Error("Record again is not available for this segment.");
+    }
+
+    if (selectedSegment.sheetId !== sheetId) {
+      setActiveRecordingSegment(sheetId, null);
+      invalidateRerecordSource(sheetId, "sheet-mismatch");
+      throw new Error("Record again is not available for this segment.");
+    }
+
+    let liveSegmentContext: SheetRecordingSegmentContext;
+
+    try {
+      liveSegmentContext = createSheetRecordingSegmentContext(selectedSegment);
+    } catch {
+      invalidateRerecordSource(sheetId, "source-segment-invalid");
+      throw new Error("Record again is not available for this segment.");
+    }
+
+    if (!segmentContextsMatch(liveSegmentContext, source.segmentContext)) {
+      invalidateRerecordSource(sheetId, "source-segment-invalid");
+      throw new Error("Record again is not available for this segment.");
+    }
+
+    return source.segmentContext;
+  }
+
+  async function startSheetRecording(mode: SheetRecordingStartMode = "normal") {
+    if (
+      isStartingRecordingRef.current ||
+      recordingState !== "idle" ||
+      recordingHarnessActive ||
+      sheetRecordingService.isRecording ||
+      (mode === "record-again" && isCounting)
+    ) {
+      return;
+    }
+
+    isStartingRecordingRef.current = true;
+    if (mode === "record-again") {
+      setIsStartingRecordAgain(true);
+    }
+
     setErrorMessage(null);
     let captureStarted = false;
 
     try {
+      const recordAgainContext =
+        mode === "record-again" ? await validateRecordAgainSource() : null;
+
       await sheetRecordingService.startCapture();
       captureStarted = true;
 
@@ -367,11 +461,16 @@ export function SheetPracticeControls({
       setSession(nextSession);
       setConsumedSourceRecordingId(sourceRecordingId);
       setRecordingState("recording");
-      beginWorkflowRecording(sheetId, selectedRecordingSegmentId);
+      beginWorkflowRecording(
+        sheetId,
+        recordAgainContext?.segmentId ?? selectedRecordingSegmentId
+      );
       setMessage(
-        isPlaying
-          ? "Recording while metronome plays."
-          : "Recording without metronome."
+        recordAgainContext
+          ? `Recording again for ${recordAgainContext.segmentName}.`
+          : isPlaying
+            ? "Recording while metronome plays."
+            : "Recording without metronome."
       );
     } catch (error) {
       if (captureStarted) {
@@ -390,6 +489,11 @@ export function SheetPracticeControls({
           ? error.message
           : "Recording failed before it could start."
       );
+    } finally {
+      isStartingRecordingRef.current = false;
+      if (mode === "record-again") {
+        setIsStartingRecordAgain(false);
+      }
     }
   }
 
@@ -585,6 +689,10 @@ export function SheetPracticeControls({
           stopMetronome={handleStopMetronome}
           startSheetRecording={() => void startSheetRecording()}
           stopSheetRecording={() => void stopSheetRecording()}
+          showRecordAgain={showRecordAgain}
+          canRecordAgain={canRecordAgain}
+          isStartingRecordAgain={isStartingRecordAgain}
+          startRecordAgain={() => void startSheetRecording("record-again")}
         />
       </div>
       <div className="border-border grid gap-3 border-t px-3 py-3 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(24rem,1.15fr)]">
