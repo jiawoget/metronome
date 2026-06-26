@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { getMeterMeasureDurationMs, getMeterTimeSignatureParts } from "@/domain/practice/meter-timing";
 import type { PracticeTimeSignature } from "@/domain/practice/types";
 
 export type MeasureGrid = {
@@ -58,9 +59,7 @@ export const measureGridSchema = measureGridBaseSchema.superRefine((grid, contex
 });
 
 export function getTimeSignatureParts(timeSignature: PracticeTimeSignature) {
-  const [numerator, denominator] = timeSignature.split("/").map((value) => Number.parseInt(value, 10));
-
-  return { numerator, denominator };
+  return getMeterTimeSignatureParts(timeSignature);
 }
 
 export function parseMeasureGrid(value: unknown): MeasureGrid | null {
@@ -94,10 +93,7 @@ export function validateMeasureRange(value: MeasureRange): MeasureRange {
 }
 
 function getMeasureDurationMsFromValidatedGrid(validatedGrid: MeasureGrid) {
-  const { numerator, denominator } = getTimeSignatureParts(validatedGrid.timeSignature);
-  const beatDurationMs = (60_000 / validatedGrid.bpm) * (4 / denominator);
-
-  return Math.round(numerator * beatDurationMs);
+  return getMeterMeasureDurationMs(validatedGrid);
 }
 
 export function getMeasureDurationMs(grid: MeasureGrid) {

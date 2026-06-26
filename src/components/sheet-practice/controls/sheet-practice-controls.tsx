@@ -545,6 +545,8 @@ export function SheetPracticeControls({
           ? error.message
           : "Selected segment could not be prepared. Recording was not saved.";
 
+      await sheetRecordingService.discardCapture();
+      setRecordingState("idle");
       failWorkflowRecording(sheetId, nextMessage);
       setErrorMessage(nextMessage);
 

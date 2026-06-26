@@ -4,6 +4,10 @@
 
 Practice Segments make Sheet Practice measure-aware without requiring automatic score recognition. The user can define a focused passage by measure range, then record, review, and repeat takes against that passage.
 
+## Pack 1 Scope Note
+
+Current Pack 1 work is the Practice Segment foundation: manual MeasureGrid calibration, segment CRUD/selection, segment-linked recording metadata, and the `Record again` foundation path. It is not the full v1/MVP milestone. Pack 2 take review, Pack 7 reference/marker work, Pack 9 audio-analysis infrastructure, and full reference/review/audio-analysis MVP behavior remain not started or deferred unless a later pack says otherwise.
+
 ## Builds On
 
 - v0 sheets already store BPM and time signature.
@@ -86,8 +90,8 @@ Open Sheet Practice for a sheet with no grid
 - Measure 1 means the first full numbered measure after any pickup.
 - `measureOneOffsetMs` is the timestamp where measure 1 starts in the sheet/practice timeline.
 - Pickup beats describe music before measure 1 and are stored for context, but measure range conversion for numbered measures starts at `measureOneOffsetMs`.
-- Time signature math is literal and deterministic: measure duration is `beatsPerMeasure * beatDuration`, where `beatDurationMs = 60000 / bpm * (4 / denominator)`.
-- For compound meters such as `6/8`, v1 uses the literal denominator policy above; it does not infer dotted-quarter conducting beats.
+- Time signature math is shared with the live metronome timing policy and remains literal and deterministic: measure duration is `beatsPerMeasure * beatDuration`, where `beatDurationMs = 60000 / bpm * (4 / denominator)`.
+- For compound meters such as `6/8`, v1 uses the shared denominator-aware policy above across MeasureGrid conversion, live metronome scheduling, and count-in timing; it does not infer dotted-quarter conducting beats.
 - Measure numbers are 1-based integers.
 - A measure range is inclusive for user input and converts to `[startMs, endMs]`, where `endMs` is the end of the final included measure.
 - The MeasureGrid UI must not imply that the app found measures in the PDF.
@@ -221,7 +225,7 @@ Later features that depend on this contract:
 - [ ] Existing sheets with no grid still open and preserve v0 Sheet Practice behavior.
 - [ ] Measure start and end timestamps are calculated deterministically from BPM, time signature, and measure-one offset.
 - [ ] Inclusive measure ranges convert to start/end timestamps where the end is the end of the final included measure.
-- [ ] 6/8 and other non-4-denominator meters follow the documented literal denominator policy.
+- [ ] 6/8 and other non-4-denominator meters follow the documented shared denominator-aware policy across MeasureGrid and live metronome timing.
 - [ ] Invalid BPM, invalid time signatures, invalid pickup beats, missing offset, and invalid measure numbers are rejected with recoverable UI state.
 - [ ] The MeasureGrid UI follows `docs/v1/ui-design.md` and the reference image direction.
 - [ ] Calibration controls do not obscure the sheet or bottom transport controls on desktop, tablet-like, or narrow mobile viewports.
@@ -235,7 +239,7 @@ Later features that depend on this contract:
 - 120 BPM, 4/4, offset `0 ms`: measure 1 starts at `0 ms`, measure 4 ends at `8000 ms`.
 - 120 BPM, 4/4, offset `1000 ms`: measures 1-4 convert to `1000-9000 ms`.
 - 90 BPM, 3/4: measure duration is three quarter-note beats.
-- 120 BPM, 6/8: measure duration follows the literal denominator policy and equals six eighth-note beats.
+- 120 BPM, 6/8: measure duration follows the shared denominator-aware policy and equals six eighth-note beats.
 - Pickup beats are stored and validated without shifting numbered measure 1 away from `measureOneOffsetMs`.
 - Measure `1` is valid; measure `0`, negative measures, fractional measures, and non-numeric measures are invalid.
 - Inclusive ranges reject start greater than end.

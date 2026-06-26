@@ -89,6 +89,41 @@ describe("useMetronomeTransport", () => {
     expect(result.current.transportState).toBe("playing");
   });
 
+  it("runs countdown using the shared denominator-aware meter timing policy", async () => {
+    vi.useFakeTimers();
+
+    const service = createTransportService();
+    const { result } = renderHook(() =>
+      useMetronomeTransport({
+        settings: {
+          ...DEFAULT_METRONOME_SETTINGS,
+          bpm: 120,
+          timeSignature: "6/8",
+          countdownBeats: 2
+        },
+        metronomeService: service
+      })
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(result.current.countdownRemaining).toBe(1);
+    expect(service.start).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(service.start).toHaveBeenCalled();
+    expect(result.current.transportState).toBe("playing");
+  });
+
   it("uses latest settings when countdown finishes after BPM changes", async () => {
     vi.useFakeTimers();
 

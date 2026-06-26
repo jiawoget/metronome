@@ -1,3 +1,4 @@
+import { getMeterTickIntervalMs, getMeterTicksPerMeasure } from "@/domain/practice/meter-timing";
 import {
   DEFAULT_BPM,
   DEFAULT_METRONOME_SETTINGS,
@@ -80,10 +81,6 @@ export function parseCountdownBeats(value: string | number) {
     : 0;
 }
 
-function getBeatsPerMeasure(timeSignature: TimeSignature) {
-  return Number.parseInt(timeSignature.split("/")[0] ?? "4", 10);
-}
-
 export function getSubdivisionMultiplier(subdivision: Subdivision) {
   switch (subdivision) {
     case "quarter":
@@ -98,13 +95,13 @@ export function getSubdivisionMultiplier(subdivision: Subdivision) {
 }
 
 export function getTickIntervalMs(
-  settings: Pick<MetronomeSettings, "bpm" | "subdivision">
+  settings: Pick<MetronomeSettings, "bpm" | "timeSignature" | "subdivision">
 ) {
-  return (
-    60_000 /
-    clampBpm(settings.bpm) /
-    getSubdivisionMultiplier(settings.subdivision)
-  );
+  return getMeterTickIntervalMs({
+    bpm: clampBpm(settings.bpm),
+    timeSignature: settings.timeSignature,
+    ticksPerBeat: getSubdivisionMultiplier(settings.subdivision)
+  });
 }
 
 export function isAccentTick(
@@ -124,7 +121,10 @@ export function isAccentTick(
 
   return (
     tickIndex %
-      (getBeatsPerMeasure(settings.timeSignature) * subdivisionMultiplier) ===
+      getMeterTicksPerMeasure({
+        timeSignature: settings.timeSignature,
+        ticksPerBeat: subdivisionMultiplier
+      }) ===
     0
   );
 }

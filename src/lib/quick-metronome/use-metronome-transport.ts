@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { getMeterBeatDurationMs } from "@/domain/practice/meter-timing";
 import type { MetronomeSettings } from "@/lib/quick-metronome/types";
 import type { MetronomeService } from "@/services/metronome";
 
@@ -117,7 +118,7 @@ export function useMetronomeTransport<StartContext = null>({
         setCountdownRemaining(remaining);
         countdownTimeoutRef.current = window.setTimeout(() => {
           scheduleNextBeat(remaining - 1);
-        }, 60_000 / latestOptionsRef.current.settings.bpm);
+        }, getMeterBeatDurationMs(latestOptionsRef.current.settings));
       };
 
       scheduleNextBeat(remainingBeats);

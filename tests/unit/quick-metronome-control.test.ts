@@ -49,8 +49,9 @@ describe("quick metronome controls", () => {
   });
 
   it("derives timing and accent behavior from meter settings", () => {
-    expect(Math.round(getTickIntervalMs({ bpm: 120, subdivision: "quarter" }))).toBe(500);
-    expect(Math.round(getTickIntervalMs({ bpm: 120, subdivision: "eighth" }))).toBe(250);
+    expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "4/4", subdivision: "quarter" }))).toBe(500);
+    expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "4/4", subdivision: "eighth" }))).toBe(250);
+    expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "6/8", subdivision: "quarter" }))).toBe(250);
 
     expect(
       isAccentTick(0, {
@@ -80,5 +81,12 @@ describe("quick metronome controls", () => {
         accent: "off"
       })
     ).toBe(false);
+    expect(
+      isAccentTick(6, {
+        timeSignature: "6/8",
+        subdivision: "quarter",
+        accent: "downbeat"
+      })
+    ).toBe(true);
   });
 });

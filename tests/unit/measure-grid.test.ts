@@ -56,7 +56,7 @@ describe("measure grid domain", () => {
     expect(getMeasureEndMs(grid, 3)).toBe(6_250);
   });
 
-  it("uses the literal denominator policy for 6/8 instead of dotted-quarter math", () => {
+  it("uses the shared denominator-aware timing policy for 6/8", () => {
     const grid: MeasureGrid = {
       bpm: 120,
       timeSignature: "6/8",

@@ -885,7 +885,7 @@ describe("sheet practice controls segment recording context", () => {
     });
   });
 
-  it("blocks save without stopping capture when the selected segment context is invalid", async () => {
+  it("discards capture and returns idle when the selected segment context is invalid", async () => {
     const user = userEvent.setup();
     const grid: MeasureGrid = {
       bpm: 96,
@@ -944,8 +944,17 @@ describe("sheet practice controls segment recording context", () => {
       expect(screen.getByText("Selected segment timing is invalid. Recording was not saved.")).toBeVisible();
     });
     expect(recordingService.service.stopAndSave).not.toHaveBeenCalled();
-    expect(recordingService.isActive()).toBe(true);
-    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    expect(recordingService.service.discardCapture).toHaveBeenCalledOnce();
+    expect(recordingService.isActive()).toBe(false);
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
+    expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Stop recording" })).toBeDisabled();
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: "segment-invalid",
+      status: "error",
+      error: "Selected segment timing is invalid. Recording was not saved."
+    });
   });
 
   it("blocks save safely when the selected segment no longer exists during stop", async () => {
@@ -1003,7 +1012,7 @@ describe("sheet practice controls segment recording context", () => {
       });
     });
 
-    vi.mocked(segmentService.getSegment).mockResolvedValueOnce(null);
+    await segmentService.deleteSegment("sheet-alpha", "segment-alpha");
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
 
     await waitFor(() => {
@@ -1011,9 +1020,11 @@ describe("sheet practice controls segment recording context", () => {
     });
     expect(segmentService.getSegment).toHaveBeenCalledWith("sheet-alpha", "segment-alpha");
     expect(recordingService.service.stopAndSave).not.toHaveBeenCalled();
-    expect(recordingService.isActive()).toBe(true);
-    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
-    expect(screen.getByRole("button", { name: "Stop recording" })).toBeEnabled();
+    expect(recordingService.service.discardCapture).toHaveBeenCalledOnce();
+    expect(recordingService.isActive()).toBe(false);
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
+    expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Stop recording" })).toBeDisabled();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: null,
@@ -1090,9 +1101,11 @@ describe("sheet practice controls segment recording context", () => {
     });
     expect(segmentService.getSegment).toHaveBeenCalledWith("sheet-alpha", "segment-alpha");
     expect(recordingService.service.stopAndSave).not.toHaveBeenCalled();
-    expect(recordingService.isActive()).toBe(true);
-    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
-    expect(screen.getByRole("button", { name: "Stop recording" })).toBeEnabled();
+    expect(recordingService.service.discardCapture).toHaveBeenCalledOnce();
+    expect(recordingService.isActive()).toBe(false);
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
+    expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Stop recording" })).toBeDisabled();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: "segment-alpha",

@@ -3,7 +3,7 @@
 ## Slice
 
 - Slice id: P1-12 `rerecord-two-artifact-verification`
-- Pack: Pack 1 Practice Segment MVP
+- Pack: Pack 1 Practice Segment foundation
 - Product contract: `practice.segment-rerecording` in `docs/v1/05f-practice-segments.md`
 - Dependencies: P1-09 segment recording context, P1-10 rerecord workflow state, P1-11 `Record again` action
 - Planning model requirement: GPT-5.5, medium effort, standard speed
@@ -12,7 +12,7 @@
 
 ## Goal
 
-Complete Pack 1 by proving the full MVP path with durable artifact evidence:
+Complete Pack 1 foundation evidence by proving the manual practice-segment path with durable artifact evidence:
 
 ```text
 Open sheet
@@ -24,7 +24,7 @@ Open sheet
   -> prove both recording artifacts exist, are distinct, survive reload/review, and carry correct segment context
 ```
 
-This is the final verification/completion slice for Pack 1. It should add missing acceptance coverage and only the smallest fixes needed to make the already implemented P1-09 through P1-11 behavior verifiable. Treat this slice as an evidence hardening pass, not a new product feature pass.
+This is the final verification/completion slice for the Pack 1 Practice Segment foundation. It should add missing acceptance coverage and only the smallest fixes needed to make the already implemented P1-09 through P1-11 behavior verifiable. Treat this slice as an evidence hardening pass, not a new product feature pass. It does not complete the full v1/MVP milestone: Pack 2 take review, Pack 7 reference/marker work, Pack 9 audio-analysis infrastructure, and full reference/review/audio-analysis MVP behavior remain deferred/not started.
 
 ## Scope
 
@@ -336,9 +336,9 @@ Playwright EPERM/escalation note: browser E2E and synthetic microphone paths may
 - [ ] No Pack 2+ take grouping, best-take, comparison, scoring, trimming, cloud, or analysis scope is introduced.
 - [ ] Focused unit/component tests, targeted E2E, typecheck, lint, and build pass or failures are documented with actionable evidence.
 
-## Definition Of Pack 1 Complete
+## Definition Of Pack 1 Foundation Complete
 
-Pack 1 Practice Segment MVP can be presented for user acceptance when:
+Pack 1 Practice Segment foundation can be presented for user acceptance when:
 
 - P1-01 through P1-12 are verified in `docs/v1/status.json` by the normal lifecycle.
 - The final Pack 1 acceptance gate passes:
@@ -351,6 +351,7 @@ Pack 1 Practice Segment MVP can be presented for user acceptance when:
   - no-segment and sheet-isolation regressions
 - Verification evidence includes real browser E2E, artifact evidence, reload persistence, console status, and source-boundary inspection.
 - No adjacent Pack 2+ or v2 behavior is implemented as part of Pack 1.
+- Pack 1 completion does not claim Pack 2 take grouping/review, Pack 7 reference/marker behavior, Pack 9 audio-analysis infrastructure, or the full reference/review/audio-analysis MVP milestone.
 
 ## Handoff Notes For Coding Agent
 

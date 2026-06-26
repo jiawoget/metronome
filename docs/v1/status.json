@@ -372,7 +372,8 @@
                                                         ]
                                          },
                 {
-                    "pack":  "pack-1-practice-segment-mvp",
+                    "pack":  "pack-1-practice-segment-foundation",
+                    "scope":  "Verified Pack 1 foundation only: manual MeasureGrid, practice segment CRUD/selection, segment recording metadata, and Record again artifact evidence. This is not full v1/MVP completion; Pack 2 take review, Pack 7 reference/markers, Pack 9 audio-analysis infrastructure, and full reference/review/audio-analysis MVP behavior remain not_started/deferred.",
                     "status":  "verified",
                                              "slices":  [
                                                             {
