@@ -28,7 +28,10 @@ import {
   type ToneScheduledCallback
 } from "@/lib/quick-metronome/metronome-service";
 import { DEFAULT_METRONOME_SETTINGS } from "@/lib/quick-metronome/types";
-import { useSheetPracticeRecordingWorkflowStore } from "@/stores/sheet-practice-recording-workflow-store";
+import {
+  initialSheetPracticeRecordingWorkflowState,
+  useSheetPracticeRecordingWorkflowStore
+} from "@/stores/sheet-practice-recording-workflow-store";
 import type { SheetPracticeRecordingService } from "@/components/sheet-practice/controls/types";
 
 function createFakeToneAdapter() {
@@ -134,13 +137,9 @@ function createPracticeSegmentService(segments: PracticeSegment[] = []) {
 
 function resetRecordingWorkflowStore() {
   useSheetPracticeRecordingWorkflowStore.setState({
-    sheetId: null,
-    activeSegmentId: null,
-    status: "idle",
-    error: null,
+    ...initialSheetPracticeRecordingWorkflowState,
     rerecord: {
-      readyRecordingId: null,
-      error: null
+      ...initialSheetPracticeRecordingWorkflowState.rerecord
     }
   });
 }
@@ -288,6 +287,22 @@ describe("sheet practice controls segment recording context", () => {
       })
     );
     expect(screen.getByText("Recording saved for Opening phrase.")).toBeVisible();
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: "segment-alpha",
+      status: "idle",
+      error: null,
+      rerecord: {
+        status: "ready",
+        source: {
+          recordingId: "recording-alpha",
+          sheetId: "sheet-alpha",
+          segmentContext: createSheetRecordingSegmentContext(segment)
+        },
+        unavailableReason: null,
+        error: null
+      }
+    });
   });
 
   it("passes null context when no segment is selected", async () => {
@@ -333,6 +348,95 @@ describe("sheet practice controls segment recording context", () => {
       })
     );
     expect(screen.getByText("Recording saved.")).toBeVisible();
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: null,
+      status: "idle",
+      error: null,
+      rerecord: {
+        status: "unavailable",
+        source: null,
+        unavailableReason: "no-segment-context",
+        error: null
+      }
+    });
+  });
+
+  it("preserves active segment and clears rerecord readiness when save fails", async () => {
+    const user = userEvent.setup();
+    const grid: MeasureGrid = {
+      bpm: 96,
+      timeSignature: "4/4",
+      pickupBeats: 0,
+      measureOneOffsetMs: 1_000
+    };
+    const segment: PracticeSegment = {
+      id: "segment-alpha",
+      sheetId: "sheet-alpha",
+      name: "Opening phrase",
+      range: {
+        startMeasure: 5,
+        endMeasure: 12
+      },
+      targetBpm: 96,
+      notes: null,
+      grid: createPracticeSegmentGridAssociation(grid)
+    };
+    const session = createSheetSession();
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => session),
+      getRecentSheetSession: vi.fn(async () => session)
+    };
+    const segmentService = createPracticeSegmentService([segment]);
+    const recordingService = createInspectableSheetRecordingService();
+
+    vi.mocked(recordingService.service.stopAndSave).mockRejectedValueOnce(
+      new Error("Recording write failed.")
+    );
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createSheetRecordingService={() => recordingService.service}
+        sessionService={sessionService}
+        measureGridService={createMeasureGridService(grid)}
+        practiceSegmentService={segmentService}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Opening phrase")).toBeVisible();
+    });
+    await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    });
+    await user.click(screen.getByRole("button", { name: "Stop recording" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Recording write failed.")).toBeVisible();
+    });
+    expect(recordingService.service.stopAndSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        segmentContext: createSheetRecordingSegmentContext(segment)
+      })
+    );
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: "segment-alpha",
+      status: "error",
+      error: "Recording write failed.",
+      rerecord: {
+        status: "unavailable",
+        source: null,
+        unavailableReason: "no-source-recording"
+      }
+    });
   });
 
   it("blocks save without stopping capture when the selected segment context is invalid", async () => {
@@ -468,7 +572,12 @@ describe("sheet practice controls segment recording context", () => {
       sheetId: "sheet-alpha",
       activeSegmentId: null,
       status: "error",
-      error: "Selected segment no longer exists. Recording was not saved."
+      error: "Selected segment no longer exists. Recording was not saved.",
+      rerecord: {
+        status: "invalid",
+        source: null,
+        unavailableReason: "source-segment-missing"
+      }
     });
   });
 
@@ -542,7 +651,11 @@ describe("sheet practice controls segment recording context", () => {
       sheetId: "sheet-alpha",
       activeSegmentId: "segment-alpha",
       status: "error",
-      error: "Selected segment could not be loaded. Recording was not saved."
+      error: "Selected segment could not be loaded. Recording was not saved.",
+      rerecord: {
+        status: "unavailable",
+        source: null
+      }
     });
   });
 });

@@ -10,7 +10,10 @@ import {
 } from "@/domain/practice";
 import type { MeasureGridService } from "@/services/measure-grid";
 import type { PracticeSegmentService } from "@/services/practice-segments";
-import { useSheetPracticeRecordingWorkflowStore } from "@/stores/sheet-practice-recording-workflow-store";
+import {
+  initialSheetPracticeRecordingWorkflowState,
+  useSheetPracticeRecordingWorkflowStore
+} from "@/stores/sheet-practice-recording-workflow-store";
 
 const currentGrid: MeasureGrid = {
   bpm: 96,
@@ -28,13 +31,9 @@ const staleGrid: MeasureGrid = {
 
 function resetRecordingWorkflowStore() {
   useSheetPracticeRecordingWorkflowStore.setState({
-    sheetId: null,
-    activeSegmentId: null,
-    status: "idle",
-    error: null,
+    ...initialSheetPracticeRecordingWorkflowState,
     rerecord: {
-      readyRecordingId: null,
-      error: null
+      ...initialSheetPracticeRecordingWorkflowState.rerecord
     }
   });
 }

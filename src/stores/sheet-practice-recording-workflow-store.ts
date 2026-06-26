@@ -1,10 +1,39 @@
 import { create } from "zustand";
 
+import type { SheetRecordingSegmentContext } from "@/domain/practice";
+
 export type SheetPracticeRecordingWorkflowStatus = "idle" | "recording" | "saving" | "error";
 
+export type SheetPracticeRerecordStatus = "unavailable" | "ready" | "invalid" | "error";
+
+export type SheetPracticeRerecordUnavailableReason =
+  | "no-source-recording"
+  | "no-segment-context"
+  | "sheet-mismatch"
+  | "selection-changed"
+  | "source-recording-missing"
+  | "source-segment-missing"
+  | "source-segment-invalid"
+  | "recording-active";
+
+export type SheetPracticeRerecordSource = {
+  recordingId: string;
+  sheetId: string;
+  segmentContext: SheetRecordingSegmentContext;
+};
+
 export type SheetPracticeRerecordState = {
-  readyRecordingId: string | null;
+  status: SheetPracticeRerecordStatus;
+  source: SheetPracticeRerecordSource | null;
+  unavailableReason: SheetPracticeRerecordUnavailableReason | null;
   error: string | null;
+};
+
+export type SheetPracticeSavedRecordingForRerecord = {
+  id: string;
+  type: "quick" | "sheet";
+  sheetId: string | null;
+  segmentContext?: SheetRecordingSegmentContext | null;
 };
 
 export type SheetPracticeRecordingWorkflowState = {
@@ -20,49 +49,166 @@ export type SheetPracticeRecordingWorkflowActions = {
   setActiveSegment: (sheetId: string, segmentId: string | null) => void;
   beginRecording: (sheetId: string, segmentId?: string | null) => void;
   beginSaving: (sheetId: string) => void;
-  finishRecording: (sheetId: string) => void;
+  finishRecording: (
+    sheetId: string,
+    recording?: SheetPracticeSavedRecordingForRerecord | null
+  ) => void;
   failRecording: (sheetId: string, error: string) => void;
-  setRerecordReady: (sheetId: string, recordingId: string | null) => void;
+  cancelRecording: (sheetId: string) => void;
+  setRerecordReady: (sheetId: string, source: SheetPracticeRerecordSource) => void;
+  clearRerecordSource: (
+    sheetId: string,
+    reason?: SheetPracticeRerecordUnavailableReason
+  ) => void;
+  invalidateRerecordSource: (
+    sheetId: string,
+    reason: SheetPracticeRerecordUnavailableReason
+  ) => void;
   failRerecord: (sheetId: string, error: string) => void;
 };
 
 export type SheetPracticeRecordingWorkflowStore = SheetPracticeRecordingWorkflowState &
   SheetPracticeRecordingWorkflowActions;
 
-const initialWorkflowState: SheetPracticeRecordingWorkflowState = {
+const initialRerecordState: SheetPracticeRerecordState = {
+  status: "unavailable",
+  source: null,
+  unavailableReason: "no-source-recording",
+  error: null
+};
+
+export const initialSheetPracticeRecordingWorkflowState: SheetPracticeRecordingWorkflowState = {
   sheetId: null,
   activeSegmentId: null,
   status: "idle",
   error: null,
-  rerecord: {
-    readyRecordingId: null,
-    error: null
-  }
+  rerecord: initialRerecordState
 };
 
 function scopedState(sheetId: string, state: SheetPracticeRecordingWorkflowState) {
   return state.sheetId === sheetId
     ? state
     : {
-        ...initialWorkflowState,
+        ...initialSheetPracticeRecordingWorkflowState,
         sheetId
       };
 }
 
+function createUnavailableRerecordState(
+  reason: SheetPracticeRerecordUnavailableReason = "no-source-recording"
+): SheetPracticeRerecordState {
+  return {
+    status: "unavailable",
+    source: null,
+    unavailableReason: reason,
+    error: null
+  };
+}
+
+function createInvalidRerecordState(
+  reason: SheetPracticeRerecordUnavailableReason
+): SheetPracticeRerecordState {
+  return {
+    status: "invalid",
+    source: null,
+    unavailableReason: reason,
+    error: null
+  };
+}
+
+function createReadyRerecordState(source: SheetPracticeRerecordSource): SheetPracticeRerecordState {
+  return {
+    status: "ready",
+    source,
+    unavailableReason: null,
+    error: null
+  };
+}
+
+function createErrorRerecordState(error: string): SheetPracticeRerecordState {
+  return {
+    status: "error",
+    source: null,
+    unavailableReason: null,
+    error
+  };
+}
+
+function isInvalidationReason(reason: SheetPracticeRerecordUnavailableReason) {
+  return (
+    reason === "selection-changed" ||
+    reason === "sheet-mismatch" ||
+    reason === "source-recording-missing" ||
+    reason === "source-segment-missing" ||
+    reason === "source-segment-invalid"
+  );
+}
+
+function clearRerecordForReason(reason: SheetPracticeRerecordUnavailableReason) {
+  return isInvalidationReason(reason)
+    ? createInvalidRerecordState(reason)
+    : createUnavailableRerecordState(reason);
+}
+
+function getRerecordStateAfterSegmentChange(
+  rerecord: SheetPracticeRerecordState,
+  segmentId: string | null
+) {
+  if (segmentId === null) {
+    return rerecord.source
+      ? createInvalidRerecordState("selection-changed")
+      : createUnavailableRerecordState("no-source-recording");
+  }
+
+  if (rerecord.source && rerecord.source.segmentContext.segmentId !== segmentId) {
+    return createInvalidRerecordState("selection-changed");
+  }
+
+  return rerecord;
+}
+
+function getRerecordStateFromSavedRecording(
+  sheetId: string,
+  recording?: SheetPracticeSavedRecordingForRerecord | null
+) {
+  if (!recording) {
+    return createUnavailableRerecordState("no-source-recording");
+  }
+
+  if (recording.type !== "sheet" || recording.sheetId !== sheetId) {
+    return createInvalidRerecordState("sheet-mismatch");
+  }
+
+  if (!recording.segmentContext) {
+    return createUnavailableRerecordState("no-segment-context");
+  }
+
+  return createReadyRerecordState({
+    recordingId: recording.id,
+    sheetId,
+    segmentContext: recording.segmentContext
+  });
+}
+
 export const useSheetPracticeRecordingWorkflowStore = create<SheetPracticeRecordingWorkflowStore>()(
   (set) => ({
-    ...initialWorkflowState,
+    ...initialSheetPracticeRecordingWorkflowState,
     resetForSheet: (sheetId) =>
       set({
-        ...initialWorkflowState,
+        ...initialSheetPracticeRecordingWorkflowState,
         sheetId
       }),
     setActiveSegment: (sheetId, segmentId) =>
-      set((state) => ({
-        ...scopedState(sheetId, state),
-        activeSegmentId: segmentId,
-        error: null
-      })),
+      set((state) => {
+        const scoped = scopedState(sheetId, state);
+
+        return {
+          ...scoped,
+          activeSegmentId: segmentId,
+          error: null,
+          rerecord: getRerecordStateAfterSegmentChange(scoped.rerecord, segmentId)
+        };
+      }),
     beginRecording: (sheetId, segmentId) =>
       set((state) => {
         const scoped = scopedState(sheetId, state);
@@ -71,7 +217,8 @@ export const useSheetPracticeRecordingWorkflowStore = create<SheetPracticeRecord
           ...scoped,
           activeSegmentId: segmentId === undefined ? scoped.activeSegmentId : segmentId,
           status: "recording",
-          error: null
+          error: null,
+          rerecord: createUnavailableRerecordState("recording-active")
         };
       }),
     beginSaving: (sheetId) =>
@@ -80,33 +227,57 @@ export const useSheetPracticeRecordingWorkflowStore = create<SheetPracticeRecord
         status: "saving",
         error: null
       })),
-    finishRecording: (sheetId) =>
+    finishRecording: (sheetId, recording) =>
+      set((state) => {
+        const scoped = scopedState(sheetId, state);
+
+        return {
+          ...scoped,
+          status: "idle",
+          error: null,
+          rerecord: getRerecordStateFromSavedRecording(sheetId, recording)
+        };
+      }),
+    failRecording: (sheetId, error) =>
+      set((state) => {
+        const scoped = scopedState(sheetId, state);
+
+        return {
+          ...scoped,
+          status: "error",
+          error,
+          rerecord:
+            scoped.rerecord.status === "invalid"
+              ? scoped.rerecord
+              : createUnavailableRerecordState("no-source-recording")
+        };
+      }),
+    cancelRecording: (sheetId) =>
       set((state) => ({
         ...scopedState(sheetId, state),
         status: "idle",
-        error: null
+        error: null,
+        rerecord: createUnavailableRerecordState("no-source-recording")
       })),
-    failRecording: (sheetId, error) =>
+    setRerecordReady: (sheetId, source) =>
       set((state) => ({
         ...scopedState(sheetId, state),
-        status: "error",
-        error
+        rerecord: createReadyRerecordState(source)
       })),
-    setRerecordReady: (sheetId, recordingId) =>
+    clearRerecordSource: (sheetId, reason = "no-source-recording") =>
       set((state) => ({
         ...scopedState(sheetId, state),
-        rerecord: {
-          readyRecordingId: recordingId,
-          error: null
-        }
+        rerecord: createUnavailableRerecordState(reason)
+      })),
+    invalidateRerecordSource: (sheetId, reason) =>
+      set((state) => ({
+        ...scopedState(sheetId, state),
+        rerecord: clearRerecordForReason(reason)
       })),
     failRerecord: (sheetId, error) =>
       set((state) => ({
         ...scopedState(sheetId, state),
-        rerecord: {
-          readyRecordingId: null,
-          error
-        }
+        rerecord: createErrorRerecordState(error)
       }))
   })
 );
@@ -116,3 +287,9 @@ export const selectSheetRecordingWorkflowStatus = (state: SheetPracticeRecording
 
 export const selectActiveSheetRecordingSegmentId = (state: SheetPracticeRecordingWorkflowStore) =>
   state.activeSegmentId;
+
+export const selectSheetPracticeRerecordState = (state: SheetPracticeRecordingWorkflowStore) =>
+  state.rerecord;
+
+export const selectSheetPracticeRerecordSource = (state: SheetPracticeRecordingWorkflowStore) =>
+  state.rerecord.source;

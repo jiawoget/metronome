@@ -124,6 +124,15 @@ export function SheetPracticeControls({
   const failWorkflowRecording = useSheetPracticeRecordingWorkflowStore(
     (state) => state.failRecording
   );
+  const invalidateRerecordSource = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.invalidateRerecordSource
+  );
+  const rerecordStatus = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.rerecord.status
+  );
+  const rerecordSourceRecordingId = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.rerecord.source?.recordingId ?? null
+  );
   const isSheetRecording = recordingState === "recording";
   const isRecordingActive = isSheetRecording || recordingHarnessActive;
   const selectedRecordingSegmentId =
@@ -183,6 +192,29 @@ export function SheetPracticeControls({
       unsubscribeRecordings();
     };
   }, [refreshSession, sessionService, sheetRecordingService]);
+
+  useEffect(() => {
+    if (
+      activeRecordingWorkflowSheetId !== sheetId ||
+      rerecordStatus !== "ready" ||
+      !rerecordSourceRecordingId
+    ) {
+      return;
+    }
+
+    if (latestSheetRecording?.id === rerecordSourceRecordingId) {
+      return;
+    }
+
+    invalidateRerecordSource(sheetId, "source-recording-missing");
+  }, [
+    activeRecordingWorkflowSheetId,
+    invalidateRerecordSource,
+    latestSheetRecording?.id,
+    rerecordSourceRecordingId,
+    rerecordStatus,
+    sheetId
+  ]);
 
   const shouldCreatePracticeAgainSession =
     Boolean(sourceRecordingId) &&
@@ -379,11 +411,13 @@ export function SheetPracticeControls({
 
     if (selectedSegment === null) {
       setActiveRecordingSegment(sheetId, null);
+      invalidateRerecordSource(sheetId, "source-segment-missing");
       throw new Error("Selected segment no longer exists. Recording was not saved.");
     }
 
     if (selectedSegment.sheetId !== sheetId) {
       setActiveRecordingSegment(sheetId, null);
+      invalidateRerecordSource(sheetId, "sheet-mismatch");
       throw new Error("Selected segment belongs to a different sheet. Recording was not saved.");
     }
 
@@ -434,7 +468,7 @@ export function SheetPracticeControls({
       );
       setLatestSheetRecording(result.recording);
       setRecordingState("idle");
-      finishWorkflowRecording(sheetId);
+      finishWorkflowRecording(sheetId, result.recording);
       setMessage(
         isPlaying
           ? "Recording saved; metronome is still playing."

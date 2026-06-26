@@ -251,6 +251,9 @@ export function PracticeSegmentSelectorPanel({
   const setActiveRecordingSegment = useSheetPracticeRecordingWorkflowStore(
     (state) => state.setActiveSegment
   );
+  const invalidateRerecordSource = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.invalidateRerecordSource
+  );
   const currentSheetIdRef = useRef(sheetId);
   const [loadResult, setLoadResult] = useState<SegmentSelectorLoadResult>({
     sheetId: null,
@@ -331,6 +334,7 @@ export function PracticeSegmentSelectorPanel({
         }
 
         setActiveRecordingSegment(sheetId, null);
+        invalidateRerecordSource(sheetId, "source-segment-missing");
 
         return null;
       });
@@ -339,7 +343,14 @@ export function PracticeSegmentSelectorPanel({
     return () => {
       isActive = false;
     };
-  }, [measureGridRevision, measureGridService, practiceSegmentService, setActiveRecordingSegment, sheetId]);
+  }, [
+    invalidateRerecordSource,
+    measureGridRevision,
+    measureGridService,
+    practiceSegmentService,
+    setActiveRecordingSegment,
+    sheetId
+  ]);
 
   const isLoadedSheet = loadResult.sheetId === sheetId;
   const effectiveLoadState = isLoadedSheet ? loadResult.loadState : "loading";
@@ -402,6 +413,7 @@ export function PracticeSegmentSelectorPanel({
       }
 
       setActiveRecordingSegment(targetSheetId, null);
+      invalidateRerecordSource(targetSheetId, "source-segment-missing");
 
       return null;
     });
@@ -506,6 +518,7 @@ export function PracticeSegmentSelectorPanel({
         setSelectedSegmentKey((currentSelection) => {
           if (currentSelection?.sheetId === targetSheetId && currentSelection.segmentId === savedSegment.id) {
             setActiveRecordingSegment(targetSheetId, null);
+            invalidateRerecordSource(targetSheetId, "source-segment-missing");
 
             return null;
           }
@@ -545,6 +558,7 @@ export function PracticeSegmentSelectorPanel({
       setSelectedSegmentKey((currentSelection) => {
         if (currentSelection?.sheetId === targetSheetId && currentSelection.segmentId === segment.id) {
           setActiveRecordingSegment(targetSheetId, null);
+          invalidateRerecordSource(targetSheetId, "source-segment-missing");
 
           return null;
         }
