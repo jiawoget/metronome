@@ -405,7 +405,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P1-08 recording-metadata-segment-fields",
-                                                                "status":  "not_started"
+                                                                "status":  "planning_ready"
                                                             },
                                                             {
                                                                 "slice":  "P1-09 recording-save-segment-context",
