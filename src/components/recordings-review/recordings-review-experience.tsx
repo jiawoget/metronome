@@ -39,6 +39,10 @@ import {
   sortErrorMarkers,
   type RecordingTypeFilter
 } from "@/lib/recordings-review/history";
+import {
+  createTakeHistorySummary,
+  type TakeHistorySummary
+} from "@/lib/recordings-review/take-history-summary";
 import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
 import { seekToErrorMarker } from "@/lib/recordings-review/error-markers";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
@@ -219,6 +223,7 @@ export function RecordingsReviewExperience() {
               <div data-testid="recordings-list" className="grid gap-4">
                 <GroupedRecordingList
                   grouping={groupedRecordings}
+                  markers={snapshot.errorMarkers}
                   selectedRecordingId={selectedRecording?.id ?? null}
                   onSelectRecording={(recordingId) => {
                     setSelectedRecordingId(recordingId);
@@ -290,10 +295,12 @@ function RecordingsHeader() {
 
 function GroupedRecordingList({
   grouping,
+  markers,
   selectedRecordingId,
   onSelectRecording
 }: {
   grouping: ReturnType<typeof groupRecordingsByTake>;
+  markers: RecordingErrorMarker[];
   selectedRecordingId: string | null;
   onSelectRecording: (recordingId: string) => void;
 }) {
@@ -303,6 +310,7 @@ function GroupedRecordingList({
         <TakeGroupSection
           key={group.groupId}
           group={group}
+          markers={markers}
           selectedRecordingId={selectedRecordingId}
           onSelectRecording={onSelectRecording}
         />
@@ -353,10 +361,12 @@ function GroupedRecordingList({
 
 function TakeGroupSection({
   group,
+  markers,
   selectedRecordingId,
   onSelectRecording
 }: {
   group: RecordingTakeGroup;
+  markers: RecordingErrorMarker[];
   selectedRecordingId: string | null;
   onSelectRecording: (recordingId: string) => void;
 }) {
@@ -378,9 +388,11 @@ function TakeGroupSection({
     string | null
   >(null);
   const resolvedSelection = recordingHistoryRepository.resolveTakeSelection(group);
-  const bestTakeLabel = resolvedSelection.bestRecording
-    ? getRecordingDisplayName(resolvedSelection.bestRecording)
-    : "none";
+  const takeHistorySummary = createTakeHistorySummary({
+    group,
+    selection: resolvedSelection,
+    markers
+  });
   const activeTakeLabel = resolvedSelection.activeRecording
     ? getRecordingDisplayName(resolvedSelection.activeRecording)
     : "none";
@@ -433,16 +445,8 @@ function TakeGroupSection({
               {contextLabel}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <MetadataPill
-              value={`${group.takeCount} ${
-                group.takeCount === 1 ? "take" : "takes"
-              }`}
-            />
-            <MetadataPill
-              value={`Latest ${formatRecordingDate(group.latestRecordedAt)}`}
-            />
-            <MetadataPill value={`Best: ${bestTakeLabel}`} wrap />
+          <div className="flex max-w-full flex-wrap gap-2 text-xs sm:justify-end">
+            <TakeHistorySummaryChips summary={takeHistorySummary} />
             <MetadataPill value={`Active: ${activeTakeLabel}`} wrap />
           </div>
         </div>
@@ -471,6 +475,28 @@ function TakeGroupSection({
         ))}
       </div>
     </section>
+  );
+}
+
+function TakeHistorySummaryChips({
+  summary
+}: {
+  summary: TakeHistorySummary;
+}) {
+  return (
+    <div
+      data-testid="take-history-summary"
+      aria-label="Take history summary"
+      className="contents"
+    >
+      {summary.fields.map((field) => (
+        <MetadataPill
+          key={field.key}
+          value={`${field.label}: ${field.value}`}
+          wrap
+        />
+      ))}
+    </div>
   );
 }
 

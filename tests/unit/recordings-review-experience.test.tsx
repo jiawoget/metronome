@@ -37,6 +37,27 @@ describe("RecordingsReviewExperience grouped take history", () => {
     expect(segmentGroup).toHaveTextContent("Bridge");
     expect(segmentGroup).toHaveTextContent("2 takes");
     expect(
+      within(segmentGroup).getByTestId("take-history-summary")
+    ).toHaveTextContent("Takes: 2 takes");
+    expect(
+      within(segmentGroup).getByTestId("take-history-summary")
+    ).toHaveTextContent(/Latest: .*Bridge take 2/);
+    expect(
+      within(segmentGroup).getByTestId("take-history-summary")
+    ).toHaveTextContent("Best: none");
+    expect(
+      within(segmentGroup).getByTestId("take-history-summary")
+    ).toHaveTextContent("Latest duration: 0:12");
+    expect(
+      within(segmentGroup).getByTestId("take-history-summary")
+    ).toHaveTextContent("BPM: 96 BPM");
+    expect(
+      within(segmentGroup).getByTestId("take-history-summary")
+    ).toHaveTextContent("Time signature: 4/4");
+    expect(
+      within(segmentGroup).getByTestId("take-history-summary")
+    ).toHaveTextContent("Markers: 2 markers");
+    expect(
       within(segmentGroup).getByTestId("recording-row-sheet-bridge-new")
     ).toBeVisible();
     expect(
@@ -56,16 +77,29 @@ describe("RecordingsReviewExperience grouped take history", () => {
     );
     expect(noSegmentGroup).toHaveTextContent("Whole sheet / no segment");
     expect(noSegmentGroup).toHaveTextContent("2 takes");
+    expect(
+      within(noSegmentGroup).getByTestId("take-history-summary")
+    ).toHaveTextContent("Markers: No markers");
 
     expect(screen.getByTestId("quick-recordings-section")).toHaveTextContent(
       "Quick recordings"
     );
+    expect(
+      within(screen.getByTestId("quick-recordings-section")).queryByTestId(
+        "take-history-summary"
+      )
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("recording-row-quick-alpha")).toBeVisible();
     expect(screen.queryByTestId("best-take-control-quick-alpha")).not.toBeInTheDocument();
     expect(screen.queryByTestId("active-take-control-quick-alpha")).not.toBeInTheDocument();
     expect(screen.getByTestId("ungrouped-recordings-section")).toHaveTextContent(
       "Legacy recordings with missing sheet links"
     );
+    expect(
+      within(screen.getByTestId("ungrouped-recordings-section")).queryByTestId(
+        "take-history-summary"
+      )
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("recording-row-sheet-missing-link")).toBeVisible();
     expect(
       screen.queryByTestId("best-take-control-sheet-missing-link")
@@ -215,6 +249,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     expect(segmentGroup).toHaveTextContent("1 take");
     expect(segmentGroup).toHaveTextContent("Best: none");
     expect(segmentGroup).toHaveTextContent("Active: none");
+    expect(segmentGroup).toHaveTextContent("Markers: 1 marker");
     expect(
       within(segmentGroup).getByTestId("active-take-control-sheet-bridge-new")
     ).toHaveAttribute("aria-pressed", "false");
@@ -302,6 +337,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
       expect(oldBestControl).toHaveAttribute("aria-pressed", "true");
     });
     expect(segmentGroup).toHaveTextContent("Best: Bridge take 1");
+    expect(
+      within(segmentGroup).getByTestId("take-history-summary")
+    ).toHaveTextContent(/Latest: .*Bridge take 2/);
     expect(segmentGroup).toHaveTextContent("Active: none");
     expect(screen.getByTestId("recording-details")).toHaveAttribute(
       "data-recording-id",
@@ -409,6 +447,49 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     expect(restoredSegmentGroup).toHaveTextContent("Best: Bridge take 1");
     expect(restoredSegmentGroup).toHaveTextContent("Active: Bridge take 2");
+  });
+
+  it("renders mixed summary fallbacks without evaluation claims", async () => {
+    recordingHistoryRepository.saveSnapshot({
+      sessions: [],
+      recordings: [
+        createSheetRecording({
+          id: "mixed-old",
+          name: "Mixed old",
+          createdAt: "2026-06-21T09:00:00.000Z",
+          segmentContext: null,
+          settings: {
+            bpm: 88,
+            timeSignature: "3/4"
+          }
+        }),
+        createSheetRecording({
+          id: "mixed-latest",
+          name: "Mixed latest",
+          createdAt: "2026-06-21T12:00:00.000Z",
+          segmentContext: null,
+          settings: {
+            bpm: 96,
+            timeSignature: "4/4"
+          }
+        })
+      ],
+      errorMarkers: []
+    });
+
+    render(<RecordingsReviewExperience />);
+
+    const group = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:none"
+    );
+    const summary = within(group).getByTestId("take-history-summary");
+    const pageText = document.body.textContent?.toLowerCase() ?? "";
+
+    expect(summary).toHaveTextContent("Mixed BPM, latest 96");
+    expect(summary).toHaveTextContent("Mixed time signatures, latest 4/4");
+    expect(pageText).not.toMatch(
+      /score|accuracy|correct|best performance|cleanest|most accurate|recommended|improved|mistakes|timing quality/
+    );
   });
 
   it("reports repository failures without crashing the review route", async () => {
@@ -523,7 +604,26 @@ function createMixedSnapshot(): RecordingReviewSnapshot {
         segmentContext: null
       })
     ],
-    errorMarkers: []
+    errorMarkers: [
+      {
+        id: "marker-bridge-old",
+        recordingId: "sheet-bridge-old",
+        timestampMs: 1_000,
+        note: "Old marker"
+      },
+      {
+        id: "marker-bridge-new",
+        recordingId: "sheet-bridge-new",
+        timestampMs: 2_000,
+        note: "New marker"
+      },
+      {
+        id: "marker-quick",
+        recordingId: "quick-alpha",
+        timestampMs: 1_000,
+        note: "Quick marker"
+      }
+    ]
   };
 }
 
@@ -577,10 +677,13 @@ function createQuickRecording(
 }
 
 function createSheetRecording(
-  overrides: Partial<Omit<ReviewRecording, "segmentContext">> & {
+  overrides: Partial<Omit<ReviewRecording, "segmentContext" | "settings">> & {
     segmentContext?: SheetRecordingSegmentContext | null;
+    settings?: Partial<ReviewRecording["settings"]>;
   } = {}
 ): ReviewRecording {
+  const { settings, ...recordingOverrides } = overrides;
+
   return {
     id: "sheet-recording",
     type: "sheet",
@@ -595,8 +698,9 @@ function createSheetRecording(
     audioDataUrl: "data:audio/webm;base64,UklGRg==",
     settings: {
       bpm: 96,
-      timeSignature: "4/4"
+      timeSignature: "4/4",
+      ...settings
     },
-    ...overrides
+    ...recordingOverrides
   };
 }

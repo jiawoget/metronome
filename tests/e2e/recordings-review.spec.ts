@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   createWavDataUrl,
   decodeRecordingHistoryAudio,
@@ -165,6 +165,57 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
   ).toBeLessThanOrEqual(overflowEvidence.viewportWidth + 1);
 }
 
+async function expectReadableSummaryChips(summary: Locator, label: string) {
+  const chips = summary.locator("span");
+
+  await expect(chips, `${label}: summary chip count`).toHaveCount(7);
+
+  const chipEvidence = await chips.evaluateAll((elements) =>
+    elements.map((element) => {
+      const style = window.getComputedStyle(element);
+      const bounds = element.getBoundingClientRect();
+
+      return {
+        text: element.textContent?.trim() ?? "",
+        width: bounds.width,
+        height: bounds.height,
+        left: bounds.left,
+        right: bounds.right,
+        viewportWidth: window.innerWidth,
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        textOverflow: style.textOverflow,
+        whiteSpace: style.whiteSpace,
+        overflowX: style.overflowX
+      };
+    })
+  );
+
+  for (const chip of chipEvidence) {
+    expect(chip.text, `${label}: chip has text`).not.toBe("");
+    expect(chip.width, `${label}: ${chip.text} has width`).toBeGreaterThan(0);
+    expect(chip.height, `${label}: ${chip.text} has height`).toBeGreaterThan(0);
+    expect(chip.left, `${label}: ${chip.text} stays inside left edge`).toBeGreaterThanOrEqual(
+      -1
+    );
+    expect(chip.right, `${label}: ${chip.text} stays inside right edge`).toBeLessThanOrEqual(
+      chip.viewportWidth + 1
+    );
+    expect(chip.scrollWidth, `${label}: ${chip.text} is not clipped horizontally`).toBeLessThanOrEqual(
+      chip.clientWidth + 1
+    );
+    expect(chip.textOverflow, `${label}: ${chip.text} does not use ellipsis`).not.toBe(
+      "ellipsis"
+    );
+    expect(chip.whiteSpace, `${label}: ${chip.text} can wrap`).not.toBe(
+      "nowrap"
+    );
+    expect(chip.overflowX, `${label}: ${chip.text} is not hidden on x`).not.toBe(
+      "hidden"
+    );
+  }
+}
+
 test("recordings review renders grouped take history, filters it, deletes a take, and survives reload", async ({
   page
 }) => {
@@ -326,7 +377,26 @@ test("recordings review renders grouped take history, filters it, deletes a take
         }
       }
     ],
-    errorMarkers: []
+    errorMarkers: [
+      {
+        id: "marker-alpha-bridge-old",
+        recordingId: "sheet-alpha-bridge-old",
+        timestampMs: 300,
+        note: "Old bridge marker"
+      },
+      {
+        id: "marker-alpha-bridge-new",
+        recordingId: "sheet-alpha-bridge-new",
+        timestampMs: 500,
+        note: "New bridge marker"
+      },
+      {
+        id: "marker-beta-bridge",
+        recordingId: "sheet-beta-bridge",
+        timestampMs: 400,
+        note: "Beta marker"
+      }
+    ]
   });
 
   await page.reload();
@@ -339,6 +409,24 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await expect(alphaBridgeGroup).toContainText("Alpha Etude");
   await expect(alphaBridgeGroup).toContainText("Bridge");
   await expect(alphaBridgeGroup).toContainText("2 takes");
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    "Takes: 2 takes"
+  );
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    /Latest: .*Bridge take 2/
+  );
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    /Latest duration: 0:0[1-9]/
+  );
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    "BPM: 96 BPM"
+  );
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    "Time signature: 4/4"
+  );
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    "Markers: 2 markers"
+  );
   await expect(
     alphaBridgeGroup.getByTestId("recording-row-sheet-alpha-bridge-new")
   ).toBeVisible();
@@ -356,12 +444,18 @@ test("recordings review renders grouped take history, filters it, deletes a take
   );
   await expect(alphaWholeGroup).toContainText("Whole sheet / no segment");
   await expect(alphaWholeGroup).toContainText("2 takes");
+  await expect(alphaWholeGroup.getByTestId("take-history-summary")).toContainText(
+    "Markers: No markers"
+  );
   await expect(
     page.getByTestId("take-group-sheet:sheet-beta:segment:segment-bridge")
   ).toContainText("Beta Study");
   await expect(page.getByTestId("quick-recordings-section")).toContainText(
     "Grouped quick take"
   );
+  await expect(
+    page.getByTestId("quick-recordings-section").getByTestId("take-history-summary")
+  ).toHaveCount(0);
   await expect(page.getByTestId("best-take-control-quick-grouped")).toHaveCount(
     0
   );
@@ -371,6 +465,11 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await expect(page.getByTestId("ungrouped-recordings-section")).toContainText(
     "Missing sheet link take"
   );
+  await expect(
+    page
+      .getByTestId("ungrouped-recordings-section")
+      .getByTestId("take-history-summary")
+  ).toHaveCount(0);
   await expect(
     page.getByTestId("best-take-control-sheet-missing-link")
   ).toHaveCount(0);
@@ -401,6 +500,9 @@ test("recordings review renders grouped take history, filters it, deletes a take
     alphaBridgeGroup.getByTestId("best-take-control-sheet-alpha-bridge-old")
   ).toHaveAttribute("aria-pressed", "true");
   await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    /Latest: .*Bridge take 2/
+  );
   await expect(alphaBridgeGroup).toContainText("Active: none");
   await expect(page.getByTestId("recording-details")).toHaveAttribute(
     "data-recording-id",
@@ -486,12 +588,19 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await expect(alphaBridgeGroup).toContainText("1 take");
   await expect(alphaBridgeGroup).toContainText("Best: none");
   await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+  await expect(alphaBridgeGroup).toContainText("Markers: 1 marker");
 
   await page.reload();
   await expect(page.getByTestId("recording-row-sheet-alpha-bridge-old")).toBeHidden();
   await expect(alphaBridgeGroup).toContainText("1 take");
   await expect(alphaBridgeGroup).toContainText("Best: none");
   await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+  await expect(alphaBridgeGroup).toContainText("Markers: 1 marker");
+  const groupedPageText = (await page.locator("body").innerText()).toLowerCase();
+
+  expect(groupedPageText).not.toMatch(
+    /score|accuracy|correct|best performance|cleanest|most accurate|recommended|improved|mistakes|timing quality/
+  );
 
   for (const viewport of [
     { width: 1280, height: 900, label: "desktop" },
@@ -508,6 +617,86 @@ test("recordings review renders grouped take history, filters it, deletes a take
     ).toBeVisible();
     await expectNoHorizontalOverflow(page, viewport.label);
   }
+});
+
+test("recordings review keeps summary chips readable at a narrow viewport", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/recordings");
+  await page.evaluate(() => window.localStorage.clear());
+
+  await seedRecordingHistory(page, {
+    sessions: [{ id: "session-summary-readability", sourceType: "sheet" }],
+    recordings: [
+      {
+        id: "summary-readable-old",
+        type: "sheet",
+        origin: "user",
+        name: "Readability older take",
+        sessionId: "session-summary-readability",
+        sheetId: "sheet-readability",
+        sheetName: "Narrow Summary Study",
+        createdAt: "2026-06-21T09:00:00.000Z",
+        durationMs: 11_000,
+        sizeBytes: 128,
+        mimeType: "audio/wav",
+        audioDataUrl: "data:audio/wav;base64,UklGRg==",
+        segmentContext: createSegmentContext({
+          segmentId: "segment-readability",
+          segmentName: "Narrow bridge"
+        }),
+        settings: {
+          bpm: 88,
+          timeSignature: "3/4"
+        }
+      },
+      {
+        id: "summary-readable-latest",
+        type: "sheet",
+        origin: "user",
+        name: "Readability newest take",
+        sessionId: "session-summary-readability",
+        sheetId: "sheet-readability",
+        sheetName: "Narrow Summary Study",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: 12_000,
+        sizeBytes: 128,
+        mimeType: "audio/wav",
+        audioDataUrl: "data:audio/wav;base64,UklGRg==",
+        segmentContext: createSegmentContext({
+          segmentId: "segment-readability",
+          segmentName: "Narrow bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "   "
+        }
+      }
+    ],
+    errorMarkers: []
+  });
+
+  await page.reload();
+
+  const group = page.getByTestId(
+    "take-group-sheet:sheet-readability:segment:segment-readability"
+  );
+  const summary = group.getByTestId("take-history-summary");
+
+  await expect(group).toBeVisible();
+  await expect(summary).toContainText("Takes: 2 takes");
+  await expect(summary).toContainText(/Latest: .*Readability newest take/);
+  await expect(summary).toContainText("Best: none");
+  await expect(summary).toContainText("Latest duration: 0:12");
+  await expect(summary).toContainText("BPM: Mixed BPM, latest 96");
+  await expect(summary).toContainText(
+    "Time signature: Time signature unavailable"
+  );
+  await expect(summary).toContainText("Markers: No markers");
+
+  await expectReadableSummaryChips(summary, "mobile take summary");
+  await expectNoHorizontalOverflow(page, "mobile take summary");
 });
 
 test("recordings review lists, filters, plays, continues, deletes, and handles bad audio", async ({
