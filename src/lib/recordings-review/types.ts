@@ -36,6 +36,27 @@ export type RecordingReviewSnapshot = {
   errorMarkers: RecordingErrorMarker[];
 };
 
+export type RecordingTakeGroupKind = "sheet-segment" | "sheet-no-segment";
+
+export type RecordingTakeGroup = {
+  groupId: string;
+  kind: RecordingTakeGroupKind;
+  sheetId: string;
+  sheetName: string | null;
+  segmentId: string | null;
+  segmentName: string | null;
+  recordings: ReviewRecording[];
+  takeCount: number;
+  latestRecording: ReviewRecording;
+  latestRecordedAt: string;
+};
+
+export type ReviewRecordingTakeGrouping = {
+  takeGroups: RecordingTakeGroup[];
+  quickRecordings: ReviewRecording[];
+  ungroupedRecordings: ReviewRecording[];
+};
+
 export type RecordingArtifactDetails = {
   recordingId: string;
   decodedDurationMs: number;

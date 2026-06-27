@@ -432,7 +432,7 @@
                                              "slices":  [
                                                             {
                                                                 "slice":  "P2-01 take-grouping-domain",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P2-02 take-grouping-review-ui",

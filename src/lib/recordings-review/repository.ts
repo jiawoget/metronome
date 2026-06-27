@@ -1,12 +1,14 @@
 import type {
   RecordingErrorMarker,
   RecordingReviewSnapshot,
+  ReviewRecordingTakeGrouping,
   ReviewRecording
 } from "@/lib/recordings-review/types";
 import {
   parseSheetRecordingSegmentContext,
   type SheetRecordingSegmentContext
 } from "@/domain/practice";
+import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
 import {
   createErrorMarker,
   normalizePersistedErrorMarker,
@@ -204,6 +206,10 @@ function writeSnapshot(snapshot: RecordingReviewSnapshot) {
 export const recordingHistoryRepository = {
   getSnapshot() {
     return readSnapshot();
+  },
+
+  getTakeGroups(): ReviewRecordingTakeGrouping {
+    return groupRecordingsByTake(readSnapshot().recordings);
   },
 
   getRecording(recordingId: string) {

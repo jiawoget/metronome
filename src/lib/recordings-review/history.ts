@@ -1,6 +1,7 @@
 import { formatDuration, formatRecordingDate } from "@/lib/recordings-review/format";
 import { getSheetPracticeQueryHref } from "@/domain/sheet/routes";
 export { getErrorMarkerSeekTarget, sortErrorMarkers } from "@/lib/recordings-review/error-markers";
+import { sortReviewRecordingsByNewest } from "@/lib/recordings-review/take-groups";
 import type {
   RecordingReviewType,
   ReviewRecording
@@ -17,12 +18,7 @@ export function getRecordingDisplayName(recording: ReviewRecording) {
 }
 
 export function sortRecordingsByNewest(recordings: ReviewRecording[]) {
-  return [...recordings].sort((left, right) => {
-    const leftTime = new Date(left.createdAt).getTime();
-    const rightTime = new Date(right.createdAt).getTime();
-
-    return rightTime - leftTime;
-  });
+  return sortReviewRecordingsByNewest(recordings);
 }
 
 export function getContinuePracticeHref(recording: ReviewRecording) {
