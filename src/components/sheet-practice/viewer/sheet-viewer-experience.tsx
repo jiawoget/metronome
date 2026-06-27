@@ -28,6 +28,7 @@ const PdfSheetRenderer = dynamic(
 type SheetViewerExperienceProps = {
   sheetId: string | null;
   sourceRecordingId?: string | null;
+  returnSegmentId?: string | null;
 };
 
 function useSheetViewer(sheetId: string | null) {
@@ -161,10 +162,12 @@ function SheetViewerToolbar({
 
 function SheetViewerReady({
   state,
-  sourceRecordingId
+  sourceRecordingId,
+  returnSegmentId
 }: {
   state: Extract<SheetViewerLoadState, { status: "ready" }>;
   sourceRecordingId: string | null;
+  returnSegmentId: string | null;
 }) {
   const objectUrls = useBrowserSheetViewerObjectUrls(state);
   const [currentPage, setCurrentPage] = useState(1);
@@ -271,13 +274,18 @@ function SheetViewerReady({
         defaultBpm={state.sheet.bpm}
         defaultTimeSignature={state.sheet.timeSignature}
         sourceRecordingId={sourceRecordingId}
+        returnSegmentId={returnSegmentId}
         currentMeasureGridTimestampMs={referencePlaybackTimestampMs}
       />
     </div>
   );
 }
 
-export function SheetViewerExperience({ sheetId, sourceRecordingId = null }: SheetViewerExperienceProps) {
+export function SheetViewerExperience({
+  sheetId,
+  sourceRecordingId = null,
+  returnSegmentId = null
+}: SheetViewerExperienceProps) {
   const state = useSheetViewer(sheetId);
 
   if (state.status === "loading") {
@@ -292,5 +300,12 @@ export function SheetViewerExperience({ sheetId, sourceRecordingId = null }: She
     return <SheetViewerError title={state.title} message={state.message} />;
   }
 
-  return <SheetViewerReady key={state.sheet.id} state={state} sourceRecordingId={sourceRecordingId} />;
+  return (
+    <SheetViewerReady
+      key={state.sheet.id}
+      state={state}
+      sourceRecordingId={sourceRecordingId}
+      returnSegmentId={returnSegmentId}
+    />
+  );
 }

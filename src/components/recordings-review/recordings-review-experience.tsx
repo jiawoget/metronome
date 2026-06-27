@@ -36,6 +36,7 @@ import {
   filterRecordings,
   getContinuePracticeHref,
   getRecordingDisplayName,
+  getTakeGroupPracticeHref,
   sortErrorMarkers,
   type RecordingTypeFilter
 } from "@/lib/recordings-review/history";
@@ -396,6 +397,13 @@ function TakeGroupSection({
   const activeTakeLabel = resolvedSelection.activeRecording
     ? getRecordingDisplayName(resolvedSelection.activeRecording)
     : "none";
+  const groupPracticeHref = getTakeGroupPracticeHref(group);
+  const groupPracticeLabel =
+    group.kind === "sheet-segment" ? "Practice segment" : "Practice sheet";
+  const groupPracticeAriaLabel =
+    group.kind === "sheet-segment"
+      ? `Return to practice for ${contextLabel} on ${sheetLabel}`
+      : `Return to sheet practice for ${sheetLabel}`;
 
   function updateBestTake(recording: ReviewRecording) {
     try {
@@ -445,9 +453,21 @@ function TakeGroupSection({
               {contextLabel}
             </p>
           </div>
-          <div className="flex max-w-full flex-wrap gap-2 text-xs sm:justify-end">
-            <TakeHistorySummaryChips summary={takeHistorySummary} />
-            <MetadataPill value={`Active: ${activeTakeLabel}`} wrap />
+          <div className="flex max-w-full flex-col gap-2 sm:items-end">
+            <Button asChild variant="secondary" className="h-9 w-fit px-3 text-xs">
+              <Link
+                href={groupPracticeHref}
+                aria-label={groupPracticeAriaLabel}
+                data-testid={`take-group-practice-${group.groupId}`}
+              >
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                {groupPracticeLabel}
+              </Link>
+            </Button>
+            <div className="flex max-w-full flex-wrap gap-2 text-xs sm:justify-end">
+              <TakeHistorySummaryChips summary={takeHistorySummary} />
+              <MetadataPill value={`Active: ${activeTakeLabel}`} wrap />
+            </div>
           </div>
         </div>
         {selectionErrorMessage ? (
@@ -676,6 +696,8 @@ function RecordingDetails({
     },
     []
   );
+  const practiceAgainAccessibleName =
+    getPracticeAgainAccessibleName(recording);
 
   function seekToMarker(marker: RecordingErrorMarker) {
     const result = seekToErrorMarker({
@@ -734,7 +756,10 @@ function RecordingDetails({
         onPlaybackControlsChange={handlePlaybackControlsChange}
         actions={
           <Button asChild variant="secondary">
-            <Link href={getContinuePracticeHref(recording)}>
+            <Link
+              href={getContinuePracticeHref(recording)}
+              aria-label={practiceAgainAccessibleName}
+            >
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
               Practice Again
             </Link>
@@ -842,6 +867,29 @@ function RecordingDetails({
       </div>
     </div>
   );
+}
+
+function getPracticeAgainAccessibleName(recording: ReviewRecording) {
+  const displayName = getRecordingDisplayName(recording);
+
+  if (recording.type === "quick") {
+    return `Practice again in Quick Metronome for ${displayName}`;
+  }
+
+  const sheetLabel = recording.sheetName?.trim() || recording.sheetId?.trim();
+  const segmentLabel =
+    recording.segmentContext?.segmentName?.trim() ||
+    recording.segmentContext?.segmentId?.trim();
+
+  if (sheetLabel && segmentLabel) {
+    return `Practice again for ${segmentLabel} on ${sheetLabel}`;
+  }
+
+  if (sheetLabel) {
+    return `Practice again for whole-sheet practice on ${sheetLabel}`;
+  }
+
+  return `Practice again for sheet recording ${displayName} without a linked sheet`;
 }
 
 function MetadataPill({

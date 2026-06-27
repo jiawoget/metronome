@@ -10,9 +10,12 @@ import {
   filterRecordings,
   getErrorMarkerSeekTarget,
   getContinuePracticeHref,
+  getTakeGroupPracticeHref,
   sortErrorMarkers,
   sortRecordingsByNewest
 } from "@/lib/recordings-review/history";
+import { getSheetPracticeQueryHref } from "@/domain/sheet/routes";
+import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
 import {
   createErrorMarker,
   MAX_ERROR_MARKER_NOTE_LENGTH,
@@ -133,6 +136,62 @@ describe("recordings review history helpers", () => {
   it("calculates practice again targets", () => {
     expect(getContinuePracticeHref(quickRecording)).toBe("/quick-metronome?recordingId=quick-1");
     expect(getContinuePracticeHref(sheetRecording)).toBe(
+      "/sheet-practice?recordingId=sheet-1&sheetId=sheet-42"
+    );
+    expect(getContinuePracticeHref(segmentSheetRecording)).toBe(
+      "/sheet-practice?recordingId=sheet-segment-1&sheetId=sheet-42&segmentId=segment-bridge"
+    );
+    expect(
+      getContinuePracticeHref({
+        ...segmentSheetRecording,
+        sheetId: " "
+      })
+    ).toBe("/sheet-practice?recordingId=sheet-segment-1");
+  });
+
+  it("builds narrow sheet practice query hrefs", () => {
+    expect(
+      getSheetPracticeQueryHref({
+        recordingId: "take 1",
+        sheetId: "sheet/42",
+        segmentId: "segment bridge"
+      })
+    ).toBe(
+      "/sheet-practice?recordingId=take+1&sheetId=sheet%2F42&segmentId=segment+bridge"
+    );
+    expect(
+      getSheetPracticeQueryHref({
+        recordingId: " take-1 ",
+        sheetId: "",
+        segmentId: " "
+      })
+    ).toBe("/sheet-practice?recordingId=take-1");
+  });
+
+  it("calculates group-level return targets from the latest grouped take", () => {
+    const grouping = groupRecordingsByTake([
+      sheetRecording,
+      segmentSheetRecording,
+      {
+        ...segmentSheetRecording,
+        id: "sheet-segment-2",
+        name: "Focused segment take 2",
+        createdAt: "2026-06-21T11:00:00.000Z"
+      }
+    ]);
+    const segmentGroup = grouping.takeGroups.find(
+      (group) => group.kind === "sheet-segment"
+    );
+    const noSegmentGroup = grouping.takeGroups.find(
+      (group) => group.kind === "sheet-no-segment"
+    );
+
+    expect(segmentGroup).toBeDefined();
+    expect(noSegmentGroup).toBeDefined();
+    expect(getTakeGroupPracticeHref(segmentGroup!)).toBe(
+      "/sheet-practice?recordingId=sheet-segment-2&sheetId=sheet-42&segmentId=segment-bridge"
+    );
+    expect(getTakeGroupPracticeHref(noSegmentGroup!)).toBe(
       "/sheet-practice?recordingId=sheet-1&sheetId=sheet-42"
     );
   });

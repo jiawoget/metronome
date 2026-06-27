@@ -63,6 +63,14 @@ describe("RecordingsReviewExperience grouped take history", () => {
     expect(
       within(segmentGroup).getByTestId("recording-row-sheet-bridge-old")
     ).toBeVisible();
+    expect(
+      within(segmentGroup).getByRole("link", {
+        name: "Return to practice for Bridge on Alpha Etude"
+      })
+    ).toHaveAttribute(
+      "href",
+      "/sheet-practice?recordingId=sheet-bridge-new&sheetId=sheet-alpha&segmentId=segment-bridge"
+    );
     expect(segmentGroup).toHaveTextContent("Best: none");
     expect(segmentGroup).toHaveTextContent("Active: none");
     expect(
@@ -80,6 +88,14 @@ describe("RecordingsReviewExperience grouped take history", () => {
     expect(
       within(noSegmentGroup).getByTestId("take-history-summary")
     ).toHaveTextContent("Markers: No markers");
+    expect(
+      within(noSegmentGroup).getByRole("link", {
+        name: "Return to sheet practice for Alpha Etude"
+      })
+    ).toHaveAttribute(
+      "href",
+      "/sheet-practice?recordingId=sheet-whole-null&sheetId=sheet-alpha"
+    );
 
     expect(screen.getByTestId("quick-recordings-section")).toHaveTextContent(
       "Quick recordings"
@@ -122,6 +138,29 @@ describe("RecordingsReviewExperience grouped take history", () => {
       "data-recording-id",
       "sheet-bridge-new"
     );
+    expect(
+      screen.getByRole("link", {
+        name: "Practice again for Bridge on Alpha Etude"
+      })
+    ).toHaveAttribute(
+      "href",
+      "/sheet-practice?recordingId=sheet-bridge-new&sheetId=sheet-alpha&segmentId=segment-bridge"
+    );
+
+    await user.click(screen.getByTestId("recording-row-sheet-whole-null"));
+
+    expect(screen.getByTestId("recording-details")).toHaveAttribute(
+      "data-recording-id",
+      "sheet-whole-null"
+    );
+    expect(
+      screen.getByRole("link", {
+        name: "Practice again for whole-sheet practice on Alpha Etude"
+      })
+    ).toHaveAttribute(
+      "href",
+      "/sheet-practice?recordingId=sheet-whole-null&sheetId=sheet-alpha"
+    );
 
     await user.click(screen.getByTestId("recording-row-quick-alpha"));
 
@@ -133,10 +172,24 @@ describe("RecordingsReviewExperience grouped take history", () => {
       "data-recording-id",
       "quick-alpha"
     );
-    expect(screen.getByRole("link", { name: "Practice Again" })).toHaveAttribute(
-      "href",
-      "/quick-metronome?recordingId=quick-alpha"
+    expect(
+      screen.getByRole("link", {
+        name: "Practice again in Quick Metronome for Quick alpha"
+      })
+    ).toHaveAttribute("href", "/quick-metronome?recordingId=quick-alpha");
+
+    await user.click(screen.getByTestId("recording-row-sheet-missing-link"));
+
+    expect(screen.getByTestId("recording-details")).toHaveAttribute(
+      "data-recording-id",
+      "sheet-missing-link"
     );
+    expect(
+      screen.getByRole("link", {
+        name:
+          "Practice again for sheet recording Missing sheet link without a linked sheet"
+      })
+    ).toHaveAttribute("href", "/sheet-practice?recordingId=sheet-missing-link");
   });
 
   it("filters grouped recordings by saved segment metadata and keeps empty group shells hidden", async () => {

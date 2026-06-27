@@ -64,6 +64,7 @@ export function SheetPracticeControls({
   defaultBpm,
   defaultTimeSignature,
   sourceRecordingId = null,
+  returnSegmentId = null,
   createMetronomeService = createBrowserMetronomeService,
   createSheetRecordingService = createBrowserSheetRecordingService,
   sessionService = browserPracticeSessionService,
@@ -700,6 +701,7 @@ export function SheetPracticeControls({
       <div className="border-border grid gap-3 border-t px-3 py-3 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(24rem,1.15fr)]">
         <PracticeSegmentSelectorPanel
           sheetId={sheetId}
+          initialSegmentId={returnSegmentId}
           practiceSegmentService={practiceSegmentService}
           measureGridService={measureGridService}
           measureGridRevision={measureGridRevision}

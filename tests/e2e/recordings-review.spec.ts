@@ -4,7 +4,17 @@ import {
   decodeRecordingHistoryAudio,
   installSyntheticMicrophone
 } from "./fixtures/audio";
-import { readRecordingHistory, seedRecordingHistory } from "./fixtures/storage";
+import { importTestSheet } from "./fixtures/sheets";
+import {
+  clearDatabases,
+  clearRecordingHistory,
+  MEASURE_GRID_DB_NAME,
+  PRACTICE_SEGMENT_DB_NAME,
+  PRACTICE_SESSION_DB_NAME,
+  readRecordingHistory,
+  seedRecordingHistory,
+  SHEET_LIBRARY_DB_NAME
+} from "./fixtures/storage";
 
 type WaveformEvidence = {
   source: string | null;
@@ -46,6 +56,72 @@ function createSegmentContext({
       endMs: 31_000
     }
   };
+}
+
+async function saveMeasureGridThroughUi(page: Page) {
+  await page.getByRole("spinbutton", { name: "Grid BPM" }).fill("96");
+  await page.getByLabel("Grid time signature").selectOption("4/4");
+  await page.getByRole("spinbutton", { name: "Pickup beats" }).fill("0");
+  await page.getByRole("spinbutton", { name: "Measure 1 offset" }).fill("1000");
+  await page.getByRole("button", { name: "Save grid" }).click();
+  await expect(page.getByTestId("measure-grid-status")).toContainText("Calibrated");
+}
+
+async function createPracticeSegmentThroughUi(page: Page, name: string) {
+  await page.getByRole("button", { name: "New segment" }).click();
+  await page.getByLabel("Segment name").fill(name);
+  await page.getByLabel("Start measure").fill("5");
+  await page.getByLabel("End measure").fill("12");
+  await page.getByLabel("Target BPM").fill("96");
+  await page.getByLabel("Segment notes").fill("Return target.");
+  await page.getByRole("button", { name: "Save segment" }).click();
+  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");
+}
+
+async function readPracticeSegments(page: Page, sheetId: string) {
+  return page.evaluate(
+    ({ databaseName, targetSheetId }) =>
+      new Promise<
+        {
+          id: string;
+          sheetId: string;
+          name: string;
+        }[]
+      >((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction(["segments"], "readonly");
+          const store = transaction.objectStore("segments");
+          const index = store.index("sheetId");
+          const getAllRequest = index.getAll(targetSheetId);
+
+          getAllRequest.onerror = () => reject(getAllRequest.error);
+          getAllRequest.onsuccess = () => {
+            resolve(
+              (getAllRequest.result as { segment?: unknown }[])
+                .map((record) => record.segment)
+                .filter(
+                  (
+                    segment
+                  ): segment is { id: string; sheetId: string; name: string } =>
+                    Boolean(
+                      segment &&
+                        typeof segment === "object" &&
+                        "id" in segment &&
+                        "sheetId" in segment &&
+                        "name" in segment
+                    )
+                )
+            );
+            database.close();
+          };
+        };
+      }),
+    { databaseName: PRACTICE_SEGMENT_DB_NAME, targetSheetId: sheetId }
+  );
 }
 
 async function expectVisibleDerivedWaveform({
@@ -430,6 +506,14 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await expect(
     alphaBridgeGroup.getByTestId("recording-row-sheet-alpha-bridge-new")
   ).toBeVisible();
+  await expect(
+    alphaBridgeGroup.getByRole("link", {
+      name: "Return to practice for Bridge on Alpha Etude"
+    })
+  ).toHaveAttribute(
+    "href",
+    "/sheet-practice?recordingId=sheet-alpha-bridge-new&sheetId=sheet-alpha&segmentId=segment-bridge"
+  );
   await expect(alphaBridgeGroup).toContainText("Best: none");
   await expect(alphaBridgeGroup).toContainText("Active: none");
   await expect(
@@ -446,6 +530,14 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await expect(alphaWholeGroup).toContainText("2 takes");
   await expect(alphaWholeGroup.getByTestId("take-history-summary")).toContainText(
     "Markers: No markers"
+  );
+  await expect(
+    alphaWholeGroup.getByRole("link", {
+      name: "Return to sheet practice for Alpha Etude"
+    })
+  ).toHaveAttribute(
+    "href",
+    "/sheet-practice?recordingId=sheet-alpha-whole-null&sheetId=sheet-alpha"
   );
   await expect(
     page.getByTestId("take-group-sheet:sheet-beta:segment:segment-bridge")
@@ -482,16 +574,21 @@ test("recordings review renders grouped take history, filters it, deletes a take
     "data-recording-id",
     "sheet-alpha-bridge-old"
   );
-  await expect(page.getByRole("link", { name: "Practice Again" })).toHaveAttribute(
+  await expect(
+    page.getByRole("link", {
+      name: "Practice again for Bridge on Alpha Etude"
+    })
+  ).toHaveAttribute(
     "href",
-    "/sheet-practice?recordingId=sheet-alpha-bridge-old&sheetId=sheet-alpha"
+    "/sheet-practice?recordingId=sheet-alpha-bridge-old&sheetId=sheet-alpha&segmentId=segment-bridge"
   );
 
   await page.getByTestId("recording-row-quick-grouped").click();
-  await expect(page.getByRole("link", { name: "Practice Again" })).toHaveAttribute(
-    "href",
-    "/quick-metronome?recordingId=quick-grouped"
-  );
+  await expect(
+    page.getByRole("link", {
+      name: "Practice again in Quick Metronome for Grouped quick take"
+    })
+  ).toHaveAttribute("href", "/quick-metronome?recordingId=quick-grouped");
 
   await page
     .getByRole("button", { name: "Mark Bridge take 1 as best take" })
@@ -617,6 +714,288 @@ test("recordings review renders grouped take history, filters it, deletes a take
     ).toBeVisible();
     await expectNoHorizontalOverflow(page, viewport.label);
   }
+});
+
+test("recordings review returns to sheet practice with segment validation and stale fallback", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.goto("/sheet-library");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [
+    SHEET_LIBRARY_DB_NAME,
+    PRACTICE_SESSION_DB_NAME,
+    MEASURE_GRID_DB_NAME,
+    PRACTICE_SEGMENT_DB_NAME
+  ]);
+  await page.reload();
+
+  const { sheetId } = await importTestSheet(page, {
+    name: "Return Segment Sheet",
+    bpm: "96",
+    timeSignature: "4/4"
+  });
+
+  await page.goto(`/sheet-practice/${sheetId}`);
+  await saveMeasureGridThroughUi(page);
+  await createPracticeSegmentThroughUi(page, "Bridge");
+
+  const segments = await readPracticeSegments(page, sheetId);
+  const bridgeSegment = segments.find((segment) => segment.name === "Bridge");
+
+  expect(bridgeSegment).toBeTruthy();
+
+  const artifact = await createWavDataUrl(page, 330, 0.8);
+  const segmentId = bridgeSegment?.id ?? "";
+
+  await seedRecordingHistory(page, {
+    sessions: [{ id: "session-return-sheet", sourceType: "sheet", sheetId }],
+    recordings: [
+      {
+        id: "return-segment-old",
+        type: "sheet",
+        origin: "user",
+        name: "Bridge return 1",
+        sessionId: "session-return-sheet",
+        sheetId,
+        sheetName: "Return Segment Sheet",
+        createdAt: "2026-06-21T09:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        trustedPeaks: [0.1, 0.5, 0.8, 0.3],
+        segmentContext: createSegmentContext({
+          segmentId,
+          segmentName: "Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "return-segment-new",
+        type: "sheet",
+        origin: "user",
+        name: "Bridge return 2",
+        sessionId: "session-return-sheet",
+        sheetId,
+        sheetName: "Return Segment Sheet",
+        createdAt: "2026-06-21T10:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        trustedPeaks: [0.1, 0.5, 0.8, 0.3],
+        segmentContext: createSegmentContext({
+          segmentId,
+          segmentName: "Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "return-whole",
+        type: "sheet",
+        origin: "user",
+        name: "Whole sheet return",
+        sessionId: "session-return-sheet",
+        sheetId,
+        sheetName: "Return Segment Sheet",
+        createdAt: "2026-06-21T11:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: null,
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "return-stale",
+        type: "sheet",
+        origin: "user",
+        name: "Deleted segment return",
+        sessionId: "session-return-sheet",
+        sheetId,
+        sheetName: "Return Segment Sheet",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-deleted",
+          segmentName: "Deleted bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "return-missing-sheet",
+        type: "sheet",
+        origin: "user",
+        name: "Missing sheet return",
+        sessionId: "session-return-sheet",
+        sheetId: "sheet-deleted",
+        sheetName: "Deleted Return Sheet",
+        createdAt: "2026-06-21T08:30:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-deleted-sheet",
+          segmentName: "Deleted sheet segment"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "return-quick",
+        type: "quick",
+        origin: "user",
+        name: "Quick return",
+        sessionId: "session-return-quick",
+        sheetId: null,
+        createdAt: "2026-06-21T13:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        settings: {
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      }
+    ],
+    errorMarkers: []
+  });
+
+  await page.goto("/recordings");
+
+  const segmentGroup = page.getByTestId(
+    `take-group-sheet:${sheetId}:segment:${segmentId}`
+  );
+  await expect(segmentGroup).toBeVisible();
+  await expect(
+    segmentGroup.getByRole("link", {
+      name: "Return to practice for Bridge on Return Segment Sheet"
+    })
+  ).toHaveAttribute(
+    "href",
+    `/sheet-practice?recordingId=return-segment-new&sheetId=${sheetId}&segmentId=${segmentId}`
+  );
+
+  await segmentGroup
+    .getByRole("link", {
+      name: "Return to practice for Bridge on Return Segment Sheet"
+    })
+    .click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/sheet-practice");
+  await expect.poll(() => new URL(page.url()).searchParams.get("sheetId")).toBe(sheetId);
+  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBe(segmentId);
+  await expect(page.getByTestId(`practice-segment-row-${segmentId}`)).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  );
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
+    "Active segment"
+  );
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
+    "Bridge"
+  );
+
+  await page.reload();
+  await expect(page.getByTestId(`practice-segment-row-${segmentId}`)).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  );
+
+  await page.goto("/recordings");
+  await page.getByTestId("recording-row-return-segment-old").click();
+  await expect(
+    page.getByRole("link", {
+      name: "Practice again for Bridge on Return Segment Sheet"
+    })
+  ).toHaveAttribute(
+    "href",
+    `/sheet-practice?recordingId=return-segment-old&sheetId=${sheetId}&segmentId=${segmentId}`
+  );
+
+  await page.goto("/recordings");
+  const wholeGroup = page.getByTestId(`take-group-sheet:${sheetId}:segment:none`);
+  await wholeGroup
+    .getByRole("link", {
+      name: "Return to sheet practice for Return Segment Sheet"
+    })
+    .click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBeNull();
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
+    "Choose a segment"
+  );
+  await expect(page.getByTestId("practice-segment-return-status")).toHaveCount(0);
+
+  await page.goto("/recordings");
+  await page.getByTestId("recording-row-return-stale").click();
+  await page
+    .getByRole("link", {
+      name: "Practice again for Deleted bridge on Return Segment Sheet"
+    })
+    .click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBe(
+    "segment-deleted"
+  );
+  await expect(page.getByTestId("practice-segment-return-status")).toContainText(
+    "Saved segment is no longer available. Sheet practice is ready without a selected segment."
+  );
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
+    "Choose a segment"
+  );
+
+  await page.goto("/recordings");
+  await page.getByTestId("recording-row-return-missing-sheet").click();
+  await page
+    .getByRole("link", {
+      name: "Practice again for Deleted sheet segment on Deleted Return Sheet"
+    })
+    .click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/sheet-practice");
+  await expect.poll(() => new URL(page.url()).searchParams.get("sheetId")).toBe(
+    "sheet-deleted"
+  );
+  await expect(
+    page.getByRole("heading", { name: "Sheet not found" })
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "This sheet is not in the local Sheet Library. Return to Sheet Library and choose an imported sheet."
+    )
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Return to Sheet Library" })
+  ).toBeVisible();
+
+  await page.goto("/recordings");
+  await page.getByTestId("recording-row-return-quick").click();
+  await page
+    .getByRole("link", {
+      name: "Practice again in Quick Metronome for Quick return"
+    })
+    .click();
+  await expect(page).toHaveURL(/\/quick-metronome\?recordingId=return-quick/);
 });
 
 test("recordings review keeps summary chips readable at a narrow viewport", async ({
@@ -1073,7 +1452,11 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     "quick-alpha playback interaction"
   );
 
-  await page.getByRole("link", { name: "Practice Again" }).click();
+  await page
+    .getByRole("link", {
+      name: "Practice again in Quick Metronome for Alpha quick take"
+    })
+    .click();
   await expect(page).toHaveURL(/\/quick-metronome\?recordingId=quick-alpha/);
   await page.getByRole("button", { name: "Start recording" }).click();
   await expect(page.getByText("Recording without metronome.")).toBeVisible();
@@ -1200,7 +1583,11 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     sheetWaveformAfterPlayback,
     "sheet-beta playback interaction"
   );
-  await page.getByRole("link", { name: "Practice Again" }).click();
+  await page
+    .getByRole("link", {
+      name: "Practice again for whole-sheet practice on Moonlight Etude"
+    })
+    .click();
   await expect(page).toHaveURL(
     /\/sheet-practice\?recordingId=sheet-beta&sheetId=sheet-42/
   );

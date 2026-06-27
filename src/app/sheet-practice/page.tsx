@@ -4,6 +4,7 @@ type SheetPracticePageProps = {
   searchParams?: Promise<{
     sheetId?: string | string[];
     recordingId?: string | string[];
+    segmentId?: string | string[];
   }>;
 };
 
@@ -11,8 +12,16 @@ export default async function SheetPracticePage({ searchParams }: SheetPracticeP
   const params = await searchParams;
   const rawSheetId = params?.sheetId;
   const rawRecordingId = params?.recordingId;
+  const rawSegmentId = params?.segmentId;
   const sheetId = Array.isArray(rawSheetId) ? rawSheetId[0] : rawSheetId ?? null;
   const sourceRecordingId = Array.isArray(rawRecordingId) ? rawRecordingId[0] : rawRecordingId ?? null;
+  const returnSegmentId = Array.isArray(rawSegmentId) ? rawSegmentId[0] : rawSegmentId ?? null;
 
-  return <SheetViewerExperience sheetId={sheetId} sourceRecordingId={sourceRecordingId} />;
+  return (
+    <SheetViewerExperience
+      sheetId={sheetId}
+      sourceRecordingId={sourceRecordingId}
+      returnSegmentId={returnSegmentId}
+    />
+  );
 }

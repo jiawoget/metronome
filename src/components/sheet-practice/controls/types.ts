@@ -36,6 +36,7 @@ export type SheetPracticeControlsProps = {
   defaultBpm: number | null;
   defaultTimeSignature: string | null;
   sourceRecordingId?: string | null;
+  returnSegmentId?: string | null;
   createMetronomeService?: () => SheetPracticeMetronomeService;
   createSheetRecordingService?: () => SheetPracticeRecordingService;
   sessionService?: SheetPracticeSessionService;
