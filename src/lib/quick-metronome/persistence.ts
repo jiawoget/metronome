@@ -1,6 +1,6 @@
 import type { QuickMetronomeStoreSnapshot, QuickRecording } from "@/lib/quick-metronome/types";
+import { RECORDING_HISTORY_STORAGE_KEY } from "@/infrastructure/storage/storage-contracts";
 
-const STORAGE_KEY = "metronome-practice:v0:quick-recordings";
 const STORE_EVENT = "quick-metronome-recordings-change";
 
 const emptySnapshot: QuickMetronomeStoreSnapshot = {
@@ -26,7 +26,7 @@ function readSnapshot(): QuickMetronomeStoreSnapshot {
     return emptySnapshot;
   }
 
-  const rawValue = storage.getItem(STORAGE_KEY);
+  const rawValue = storage.getItem(RECORDING_HISTORY_STORAGE_KEY);
 
   if (!rawValue) {
     cachedRawValue = null;
@@ -63,7 +63,7 @@ function writeSnapshot(snapshot: QuickMetronomeStoreSnapshot) {
     return;
   }
 
-  storage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+  storage.setItem(RECORDING_HISTORY_STORAGE_KEY, JSON.stringify(snapshot));
   window.dispatchEvent(new Event(STORE_EVENT));
 }
 
@@ -105,7 +105,7 @@ export const quickRecordingRepository = {
     const storage = getStorage();
 
     if (storage) {
-      storage.removeItem(STORAGE_KEY);
+      storage.removeItem(RECORDING_HISTORY_STORAGE_KEY);
       window.dispatchEvent(new Event(STORE_EVENT));
     }
   },

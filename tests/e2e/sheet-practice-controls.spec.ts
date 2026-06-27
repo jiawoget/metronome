@@ -2,11 +2,16 @@ import { expect, test, type Page } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  clearDatabases,
+  clearRecordingHistory,
+  PRACTICE_SESSION_DB_NAME,
+  RECORDING_HISTORY_STORAGE_KEY,
+  SHEET_LIBRARY_DB_NAME
+} from "./fixtures/storage";
+
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
-const sheetDbName = "metronome-practice-v0-sheet-library";
-const practiceDbName = "metronome-practice-v0-practice-sessions";
-const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
 const recordingHarnessEvent = "sheet-practice-controls:set-recording-harness-active";
 
 type MetronomeTrace = {
@@ -25,29 +30,6 @@ function average(values: number[]) {
 
 function intervalsFromAudioTime(traces: MetronomeTrace[]) {
   return traces.slice(1).map((trace, index) => (trace.audioTime - traces[index].audioTime) * 1_000);
-}
-
-async function deleteDatabase(page: Page, databaseName: string) {
-  await page.evaluate(
-    (name: string) =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(name);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => resolve();
-      }),
-    databaseName
-  );
-}
-
-async function clearDatabases(page: Page) {
-  await page.goto("/sheet-library");
-  await page.evaluate((storageKey) => window.localStorage.removeItem(storageKey), recordingHistoryStorageKey);
-  await deleteDatabase(page, sheetDbName);
-  await deleteDatabase(page, practiceDbName);
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
 }
 
 async function importSheet(page: Page) {
@@ -137,7 +119,10 @@ async function getPracticeSnapshot(page: Page) {
 
         openExistingDatabase();
       }),
-    { databaseName: practiceDbName, storageKey: recordingHistoryStorageKey }
+    {
+      databaseName: PRACTICE_SESSION_DB_NAME,
+      storageKey: RECORDING_HISTORY_STORAGE_KEY
+    }
   );
 }
 
@@ -195,14 +180,18 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   });
 
   await page.setViewportSize({ width: 1280, height: 820 });
-  await clearDatabases(page);
+  await page.goto("/sheet-library");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME]);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
   const { link, sheetId } = await importSheet(page);
 
   await link.click();
   await expect(page.getByRole("heading", { name: "Controls Contract Sheet" })).toBeVisible();
   await expect(page.getByTestId("sheet-practice-controls")).toBeVisible();
-  await expect(page.getByRole("spinbutton", { name: "BPM" })).toHaveValue("72");
-  await expect(page.getByLabel("Time signature")).toHaveValue("4/4");
+  await expect(page.getByRole("spinbutton", { name: "BPM", exact: true })).toHaveValue("72");
+  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue("4/4");
   await expect(page.getByText("Defaults: 72 BPM, 4/4")).toBeVisible();
   await expect(page.getByTestId("sheet-session-id")).toContainText("none");
   await expect(page.getByTestId("sheet-recording-count")).toContainText("0");
@@ -215,11 +204,11 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
   await expect(page.getByText("Metronome playing.")).toBeVisible();
   await expect(page.getByText(/locked while the metronome is running/i)).toBeVisible();
-  await expect(page.getByLabel("Time signature")).toBeDisabled();
-  await expect(page.getByLabel("Subdivision")).toBeDisabled();
-  await expect(page.getByLabel("Countdown")).toBeDisabled();
+  await expect(page.getByLabel("Time signature", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("Subdivision", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("Countdown", { exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Every beat" })).toBeDisabled();
-  await expect(page.getByRole("spinbutton", { name: "BPM" })).toBeEnabled();
+  await expect(page.getByRole("spinbutton", { name: "BPM", exact: true })).toBeEnabled();
   await expect(page.getByTestId("sheet-session-source")).toContainText("sheet");
   await page.waitForFunction(() => {
     const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
@@ -255,7 +244,7 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   expect(average(bpm72Intervals)).toBeLessThan(860);
   expect(Math.max(...bpm72Intervals) - Math.min(...bpm72Intervals)).toBeLessThan(8);
 
-  const bpmInput = page.getByRole("spinbutton", { name: "BPM" });
+  const bpmInput = page.getByRole("spinbutton", { name: "BPM", exact: true });
 
   await bpmInput.fill("90");
   await bpmInput.press("Enter");
@@ -299,13 +288,13 @@ test("sheet practice controls drive shared metronome timing, session activity, a
     )
     .toBe(traceCountAfterStop);
 
-  await page.getByLabel("Countdown").selectOption("4");
+  await page.getByLabel("Countdown", { exact: true }).selectOption("4");
   await page.getByRole("button", { name: "Start metronome" }).click();
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Counting");
   await expect(page.getByText(/locked while the metronome is running/i)).toBeVisible();
-  await expect(page.getByLabel("Time signature")).toBeDisabled();
-  await expect(page.getByLabel("Subdivision")).toBeDisabled();
-  await expect(page.getByLabel("Countdown")).toBeDisabled();
+  await expect(page.getByLabel("Time signature", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("Subdivision", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("Countdown", { exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Every beat" })).toBeDisabled();
   await expect(bpmInput).toBeEnabled();
   await bpmInput.fill("91");
@@ -324,13 +313,13 @@ test("sheet practice controls drive shared metronome timing, session activity, a
     bpm: 91
   });
   await page.getByRole("button", { name: "Stop metronome" }).click();
-  await expect(page.getByLabel("Countdown")).toBeEnabled();
-  await page.getByLabel("Countdown").selectOption("0");
+  await expect(page.getByLabel("Countdown", { exact: true })).toBeEnabled();
+  await page.getByLabel("Countdown", { exact: true }).selectOption("0");
 
   await bpmInput.fill("120");
   await bpmInput.press("Enter");
-  await page.getByLabel("Time signature").selectOption("3/4");
-  await page.getByLabel("Subdivision").selectOption("eighth");
+  await page.getByLabel("Time signature", { exact: true }).selectOption("3/4");
+  await page.getByLabel("Subdivision", { exact: true }).selectOption("eighth");
   await page.getByRole("button", { name: "Downbeat" }).click();
   await page.getByRole("button", { name: "Start metronome" }).click();
   await page.waitForFunction(() => {

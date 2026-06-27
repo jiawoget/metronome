@@ -1,7 +1,7 @@
-import { Mic, Octagon, Play, Radio, Square } from "lucide-react";
+import { Mic, Octagon, Play, Radio, RotateCcw, Square } from "lucide-react";
 
 import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
-import type { MetronomeTick } from "@/lib/quick-metronome/metronome-service";
+import type { MetronomeTick } from "@/services/metronome";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { LatestSheetRecording } from "@/components/sheet-practice/recording/latest-sheet-recording";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,10 @@ type TransportActionsPanelProps = {
   stopMetronome: () => void;
   startSheetRecording: () => void;
   stopSheetRecording: () => void;
+  showRecordAgain: boolean;
+  canRecordAgain: boolean;
+  isStartingRecordAgain: boolean;
+  startRecordAgain: () => void;
 };
 
 export function TransportActionsPanel({
@@ -40,7 +44,11 @@ export function TransportActionsPanel({
   startMetronome,
   stopMetronome,
   startSheetRecording,
-  stopSheetRecording
+  stopSheetRecording,
+  showRecordAgain,
+  canRecordAgain,
+  isStartingRecordAgain,
+  startRecordAgain
 }: TransportActionsPanelProps) {
   return (
     <div className="border-border bg-background flex min-w-0 flex-col justify-between gap-3 rounded-md border p-3">
@@ -84,6 +92,19 @@ export function TransportActionsPanel({
           <Octagon className="h-4 w-4" aria-hidden="true" />
           Stop Rec
         </Button>
+        {showRecordAgain ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={startRecordAgain}
+            disabled={!canRecordAgain || isStartingRecordAgain}
+            aria-label="Record again"
+            className="col-span-2"
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
+            {isStartingRecordAgain ? "Starting..." : "Record again"}
+          </Button>
+        ) : null}
       </div>
 
       <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">

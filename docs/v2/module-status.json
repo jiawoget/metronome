@@ -1,0 +1,98 @@
+[
+  {
+    "module": "account-cloud-sync",
+    "status": "not_started",
+    "features": [
+      {
+        "feature": "sync.user-login",
+        "status": "not_started"
+      },
+      {
+        "feature": "sync.supabase-cloud-sync",
+        "status": "not_started"
+      },
+      {
+        "feature": "sync.cross-device-resume",
+        "status": "not_started"
+      },
+      {
+        "feature": "sync.conflict-handling",
+        "status": "not_started"
+      },
+      {
+        "feature": "sync.backup-restore",
+        "status": "not_started"
+      }
+    ]
+  },
+  {
+    "module": "cloud-artifacts",
+    "status": "not_started",
+    "features": [
+      {
+        "feature": "cloud.recording-artifact-upload",
+        "status": "not_started"
+      },
+      {
+        "feature": "cloud.reference-artifact-upload",
+        "status": "not_started"
+      },
+      {
+        "feature": "cloud.artifact-restore",
+        "status": "not_started"
+      }
+    ]
+  },
+  {
+    "module": "automatic-recognition",
+    "status": "not_started",
+    "features": [
+      {
+        "feature": "recognition.sheet-barline-detection",
+        "status": "not_started"
+      },
+      {
+        "feature": "recognition.score-following",
+        "status": "not_started"
+      },
+      {
+        "feature": "recognition.guitar-pro-import",
+        "status": "not_started"
+      },
+      {
+        "feature": "recognition.musicxml-import",
+        "status": "not_started"
+      },
+      {
+        "feature": "recognition.bpm-time-signature-detection",
+        "status": "not_started"
+      }
+    ]
+  },
+  {
+    "module": "advanced-analysis-feedback",
+    "status": "not_started",
+    "features": [
+      {
+        "feature": "feedback.automatic-mistake-detection",
+        "status": "not_started"
+      },
+      {
+        "feature": "feedback.automatic-scoring",
+        "status": "not_started"
+      },
+      {
+        "feature": "feedback.timing-deviation-feedback",
+        "status": "not_started"
+      },
+      {
+        "feature": "feedback.pitch-detection-feedback",
+        "status": "not_started"
+      },
+      {
+        "feature": "feedback.productized-audio-alignment",
+        "status": "not_started"
+      }
+    ]
+  }
+]

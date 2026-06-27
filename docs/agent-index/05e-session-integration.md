@@ -11,8 +11,9 @@ metronome/recording/reference transports.
 
 ## Code Map
 
-- Harness: `src/components/sheet-practice/session/sheet-practice-session-harness.tsx`
 - Sheet controls session wiring:
+  `src/components/sheet-practice/controls/sheet-practice-controls.tsx`
+- Test-injected recording independence harness boundary:
   `src/components/sheet-practice/controls/sheet-practice-controls.tsx`
 - Reference session trigger:
   `src/components/sheet-practice/reference/reference-panel.tsx`

@@ -1,24 +1,26 @@
 "use client";
 
 import { Timer } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  createSheetRecordingSegmentContext,
   type PracticeSession,
-  type SheetRecordingMetadata
+  type SheetRecordingMetadata,
+  type SheetRecordingSegmentContext
 } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
-import { clampBpm } from "@/lib/quick-metronome/control";
-import {
-  BrowserMetronomeService,
-  type MetronomeTick
-} from "@/lib/quick-metronome/metronome-service";
-import type { MetronomeSettings } from "@/lib/quick-metronome/types";
-import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
+import { browserPracticeSegmentService } from "@/infrastructure/db/browser-practice-segment-service";
+import type { MetronomeTick } from "@/services/metronome";
+import { createBrowserMetronomeService } from "@/services/metronome/browser";
+import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
-import { BrowserSheetRecordingService } from "@/lib/sheet-practice/recording-service";
+import { createBrowserSheetRecordingService } from "@/services/recording/browser";
+import { browserMeasureGridService } from "@/infrastructure/db/browser-measure-grid-service";
+import { MeasureGridCalibrationPanel } from "@/components/sheet-practice/measure-grid/measure-grid-calibration-panel";
+import { PracticeSegmentSelectorPanel } from "@/components/sheet-practice/segments/practice-segment-selector-panel";
 import { MetronomeSettingsPanel } from "@/components/sheet-practice/controls/metronome-settings-panel";
 import {
   createSheetPracticeControlInitialState,
@@ -27,8 +29,9 @@ import {
 import { PracticeStatusPanel } from "@/components/sheet-practice/controls/practice-status-panel";
 import { TransportActionsPanel } from "@/components/sheet-practice/controls/transport-actions-panel";
 import type { SheetPracticeControlsProps } from "@/components/sheet-practice/controls/types";
+import { useSheetPracticeRecordingWorkflowStore } from "@/stores/sheet-practice-recording-workflow-store";
 
-export const SHEET_RECORDING_HARNESS_EVENT =
+const SHEET_RECORDING_HARNESS_EVENT =
   "sheet-practice-controls:set-recording-harness-active";
 
 type SheetMetronomeStartContext = {
@@ -46,12 +49,13 @@ type SheetMetronomeStartContext = {
       };
 };
 
-function createBrowserMetronomeService() {
-  return new BrowserMetronomeService();
-}
+type SheetRecordingStartMode = "normal" | "record-again";
 
-function createBrowserSheetRecordingService() {
-  return new BrowserSheetRecordingService();
+function segmentContextsMatch(
+  left: SheetRecordingSegmentContext,
+  right: SheetRecordingSegmentContext
+) {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 export function SheetPracticeControls({
@@ -62,7 +66,10 @@ export function SheetPracticeControls({
   sourceRecordingId = null,
   createMetronomeService = createBrowserMetronomeService,
   createSheetRecordingService = createBrowserSheetRecordingService,
-  sessionService = browserPracticeSessionService
+  sessionService = browserPracticeSessionService,
+  measureGridService = browserMeasureGridService,
+  practiceSegmentService = browserPracticeSegmentService,
+  currentMeasureGridTimestampMs = null
 }: SheetPracticeControlsProps) {
   const initialState = useMemo(
     () =>
@@ -80,10 +87,17 @@ export function SheetPracticeControls({
     () => createSheetRecordingService(),
     [createSheetRecordingService]
   );
-  const [settings, setSettings] = useState<MetronomeSettings>(
-    initialState.settings
-  );
+  const {
+    settings,
+    bpmDraft,
+    setBpmDraft,
+    commitBpmInput,
+    stepBpmInput,
+    updateSettings
+  } = useMetronomeSettingsState(initialState.settings);
   const [recordingHarnessActive, setRecordingHarnessActive] = useState(false);
+  const [isStartingRecordAgain, setIsStartingRecordAgain] = useState(false);
+  const isStartingRecordingRef = useRef(false);
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "saving"
   >("idle");
@@ -95,12 +109,50 @@ export function SheetPracticeControls({
   const [recordings, setRecordings] = useState<SheetRecordingMetadata[]>([]);
   const [latestSheetRecording, setLatestSheetRecording] =
     useState<ReviewRecording | null>(null);
+  const [measureGridRevision, setMeasureGridRevision] = useState(0);
   const [message, setMessage] = useState(
     "Ready. Viewing the sheet has not started practice."
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const activeRecordingWorkflowSheetId = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.sheetId
+  );
+  const activeRecordingWorkflowSegmentId = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.activeSegmentId
+  );
+  const setActiveRecordingSegment = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.setActiveSegment
+  );
+  const beginWorkflowRecording = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.beginRecording
+  );
+  const beginWorkflowSaving = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.beginSaving
+  );
+  const finishWorkflowRecording = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.finishRecording
+  );
+  const failWorkflowRecording = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.failRecording
+  );
+  const invalidateRerecordSource = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.invalidateRerecordSource
+  );
+  const rerecordStatus = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.rerecord.status
+  );
+  const rerecordSource = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.rerecord.source
+  );
+  const rerecordSourceRecordingId = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.rerecord.source?.recordingId ?? null
+  );
   const isSheetRecording = recordingState === "recording";
   const isRecordingActive = isSheetRecording || recordingHarnessActive;
+  const selectedRecordingSegmentId =
+    activeRecordingWorkflowSheetId === sheetId
+      ? activeRecordingWorkflowSegmentId
+      : null;
 
   useActiveRecordingNavigationGuard(
     `sheet-practice-recording-${sheetId}`,
@@ -155,21 +207,29 @@ export function SheetPracticeControls({
     };
   }, [refreshSession, sessionService, sheetRecordingService]);
 
-  function updateSettings(nextSettings: Partial<MetronomeSettings>) {
-    setSettings((currentSettings) => ({
-      ...currentSettings,
-      ...nextSettings,
-      bpm:
-        nextSettings.bpm === undefined
-          ? currentSettings.bpm
-          : clampBpm(nextSettings.bpm)
-    }));
-  }
+  useEffect(() => {
+    if (
+      activeRecordingWorkflowSheetId !== sheetId ||
+      rerecordStatus !== "ready" ||
+      !rerecordSourceRecordingId
+    ) {
+      return;
+    }
 
-  const { bpmDraft, setBpmDraft, commitBpmInput, stepBpmInput } =
-    useMetronomeBpmDraft(settings.bpm, (nextBpm) =>
-      updateSettings({ bpm: nextBpm })
-    );
+    if (latestSheetRecording?.id === rerecordSourceRecordingId) {
+      return;
+    }
+
+    invalidateRerecordSource(sheetId, "source-recording-missing");
+  }, [
+    activeRecordingWorkflowSheetId,
+    invalidateRerecordSource,
+    latestSheetRecording?.id,
+    rerecordSourceRecordingId,
+    rerecordStatus,
+    sheetId
+  ]);
+
   const shouldCreatePracticeAgainSession =
     Boolean(sourceRecordingId) &&
     consumedSourceRecordingId !== sourceRecordingId;
@@ -296,12 +356,92 @@ export function SheetPracticeControls({
     void stopMetronome();
   }, [stopMetronome]);
   const arePreRunSettingsLocked = isPlaying || isCounting;
+  const showRecordAgain =
+    activeRecordingWorkflowSheetId === sheetId &&
+    rerecordStatus === "ready" &&
+    rerecordSource !== null &&
+    rerecordSource.sheetId === sheetId &&
+    selectedRecordingSegmentId === rerecordSource.segmentContext.segmentId;
+  const canRecordAgain =
+    showRecordAgain &&
+    recordingState === "idle" &&
+    !recordingHarnessActive &&
+    !sheetRecordingService.isRecording &&
+    !isCounting &&
+    !isStartingRecordAgain;
 
-  async function startSheetRecording() {
+  async function validateRecordAgainSource() {
+    const workflowState = useSheetPracticeRecordingWorkflowStore.getState();
+    const source = workflowState.rerecord.source;
+
+    if (
+      workflowState.sheetId !== sheetId ||
+      workflowState.rerecord.status !== "ready" ||
+      !source ||
+      source.sheetId !== sheetId ||
+      workflowState.activeSegmentId !== source.segmentContext.segmentId
+    ) {
+      invalidateRerecordSource(sheetId, "selection-changed");
+      throw new Error("Record again is not available for this segment.");
+    }
+
+    const selectedSegment = await practiceSegmentService.getSegment(
+      sheetId,
+      source.segmentContext.segmentId
+    );
+
+    if (selectedSegment === null) {
+      setActiveRecordingSegment(sheetId, null);
+      invalidateRerecordSource(sheetId, "source-segment-missing");
+      throw new Error("Record again is not available for this segment.");
+    }
+
+    if (selectedSegment.sheetId !== sheetId) {
+      setActiveRecordingSegment(sheetId, null);
+      invalidateRerecordSource(sheetId, "sheet-mismatch");
+      throw new Error("Record again is not available for this segment.");
+    }
+
+    let liveSegmentContext: SheetRecordingSegmentContext;
+
+    try {
+      liveSegmentContext = createSheetRecordingSegmentContext(selectedSegment);
+    } catch {
+      invalidateRerecordSource(sheetId, "source-segment-invalid");
+      throw new Error("Record again is not available for this segment.");
+    }
+
+    if (!segmentContextsMatch(liveSegmentContext, source.segmentContext)) {
+      invalidateRerecordSource(sheetId, "source-segment-invalid");
+      throw new Error("Record again is not available for this segment.");
+    }
+
+    return source.segmentContext;
+  }
+
+  async function startSheetRecording(mode: SheetRecordingStartMode = "normal") {
+    if (
+      isStartingRecordingRef.current ||
+      recordingState !== "idle" ||
+      recordingHarnessActive ||
+      sheetRecordingService.isRecording ||
+      (mode === "record-again" && isCounting)
+    ) {
+      return;
+    }
+
+    isStartingRecordingRef.current = true;
+    if (mode === "record-again") {
+      setIsStartingRecordAgain(true);
+    }
+
     setErrorMessage(null);
     let captureStarted = false;
 
     try {
+      const recordAgainContext =
+        mode === "record-again" ? await validateRecordAgainSource() : null;
+
       await sheetRecordingService.startCapture();
       captureStarted = true;
 
@@ -321,10 +461,16 @@ export function SheetPracticeControls({
       setSession(nextSession);
       setConsumedSourceRecordingId(sourceRecordingId);
       setRecordingState("recording");
+      beginWorkflowRecording(
+        sheetId,
+        recordAgainContext?.segmentId ?? selectedRecordingSegmentId
+      );
       setMessage(
-        isPlaying
-          ? "Recording while metronome plays."
-          : "Recording without metronome."
+        recordAgainContext
+          ? `Recording again for ${recordAgainContext.segmentName}.`
+          : isPlaying
+            ? "Recording while metronome plays."
+            : "Recording without metronome."
       );
     } catch (error) {
       if (captureStarted) {
@@ -332,23 +478,90 @@ export function SheetPracticeControls({
       }
 
       setRecordingState("idle");
+      failWorkflowRecording(
+        sheetId,
+        error instanceof Error
+          ? error.message
+          : "Recording failed before it could start."
+      );
       setErrorMessage(
         error instanceof Error
           ? error.message
           : "Recording failed before it could start."
       );
+    } finally {
+      isStartingRecordingRef.current = false;
+      if (mode === "record-again") {
+        setIsStartingRecordAgain(false);
+      }
+    }
+  }
+
+  async function resolveSelectedSegmentContext(): Promise<SheetRecordingSegmentContext | null> {
+    if (!selectedRecordingSegmentId) {
+      return null;
+    }
+
+    let selectedSegment: Awaited<ReturnType<typeof practiceSegmentService.getSegment>>;
+
+    try {
+      selectedSegment = await practiceSegmentService.getSegment(
+        sheetId,
+        selectedRecordingSegmentId
+      );
+    } catch {
+      throw new Error("Selected segment could not be loaded. Recording was not saved.");
+    }
+
+    if (selectedSegment === null) {
+      setActiveRecordingSegment(sheetId, null);
+      invalidateRerecordSource(sheetId, "source-segment-missing");
+      throw new Error("Selected segment no longer exists. Recording was not saved.");
+    }
+
+    if (selectedSegment.sheetId !== sheetId) {
+      setActiveRecordingSegment(sheetId, null);
+      invalidateRerecordSource(sheetId, "sheet-mismatch");
+      throw new Error("Selected segment belongs to a different sheet. Recording was not saved.");
+    }
+
+    try {
+      return createSheetRecordingSegmentContext(selectedSegment);
+    } catch {
+      throw new Error("Selected segment timing is invalid. Recording was not saved.");
     }
   }
 
   async function stopSheetRecording() {
     setErrorMessage(null);
+
+    let segmentContext: SheetRecordingSegmentContext | null;
+
+    try {
+      segmentContext = await resolveSelectedSegmentContext();
+    } catch (error) {
+      const nextMessage =
+        error instanceof Error
+          ? error.message
+          : "Selected segment could not be prepared. Recording was not saved.";
+
+      await sheetRecordingService.discardCapture();
+      setRecordingState("idle");
+      failWorkflowRecording(sheetId, nextMessage);
+      setErrorMessage(nextMessage);
+
+      return;
+    }
+
     setRecordingState("saving");
+    beginWorkflowSaving(sheetId);
 
     try {
       const result = await sheetRecordingService.stopAndSave({
         sheetId,
         sessionId: session?.id ?? null,
         settings,
+        segmentContext,
         forceNewSession: false,
         sessionService
       });
@@ -361,13 +574,20 @@ export function SheetPracticeControls({
       );
       setLatestSheetRecording(result.recording);
       setRecordingState("idle");
+      finishWorkflowRecording(sheetId, result.recording);
       setMessage(
         isPlaying
           ? "Recording saved; metronome is still playing."
-          : "Recording saved."
+          : segmentContext
+            ? `Recording saved for ${segmentContext.segmentName}.`
+            : "Recording saved."
       );
     } catch (error) {
       setRecordingState("idle");
+      failWorkflowRecording(
+        sheetId,
+        error instanceof Error ? error.message : "Recording could not be saved."
+      );
       setErrorMessage(
         error instanceof Error ? error.message : "Recording could not be saved."
       );
@@ -471,6 +691,27 @@ export function SheetPracticeControls({
           stopMetronome={handleStopMetronome}
           startSheetRecording={() => void startSheetRecording()}
           stopSheetRecording={() => void stopSheetRecording()}
+          showRecordAgain={showRecordAgain}
+          canRecordAgain={canRecordAgain}
+          isStartingRecordAgain={isStartingRecordAgain}
+          startRecordAgain={() => void startSheetRecording("record-again")}
+        />
+      </div>
+      <div className="border-border grid gap-3 border-t px-3 py-3 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(24rem,1.15fr)]">
+        <PracticeSegmentSelectorPanel
+          sheetId={sheetId}
+          practiceSegmentService={practiceSegmentService}
+          measureGridService={measureGridService}
+          measureGridRevision={measureGridRevision}
+        />
+        <MeasureGridCalibrationPanel
+          sheetId={sheetId}
+          defaultBpm={defaultBpm}
+          defaultTimeSignature={defaultTimeSignature}
+          fallbackSettings={initialState.settings}
+          currentTimestampMs={currentMeasureGridTimestampMs}
+          measureGridService={measureGridService}
+          onGridSaved={() => setMeasureGridRevision((revision) => revision + 1)}
         />
       </div>
       <div className="border-border text-muted-foreground flex flex-wrap items-center gap-3 border-t px-3 py-2 text-xs">

@@ -1,5 +1,3 @@
-export type ReferenceKind = "local-audio" | "bilibili";
-
 export type LocalAudioReference = {
   id: string;
   sheetId: string;

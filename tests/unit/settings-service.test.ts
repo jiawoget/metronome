@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_USER_SETTINGS,
@@ -9,7 +9,6 @@ import {
   type UserSettings
 } from "@/domain/settings";
 import {
-  createLocalDataCleanupService,
   createStorageSummaryService,
   createUserSettingsService,
   type SettingsRepository
@@ -127,16 +126,6 @@ describe("settings services", () => {
         quotaBytes: 4096
       }
     });
-  });
-
-  it("propagates cleanup failures", async () => {
-    const clearLocalData = vi.fn(async () => {
-      throw new Error("cleanup failed");
-    });
-    const cleanupService = createLocalDataCleanupService({ clearLocalData });
-
-    await expect(cleanupService.clearAllLocalData()).rejects.toThrow("cleanup failed");
-    expect(clearLocalData).toHaveBeenCalledTimes(1);
   });
 });
 

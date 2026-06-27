@@ -1,13 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
-const sheetDbName = "metronome-practice-v0-sheet-library";
-const referenceDbName = "metronome-practice-v0-references";
-const practiceDbName = "metronome-practice-v0-practice-sessions";
-const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
+import { installSyntheticMicrophone } from "./fixtures/audio";
+import { importTestSheet } from "./fixtures/sheets";
+import {
+  clearDatabases as clearDatabaseList,
+  clearRecordingHistory,
+  PRACTICE_SESSION_DB_NAME,
+  readRecordingHistory,
+  REFERENCE_DB_NAME,
+  SHEET_LIBRARY_DB_NAME
+} from "./fixtures/storage";
 
 type ReferenceAudioSnapshot = {
   referenceId: string | null;
@@ -50,105 +51,23 @@ function createReferenceWavBuffer() {
   return buffer;
 }
 
-async function deleteDatabase(page: Page, databaseName: string) {
-  await page.evaluate(
-    (name: string) =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(name);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => resolve();
-      }),
-    databaseName
-  );
-}
-
-async function clearDatabases(page: Page) {
+async function clearState(page: Page) {
   await page.goto("/sheet-library");
-  await page.evaluate(
-    (storageKey) => window.localStorage.removeItem(storageKey),
-    recordingHistoryStorageKey
-  );
-  await deleteDatabase(page, sheetDbName);
-  await deleteDatabase(page, referenceDbName);
-  await deleteDatabase(page, practiceDbName);
+  await clearRecordingHistory(page);
+  await clearDatabaseList(page, [
+    SHEET_LIBRARY_DB_NAME,
+    REFERENCE_DB_NAME,
+    PRACTICE_SESSION_DB_NAME
+  ]);
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Sheet Library" })
   ).toBeVisible();
 }
 
-async function installSyntheticMicrophone(page: Page, frequencyHz = 440) {
-  await page.addInitScript((frequency) => {
-    const e2eWindow = window as Window & {
-      __referenceSyntheticAudioNodes?: unknown[];
-    };
-
-    e2eWindow.__referenceSyntheticAudioNodes = [];
-    Object.defineProperty(navigator, "mediaDevices", {
-      configurable: true,
-      value: {
-        getUserMedia: async () => {
-          const audioWindow = window as Window &
-            typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-          const AudioContextConstructor =
-            audioWindow.AudioContext || audioWindow.webkitAudioContext;
-
-          if (!AudioContextConstructor) {
-            throw new Error("Web Audio is not available in this browser.");
-          }
-
-          const audioContext = new AudioContextConstructor();
-          const destination = audioContext.createMediaStreamDestination();
-          const oscillator = audioContext.createOscillator();
-          const gain = audioContext.createGain();
-
-          oscillator.frequency.value = frequency;
-          gain.gain.value = 0.22;
-          oscillator.connect(gain);
-          gain.connect(destination);
-          oscillator.start();
-          e2eWindow.__referenceSyntheticAudioNodes?.push({
-            audioContext,
-            oscillator,
-            gain
-          });
-
-          return destination.stream;
-        }
-      }
-    });
-  }, frequencyHz);
-}
-
-async function importSheet(page: Page) {
-  await page.goto("/sheet-library");
-  await page
-    .getByLabel("File")
-    .setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
-  await expect(page.getByText(/^Ready:/)).toBeVisible();
-  await page.getByLabel("Name").fill("Reference Contract Sheet");
-  await page.getByLabel("BPM").fill("84");
-  await page.getByLabel("Time signature").fill("4/4");
-  await page.getByRole("button", { name: "Save Imported Sheet" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Reference Contract Sheet" })
-  ).toBeVisible();
-
-  const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
-  const href = await link.getAttribute("href");
-  const sheetId =
-    new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
-
-  expect(sheetId).toBeTruthy();
-
-  return { link, sheetId };
-}
-
 async function getReferenceSnapshot(
   page: Page,
-  databaseName = referenceDbName
+  databaseName = REFERENCE_DB_NAME
 ) {
   return page.evaluate(
     (name) =>
@@ -206,35 +125,17 @@ async function getReferenceSnapshot(
 }
 
 async function getPracticeSnapshot(page: Page) {
-  return page.evaluate(
-    ({
-      databaseName,
-      storageKey
-    }: {
-      databaseName: string;
-      storageKey: string;
-    }) =>
-      new Promise<{
-        sessions: Array<{
+  const sessions = await page.evaluate(
+    (databaseName) =>
+      new Promise<
+        Array<{
           id: string;
           sourceType: string;
           sheetId: string | null;
           recordingCount: number;
           latestRecordingId: string | null;
-        }>;
-        recordings: Array<{
-          id: string;
-          type: string;
-          sessionId: string;
-          sheetId: string | null;
-        }>;
-      }>((resolve, reject) => {
-        const readRecordings = () => {
-          const rawValue = window.localStorage.getItem(storageKey);
-          const parsed = rawValue ? JSON.parse(rawValue) : { recordings: [] };
-
-          return Array.isArray(parsed.recordings) ? parsed.recordings : [];
-        };
+        }>
+      >((resolve, reject) => {
         const openRequest = indexedDB.open(databaseName);
 
         openRequest.onerror = () => reject(openRequest.error);
@@ -243,7 +144,7 @@ async function getPracticeSnapshot(page: Page) {
 
           if (!database.objectStoreNames.contains("sessions")) {
             database.close();
-            resolve({ sessions: [], recordings: readRecordings() });
+            resolve([]);
             return;
           }
 
@@ -252,16 +153,26 @@ async function getPracticeSnapshot(page: Page) {
 
           transaction.oncomplete = () => {
             database.close();
-            resolve({
-              sessions: sessionsRequest.result,
-              recordings: readRecordings()
-            });
+            resolve(sessionsRequest.result);
           };
           transaction.onerror = () => reject(transaction.error);
         };
       }),
-    { databaseName: practiceDbName, storageKey: recordingHistoryStorageKey }
+    PRACTICE_SESSION_DB_NAME
   );
+  const recordingHistory = await readRecordingHistory(page);
+
+  return {
+    sessions,
+    recordings: Array.isArray(recordingHistory.recordings)
+      ? (recordingHistory.recordings as Array<{
+          id: string;
+          type: string;
+          sessionId: string;
+          sheetId: string | null;
+        }>)
+      : []
+  };
 }
 
 test("reference system saves local audio and Bilibili references through Sheet Practice", async ({
@@ -295,8 +206,12 @@ test("reference system saves local audio and Bilibili references through Sheet P
   await installSyntheticMicrophone(page);
 
   await page.setViewportSize({ width: 1280, height: 860 });
-  await clearDatabases(page);
-  const { link, sheetId } = await importSheet(page);
+  await clearState(page);
+  const { link, sheetId } = await importTestSheet(page, {
+    name: "Reference Contract Sheet",
+    bpm: 84,
+    timeSignature: "4/4"
+  });
 
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
@@ -308,7 +223,9 @@ test("reference system saves local audio and Bilibili references through Sheet P
     "No active reference"
   );
   await expect(
-    page.getByText(/Download|Extract|A-B loop|Playback speed|Offset/i)
+    page
+      .getByTestId("reference-panel")
+      .getByText(/Download|Extract|A-B loop|Playback speed|Offset/i)
   ).toHaveCount(0);
 
   await page.getByLabel("Local title").fill("Tone Reference");

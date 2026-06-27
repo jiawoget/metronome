@@ -31,7 +31,7 @@ export type SheetViewerLibraryReader = {
   getArtifact: (sheetId: string) => Promise<SheetArtifact | null>;
 };
 
-export type SheetViewerReadyState = {
+type SheetViewerReadyState = {
   status: "ready";
   sheet: SheetListItem;
   artifact: SheetArtifact;
@@ -39,7 +39,7 @@ export type SheetViewerReadyState = {
   imageDimensions: SheetImageDimensions[];
 };
 
-export type SheetViewerErrorState = {
+type SheetViewerErrorState = {
   status: "error";
   code: SheetViewerErrorCode;
   title: string;

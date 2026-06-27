@@ -121,4 +121,18 @@ describe("BrowserMetronomeService Tone adapter", () => {
     expect(fakeTone.adapter.scheduleRepeat).toHaveBeenLastCalledWith(expect.any(Function), 1 / 3);
     expect(fakeTone.adapter.startTransport).toHaveBeenLastCalledWith("+0.02");
   });
+
+  it("schedules 6/8 with the shared denominator-aware meter timing policy", async () => {
+    const fakeTone = createFakeToneAdapter();
+    const service = new BrowserMetronomeService(async () => fakeTone.adapter);
+
+    await service.start({
+      ...DEFAULT_METRONOME_SETTINGS,
+      bpm: 120,
+      timeSignature: "6/8",
+      subdivision: "quarter"
+    });
+
+    expect(fakeTone.adapter.scheduleRepeat).toHaveBeenCalledWith(expect.any(Function), 0.25);
+  });
 });

@@ -17,9 +17,7 @@ This module extends the v0 unified recordings review surface into a deeper pract
 - Recording comparison.
 - Multi-take management.
 - Bar-level navigation.
-- Automatic scoring experiments.
-- Automatic timing analysis.
-- Cloud backup and restore.
+- Analysis-backed waveform support.
 - Tags.
 - Favorites.
 - Archive.
@@ -33,7 +31,7 @@ This module extends the v0 unified recordings review surface into a deeper pract
 - Help the player compare progress across takes.
 - Make review useful for repeated practice, not just playback.
 - Support larger recording collections.
-- Enable long-term history once sync exists.
+- Enable richer local long-term history.
 
 ## Required v0 Boundaries to Preserve
 
@@ -50,15 +48,13 @@ This module extends the v0 unified recordings review surface into a deeper pract
 - Segment-linked review model.
 - Tag and favorite metadata.
 - Export service.
-- Cloud backup service after sync exists.
-- Audio analysis result storage.
+- Audio analysis result storage for bounded v1 infrastructure.
 
 ## Testing Implications
 
 - Comparison tests need multiple real audio artifacts.
 - Export tests need file integrity verification.
-- Cloud backup tests need sync conflict and restore scenarios.
-- Automatic analysis tests need controlled audio fixtures.
+- Analysis-backed waveform tests need controlled audio fixtures.
 - E2E tests must still use real browser interaction.
 
 ## Risks
@@ -66,7 +62,9 @@ This module extends the v0 unified recordings review surface into a deeper pract
 - Multi-take review can drift toward DAW-like editing.
 - Export can introduce browser compatibility issues.
 - Tags and folders can add management complexity.
-- Automatic scoring can create false confidence if analysis is weak.
+- Automatic scoring is deferred to v2 because weak analysis can create false confidence.
+
+Cloud backup and restore are deferred to v2.
 
 ## Promotion Criteria
 

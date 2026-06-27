@@ -10,7 +10,6 @@ empty dashboard states, diagnostics/devtools visibility, and responsive nav.
 ## Code Map
 
 - App shell: `src/components/app-shell/app-shell.tsx`
-- Route wrapper: `src/components/app-shell/route-shell.tsx`
 - Home dashboard: `src/components/home/home-dashboard.tsx`
 - Navigation helpers: `src/lib/navigation.ts`
 - Routes: `src/app/page.tsx`, `src/app/*/page.tsx`

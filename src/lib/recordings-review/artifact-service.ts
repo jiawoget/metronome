@@ -41,7 +41,7 @@ export function getDurationWarning({
   return `Decoded audio duration (${(decodedDurationMs / 1_000).toFixed(1)}s) differs from saved metadata (${(metadataDurationMs / 1_000).toFixed(1)}s).`;
 }
 
-export function normalizeTrustedPeaks(peaks: number[]) {
+function normalizeTrustedPeaks(peaks: number[]) {
   return peaks.map((peak) => Math.max(0, Math.min(1, peak)));
 }
 

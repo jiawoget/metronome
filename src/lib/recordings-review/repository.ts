@@ -4,13 +4,18 @@ import type {
   ReviewRecording
 } from "@/lib/recordings-review/types";
 import {
+  parseSheetRecordingSegmentContext,
+  type SheetRecordingSegmentContext
+} from "@/domain/practice";
+import {
   createErrorMarker,
   normalizePersistedErrorMarker,
   sortErrorMarkers,
   type CreateErrorMarkerInput
 } from "@/lib/recordings-review/error-markers";
+import { RECORDING_HISTORY_STORAGE_KEY } from "@/infrastructure/storage/storage-contracts";
 
-export const RECORDINGS_STORAGE_KEY = "metronome-practice:v0:quick-recordings";
+export const RECORDINGS_STORAGE_KEY = RECORDING_HISTORY_STORAGE_KEY;
 const STORE_EVENT = "recordings-review-change";
 const QUICK_STORE_EVENT = "quick-metronome-recordings-change";
 
@@ -53,6 +58,29 @@ function isRecording(value: unknown): value is ReviewRecording {
     Number.isFinite(recording.settings.bpm) &&
     typeof recording.settings.timeSignature === "string"
   );
+}
+
+function normalizeRecording(value: unknown): ReviewRecording | null {
+  if (!isRecording(value)) {
+    return null;
+  }
+
+  const recording = value as ReviewRecording & { segmentContext?: unknown };
+  const hasSegmentContext = Object.prototype.hasOwnProperty.call(recording, "segmentContext");
+
+  if (recording.type !== "sheet" || !hasSegmentContext) {
+    return recording;
+  }
+
+  const segmentContext: SheetRecordingSegmentContext | null =
+    recording.segmentContext === null || recording.segmentContext === undefined
+      ? null
+      : parseSheetRecordingSegmentContext(recording.segmentContext);
+
+  return {
+    ...recording,
+    segmentContext
+  };
 }
 
 function isErrorMarker(value: unknown): value is RecordingErrorMarker {
@@ -110,7 +138,11 @@ function normalizeErrorMarkersForRecordings({
 }
 
 function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | RecordingReviewSnapshot): RecordingReviewSnapshot {
-  const recordings = Array.isArray(value.recordings) ? value.recordings.filter(isRecording) : [];
+  const recordings = Array.isArray(value.recordings)
+    ? value.recordings
+        .map(normalizeRecording)
+        .filter((recording): recording is ReviewRecording => recording !== null)
+    : [];
   const markers = Array.isArray(value.errorMarkers) ? value.errorMarkers : [];
 
   return {

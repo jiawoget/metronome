@@ -2,10 +2,9 @@
 
 import Dexie, { type Table } from "dexie";
 
-import { DEFAULT_USER_SETTINGS, normalizeUserSettings, type UserSettings } from "@/domain/settings";
+import { normalizeUserSettings, type UserSettings } from "@/domain/settings";
+import { SETTINGS_DB_NAME } from "@/infrastructure/storage/storage-contracts";
 import { createUserSettingsService, type SettingsRepository } from "@/services/settings";
-
-export const SETTINGS_DB_NAME = "metronome-practice-v0-settings";
 
 type PersistedSettingsRecord = {
   id: "user-settings";
@@ -58,10 +57,4 @@ export const browserSettingsRepository: SettingsRepository = {
 };
 
 export const browserSettingsService = createUserSettingsService(browserSettingsRepository);
-
-export async function resetSettingsDatabaseForTests() {
-  await getDatabase().delete();
-  database = null;
-  await browserSettingsRepository.saveSettings(DEFAULT_USER_SETTINGS);
-}
 

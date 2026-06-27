@@ -28,7 +28,7 @@ export type HomeDashboardData = {
   recentRecordings: [];
 };
 
-export const emptyHomeDashboardData: HomeDashboardData = {
+const emptyHomeDashboardData: HomeDashboardData = {
   summary: {
     durationMs: 0,
     minutesToday: 0,

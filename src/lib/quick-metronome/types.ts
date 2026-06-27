@@ -1,3 +1,8 @@
+import type {
+  RecordingArtifact as ServiceRecordingArtifact,
+  RecordingArtifactAnalysis as ServiceRecordingArtifactAnalysis
+} from "@/services/recording";
+
 export const MIN_BPM = 30;
 export const MAX_BPM = 240;
 export const DEFAULT_BPM = 96;
@@ -29,23 +34,9 @@ export type QuickRecording = {
   settings: MetronomeSettings;
 };
 
-export type RecordingArtifactAnalysis = {
-  decodedDurationMs: number;
-  sampleRate: number;
-  peakAmplitude: number;
-  rmsAmplitude: number;
-  estimatedFrequencyHz: number | null;
-  isSilent: boolean;
-};
+export type RecordingArtifactAnalysis = ServiceRecordingArtifactAnalysis;
 
-export type RecordingArtifact = {
-  blob: Blob;
-  dataUrl: string;
-  durationMs: number;
-  mimeType: string;
-  sizeBytes: number;
-  analysis: RecordingArtifactAnalysis | null;
-};
+export type RecordingArtifact = ServiceRecordingArtifact;
 
 export type QuickMetronomeStoreSnapshot = {
   sessions: unknown[];

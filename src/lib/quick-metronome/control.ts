@@ -1,3 +1,4 @@
+import { getMeterTickIntervalMs, getMeterTicksPerMeasure } from "@/domain/practice/meter-timing";
 import {
   DEFAULT_BPM,
   DEFAULT_METRONOME_SETTINGS,
@@ -9,8 +10,18 @@ import {
   type TimeSignature
 } from "@/lib/quick-metronome/types";
 
-export const TIME_SIGNATURES: TimeSignature[] = ["2/4", "3/4", "4/4", "6/8"];
-export const SUBDIVISIONS: Subdivision[] = ["quarter", "eighth", "triplet", "sixteenth"];
+export const TIME_SIGNATURES = [
+  "2/4",
+  "3/4",
+  "4/4",
+  "6/8"
+] as const satisfies readonly TimeSignature[];
+export const SUBDIVISIONS = [
+  "quarter",
+  "eighth",
+  "triplet",
+  "sixteenth"
+] as const satisfies readonly Subdivision[];
 export const ACCENT_MODES: AccentMode[] = ["downbeat", "every-beat", "off"];
 export const COUNTDOWN_OPTIONS = [0, 4, 8, 16] as const;
 
@@ -63,11 +74,11 @@ export function parseAccentMode(value: string): AccentMode {
 export function parseCountdownBeats(value: string | number) {
   const parsed = typeof value === "number" ? value : Number.parseInt(value, 10);
 
-  return COUNTDOWN_OPTIONS.includes(parsed as (typeof COUNTDOWN_OPTIONS)[number]) ? parsed : 0;
-}
-
-export function getBeatsPerMeasure(timeSignature: TimeSignature) {
-  return Number.parseInt(timeSignature.split("/")[0] ?? "4", 10);
+  return COUNTDOWN_OPTIONS.includes(
+    parsed as (typeof COUNTDOWN_OPTIONS)[number]
+  )
+    ? parsed
+    : 0;
 }
 
 export function getSubdivisionMultiplier(subdivision: Subdivision) {
@@ -83,8 +94,14 @@ export function getSubdivisionMultiplier(subdivision: Subdivision) {
   }
 }
 
-export function getTickIntervalMs(settings: Pick<MetronomeSettings, "bpm" | "subdivision">) {
-  return 60_000 / clampBpm(settings.bpm) / getSubdivisionMultiplier(settings.subdivision);
+export function getTickIntervalMs(
+  settings: Pick<MetronomeSettings, "bpm" | "timeSignature" | "subdivision">
+) {
+  return getMeterTickIntervalMs({
+    bpm: clampBpm(settings.bpm),
+    timeSignature: settings.timeSignature,
+    ticksPerBeat: getSubdivisionMultiplier(settings.subdivision)
+  });
 }
 
 export function isAccentTick(
@@ -102,7 +119,14 @@ export function isAccentTick(
     return beatIndex === 0;
   }
 
-  return tickIndex % (getBeatsPerMeasure(settings.timeSignature) * subdivisionMultiplier) === 0;
+  return (
+    tickIndex %
+      getMeterTicksPerMeasure({
+        timeSignature: settings.timeSignature,
+        ticksPerBeat: subdivisionMultiplier
+      }) ===
+    0
+  );
 }
 
 export function calculateTapTempo(tapTimesMs: number[]) {
@@ -114,15 +138,20 @@ export function calculateTapTempo(tapTimesMs: number[]) {
     return null;
   }
 
-  const intervals = validTapTimes.slice(1).map((tapTime, index) => tapTime - validTapTimes[index]);
-  const usableIntervals = intervals.filter((interval) => interval >= 250 && interval <= 2_000);
+  const intervals = validTapTimes
+    .slice(1)
+    .map((tapTime, index) => tapTime - validTapTimes[index]);
+  const usableIntervals = intervals.filter(
+    (interval) => interval >= 250 && interval <= 2_000
+  );
 
   if (usableIntervals.length === 0) {
     return null;
   }
 
   const averageInterval =
-    usableIntervals.reduce((total, interval) => total + interval, 0) / usableIntervals.length;
+    usableIntervals.reduce((total, interval) => total + interval, 0) /
+    usableIntervals.length;
 
   return clampBpm(60_000 / averageInterval);
 }

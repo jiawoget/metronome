@@ -19,8 +19,7 @@ This module extends v0 sheet recording and latest-take review into richer multi-
 - Recording comparison.
 - Reference-to-recording comparison.
 - Audio export.
-- Automatic timing analysis.
-- Automatic scoring experiments.
+- Analysis-backed waveform support.
 - Segment re-recording.
 - Take history per sheet or segment.
 - Better waveform comparison views.
@@ -46,7 +45,7 @@ This module extends v0 sheet recording and latest-take review into richer multi-
 - Segment recording model.
 - Comparison waveform service.
 - Export service.
-- Timing analysis result storage.
+- Bounded audio analysis result storage for waveform comparison.
 
 ## Testing Implications
 
@@ -60,8 +59,9 @@ This module extends v0 sheet recording and latest-take review into richer multi-
 
 - Multi-take workflows can drift toward DAW editing.
 - Waveform comparison can become visually complex on mobile.
-- Automatic scoring can imply more confidence than analysis supports.
 - Export can introduce browser compatibility issues.
+
+Automatic timing feedback and automatic scoring are deferred to v2.
 
 ## Promotion Criteria
 

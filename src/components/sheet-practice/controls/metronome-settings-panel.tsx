@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Circle } from "lucide-react";
+import { Activity, ChevronDown, ChevronUp, Circle } from "lucide-react";
 
 import {
   ACCENT_MODES,
@@ -20,6 +20,7 @@ import {
 } from "@/lib/quick-metronome/types";
 import { Button } from "@/components/ui/button";
 import { LabeledSelect } from "@/components/sheet-practice/controls/labeled-select";
+import { cn } from "@/lib/utils";
 
 const subdivisionLabels: Record<Subdivision, string> = {
   quarter: "Quarter",
@@ -39,6 +40,10 @@ type MetronomeSettingsPanelProps = {
   bpmDraft: string;
   unsupportedTimeSignatureMessage: string | null;
   arePreRunSettingsLocked: boolean;
+  bpmInputId?: string;
+  className?: string;
+  layout?: "sheet" | "stacked";
+  onTapTempo?: () => void;
   setBpmDraft: (value: string) => void;
   commitBpmInput: () => void;
   stepBpmInput: (step: -1 | 1) => void;
@@ -50,15 +55,25 @@ export function MetronomeSettingsPanel({
   bpmDraft,
   unsupportedTimeSignatureMessage,
   arePreRunSettingsLocked,
+  bpmInputId = "sheet-bpm",
+  className,
+  layout = "sheet",
+  onTapTempo,
   setBpmDraft,
   commitBpmInput,
   stepBpmInput,
   updateSettings
 }: MetronomeSettingsPanelProps) {
   return (
-    <div className="border-border bg-background grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(13rem,0.85fr)_1fr]">
+    <div
+      className={cn(
+        "border-border bg-background grid gap-3 rounded-md border p-3",
+        layout === "sheet" && "md:grid-cols-[minmax(13rem,0.85fr)_1fr]",
+        className
+      )}
+    >
       <div>
-        <label htmlFor="sheet-bpm" className="text-sm font-medium">
+        <label htmlFor={bpmInputId} className="text-sm font-medium">
           BPM
         </label>
         <div className="mt-2 grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] gap-2">
@@ -72,7 +87,7 @@ export function MetronomeSettingsPanel({
             <ChevronDown className="h-4 w-4" aria-hidden="true" />
           </Button>
           <input
-            id="sheet-bpm"
+            id={bpmInputId}
             aria-label="BPM"
             type="number"
             min={MIN_BPM}
@@ -99,15 +114,26 @@ export function MetronomeSettingsPanel({
             <ChevronUp className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
-        <p className="text-muted-foreground mt-2 text-sm leading-6">
-          Tick interval {Math.round(getTickIntervalMs(settings))} ms.
-        </p>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+          {onTapTempo ? (
+            <Button type="button" variant="secondary" onClick={onTapTempo}>
+              <Activity className="h-4 w-4" aria-hidden="true" />
+              Tap Tempo
+            </Button>
+          ) : null}
+          <p className="text-muted-foreground text-sm leading-6">
+            Tick interval {Math.round(getTickIntervalMs(settings))} ms.
+          </p>
+        </div>
       </div>
 
       {unsupportedTimeSignatureMessage ? (
         <p
           role="status"
-          className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 md:col-span-2"
+          className={cn(
+            "rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900",
+            layout === "sheet" && "md:col-span-2"
+          )}
         >
           {unsupportedTimeSignatureMessage}
         </p>
@@ -155,14 +181,17 @@ export function MetronomeSettingsPanel({
       {arePreRunSettingsLocked ? (
         <p
           role="status"
-          className="text-muted-foreground text-sm leading-6 md:col-span-2"
+          className={cn(
+            "text-muted-foreground text-sm leading-6",
+            layout === "sheet" && "md:col-span-2"
+          )}
         >
           Meter, subdivision, accent, and countdown are locked while the
           metronome is running. Stop playback to change them.
         </p>
       ) : null}
 
-      <div className="md:col-span-2">
+      <div className={cn(layout === "sheet" && "md:col-span-2")}>
         <p className="text-sm font-medium">Accent</p>
         <div className="mt-2 grid gap-2 sm:grid-cols-3">
           {ACCENT_MODES.map((accentMode) => (

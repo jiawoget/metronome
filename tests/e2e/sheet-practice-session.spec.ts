@@ -2,35 +2,17 @@ import { expect, test, type Page } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  clearDatabases,
+  clearRecordingHistory,
+  PRACTICE_SESSION_DB_NAME,
+  RECORDING_HISTORY_STORAGE_KEY,
+  SHEET_LIBRARY_DB_NAME
+} from "./fixtures/storage";
+
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
-const sheetDbName = "metronome-practice-v0-sheet-library";
-const practiceDbName = "metronome-practice-v0-practice-sessions";
-const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
 const recordingHarnessEvent = "sheet-practice-controls:set-recording-harness-active";
-
-async function deleteDatabase(page: Page, databaseName: string) {
-  await page.evaluate(
-    (name: string) =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(name);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => resolve();
-      }),
-    databaseName
-  );
-}
-
-async function clearDatabases(page: Page) {
-  await page.goto("/sheet-library");
-  await page.evaluate((storageKey) => window.localStorage.removeItem(storageKey), recordingHistoryStorageKey);
-  await deleteDatabase(page, sheetDbName);
-  await deleteDatabase(page, practiceDbName);
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
-}
 
 async function importSheet(page: Page) {
   await page.goto("/sheet-library");
@@ -117,7 +99,10 @@ async function getPracticeSnapshot(page: Page) {
 
         openExistingDatabase();
       }),
-    { databaseName: practiceDbName, storageKey: recordingHistoryStorageKey }
+    {
+      databaseName: PRACTICE_SESSION_DB_NAME,
+      storageKey: RECORDING_HISTORY_STORAGE_KEY
+    }
   );
 }
 
@@ -140,7 +125,7 @@ async function getSheetLastPracticedAt(page: Page, sheetId: string) {
           request.onerror = () => reject(request.error);
         };
       }),
-    { databaseName: sheetDbName, id: sheetId }
+    { databaseName: SHEET_LIBRARY_DB_NAME, id: sheetId }
   );
 }
 
@@ -168,7 +153,7 @@ async function seedQuickSession(page: Page) {
         errorMarkers: []
       })
     );
-  }, recordingHistoryStorageKey);
+  }, RECORDING_HISTORY_STORAGE_KEY);
 }
 
 async function deleteSheetRecord(page: Page, sheetId: string) {
@@ -191,7 +176,7 @@ async function deleteSheetRecord(page: Page, sheetId: string) {
           transaction.onerror = () => reject(transaction.error);
         };
       }),
-    { databaseName: sheetDbName, id: sheetId }
+    { databaseName: SHEET_LIBRARY_DB_NAME, id: sheetId }
   );
 }
 
@@ -217,7 +202,11 @@ test("sheet practice session starts only on activity, persists, keeps recording 
     e2eWindow.__sheetPracticeControlsTestHarness = true;
   });
 
-  await clearDatabases(page);
+  await page.goto("/sheet-library");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME]);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
   const { link, sheetId } = await importSheet(page);
 
   await link.click();

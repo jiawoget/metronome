@@ -67,7 +67,7 @@ const supportedBilibiliHosts = new Set([
   "m.bilibili.com"
 ]);
 
-export const supportedLocalAudioTypes = new Set([
+const supportedLocalAudioTypes = new Set([
   "audio/mpeg",
   "audio/mp3",
   "audio/wav",
@@ -87,7 +87,7 @@ export function validateLocalAudioArtifact(artifact: LocalAudioReferenceArtifact
   return localAudioArtifactSchema.parse(artifact);
 }
 
-export function validateBilibiliSearchResult(result: BilibiliSearchResult): BilibiliSearchResult {
+function validateBilibiliSearchResult(result: BilibiliSearchResult): BilibiliSearchResult {
   return bilibiliSearchResultSchema.parse(result);
 }
 

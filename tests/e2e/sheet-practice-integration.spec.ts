@@ -2,11 +2,17 @@ import { expect, test, type Page } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  PRACTICE_SESSION_DB_NAME,
+  RECORDING_HISTORY_STORAGE_KEY,
+  SHEET_LIBRARY_DB_NAME
+} from "./fixtures/storage";
+
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
-const sheetDbName = "metronome-practice-v0-sheet-library";
-const practiceDbName = "metronome-practice-v0-practice-sessions";
-const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
+const sheetDbName = SHEET_LIBRARY_DB_NAME;
+const practiceDbName = PRACTICE_SESSION_DB_NAME;
+const recordingHistoryStorageKey = RECORDING_HISTORY_STORAGE_KEY;
 
 type MetronomeTrace = {
   bpm: number;
@@ -345,8 +351,8 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
   await expect(page.getByRole("heading", { name: "Integrated Practice Sheet" })).toBeVisible();
-  await expect(page.getByRole("spinbutton", { name: "BPM" })).toHaveValue("84");
-  await expect(page.getByLabel("Time signature")).toHaveValue("4/4");
+  await expect(page.getByRole("spinbutton", { name: /^BPM$/ })).toHaveValue("84");
+  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue("4/4");
   await expectIntegratedLayoutAcrossViewports(page, "initial open");
   await expect(page.getByTestId("sheet-session-id")).toHaveText("none");
   expect(await getPracticeSnapshot(page)).toMatchObject({ sessions: [] });

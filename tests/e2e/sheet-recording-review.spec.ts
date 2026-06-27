@@ -1,12 +1,18 @@
 import { expect, test, type Page } from "@playwright/test";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
-const sheetDbName = "metronome-practice-v0-sheet-library";
-const practiceDbName = "metronome-practice-v0-practice-sessions";
-const recordingHistoryStorageKey = "metronome-practice:v0:quick-recordings";
+import {
+  createWavDataUrl,
+  decodeRecordingHistoryAudio,
+  installSyntheticMicrophone
+} from "./fixtures/audio";
+import { importTestSheet } from "./fixtures/sheets";
+import {
+  clearDatabases,
+  clearRecordingHistory,
+  PRACTICE_SESSION_DB_NAME,
+  readRecordingHistory,
+  seedRecordingHistory,
+  SHEET_LIBRARY_DB_NAME
+} from "./fixtures/storage";
 
 type SavedRecordingEvidence = {
   id: string;
@@ -27,28 +33,16 @@ type SavedRecordingEvidence = {
   } | null;
 };
 
-async function deleteDatabase(page: Page, databaseName: string) {
-  await page.evaluate(
-    (name: string) =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(name);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => resolve();
-      }),
-    databaseName
-  );
-}
+type SimpleWaveformState = {
+  peakCount: number;
+  source: string | null;
+  heights: number[];
+};
 
 async function clearState(page: Page) {
   await page.goto("/sheet-library");
-  await page.evaluate(
-    (storageKey) => window.localStorage.removeItem(storageKey),
-    recordingHistoryStorageKey
-  );
-  await deleteDatabase(page, sheetDbName);
-  await deleteDatabase(page, practiceDbName);
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME]);
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Sheet Library" })
@@ -56,77 +50,17 @@ async function clearState(page: Page) {
 }
 
 async function importSheet(page: Page, name = "Recording Contract Sheet") {
-  await page.goto("/sheet-library");
-  await page
-    .getByLabel("File")
-    .setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
-  await expect(page.getByText(/^Ready:/)).toBeVisible();
-  await page.getByLabel("Name").fill(name);
-  await page.getByLabel("BPM").fill("88");
-  await page.getByLabel("Time signature").fill("3/4");
-  await page.getByRole("button", { name: "Save Imported Sheet" }).click();
-  await expect(page.getByRole("heading", { name })).toBeVisible();
-
-  const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
-  const href = await link.getAttribute("href");
-  const sheetId =
-    new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
-
-  expect(sheetId).toBeTruthy();
-
-  return { link, sheetId };
-}
-
-async function installSyntheticMicrophone(page: Page, frequencyHz = 440) {
-  await page.addInitScript((frequency) => {
-    const e2eWindow = window as Window & {
-      __sheetSyntheticAudioNodes?: unknown[];
-    };
-
-    e2eWindow.__sheetSyntheticAudioNodes = [];
-    Object.defineProperty(navigator, "mediaDevices", {
-      configurable: true,
-      value: {
-        getUserMedia: async () => {
-          const audioWindow = window as Window &
-            typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-          const AudioContextConstructor =
-            audioWindow.AudioContext || audioWindow.webkitAudioContext;
-
-          if (!AudioContextConstructor) {
-            throw new Error("Web Audio is not available in this browser.");
-          }
-
-          const audioContext = new AudioContextConstructor();
-          const destination = audioContext.createMediaStreamDestination();
-          const oscillator = audioContext.createOscillator();
-          const gain = audioContext.createGain();
-
-          oscillator.frequency.value = frequency;
-          gain.gain.value = 0.22;
-          oscillator.connect(gain);
-          gain.connect(destination);
-          oscillator.start();
-          e2eWindow.__sheetSyntheticAudioNodes?.push({
-            audioContext,
-            oscillator,
-            gain
-          });
-
-          return destination.stream;
-        }
-      }
-    });
-  }, frequencyHz);
+  return importTestSheet(page, {
+    name,
+    bpm: 88,
+    timeSignature: "3/4"
+  });
 }
 
 async function getSavedRecordings(page: Page) {
-  return page.evaluate((storageKey) => {
-    const rawValue = window.localStorage.getItem(storageKey);
-    const parsed = rawValue ? JSON.parse(rawValue) : { recordings: [] };
+  const parsed = await readRecordingHistory(page);
 
-    return Array.isArray(parsed.recordings) ? parsed.recordings : [];
-  }, recordingHistoryStorageKey);
+  return Array.isArray(parsed.recordings) ? parsed.recordings : [];
 }
 
 async function getSheetRecordings(page: Page, sheetId: string) {
@@ -138,68 +72,21 @@ async function getSheetRecordings(page: Page, sheetId: string) {
   ) as SavedRecordingEvidence[];
 }
 
-async function decodeRecording(page: Page, recordingId: string) {
-  return page.evaluate(
-    async ({ storageKey, id }: { storageKey: string; id: string }) => {
-      const rawValue = window.localStorage.getItem(storageKey);
-      const parsed = rawValue ? JSON.parse(rawValue) : { recordings: [] };
-      const recording = parsed.recordings.find(
-        (item: { id: string }) => item.id === id
-      );
-      const audioWindow = window as Window &
-        typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-      const AudioContextConstructor =
-        audioWindow.AudioContext || audioWindow.webkitAudioContext;
-
-      if (!recording?.audioDataUrl || !AudioContextConstructor) {
-        throw new Error(`Cannot decode ${id}.`);
-      }
-
-      const response = await fetch(recording.audioDataUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioContext = new AudioContextConstructor();
-      const audioBuffer = await audioContext.decodeAudioData(
-        arrayBuffer.slice(0)
-      );
-      const samples = audioBuffer.getChannelData(0);
-      let peakAmplitude = 0;
-      let sumSquares = 0;
-      let positiveZeroCrossings = 0;
-      let previousSample = samples[0] ?? 0;
-
-      for (let index = 0; index < samples.length; index += 1) {
-        const sample = samples[index] ?? 0;
-
-        peakAmplitude = Math.max(peakAmplitude, Math.abs(sample));
-        sumSquares += sample * sample;
-
-        if (previousSample < 0 && sample >= 0) {
-          positiveZeroCrossings += 1;
-        }
-
-        previousSample = sample;
-      }
-
-      await audioContext.close();
-
-      const decodedDurationMs = audioBuffer.duration * 1_000;
-
-      return {
-        decodedDurationMs,
-        peakAmplitude,
-        rmsAmplitude: Math.sqrt(sumSquares / Math.max(1, samples.length)),
-        estimatedFrequencyHz:
-          decodedDurationMs > 0
-            ? positiveZeroCrossings / (decodedDurationMs / 1_000)
-            : null
-      };
-    },
-    { storageKey: recordingHistoryStorageKey, id: recordingId }
-  );
+async function markerNotesFitTheirContainers(page: Page, testId: string) {
+  return page
+    .getByTestId(testId)
+    .evaluateAll((elements) =>
+      elements.every(
+        (element) => element.scrollWidth <= element.clientWidth + 1
+      )
+    );
 }
 
-async function getWaveformState(page: Page) {
-  const waveform = page.getByTestId("sheet-derived-waveform");
+async function readWaveformState(
+  page: Page,
+  testId: string
+): Promise<SimpleWaveformState> {
+  const waveform = page.getByTestId(testId);
 
   await expect(waveform).toBeVisible();
 
@@ -210,16 +97,6 @@ async function getWaveformState(page: Page) {
       Number.parseFloat((span as HTMLElement).style.height)
     )
   }));
-}
-
-async function markerNotesFitTheirContainers(page: Page, testId: string) {
-  return page
-    .getByTestId(testId)
-    .evaluateAll((elements) =>
-      elements.every(
-        (element) => element.scrollWidth <= element.clientWidth + 1
-      )
-    );
 }
 
 async function seedSheetMarkerRecordings({
@@ -233,150 +110,72 @@ async function seedSheetMarkerRecordings({
   latestRecordingId?: "marker-sheet-a" | "marker-sheet-b";
   includeSecondRecording?: boolean;
 }) {
-  await page.evaluate(
-    ({
-      storageKey,
-      id,
-      latestId,
-      withSecond
-    }: {
-      storageKey: string;
-      id: string;
-      latestId: "marker-sheet-a" | "marker-sheet-b";
-      withSecond: boolean;
-    }) => {
-      function createWavDataUrl(frequencyHz: number, durationSeconds: number) {
-        const sampleRate = 8_000;
-        const sampleCount = Math.round(sampleRate * durationSeconds);
-        const dataSize = sampleCount * 2;
-        const buffer = new ArrayBuffer(44 + dataSize);
-        const view = new DataView(buffer);
-
-        function writeString(offset: number, value: string) {
-          for (let index = 0; index < value.length; index += 1) {
-            view.setUint8(offset + index, value.charCodeAt(index));
-          }
-        }
-
-        writeString(0, "RIFF");
-        view.setUint32(4, 36 + dataSize, true);
-        writeString(8, "WAVE");
-        writeString(12, "fmt ");
-        view.setUint32(16, 16, true);
-        view.setUint16(20, 1, true);
-        view.setUint16(22, 1, true);
-        view.setUint32(24, sampleRate, true);
-        view.setUint32(28, sampleRate * 2, true);
-        view.setUint16(32, 2, true);
-        view.setUint16(34, 16, true);
-        writeString(36, "data");
-        view.setUint32(40, dataSize, true);
-
-        for (let index = 0; index < sampleCount; index += 1) {
-          const sample =
-            Math.sin((2 * Math.PI * frequencyHz * index) / sampleRate) * 0.35;
-
-          view.setInt16(
-            44 + index * 2,
-            Math.max(-1, Math.min(1, sample)) * 0x7fff,
-            true
-          );
-        }
-
-        let binary = "";
-        const bytes = new Uint8Array(buffer);
-
-        for (let index = 0; index < bytes.length; index += 1) {
-          binary += String.fromCharCode(bytes[index]);
-        }
-
-        return {
-          dataUrl: `data:audio/wav;base64,${window.btoa(binary)}`,
-          sizeBytes: bytes.length,
-          durationMs: durationSeconds * 1_000
-        };
-      }
-
-      const rawValue = window.localStorage.getItem(storageKey);
-      const existing = rawValue
-        ? JSON.parse(rawValue)
-        : { sessions: [], recordings: [], errorMarkers: [] };
-      const markerAArtifact = createWavDataUrl(330, 2);
-      const markerBArtifact = createWavDataUrl(440, 2);
-      const recordings = [
-        {
-          id: "marker-sheet-a",
-          type: "sheet",
-          origin: "user",
-          name: "Marker sheet take A",
-          sessionId: "session-marker-a",
-          sheetId: id,
-          sheetName: "Marker Contract Sheet",
-          createdAt:
-            latestId === "marker-sheet-a"
-              ? "2026-06-22T08:10:00.000Z"
-              : "2026-06-22T08:00:00.000Z",
-          durationMs: markerAArtifact.durationMs,
-          sizeBytes: markerAArtifact.sizeBytes,
-          mimeType: "audio/wav",
-          audioDataUrl: markerAArtifact.dataUrl,
-          trustedPeaks: [0.1, 0.6, 0.9, 0.4, 0.2],
-          settings: {
-            bpm: 88,
-            timeSignature: "3/4"
-          }
-        },
-        ...(withSecond
-          ? [
-              {
-                id: "marker-sheet-b",
-                type: "sheet",
-                origin: "user",
-                name: "Marker sheet take B",
-                sessionId: "session-marker-b",
-                sheetId: id,
-                sheetName: "Marker Contract Sheet",
-                createdAt:
-                  latestId === "marker-sheet-b"
-                    ? "2026-06-22T08:20:00.000Z"
-                    : "2026-06-22T07:50:00.000Z",
-                durationMs: markerBArtifact.durationMs,
-                sizeBytes: markerBArtifact.sizeBytes,
-                mimeType: "audio/wav",
-                audioDataUrl: markerBArtifact.dataUrl,
-                trustedPeaks: [0.2, 0.7, 0.5, 0.3, 0.1],
-                settings: {
-                  bpm: 92,
-                  timeSignature: "4/4"
-                }
-              }
-            ]
-          : [])
-      ];
-
-      window.localStorage.setItem(
-        storageKey,
-        JSON.stringify({
-          sessions: [
-            { id: "session-marker-a", sourceType: "sheet", sheetId: id },
-            ...(withSecond
-              ? [{ id: "session-marker-b", sourceType: "sheet", sheetId: id }]
-              : [])
-          ],
-          recordings,
-          errorMarkers: Array.isArray(existing.errorMarkers)
-            ? existing.errorMarkers
-            : []
-        })
-      );
-    },
+  const markerAArtifact = await createWavDataUrl(page, 330, 2);
+  const markerBArtifact = await createWavDataUrl(page, 440, 2);
+  const existing = await readRecordingHistory(page);
+  const recordings = [
     {
-      storageKey: recordingHistoryStorageKey,
-      id: sheetId,
-      latestId: latestRecordingId,
-      withSecond: includeSecondRecording
-    }
-  );
+      id: "marker-sheet-a",
+      type: "sheet",
+      origin: "user",
+      name: "Marker sheet take A",
+      sessionId: "session-marker-a",
+      sheetId,
+      sheetName: "Marker Contract Sheet",
+      createdAt:
+        latestRecordingId === "marker-sheet-a"
+          ? "2026-06-22T08:10:00.000Z"
+          : "2026-06-22T08:00:00.000Z",
+      durationMs: markerAArtifact.durationMs,
+      sizeBytes: markerAArtifact.sizeBytes,
+      mimeType: "audio/wav",
+      audioDataUrl: markerAArtifact.dataUrl,
+      trustedPeaks: [0.1, 0.6, 0.9, 0.4, 0.2],
+      settings: {
+        bpm: 88,
+        timeSignature: "3/4"
+      }
+    },
+    ...(includeSecondRecording
+      ? [
+          {
+            id: "marker-sheet-b",
+            type: "sheet",
+            origin: "user",
+            name: "Marker sheet take B",
+            sessionId: "session-marker-b",
+            sheetId,
+            sheetName: "Marker Contract Sheet",
+            createdAt:
+              latestRecordingId === "marker-sheet-b"
+                ? "2026-06-22T08:20:00.000Z"
+                : "2026-06-22T07:50:00.000Z",
+            durationMs: markerBArtifact.durationMs,
+            sizeBytes: markerBArtifact.sizeBytes,
+            mimeType: "audio/wav",
+            audioDataUrl: markerBArtifact.dataUrl,
+            trustedPeaks: [0.2, 0.7, 0.5, 0.3, 0.1],
+            settings: {
+              bpm: 92,
+              timeSignature: "4/4"
+            }
+          }
+        ]
+      : [])
+  ];
+
+  await seedRecordingHistory(page, {
+    sessions: [
+      { id: "session-marker-a", sourceType: "sheet", sheetId },
+      ...(includeSecondRecording
+        ? [{ id: "session-marker-b", sourceType: "sheet", sheetId }]
+        : [])
+    ],
+    recordings,
+    errorMarkers: Array.isArray(existing.errorMarkers)
+      ? existing.errorMarkers
+      : []
+  });
 }
 
 test("sheet practice records real synthetic audio, replays latest take, persists waveform, and keeps Practice Again immutable", async ({
@@ -466,7 +265,10 @@ test("sheet practice records real synthetic audio, replays latest take, persists
   ).toBe(true);
   expect(originalRecording.trustedPeaks.some((peak) => peak > 0)).toBe(true);
 
-  const decodedOriginal = await decodeRecording(page, originalRecording.id);
+  const decodedOriginal = await decodeRecordingHistoryAudio(
+    page,
+    originalRecording.id
+  );
 
   expect(decodedOriginal.decodedDurationMs).toBeGreaterThan(600);
   expect(decodedOriginal.rmsAmplitude).toBeGreaterThan(0.01);
@@ -477,7 +279,10 @@ test("sheet practice records real synthetic audio, replays latest take, persists
     Math.abs(originalRecording.durationMs - decodedOriginal.decodedDurationMs)
   ).toBeLessThanOrEqual(1);
 
-  const waveformBeforePlay = await getWaveformState(page);
+  const waveformBeforePlay = await readWaveformState(
+    page,
+    "sheet-derived-waveform"
+  );
 
   expect(waveformBeforePlay.peakCount).toBeGreaterThan(12);
   expect(waveformBeforePlay.source).toBe("trusted-peaks");
@@ -527,18 +332,26 @@ test("sheet practice records real synthetic audio, replays latest take, persists
   await page
     .getByRole("button", { name: "Pause latest sheet recording" })
     .click();
-  expect(await getWaveformState(page)).toEqual(waveformBeforePlay);
+  expect(await readWaveformState(page, "sheet-derived-waveform")).toEqual(
+    waveformBeforePlay
+  );
 
   for (let index = 0; index < 3; index += 1) {
     await page.waitForTimeout(150);
-    expect(await getWaveformState(page)).toEqual(waveformBeforePlay);
+    expect(await readWaveformState(page, "sheet-derived-waveform")).toEqual(
+      waveformBeforePlay
+    );
   }
 
   await page.setViewportSize({ width: 390, height: 844 });
-  expect(await getWaveformState(page)).toEqual(waveformBeforePlay);
+  expect(await readWaveformState(page, "sheet-derived-waveform")).toEqual(
+    waveformBeforePlay
+  );
   await page.reload();
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
-  expect(await getWaveformState(page)).toEqual(waveformBeforePlay);
+  expect(await readWaveformState(page, "sheet-derived-waveform")).toEqual(
+    waveformBeforePlay
+  );
 
   await page.goto("/recordings");
   await page
@@ -582,7 +395,7 @@ test("sheet practice records real synthetic audio, replays latest take, persists
   expect(continuedRecording?.sessionId).not.toBe(originalRecording.sessionId);
   expect(continuedRecording?.audioDataUrl).toMatch(/^data:audio\//);
 
-  const decodedContinued = await decodeRecording(
+  const decodedContinued = await decodeRecordingHistoryAudio(
     page,
     continuedRecording?.id ?? ""
   );
@@ -819,14 +632,9 @@ test("sheet practice creates recording-scoped error markers and seeks playback t
     page.getByTestId("sheet-error-marker-list-empty")
   ).not.toContainText("Missed left hand");
 
-  const markerPersistence = await page.evaluate((storageKey) => {
-    const rawValue = window.localStorage.getItem(storageKey);
-    const parsed = rawValue ? JSON.parse(rawValue) : { errorMarkers: [] };
-
-    return parsed.errorMarkers.map(
-      (marker: { recordingId: string; note: string | null }) => marker
-    );
-  }, recordingHistoryStorageKey);
+  const markerPersistence = (await readRecordingHistory(page)).errorMarkers.map(
+    (marker: { recordingId: string; note: string | null }) => marker
+  );
 
   expect(markerPersistence).toEqual([
     expect.objectContaining({
@@ -872,41 +680,31 @@ test("sheet recording surfaces microphone denial and bad artifact states", async
     "stopped"
   );
 
-  await page.evaluate(
-    ({ storageKey, id }: { storageKey: string; id: string }) => {
-      window.localStorage.setItem(
-        storageKey,
-        JSON.stringify({
-          sessions: [
-            { id: "session-bad-sheet", sourceType: "sheet", sheetId: id }
-          ],
-          recordings: [
-            {
-              id: "bad-sheet-recording",
-              type: "sheet",
-              origin: "user",
-              name: "Bad sheet take",
-              sessionId: "session-bad-sheet",
-              sheetId: id,
-              sheetName: "Bad Artifact Contract Sheet",
-              createdAt: "2026-06-22T06:30:00.000Z",
-              durationMs: 900,
-              sizeBytes: 12,
-              mimeType: "audio/wav",
-              audioDataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
-              trustedPeaks: [0.4, 0.8],
-              settings: {
-                bpm: 88,
-                timeSignature: "3/4"
-              }
-            }
-          ],
-          errorMarkers: []
-        })
-      );
-    },
-    { storageKey: recordingHistoryStorageKey, id: sheetId }
-  );
+  await seedRecordingHistory(page, {
+    sessions: [{ id: "session-bad-sheet", sourceType: "sheet", sheetId }],
+    recordings: [
+      {
+        id: "bad-sheet-recording",
+        type: "sheet",
+        origin: "user",
+        name: "Bad sheet take",
+        sessionId: "session-bad-sheet",
+        sheetId,
+        sheetName: "Bad Artifact Contract Sheet",
+        createdAt: "2026-06-22T06:30:00.000Z",
+        durationMs: 900,
+        sizeBytes: 12,
+        mimeType: "audio/wav",
+        audioDataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
+        trustedPeaks: [0.4, 0.8],
+        settings: {
+          bpm: 88,
+          timeSignature: "3/4"
+        }
+      }
+    ],
+    errorMarkers: []
+  });
 
   await page.goto(`/sheet-practice/${sheetId}`);
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
@@ -917,86 +715,33 @@ test("sheet recording surfaces microphone denial and bad artifact states", async
     page.getByRole("button", { name: "Play latest sheet recording" })
   ).toBeDisabled();
 
-  await page.evaluate(
-    ({ storageKey, id }: { storageKey: string; id: string }) => {
-      const sampleRate = 8_000;
-      const durationSeconds = 1;
-      const sampleCount = sampleRate * durationSeconds;
-      const dataSize = sampleCount * 2;
-      const buffer = new ArrayBuffer(44 + dataSize);
-      const view = new DataView(buffer);
+  const mismatchArtifact = await createWavDataUrl(page, 330, 1);
 
-      function writeString(offset: number, value: string) {
-        for (let index = 0; index < value.length; index += 1) {
-          view.setUint8(offset + index, value.charCodeAt(index));
+  await seedRecordingHistory(page, {
+    sessions: [{ id: "session-mismatch-sheet", sourceType: "sheet", sheetId }],
+    recordings: [
+      {
+        id: "mismatch-sheet-recording",
+        type: "sheet",
+        origin: "user",
+        name: "Mismatch sheet take",
+        sessionId: "session-mismatch-sheet",
+        sheetId,
+        sheetName: "Bad Artifact Contract Sheet",
+        createdAt: "2026-06-22T06:35:00.000Z",
+        durationMs: 4_000,
+        sizeBytes: mismatchArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: mismatchArtifact.dataUrl,
+        trustedPeaks: [0.2, 0.7, 0.4],
+        settings: {
+          bpm: 88,
+          timeSignature: "3/4"
         }
       }
-
-      writeString(0, "RIFF");
-      view.setUint32(4, 36 + dataSize, true);
-      writeString(8, "WAVE");
-      writeString(12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, 1, true);
-      view.setUint32(24, sampleRate, true);
-      view.setUint32(28, sampleRate * 2, true);
-      view.setUint16(32, 2, true);
-      view.setUint16(34, 16, true);
-      writeString(36, "data");
-      view.setUint32(40, dataSize, true);
-
-      for (let index = 0; index < sampleCount; index += 1) {
-        const sample =
-          Math.sin((2 * Math.PI * 330 * index) / sampleRate) * 0.35;
-
-        view.setInt16(
-          44 + index * 2,
-          Math.max(-1, Math.min(1, sample)) * 0x7fff,
-          true
-        );
-      }
-
-      let binary = "";
-      const bytes = new Uint8Array(buffer);
-
-      for (let index = 0; index < bytes.length; index += 1) {
-        binary += String.fromCharCode(bytes[index]);
-      }
-
-      window.localStorage.setItem(
-        storageKey,
-        JSON.stringify({
-          sessions: [
-            { id: "session-mismatch-sheet", sourceType: "sheet", sheetId: id }
-          ],
-          recordings: [
-            {
-              id: "mismatch-sheet-recording",
-              type: "sheet",
-              origin: "user",
-              name: "Mismatch sheet take",
-              sessionId: "session-mismatch-sheet",
-              sheetId: id,
-              sheetName: "Bad Artifact Contract Sheet",
-              createdAt: "2026-06-22T06:35:00.000Z",
-              durationMs: 4_000,
-              sizeBytes: bytes.length,
-              mimeType: "audio/wav",
-              audioDataUrl: `data:audio/wav;base64,${window.btoa(binary)}`,
-              trustedPeaks: [0.2, 0.7, 0.4],
-              settings: {
-                bpm: 88,
-                timeSignature: "3/4"
-              }
-            }
-          ],
-          errorMarkers: []
-        })
-      );
-    },
-    { storageKey: recordingHistoryStorageKey, id: sheetId }
-  );
+    ],
+    errorMarkers: []
+  });
 
   await page.goto(`/sheet-practice/${sheetId}`);
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();

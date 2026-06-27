@@ -114,7 +114,7 @@ export function createSheetViewerService({
   };
 }
 
-export const SHEET_VIEWER_ZOOM = {
+const SHEET_VIEWER_ZOOM = {
   min: 0.5,
   max: 2,
   step: 0.25

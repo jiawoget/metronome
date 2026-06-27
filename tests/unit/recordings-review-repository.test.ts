@@ -5,8 +5,8 @@ import {
   recordingHistoryRepository
 } from "@/lib/recordings-review/repository";
 import { recordingHistoryMetadataRepository } from "@/infrastructure/db/recording-history-metadata-repository";
-import type { RecordingReviewSnapshot } from "@/lib/recordings-review/types";
-import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
+import type { RecordingReviewSnapshot, ReviewRecording } from "@/lib/recordings-review/types";
+import type { PracticeSession, SheetRecordingMetadata, SheetRecordingSegmentContext } from "@/domain/practice";
 
 const snapshot: RecordingReviewSnapshot = {
   sessions: [{ id: "session-1" }],
@@ -273,10 +273,93 @@ describe("recording history repository", () => {
         sheetId: "sheet-alpha",
         sheetName: "Alpha Sheet",
         createdAt: "2026-06-21T12:00:00.000Z",
-        durationMs: 12_000,
-        bpm: 96,
-        timeSignature: "4/4"
+      durationMs: 12_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      segmentContext: null
       }
+    ]);
+  });
+
+  it("preserves valid segment context through raw recording history snapshots", () => {
+    const segmentContext = createSegmentContext();
+    const sheetRecording = createReviewSheetRecording({ segmentContext });
+
+    recordingHistoryRepository.saveSnapshot({
+      sessions: [],
+      recordings: [sheetRecording],
+      errorMarkers: []
+    });
+
+    const loaded = recordingHistoryRepository.getRecording("sheet-recording-with-segment");
+
+    expect(loaded?.segmentContext).toEqual(segmentContext);
+
+    recordingHistoryRepository.saveSnapshot(recordingHistoryRepository.getSnapshot());
+
+    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+
+    expect(persisted.recordings[0].segmentContext).toEqual(segmentContext);
+  });
+
+  it("keeps legacy sheet recordings and normalizes malformed segment context to null", () => {
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [],
+        recordings: [
+          createReviewSheetRecording({ id: "sheet-legacy" }),
+          createReviewSheetRecording({
+            id: "sheet-malformed-segment",
+            segmentContext: {
+              ...createSegmentContext(),
+              measureRangeMs: {
+                startMs: 9_000,
+                endMs: 25_000
+              }
+            }
+          })
+        ],
+        errorMarkers: []
+      })
+    );
+
+    const loadedRecordings = recordingHistoryRepository.getSnapshot().recordings;
+
+    expect(loadedRecordings.find((recording) => recording.id === "sheet-legacy")).not.toHaveProperty("segmentContext");
+    expect(loadedRecordings.find((recording) => recording.id === "sheet-malformed-segment")).toMatchObject({
+      id: "sheet-malformed-segment",
+      segmentContext: null
+    });
+  });
+
+  it("maps segment context through metadata-only and artifact-backed sheet recording records", async () => {
+    const segmentContext = createSegmentContext({ targetBpm: null });
+    const recording = createSheetRecording({ segmentContext });
+
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(recording, createSheetSession());
+    await expect(recordingHistoryMetadataRepository.listRecordingMetadataForSession("session-sheet-1")).resolves.toEqual([
+      recording
+    ]);
+
+    recordingHistoryRepository.saveSnapshot({
+      sessions: [],
+      recordings: [
+        createReviewSheetRecording({
+          id: recording.id,
+          sessionId: recording.sessionId,
+          sheetId: recording.sheetId,
+          sheetName: recording.sheetName,
+          createdAt: recording.createdAt,
+          durationMs: recording.durationMs,
+          segmentContext
+        })
+      ],
+      errorMarkers: []
+    });
+
+    await expect(recordingHistoryMetadataRepository.listRecordingMetadataForSession("session-sheet-1")).resolves.toEqual([
+      recording
     ]);
   });
 
@@ -310,7 +393,31 @@ describe("recording history repository", () => {
   });
 });
 
-function createSheetRecording(): SheetRecordingMetadata {
+function createSegmentContext(overrides: Partial<SheetRecordingSegmentContext> = {}): SheetRecordingSegmentContext {
+  return {
+    segmentId: "segment-alpha",
+    segmentName: "Bridge",
+    range: {
+      startMeasure: 5,
+      endMeasure: 12
+    },
+    targetBpm: 96,
+    measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
+    measureGridSnapshot: {
+      bpm: 96,
+      timeSignature: "4/4",
+      pickupBeats: 0,
+      measureOneOffsetMs: 1_000
+    },
+    measureRangeMs: {
+      startMs: 11_000,
+      endMs: 31_000
+    },
+    ...overrides
+  };
+}
+
+function createSheetRecording(overrides: Partial<SheetRecordingMetadata> = {}): SheetRecordingMetadata {
   return {
     id: "sheet-metadata-1",
     type: "sheet",
@@ -320,8 +427,33 @@ function createSheetRecording(): SheetRecordingMetadata {
     createdAt: "2026-06-21T12:00:00.000Z",
     durationMs: 12_000,
     bpm: 96,
-    timeSignature: "4/4"
+    timeSignature: "4/4",
+    segmentContext: null,
+    ...overrides
   };
+}
+
+function createReviewSheetRecording(
+  overrides: Partial<Omit<ReviewRecording, "segmentContext">> & { segmentContext?: unknown } = {}
+): ReviewRecording {
+  return {
+    id: "sheet-recording-with-segment",
+    type: "sheet",
+    name: "Alpha Sheet take",
+    sessionId: "session-sheet-1",
+    sheetId: "sheet-alpha",
+    sheetName: "Alpha Sheet",
+    createdAt: "2026-06-21T12:00:00.000Z",
+    durationMs: 12_000,
+    sizeBytes: 256,
+    mimeType: "audio/webm",
+    audioDataUrl: "data:audio/webm;base64,UklGRg==",
+    settings: {
+      bpm: 96,
+      timeSignature: "4/4"
+    },
+    ...overrides
+  } as ReviewRecording;
 }
 
 function createSheetSession(): PracticeSession {

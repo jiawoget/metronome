@@ -18,23 +18,17 @@ This module extends the v0 sheet list and import flow into a more useful library
 - Tags.
 - Favorites.
 - Batch import.
-- Guitar Pro import exploration.
-- MusicXML import exploration.
-- Automatic BPM detection.
-- Automatic time signature detection.
-- Assisted bar detection.
-- Cloud-synced sheet library.
-- Sheet sharing.
 - Richer sheet detail pages.
 - Recent practice summary per sheet.
 - Review grouped by sheet.
+
+Guitar Pro import, MusicXML import, automatic BPM detection, automatic time-signature detection, assisted bar detection, cloud-synced library, and sheet sharing are deferred to v2.
 
 ## Product Value
 
 - Help users manage larger sheet collections.
 - Make it easier to organize material by practice purpose.
-- Reduce manual metadata work where reliable detection is possible.
-- Support cross-device practice after sync exists.
+- Reduce navigation friction for larger local collections.
 
 ## Required v0 Boundaries to Preserve
 
@@ -48,24 +42,18 @@ This module extends the v0 sheet list and import flow into a more useful library
 - Folder and tag domain models.
 - Batch import queue.
 - Sheet metadata enrichment service.
-- Guitar Pro or MusicXML parser adapters.
-- Cloud sheet sync service.
 - Sheet detail route.
 
 ## Testing Implications
 
 - Batch import requires mixed success and failure tests.
 - Folder and tag tests need migration from fixed categories.
-- Parser tests need real Guitar Pro or MusicXML fixtures if promoted.
-- Sync tests need conflict and restore scenarios.
 - E2E tests must still use real browser interaction.
 
 ## Risks
 
 - Folder and tag systems can create unnecessary management burden.
-- Automatic detection can be wrong and should not overwrite user intent without review.
-- Guitar Pro and MusicXML support can greatly expand parsing complexity.
-- Cloud sync can create file conflict and storage quota issues.
+- Batch import can create confusing partial success states if not explained clearly.
 
 ## Promotion Criteria
 

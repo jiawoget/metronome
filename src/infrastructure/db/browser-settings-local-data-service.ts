@@ -10,8 +10,8 @@ import {
   browserSettingsService
 } from "@/infrastructure/db/browser-settings-service";
 import {
-  createLocalDataCleanupService,
   createStorageSummaryService,
+  type LocalDataCleanupService,
   type PermissionStatusService
 } from "@/services/settings";
 
@@ -51,8 +51,8 @@ export const browserStorageSummaryService = createStorageSummaryService({
   }
 });
 
-export const browserLocalDataCleanupService = createLocalDataCleanupService({
-  async clearLocalData() {
+export const browserLocalDataCleanupService: LocalDataCleanupService = {
+  async clearAllLocalData() {
     await Promise.all([
       sheetLibraryRepository.clear(),
       referenceRepository.clear(),
@@ -62,7 +62,7 @@ export const browserLocalDataCleanupService = createLocalDataCleanupService({
     await browserSettingsRepository.clearSettings();
     await browserSettingsService.resetToDefaults();
   }
-});
+};
 
 export const browserMicrophonePermissionService: PermissionStatusService = {
   async getMicrophonePermissionStatus() {

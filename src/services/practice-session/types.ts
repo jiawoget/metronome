@@ -2,12 +2,13 @@ import type {
   ContinuePracticeTarget,
   PracticeActivityTrigger,
   PracticeSession,
+  SheetRecordingSegmentContext,
   PracticeTimeSignature,
   SheetRecordingMetadata,
   TodayPracticeSummary
 } from "@/domain/practice";
 
-export type SheetSessionContext = {
+type SheetSessionContext = {
   id: string;
   name: string;
   bpm: number | null;
@@ -59,6 +60,7 @@ export type SheetRecordingMetadataInput = {
   durationMs?: number;
   bpm?: number | null;
   timeSignature?: PracticeTimeSignature | null;
+  segmentContext?: SheetRecordingSegmentContext | null;
   forceNewSession?: boolean;
 };
 

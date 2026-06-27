@@ -4,6 +4,8 @@
 
 This document collects future visual design expansion while preserving the v0 style direction from the reference image.
 
+The concrete v1 UI direction lives in `docs/v1/ui-design.md`.
+
 ## Builds On
 
 - v0 follows the provided `overall_style_design.png`.
@@ -16,6 +18,8 @@ This document collects future visual design expansion while preserving the v0 st
 - More refined dashboard analytics visuals.
 - More detailed recording review visualizations.
 - Practice Segment visual states.
+- MeasureGrid calibration controls.
+- Segment selector and measure range editor.
 - Bar-aware marker overlays.
 - Reference-to-recording comparison views.
 - Theme system exploration.
@@ -27,6 +31,7 @@ This document collects future visual design expansion while preserving the v0 st
 - Sheet Practice does not become visually crowded.
 - Visual polish must not hide fake or incomplete behavior.
 - Responsive layout remains mandatory.
+- The reference image remains the visual baseline for spacing, color, hierarchy, and workspace density.
 
 ## Promotion Criteria
 

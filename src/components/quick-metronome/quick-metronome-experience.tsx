@@ -1,80 +1,40 @@
 "use client";
 
-import {
-  Activity,
-  ChevronDown,
-  ChevronUp,
-  Circle,
-  Mic,
-  Octagon,
-  Play,
-  Radio,
-  Square,
-  Timer
-} from "lucide-react";
+import { Mic, Octagon, Play, Radio, Square, Timer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { LatestQuickRecording } from "@/components/quick-metronome/latest-quick-recording";
+import { MetronomeSettingsPanel } from "@/components/sheet-practice/controls/metronome-settings-panel";
+import { StatusTile } from "@/components/sheet-practice/controls/status-tile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PracticeSession } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
-import {
-  ACCENT_MODES,
-  COUNTDOWN_OPTIONS,
-  SUBDIVISIONS,
-  TIME_SIGNATURES,
-  calculateTapTempo,
-  clampBpm,
-  getTickIntervalMs,
-  parseAccentMode,
-  parseCountdownBeats,
-  parseSubdivision,
-  parseTimeSignature
-} from "@/lib/quick-metronome/control";
-import {
-  BrowserMetronomeService,
-  type MetronomeTick
-} from "@/lib/quick-metronome/metronome-service";
+import { calculateTapTempo } from "@/lib/quick-metronome/control";
 import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
-import {
-  BrowserRecordingService,
-  RecordingPermissionError
-} from "@/lib/quick-metronome/recording-service";
 import { createQuickRecording } from "@/lib/quick-metronome/session";
-import {
-  DEFAULT_METRONOME_SETTINGS,
-  MAX_BPM,
-  MIN_BPM,
-  type AccentMode,
-  type MetronomeSettings,
-  type Subdivision
-} from "@/lib/quick-metronome/types";
-import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
+import { DEFAULT_METRONOME_SETTINGS } from "@/lib/quick-metronome/types";
+import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
+import { createBrowserMetronomeService } from "@/services/metronome/browser";
+import type { MetronomeTick } from "@/services/metronome";
+import { createBrowserRecordingCaptureService } from "@/services/recording/browser";
+import { RecordingPermissionError } from "@/services/recording";
 
 type RecordingState = "idle" | "recording" | "saving";
 
-const subdivisionLabels: Record<Subdivision, string> = {
-  quarter: "Quarter",
-  eighth: "Eighth",
-  triplet: "Triplet",
-  sixteenth: "Sixteenth"
-};
-
-const accentLabels: Record<AccentMode, string> = {
-  downbeat: "Downbeat",
-  "every-beat": "Every beat",
-  off: "Off"
-};
-
 export function QuickMetronomeExperience() {
-  const metronomeService = useMemo(() => new BrowserMetronomeService(), []);
-  const recordingService = useMemo(() => new BrowserRecordingService(), []);
-  const [settings, setSettings] = useState<MetronomeSettings>(
-    DEFAULT_METRONOME_SETTINGS
-  );
+  const metronomeService = useMemo(() => createBrowserMetronomeService(), []);
+  const recordingService = useMemo(() => createBrowserRecordingCaptureService(), []);
+  const {
+    settings,
+    bpmDraft,
+    setBpmDraft,
+    commitBpmInput,
+    stepBpmInput,
+    updateSettings
+  } = useMetronomeSettingsState(DEFAULT_METRONOME_SETTINGS);
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [currentSession, setCurrentSession] = useState<PracticeSession | null>(
     null
@@ -96,22 +56,6 @@ export function QuickMetronomeExperience() {
   }, [metronomeService]);
 
   const isRecording = recordingState === "recording";
-
-  function updateSettings(nextSettings: Partial<MetronomeSettings>) {
-    setSettings((currentSettings) => ({
-      ...currentSettings,
-      ...nextSettings,
-      bpm:
-        nextSettings.bpm === undefined
-          ? currentSettings.bpm
-          : clampBpm(nextSettings.bpm)
-    }));
-  }
-
-  const { bpmDraft, setBpmDraft, commitBpmInput, stepBpmInput } =
-    useMetronomeBpmDraft(settings.bpm, (nextBpm) =>
-      updateSettings({ bpm: nextBpm })
-    );
 
   const handleCountdownStarted = useCallback(() => {
     setMessage("Countdown running.");
@@ -343,138 +287,20 @@ export function QuickMetronomeExperience() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-5">
-              <div>
-                <label htmlFor="bpm" className="text-sm font-medium">
-                  BPM
-                </label>
-                <div className="mt-2 grid grid-cols-[2.75rem_1fr_2.75rem] gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    aria-label="Decrease BPM"
-                    onClick={() => stepBpmInput(-1)}
-                  >
-                    <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                  <input
-                    id="bpm"
-                    aria-label="BPM"
-                    type="number"
-                    min={MIN_BPM}
-                    max={MAX_BPM}
-                    step={1}
-                    value={bpmDraft}
-                    onChange={(event) => setBpmDraft(event.target.value)}
-                    onBlur={commitBpmInput}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        commitBpmInput();
-                        event.currentTarget.blur();
-                      }
-                    }}
-                    className="border-border bg-background focus-visible:ring-ring h-10 min-w-0 rounded-md border px-3 text-center text-lg font-semibold focus-visible:ring-2 focus-visible:outline-none"
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    aria-label="Increase BPM"
-                    onClick={() => stepBpmInput(1)}
-                  >
-                    <ChevronUp className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </div>
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleTapTempo}
-                  >
-                    <Activity className="h-4 w-4" aria-hidden="true" />
-                    Tap Tempo
-                  </Button>
-                  <p className="text-muted-foreground text-sm leading-6">
-                    Tick interval {Math.round(getTickIntervalMs(settings))} ms.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <LabeledSelect
-                  label="Time signature"
-                  value={settings.timeSignature}
-                  disabled={arePreRunSettingsLocked}
-                  onChange={(value) =>
-                    updateSettings({ timeSignature: parseTimeSignature(value) })
-                  }
-                  options={TIME_SIGNATURES.map((timeSignature) => ({
-                    value: timeSignature,
-                    label: timeSignature
-                  }))}
-                />
-                <LabeledSelect
-                  label="Subdivision"
-                  value={settings.subdivision}
-                  disabled={arePreRunSettingsLocked}
-                  onChange={(value) =>
-                    updateSettings({ subdivision: parseSubdivision(value) })
-                  }
-                  options={SUBDIVISIONS.map((subdivision) => ({
-                    value: subdivision,
-                    label: subdivisionLabels[subdivision]
-                  }))}
-                />
-                <LabeledSelect
-                  label="Countdown"
-                  value={String(settings.countdownBeats)}
-                  disabled={arePreRunSettingsLocked}
-                  onChange={(value) =>
-                    updateSettings({
-                      countdownBeats: parseCountdownBeats(value)
-                    })
-                  }
-                  options={COUNTDOWN_OPTIONS.map((beats) => ({
-                    value: String(beats),
-                    label: beats === 0 ? "Off" : `${beats} beats`
-                  }))}
-                />
-              </div>
-
-              {arePreRunSettingsLocked ? (
-                <p
-                  role="status"
-                  className="text-muted-foreground text-sm leading-6"
-                >
-                  Meter, subdivision, accent, and countdown are locked while the
-                  metronome is running. Stop playback to change them.
-                </p>
-              ) : null}
-
-              <div>
-                <p className="text-sm font-medium">Accent</p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                  {ACCENT_MODES.map((accentMode) => (
-                    <Button
-                      key={accentMode}
-                      type="button"
-                      variant={
-                        settings.accent === accentMode ? "default" : "secondary"
-                      }
-                      aria-pressed={settings.accent === accentMode}
-                      disabled={arePreRunSettingsLocked}
-                      onClick={() =>
-                        updateSettings({ accent: parseAccentMode(accentMode) })
-                      }
-                    >
-                      <Circle className="h-4 w-4" aria-hidden="true" />
-                      {accentLabels[accentMode]}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <MetronomeSettingsPanel
+              settings={settings}
+              bpmDraft={bpmDraft}
+              unsupportedTimeSignatureMessage={null}
+              arePreRunSettingsLocked={arePreRunSettingsLocked}
+              bpmInputId="bpm"
+              className="border-0 bg-transparent p-0"
+              layout="stacked"
+              onTapTempo={handleTapTempo}
+              setBpmDraft={setBpmDraft}
+              commitBpmInput={commitBpmInput}
+              stepBpmInput={stepBpmInput}
+              updateSettings={updateSettings}
+            />
           </CardContent>
         </Card>
 
@@ -532,12 +358,14 @@ export function QuickMetronomeExperience() {
               <div className="grid gap-3 text-sm sm:grid-cols-2">
                 <StatusTile
                   label="Metronome"
+                  className="py-3"
                   value={
                     isCounting ? "Counting" : isPlaying ? "Playing" : "Stopped"
                   }
                 />
                 <StatusTile
                   label="Recording"
+                  className="py-3"
                   value={
                     recordingState === "saving"
                       ? "Saving"
@@ -548,10 +376,12 @@ export function QuickMetronomeExperience() {
                 />
                 <StatusTile
                   label="Last tick"
+                  className="py-3"
                   value={lastTick ? `#${lastTick.tickIndex + 1}` : "None"}
                 />
                 <StatusTile
                   label="Accent tick"
+                  className="py-3"
                   value={lastTick?.accented ? "Yes" : "No"}
                 />
               </div>
@@ -576,52 +406,5 @@ export function QuickMetronomeExperience() {
         <LatestQuickRecording />
       </div>
     </section>
-  );
-}
-
-function LabeledSelect({
-  label,
-  value,
-  onChange,
-  options,
-  disabled = false
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-  disabled?: boolean;
-}) {
-  const id = label.toLowerCase().replaceAll(" ", "-");
-
-  return (
-    <div>
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
-      <select
-        id={id}
-        aria-label={label}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function StatusTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="border-border bg-muted rounded-md border px-3 py-3">
-      <p className="text-muted-foreground text-xs font-medium">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
-    </div>
   );
 }

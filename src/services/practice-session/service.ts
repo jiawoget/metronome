@@ -302,7 +302,8 @@ export function createPracticeSessionService({
         createdAt: timestamp,
         durationMs: Math.max(0, Math.round(input.durationMs ?? 0)),
         bpm: session.bpm ?? sheet.bpm,
-        timeSignature: session.timeSignature ?? sheet.timeSignature
+        timeSignature: session.timeSignature ?? sheet.timeSignature,
+        segmentContext: input.segmentContext ?? null
       };
       const nextSession = {
         ...session,

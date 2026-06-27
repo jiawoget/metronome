@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { SHEET_CATEGORIES, type SheetMetadataInput } from "@/domain/sheet/types";
 
-export const sheetMetadataSchema = z.object({
+const sheetMetadataSchema = z.object({
   name: z.string().trim().min(1, "Sheet name is required.").max(120, "Sheet name is too long."),
   category: z.enum(SHEET_CATEGORIES),
   bpm: z.coerce

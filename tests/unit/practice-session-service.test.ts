@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   applyPracticeTrigger,
+  parseSheetRecordingMetadata,
   validatePracticeSession,
   validateSheetRecordingMetadata,
   type PracticeSession,
+  type SheetRecordingSegmentContext,
   type SheetRecordingMetadata
 } from "@/domain/practice";
 import { createGlobalPracticeSessionRepository } from "@/infrastructure/db/global-practice-session-repository";
@@ -84,6 +86,30 @@ function createSheetGateway(validSheetIds = new Set(["sheet-alpha"])) {
   };
 
   return { gateway, lastPracticed };
+}
+
+function createSegmentContext(overrides: Partial<SheetRecordingSegmentContext> = {}): SheetRecordingSegmentContext {
+  return {
+    segmentId: "segment-alpha",
+    segmentName: "Bridge",
+    range: {
+      startMeasure: 5,
+      endMeasure: 12
+    },
+    targetBpm: 96,
+    measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
+    measureGridSnapshot: {
+      bpm: 96,
+      timeSignature: "4/4",
+      pickupBeats: 0,
+      measureOneOffsetMs: 1_000
+    },
+    measureRangeMs: {
+      startMs: 11_000,
+      endMs: 31_000
+    },
+    ...overrides
+  };
 }
 
 describe("practice session service", () => {
@@ -395,7 +421,8 @@ describe("practice session service", () => {
       createdAt: "2026-06-21T12:00:12.500Z",
       durationMs: 12_300,
       bpm: 96,
-      timeSignature: "4/4"
+      timeSignature: "4/4",
+      segmentContext: null
     });
     expect(recording).not.toHaveProperty("audioDataUrl");
     expect(await service.listRecordingMetadata()).toEqual([recording]);
@@ -409,6 +436,170 @@ describe("practice session service", () => {
     await expect(service.endPracticeSession(session?.id ?? "")).resolves.toMatchObject({
       endedAt: "2026-06-21T12:00:13.500Z",
       durationMs: 13_500
+    });
+  });
+
+  it("normalizes legacy and explicit null sheet recording segment context", () => {
+    const legacyMetadata = {
+      id: "recording-legacy",
+      type: "sheet",
+      sessionId: "session-1",
+      sheetId: "sheet-alpha",
+      sheetName: "Alpha Sheet",
+      createdAt: "2026-06-21T12:00:00.000Z",
+      durationMs: 1_000,
+      bpm: 96,
+      timeSignature: "4/4"
+    };
+
+    expect(parseSheetRecordingMetadata(legacyMetadata)).toEqual({
+      ...legacyMetadata,
+      segmentContext: null
+    });
+    expect(
+      validateSheetRecordingMetadata({
+        ...legacyMetadata,
+        segmentContext: null
+      } as SheetRecordingMetadata)
+    ).toMatchObject({
+      segmentContext: null
+    });
+  });
+
+  it("creates sheet recording metadata with a valid segment context snapshot", async () => {
+    const { service } = createService();
+    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "recording" });
+    const segmentContext = createSegmentContext();
+
+    nowMs += 1_500;
+    const recording = await service.createSheetRecordingMetadata({
+      sheetId: "sheet-alpha",
+      sessionId: session?.id,
+      durationMs: 1_500,
+      segmentContext
+    });
+
+    expect(recording?.segmentContext).toEqual(segmentContext);
+    await expect(service.listRecordingMetadata()).resolves.toEqual([recording]);
+  });
+
+  it("rejects invalid sheet recording segment context before saving metadata or session counts", async () => {
+    const { service, repository } = createService();
+    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "recording" });
+
+    await expect(
+      service.createSheetRecordingMetadata({
+        sheetId: "sheet-alpha",
+        sessionId: session?.id,
+        durationMs: 1_500,
+        segmentContext: {
+          ...createSegmentContext(),
+          segmentId: ""
+        }
+      })
+    ).rejects.toThrow();
+
+    await expect(service.listRecordingMetadata()).resolves.toEqual([]);
+    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+      recordingCount: 0,
+      latestRecordingId: null
+    });
+    expect(
+      parseSheetRecordingMetadata({
+        id: "recording-invalid-segment",
+        type: "sheet",
+        sessionId: "session-1",
+        sheetId: "sheet-alpha",
+        sheetName: "Alpha Sheet",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: 1_000,
+        bpm: 96,
+        timeSignature: "4/4",
+        segmentContext: {
+          ...createSegmentContext(),
+          segmentId: ""
+        }
+      })
+    ).toBeNull();
+  });
+
+  it("validates segment context range, bpm, grid snapshot, and timestamp bounds", () => {
+    expect(validateSheetRecordingMetadata({
+      id: "recording-valid-segment",
+      type: "sheet",
+      sessionId: "session-1",
+      sheetId: "sheet-alpha",
+      sheetName: "Alpha Sheet",
+      createdAt: "2026-06-21T12:00:00.000Z",
+      durationMs: 1_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      segmentContext: createSegmentContext({ targetBpm: null })
+    })).toMatchObject({
+      segmentContext: {
+        targetBpm: null,
+        measureRangeMs: {
+          startMs: 11_000,
+          endMs: 31_000
+        }
+      }
+    });
+
+    for (const segmentContext of [
+      createSegmentContext({ segmentName: "" }),
+      createSegmentContext({ range: { startMeasure: 12, endMeasure: 5 } }),
+      createSegmentContext({ targetBpm: 301 }),
+      createSegmentContext({ measureGridSnapshot: { bpm: 0, timeSignature: "4/4", pickupBeats: 0, measureOneOffsetMs: 0 } }),
+      createSegmentContext({ measureRangeMs: { startMs: 25_000, endMs: 9_000 } }),
+      createSegmentContext({ measureRangeMs: { startMs: 9_000, endMs: 25_000 } }),
+      createSegmentContext({ measureRangeMs: { startMs: Number.NaN, endMs: 9_000 } })
+    ]) {
+      expect(() =>
+        validateSheetRecordingMetadata({
+          id: "recording-invalid-segment",
+          type: "sheet",
+          sessionId: "session-1",
+          sheetId: "sheet-alpha",
+          sheetName: "Alpha Sheet",
+          createdAt: "2026-06-21T12:00:00.000Z",
+          durationMs: 1_000,
+          bpm: 96,
+          timeSignature: "4/4",
+          segmentContext
+        })
+      ).toThrow();
+    }
+  });
+
+  it("rejects segment context measureRangeMs that does not match the range and grid snapshot", () => {
+    const inconsistentMetadata: SheetRecordingMetadata = {
+      id: "recording-inconsistent-range-ms",
+      type: "sheet",
+      sessionId: "session-1",
+      sheetId: "sheet-alpha",
+      sheetName: "Alpha Sheet",
+      createdAt: "2026-06-21T12:00:00.000Z",
+      durationMs: 1_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      segmentContext: createSegmentContext({
+        measureRangeMs: {
+          startMs: 9_000,
+          endMs: 25_000
+        }
+      })
+    };
+
+    expect(() => validateSheetRecordingMetadata(inconsistentMetadata)).toThrow();
+    expect(parseSheetRecordingMetadata(inconsistentMetadata)).toBeNull();
+    expect(
+      validateSheetRecordingMetadata({
+        ...inconsistentMetadata,
+        segmentContext: createSegmentContext()
+      }).segmentContext?.measureRangeMs
+    ).toEqual({
+      startMs: 11_000,
+      endMs: 31_000
     });
   });
 
@@ -467,7 +658,8 @@ describe("practice session service", () => {
       sessionId: freshSession?.id,
       durationMs: 900,
       bpm: 88,
-      timeSignature: "3/4"
+      timeSignature: "3/4",
+      segmentContext: null
     });
 
     expect(recording).toMatchObject({
@@ -603,7 +795,8 @@ describe("practice session service", () => {
         createdAt: "2026-06-21T12:00:00.000Z",
         durationMs: 0,
         bpm: 96,
-        timeSignature: "4/4"
+        timeSignature: "4/4",
+        segmentContext: null
       })
     ).toThrow();
   });
@@ -682,6 +875,47 @@ describe("practice session service", () => {
       sessionId: "sheet-session",
       sheetId: "sheet-alpha"
     });
+  });
+
+  it("filters legacy quick sessions that inherit an unsupported recording meter", async () => {
+    const sheetRepository = createMemorySessionRepository();
+    const globalRepository = createGlobalPracticeSessionRepository(sheetRepository);
+
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [
+          {
+            id: "legacy-quick-session",
+            sourceType: "quick",
+            startedAt: "2026-06-21T12:05:00.000Z",
+            endedAt: "2026-06-21T12:06:00.000Z"
+          }
+        ],
+        recordings: [
+          {
+            id: "legacy-quick-recording",
+            type: "quick",
+            sessionId: "legacy-quick-session",
+            sheetId: null,
+            createdAt: "2026-06-21T12:06:00.000Z",
+            durationMs: 60_000,
+            sizeBytes: 1024,
+            mimeType: "audio/webm",
+            settings: {
+              bpm: 120,
+              timeSignature: "5/4"
+            }
+          }
+        ],
+        errorMarkers: []
+      })
+    );
+
+    await expect(globalRepository.listSessions()).resolves.toEqual([]);
+    await expect(
+      globalRepository.getSession("legacy-quick-session")
+    ).resolves.toBeNull();
   });
 
   it("keeps metronome, recording, and future reference trigger states independent", () => {

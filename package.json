@@ -19,8 +19,8 @@
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:e2e": "env -u NO_COLOR -u FORCE_COLOR playwright test",
-    "test:e2e:ui": "env -u NO_COLOR -u FORCE_COLOR playwright test --ui",
+    "test:e2e": "node scripts/run-playwright-stable-env.mjs",
+    "test:e2e:ui": "node scripts/run-playwright-stable-env.mjs --ui",
     "playwright:install": "playwright install chromium",
     "smoke": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run test:e2e"
   },
@@ -42,7 +42,6 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.5",
     "@playwright/test": "^1.61.0",
     "@tailwindcss/postcss": "^4.3.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -55,6 +54,7 @@
     "autoprefixer": "^10.5.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.9",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.15",
     "prettier": "^3.8.4",
