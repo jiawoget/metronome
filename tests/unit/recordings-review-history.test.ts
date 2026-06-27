@@ -59,6 +59,33 @@ const sheetRecording: ReviewRecording = {
   trustedPeaks: [0.2, 0.8, 0.4]
 };
 
+const segmentSheetRecording: ReviewRecording = {
+  ...sheetRecording,
+  id: "sheet-segment-1",
+  name: "Focused segment take",
+  segmentContext: {
+    segmentId: "segment-bridge",
+    segmentName: "Bridge",
+    range: {
+      startMeasure: 5,
+      endMeasure: 8
+    },
+    targetBpm: 96,
+    measureGridVersion:
+      "bpm:96|timeSignature:3/4|pickupBeats:0|measureOneOffsetMs:1000",
+    measureGridSnapshot: {
+      bpm: 96,
+      timeSignature: "3/4",
+      pickupBeats: 0,
+      measureOneOffsetMs: 1_000
+    },
+    measureRangeMs: {
+      startMs: 10_000,
+      endMs: 25_000
+    }
+  }
+};
+
 describe("recordings review history helpers", () => {
   it("filters by visible metadata, type, and combined search", () => {
     expect(filterRecordings({ recordings: [quickRecording, sheetRecording], query: "moonlight", type: "all" })).toEqual([
@@ -71,6 +98,23 @@ describe("recordings review history helpers", () => {
       sheetRecording
     ]);
     expect(filterRecordings({ recordings: [quickRecording, sheetRecording], query: "moonlight", type: "quick" })).toEqual([]);
+  });
+
+  it("filters sheet recordings by saved segment metadata", () => {
+    expect(
+      filterRecordings({
+        recordings: [quickRecording, sheetRecording, segmentSheetRecording],
+        query: "bridge",
+        type: "sheet"
+      })
+    ).toEqual([segmentSheetRecording]);
+    expect(
+      filterRecordings({
+        recordings: [quickRecording, sheetRecording, segmentSheetRecording],
+        query: "segment-bridge",
+        type: "all"
+      })
+    ).toEqual([segmentSheetRecording]);
   });
 
   it("sorts recordings by newest first", () => {

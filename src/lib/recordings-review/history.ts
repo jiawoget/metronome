@@ -37,6 +37,8 @@ function getVisibleMetadata(recording: ReviewRecording) {
     getRecordingDisplayName(recording),
     recording.type,
     recording.sheetName ?? "",
+    recording.segmentContext?.segmentName ?? "",
+    recording.segmentContext?.segmentId ?? "",
     recording.settings.bpm.toString(),
     `${recording.settings.bpm} BPM`,
     recording.settings.timeSignature,

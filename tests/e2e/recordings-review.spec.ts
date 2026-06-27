@@ -16,6 +16,38 @@ type WaveformEvidence = {
   barHeights: number[];
 };
 
+type SegmentContextFixture = {
+  segmentId?: string;
+  segmentName?: string;
+};
+
+function createSegmentContext({
+  segmentId = "segment-bridge",
+  segmentName = "Bridge"
+}: SegmentContextFixture = {}) {
+  return {
+    segmentId,
+    segmentName,
+    range: {
+      startMeasure: 5,
+      endMeasure: 12
+    },
+    targetBpm: 96,
+    measureGridVersion:
+      "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
+    measureGridSnapshot: {
+      bpm: 96,
+      timeSignature: "4/4",
+      pickupBeats: 0,
+      measureOneOffsetMs: 1_000
+    },
+    measureRangeMs: {
+      startMs: 11_000,
+      endMs: 31_000
+    }
+  };
+}
+
 async function expectVisibleDerivedWaveform({
   page,
   source,
@@ -114,6 +146,280 @@ function expectStableWaveform(
     before.barHeights
   );
 }
+
+async function expectNoHorizontalOverflow(page: Page, label: string) {
+  const overflowEvidence = await page.evaluate(() => ({
+    viewportWidth: window.innerWidth,
+    documentScrollWidth: document.documentElement.scrollWidth,
+    bodyScrollWidth: document.body.scrollWidth
+  }));
+
+  expect(
+    overflowEvidence.documentScrollWidth,
+    `${label}: document has no horizontal overflow`
+  ).toBeLessThanOrEqual(overflowEvidence.viewportWidth + 1);
+  expect(
+    overflowEvidence.bodyScrollWidth,
+    `${label}: body has no horizontal overflow`
+  ).toBeLessThanOrEqual(overflowEvidence.viewportWidth + 1);
+}
+
+test("recordings review renders grouped take history, filters it, deletes a take, and survives reload", async ({
+  page
+}) => {
+  await page.goto("/recordings");
+  await page.evaluate(() => window.localStorage.clear());
+
+  const artifact = await createWavDataUrl(page, 440, 0.8);
+  const sheetArtifact = await createWavDataUrl(page, 330, 0.9);
+
+  await seedRecordingHistory(page, {
+    sessions: [
+      { id: "session-quick-grouped", sourceType: "quick" },
+      { id: "session-sheet-grouped", sourceType: "sheet" }
+    ],
+    recordings: [
+      {
+        id: "sheet-alpha-bridge-old",
+        type: "sheet",
+        origin: "user",
+        name: "Bridge take 1",
+        sessionId: "session-sheet-grouped",
+        sheetId: "sheet-alpha",
+        sheetName: "Alpha Etude",
+        createdAt: "2026-06-21T09:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.5, 0.8, 0.3],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-bridge",
+          segmentName: "Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-alpha-bridge-new",
+        type: "sheet",
+        origin: "user",
+        name: "Bridge take 2",
+        sessionId: "session-sheet-grouped",
+        sheetId: "sheet-alpha",
+        sheetName: "Alpha Etude",
+        createdAt: "2026-06-21T13:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.5, 0.8, 0.3],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-bridge",
+          segmentName: "Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-alpha-whole-legacy",
+        type: "sheet",
+        origin: "user",
+        name: "Whole sheet legacy",
+        sessionId: "session-sheet-grouped",
+        sheetId: "sheet-alpha",
+        sheetName: "Alpha Etude",
+        createdAt: "2026-06-21T10:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.6, 0.2],
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-alpha-whole-null",
+        type: "sheet",
+        origin: "user",
+        name: "Whole sheet current",
+        sessionId: "session-sheet-grouped",
+        sheetId: "sheet-alpha",
+        sheetName: "Alpha Etude",
+        createdAt: "2026-06-21T11:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.6, 0.2],
+        segmentContext: null,
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-beta-bridge",
+        type: "sheet",
+        origin: "user",
+        name: "Beta bridge take",
+        sessionId: "session-sheet-grouped",
+        sheetId: "sheet-beta",
+        sheetName: "Beta Study",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.2, 0.5, 0.7, 0.2],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-bridge",
+          segmentName: "Bridge"
+        }),
+        settings: {
+          bpm: 102,
+          timeSignature: "3/4"
+        }
+      },
+      {
+        id: "quick-grouped",
+        type: "quick",
+        origin: "user",
+        name: "Grouped quick take",
+        sessionId: "session-quick-grouped",
+        sheetId: null,
+        createdAt: "2026-06-21T14:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        settings: {
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-missing-link",
+        type: "sheet",
+        origin: "user",
+        name: "Missing sheet link take",
+        sessionId: "session-sheet-grouped",
+        sheetId: null,
+        sheetName: null,
+        createdAt: "2026-06-21T08:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.6, 0.2],
+        segmentContext: null,
+        settings: {
+          bpm: 88,
+          timeSignature: "4/4"
+        }
+      }
+    ],
+    errorMarkers: []
+  });
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Take History" })).toBeVisible();
+
+  const alphaBridgeGroup = page.getByTestId(
+    "take-group-sheet:sheet-alpha:segment:segment-bridge"
+  );
+  await expect(alphaBridgeGroup).toContainText("Segment take history");
+  await expect(alphaBridgeGroup).toContainText("Alpha Etude");
+  await expect(alphaBridgeGroup).toContainText("Bridge");
+  await expect(alphaBridgeGroup).toContainText("2 takes");
+  await expect(
+    alphaBridgeGroup.getByTestId("recording-row-sheet-alpha-bridge-new")
+  ).toBeVisible();
+
+  const alphaWholeGroup = page.getByTestId(
+    "take-group-sheet:sheet-alpha:segment:none"
+  );
+  await expect(alphaWholeGroup).toContainText("Whole sheet / no segment");
+  await expect(alphaWholeGroup).toContainText("2 takes");
+  await expect(
+    page.getByTestId("take-group-sheet:sheet-beta:segment:segment-bridge")
+  ).toContainText("Beta Study");
+  await expect(page.getByTestId("quick-recordings-section")).toContainText(
+    "Grouped quick take"
+  );
+  await expect(page.getByTestId("ungrouped-recordings-section")).toContainText(
+    "Missing sheet link take"
+  );
+
+  await page.getByTestId("recording-row-sheet-alpha-bridge-old").click();
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "sheet-alpha-bridge-old"
+  );
+  await expect(page.getByRole("link", { name: "Practice Again" })).toHaveAttribute(
+    "href",
+    "/sheet-practice?recordingId=sheet-alpha-bridge-old&sheetId=sheet-alpha"
+  );
+
+  await page.getByTestId("recording-row-quick-grouped").click();
+  await expect(page.getByRole("link", { name: "Practice Again" })).toHaveAttribute(
+    "href",
+    "/quick-metronome?recordingId=quick-grouped"
+  );
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Bridge");
+  await expect(alphaBridgeGroup).toBeVisible();
+  await expect(alphaWholeGroup).toBeHidden();
+  await expect(page.getByTestId("quick-recordings-section")).toBeHidden();
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("");
+  await page.getByLabel("Type filter").selectOption("quick");
+  await expect(page.getByTestId("quick-recordings-section")).toBeVisible();
+  await expect(alphaBridgeGroup).toBeHidden();
+
+  await page.getByLabel("Type filter").selectOption("sheet");
+  await expect(alphaBridgeGroup).toBeVisible();
+  await expect(page.getByTestId("quick-recordings-section")).toBeHidden();
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("nomatch");
+  await expect(page.getByTestId("recordings-filter-empty-state")).toContainText(
+    "No recording groups match"
+  );
+  await expect(alphaBridgeGroup).toBeHidden();
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("");
+  await page.getByTestId("recording-row-sheet-alpha-bridge-old").click();
+  await page.getByRole("button", { name: "Delete Recording" }).click();
+  await page.getByRole("button", { name: "Confirm Delete" }).click();
+  await expect(page.getByTestId("recording-row-sheet-alpha-bridge-old")).toBeHidden();
+  await expect(alphaBridgeGroup).toContainText("1 take");
+
+  await page.reload();
+  await expect(page.getByTestId("recording-row-sheet-alpha-bridge-old")).toBeHidden();
+  await expect(alphaBridgeGroup).toContainText("1 take");
+
+  for (const viewport of [
+    { width: 1280, height: 900, label: "desktop" },
+    { width: 1024, height: 768, label: "tablet" },
+    { width: 390, height: 844, label: "mobile" }
+  ]) {
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height
+    });
+    await expect(alphaBridgeGroup).toBeVisible();
+    await expect(
+      page.getByTestId("recording-row-sheet-alpha-bridge-new")
+    ).toBeVisible();
+    await expectNoHorizontalOverflow(page, viewport.label);
+  }
+});
 
 test("recordings review lists, filters, plays, continues, deletes, and handles bad audio", async ({
   page

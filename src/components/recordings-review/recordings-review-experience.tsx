@@ -17,6 +17,7 @@ import {
   useState,
   useSyncExternalStore
 } from "react";
+import type { ReactNode } from "react";
 
 import {
   RecordingArtifactReview,
@@ -36,9 +37,11 @@ import {
   sortErrorMarkers,
   type RecordingTypeFilter
 } from "@/lib/recordings-review/history";
+import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
 import { seekToErrorMarker } from "@/lib/recordings-review/error-markers";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type {
+  RecordingTakeGroup,
   RecordingErrorMarker,
   ReviewRecording
 } from "@/lib/recordings-review/types";
@@ -75,11 +78,23 @@ export function RecordingsReviewExperience() {
       }),
     [snapshot.recordings, searchQuery, typeFilter]
   );
+  const groupedRecordings = useMemo(
+    () => groupRecordingsByTake(filteredRecordings),
+    [filteredRecordings]
+  );
+  const visibleRecordings = useMemo(
+    () => [
+      ...groupedRecordings.takeGroups.flatMap((group) => group.recordings),
+      ...groupedRecordings.quickRecordings,
+      ...groupedRecordings.ungroupedRecordings
+    ],
+    [groupedRecordings]
+  );
   const selectedRecording =
-    snapshot.recordings.find(
+    visibleRecordings.find(
       (recording) => recording.id === selectedRecordingId
     ) ??
-    filteredRecordings[0] ??
+    visibleRecordings[0] ??
     null;
   const selectedMarkers = useMemo(
     () =>
@@ -187,29 +202,26 @@ export function RecordingsReviewExperience() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <Card>
           <CardHeader>
-            <CardTitle>Unified List</CardTitle>
+            <CardTitle>Take History</CardTitle>
           </CardHeader>
           <CardContent>
-            {filteredRecordings.length === 0 ? (
+            {visibleRecordings.length === 0 ? (
               <div
                 data-testid="recordings-filter-empty-state"
                 className="border-border bg-muted text-muted-foreground rounded-md border border-dashed px-4 py-6 text-sm"
               >
-                No recordings match the current search and filter.
+                No recording groups match the current search and filter.
               </div>
             ) : (
-              <div data-testid="recordings-list" className="grid gap-2">
-                {filteredRecordings.map((recording) => (
-                  <RecordingListItem
-                    key={recording.id}
-                    recording={recording}
-                    selected={selectedRecording?.id === recording.id}
-                    onSelect={() => {
-                      setSelectedRecordingId(recording.id);
-                      setConfirmingDeleteId(null);
-                    }}
-                  />
-                ))}
+              <div data-testid="recordings-list" className="grid gap-4">
+                <GroupedRecordingList
+                  grouping={groupedRecordings}
+                  selectedRecordingId={selectedRecording?.id ?? null}
+                  onSelectRecording={(recordingId) => {
+                    setSelectedRecordingId(recordingId);
+                    setConfirmingDeleteId(null);
+                  }}
+                />
               </div>
             )}
           </CardContent>
@@ -258,7 +270,8 @@ function RecordingsHeader() {
           Recordings
         </h1>
         <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
-          Review quick and sheet practice recordings in one history list.
+          Review quick recordings and sheet take histories in one focused
+          workspace.
         </p>
       </div>
       <div
@@ -272,32 +285,201 @@ function RecordingsHeader() {
   );
 }
 
+function GroupedRecordingList({
+  grouping,
+  selectedRecordingId,
+  onSelectRecording
+}: {
+  grouping: ReturnType<typeof groupRecordingsByTake>;
+  selectedRecordingId: string | null;
+  onSelectRecording: (recordingId: string) => void;
+}) {
+  return (
+    <>
+      {grouping.takeGroups.map((group) => (
+        <TakeGroupSection
+          key={group.groupId}
+          group={group}
+          selectedRecordingId={selectedRecordingId}
+          onSelectRecording={onSelectRecording}
+        />
+      ))}
+
+      {grouping.quickRecordings.length > 0 ? (
+        <RecordingSection
+          testId="quick-recordings-section"
+          title="Quick recordings"
+          description="Quick metronome takes"
+        >
+          <div className="divide-border divide-y overflow-hidden rounded-md border">
+            {grouping.quickRecordings.map((recording) => (
+              <RecordingListItem
+                key={recording.id}
+                recording={recording}
+                contextLabel="Quick metronome"
+                selected={selectedRecordingId === recording.id}
+                onSelect={() => onSelectRecording(recording.id)}
+              />
+            ))}
+          </div>
+        </RecordingSection>
+      ) : null}
+
+      {grouping.ungroupedRecordings.length > 0 ? (
+        <RecordingSection
+          testId="ungrouped-recordings-section"
+          title="Legacy recordings with missing sheet links"
+          description="Sheet recordings kept visible without a usable sheet id"
+        >
+          <div className="divide-border divide-y overflow-hidden rounded-md border">
+            {grouping.ungroupedRecordings.map((recording) => (
+              <RecordingListItem
+                key={recording.id}
+                recording={recording}
+                contextLabel="Missing sheet link"
+                selected={selectedRecordingId === recording.id}
+                onSelect={() => onSelectRecording(recording.id)}
+              />
+            ))}
+          </div>
+        </RecordingSection>
+      ) : null}
+    </>
+  );
+}
+
+function TakeGroupSection({
+  group,
+  selectedRecordingId,
+  onSelectRecording
+}: {
+  group: RecordingTakeGroup;
+  selectedRecordingId: string | null;
+  onSelectRecording: (recordingId: string) => void;
+}) {
+  const titleId = `take-group-title-${group.groupId}`;
+  const sheetLabel = group.sheetName ?? group.sheetId;
+  const contextLabel =
+    group.kind === "sheet-segment"
+      ? group.segmentName ?? group.segmentId ?? "Saved segment"
+      : "Whole sheet / no segment";
+  const ariaContextLabel =
+    group.kind === "sheet-segment"
+      ? `${sheetLabel}, Segment ${contextLabel}`
+      : `${sheetLabel}, ${contextLabel}`;
+  const eyebrow =
+    group.kind === "sheet-segment"
+      ? "Segment take history"
+      : "Sheet take history";
+
+  return (
+    <section
+      aria-labelledby={titleId}
+      data-testid={`take-group-${group.groupId}`}
+      className="border-border bg-background overflow-hidden rounded-md border"
+    >
+      <div className="border-border bg-muted/60 border-b px-3 py-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-muted-foreground text-xs font-semibold tracking-[0.08em] uppercase">
+              {eyebrow}
+            </p>
+            <h3 id={titleId} className="mt-1 text-sm font-semibold break-words">
+              {sheetLabel}
+            </h3>
+            <p className="text-muted-foreground mt-1 text-sm break-words">
+              {contextLabel}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <MetadataPill
+              value={`${group.takeCount} ${
+                group.takeCount === 1 ? "take" : "takes"
+              }`}
+            />
+            <MetadataPill
+              value={`Latest ${formatRecordingDate(group.latestRecordedAt)}`}
+            />
+          </div>
+        </div>
+      </div>
+      <div className="divide-border divide-y">
+        {group.recordings.map((recording) => (
+          <RecordingListItem
+            key={recording.id}
+            recording={recording}
+            contextLabel={contextLabel}
+            ariaContextLabel={ariaContextLabel}
+            selected={selectedRecordingId === recording.id}
+            onSelect={() => onSelectRecording(recording.id)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RecordingSection({
+  testId,
+  title,
+  description,
+  children
+}: {
+  testId: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  const titleId = `${testId}-title`;
+
+  return (
+    <section aria-labelledby={titleId} data-testid={testId} className="grid gap-2">
+      <div>
+        <h3 id={titleId} className="text-sm font-semibold">
+          {title}
+        </h3>
+        <p className="text-muted-foreground mt-1 text-xs">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 function RecordingListItem({
   recording,
+  contextLabel,
+  ariaContextLabel = contextLabel,
   selected,
   onSelect
 }: {
   recording: ReviewRecording;
+  contextLabel: string;
+  ariaContextLabel?: string;
   selected: boolean;
   onSelect: () => void;
 }) {
+  const displayName = getRecordingDisplayName(recording);
+  const recordedDate = formatRecordingDate(recording.createdAt);
+
   return (
     <button
       type="button"
       data-testid={`recording-row-${recording.id}`}
       aria-pressed={selected}
+      aria-label={`${displayName}, ${ariaContextLabel}, recorded ${recordedDate}`}
       onClick={onSelect}
-      className="border-border bg-background hover:bg-muted focus-visible:ring-ring aria-pressed:border-accent aria-pressed:bg-muted w-full rounded-md border px-3 py-3 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      className="bg-background hover:bg-muted focus-visible:ring-ring aria-pressed:bg-muted aria-pressed:ring-accent w-full px-3 py-3 text-left text-sm transition-colors aria-pressed:ring-2 aria-pressed:ring-inset focus-visible:ring-2 focus-visible:outline-none"
     >
       <span className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <span className="min-w-0">
-          <span className="block truncate font-semibold">
-            {getRecordingDisplayName(recording)}
+          <span className="block truncate font-semibold">{displayName}</span>
+          <span className="text-muted-foreground mt-1 block break-words">
+            {contextLabel}
           </span>
           <span className="text-muted-foreground mt-1 block">
-            {formatRecordingDate(recording.createdAt)}
+            {recordedDate}
           </span>
-          {recording.sheetName ? (
+          {recording.sheetName && recording.sheetName !== contextLabel ? (
             <span className="text-foreground mt-1 block font-medium">
               {recording.sheetName}
             </span>
