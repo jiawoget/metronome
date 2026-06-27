@@ -6,6 +6,7 @@ import {
   type SheetRecordingMetadata
 } from "@/domain/practice";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
+import { removeRecordingReferencesFromTakeSelections } from "@/lib/recordings-review/take-selection-metadata";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { parseTimeSignature } from "@/lib/quick-metronome/control";
 import type { TimeSignature } from "@/lib/quick-metronome/types";
@@ -127,7 +128,8 @@ export const recordingHistoryMetadataRepository: PracticeRecordingMetadataReposi
             (item) => item.id !== reviewRecording.id
           )
         ],
-        errorMarkers: snapshot.errorMarkers
+        errorMarkers: snapshot.errorMarkers,
+        takeSelections: snapshot.takeSelections
       });
     },
 
@@ -152,7 +154,12 @@ export const recordingHistoryMetadataRepository: PracticeRecordingMetadataReposi
         ),
         errorMarkers: snapshot.errorMarkers.filter(
           (marker) => !sheetRecordingIds.has(marker.recordingId)
-        )
+        ),
+        takeSelections: removeRecordingReferencesFromTakeSelections({
+          takeSelections: recordingHistoryRepository.getTakeSelections(),
+          recordingIds: sheetRecordingIds,
+          updatedAt: new Date().toISOString()
+        })
       });
     },
 

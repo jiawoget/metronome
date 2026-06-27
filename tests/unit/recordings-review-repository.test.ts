@@ -242,6 +242,281 @@ describe("recording history repository", () => {
     expect(persisted.errorMarkers).toEqual(loadedSnapshot.errorMarkers);
   });
 
+  it("stores and resolves separate best and active take metadata without changing latest-take ordering", () => {
+    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+
+    const [segmentGroup, noSegmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+
+    expect(segmentGroup.latestRecording.id).toBe("sheet-segment-new");
+
+    recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old");
+    recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-new");
+    recordingHistoryRepository.setBestTake(noSegmentGroup, "sheet-whole-legacy");
+    recordingHistoryRepository.setActiveTake(noSegmentGroup, "sheet-whole-legacy");
+
+    expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({
+      groupId: "sheet:sheet-alpha:segment:segment-alpha",
+      bestRecordingId: "sheet-segment-old",
+      activeRecordingId: "sheet-segment-new",
+      bestRecording: {
+        id: "sheet-segment-old"
+      },
+      activeRecording: {
+        id: "sheet-segment-new"
+      }
+    });
+    expect(recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)).toMatchObject({
+      groupId: "sheet:sheet-alpha:segment:none",
+      bestRecordingId: "sheet-whole-legacy",
+      activeRecordingId: "sheet-whole-legacy",
+      bestRecording: {
+        id: "sheet-whole-legacy"
+      },
+      activeRecording: {
+        id: "sheet-whole-legacy"
+      }
+    });
+    expect(recordingHistoryRepository.getTakeGroups().takeGroups[0].latestRecording.id).toBe(
+      "sheet-segment-new"
+    );
+
+    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+
+    expect(persisted.takeSelections).toHaveLength(2);
+    expect(recordingHistoryRepository.getTakeSelections()).toHaveLength(2);
+  });
+
+  it("clears best and active independently and removes empty metadata records", () => {
+    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+
+    const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+
+    recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old");
+    recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-new");
+    recordingHistoryRepository.setBestTake(segmentGroup, null);
+
+    expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({
+      bestRecordingId: null,
+      activeRecordingId: "sheet-segment-new",
+      bestRecording: null,
+      activeRecording: {
+        id: "sheet-segment-new"
+      }
+    });
+
+    recordingHistoryRepository.setActiveTake(segmentGroup, null);
+
+    expect(recordingHistoryRepository.getTakeSelection(segmentGroup.groupId)).toBeNull();
+    expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({
+      bestRecordingId: null,
+      activeRecordingId: null,
+      bestRecording: null,
+      activeRecording: null,
+      updatedAt: null
+    });
+
+    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+
+    expect(persisted.takeSelections).toBeUndefined();
+  });
+
+  it("rejects take selections for recordings outside the target group and preserves stored state", () => {
+    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+
+    const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+
+    expect(() =>
+      recordingHistoryRepository.setBestTake(segmentGroup, "sheet-whole-null")
+    ).toThrow("does not belong");
+    expect(() =>
+      recordingHistoryRepository.setActiveTake(segmentGroup, "quick-review-recording")
+    ).toThrow("does not belong");
+
+    expect(recordingHistoryRepository.getTakeSelections()).toEqual([]);
+  });
+
+  it("rejects stale group writes for deleted recordings and does not persist orphaned refs", () => {
+    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+
+    const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+
+    recordingHistoryRepository.deleteRecording("sheet-segment-old");
+
+    expect(() =>
+      recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old")
+    ).toThrow("does not belong");
+    expect(() =>
+      recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-old")
+    ).toThrow("does not belong");
+    expect(recordingHistoryRepository.getTakeSelections()).toEqual([]);
+
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
+
+    expect(persisted.takeSelections).toBeUndefined();
+  });
+
+  it("normalizes duplicate persisted metadata entries and resolves stale refs safely", () => {
+    const seededSnapshot = createTakeSelectionSnapshot();
+    const duplicateEntries = [
+      {
+        groupId: "sheet:sheet-alpha:segment:segment-alpha",
+        sheetId: "sheet-alpha",
+        segmentId: "segment-alpha",
+        bestRecordingId: "sheet-segment-old",
+        activeRecordingId: "sheet-segment-old",
+        updatedAt: "2026-06-21T11:00:00.000Z"
+      },
+      {
+        groupId: "sheet:sheet-alpha:segment:segment-alpha",
+        sheetId: "sheet-alpha",
+        segmentId: "segment-alpha",
+        bestRecordingId: "missing-recording",
+        activeRecordingId: "sheet-segment-new",
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      },
+      {
+        groupId: "sheet:sheet-alpha:segment:none",
+        sheetId: "sheet-alpha",
+        segmentId: null,
+        bestRecordingId: "missing-recording",
+        activeRecordingId: null,
+        updatedAt: "2026-06-21T10:00:00.000Z"
+      },
+      {
+        groupId: "sheet:sheet-alpha:segment:wrong",
+        sheetId: "sheet-alpha",
+        segmentId: null,
+        bestRecordingId: "sheet-whole-null",
+        activeRecordingId: null,
+        updatedAt: "2026-06-21T09:00:00.000Z"
+      },
+      {
+        groupId: "sheet:sheet-alpha:segment:segment-alpha",
+        sheetId: "sheet-alpha",
+        segmentId: "segment-alpha",
+        bestRecordingId: null,
+        activeRecordingId: null,
+        updatedAt: "2026-06-21T13:00:00.000Z"
+      }
+    ];
+
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        ...seededSnapshot,
+        takeSelections: duplicateEntries
+      })
+    );
+
+    const [segmentGroup, noSegmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+
+    expect(recordingHistoryRepository.getTakeSelections()).toEqual([
+      {
+        groupId: "sheet:sheet-alpha:segment:none",
+        sheetId: "sheet-alpha",
+        segmentId: null,
+        bestRecordingId: "missing-recording",
+        activeRecordingId: null,
+        updatedAt: "2026-06-21T10:00:00.000Z"
+      },
+      {
+        groupId: "sheet:sheet-alpha:segment:segment-alpha",
+        sheetId: "sheet-alpha",
+        segmentId: "segment-alpha",
+        bestRecordingId: "missing-recording",
+        activeRecordingId: "sheet-segment-new",
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      }
+    ]);
+    expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({
+      bestRecordingId: "missing-recording",
+      activeRecordingId: "sheet-segment-new",
+      bestRecording: null,
+      activeRecording: {
+        id: "sheet-segment-new"
+      }
+    });
+    expect(recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)).toMatchObject({
+      bestRecordingId: "missing-recording",
+      activeRecordingId: null,
+      bestRecording: null,
+      activeRecording: null
+    });
+  });
+
+  it("clears deleted recording refs from take selections while preserving unrelated groups", () => {
+    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+
+    const [segmentGroup, noSegmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+
+    recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old");
+    recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-new");
+    recordingHistoryRepository.setBestTake(noSegmentGroup, "sheet-whole-legacy");
+    recordingHistoryRepository.setActiveTake(noSegmentGroup, "sheet-whole-null");
+
+    recordingHistoryRepository.deleteRecording("sheet-segment-old");
+
+    expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({
+      bestRecordingId: null,
+      activeRecordingId: "sheet-segment-new",
+      bestRecording: null,
+      activeRecording: {
+        id: "sheet-segment-new"
+      }
+    });
+    expect(recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)).toMatchObject({
+      bestRecordingId: "sheet-whole-legacy",
+      activeRecordingId: "sheet-whole-null"
+    });
+
+    recordingHistoryRepository.deleteRecording("sheet-segment-new");
+
+    expect(recordingHistoryRepository.getTakeSelection(segmentGroup.groupId)).toBeNull();
+
+    recordingHistoryRepository.deleteRecording("sheet-whole-legacy");
+
+    expect(recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)).toMatchObject({
+      bestRecordingId: null,
+      activeRecordingId: "sheet-whole-null",
+      bestRecording: null,
+      activeRecording: {
+        id: "sheet-whole-null"
+      }
+    });
+
+    recordingHistoryRepository.deleteRecording("sheet-whole-null");
+
+    expect(recordingHistoryRepository.getTakeSelections()).toEqual([]);
+  });
+
+  it("leaves take selections unchanged when deleting an unselected recording", () => {
+    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+
+    const [segmentGroup, noSegmentGroup] =
+      recordingHistoryRepository.getTakeGroups().takeGroups;
+
+    recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old");
+    recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-new");
+    recordingHistoryRepository.setBestTake(noSegmentGroup, "sheet-whole-legacy");
+
+    const persistedBefore = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
+
+    recordingHistoryRepository.deleteRecording("quick-review-recording");
+
+    const persistedAfter = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
+
+    expect(persistedAfter.takeSelections).toEqual(persistedBefore.takeSelections);
+    expect(JSON.stringify(persistedAfter.takeSelections)).toBe(
+      JSON.stringify(persistedBefore.takeSelections)
+    );
+  });
+
   it("stores 05e sheet recording metadata in the shared recording history boundary", async () => {
     await recordingHistoryMetadataRepository.saveRecordingMetadata(createSheetRecording(), createSheetSession());
 
@@ -279,6 +554,34 @@ describe("recording history repository", () => {
       segmentContext: null
       }
     ]);
+  });
+
+  it("preserves take selections across metadata-only sheet snapshot writes and clears them with sheet metadata cleanup", async () => {
+    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+
+    const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+
+    recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old");
+    recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-new");
+
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecording({
+        id: "sheet-metadata-1",
+        segmentContext: createSegmentContext()
+      }),
+      createSheetSession()
+    );
+
+    expect(
+      recordingHistoryRepository.getTakeSelection(segmentGroup.groupId)
+    ).toMatchObject({
+      bestRecordingId: "sheet-segment-old",
+      activeRecordingId: "sheet-segment-new"
+    });
+
+    await recordingHistoryMetadataRepository.clear();
+
+    expect(recordingHistoryRepository.getTakeSelections()).toEqual([]);
   });
 
   it("preserves valid segment context through raw recording history snapshots", () => {
@@ -454,6 +757,57 @@ function createReviewSheetRecording(
     },
     ...overrides
   } as ReviewRecording;
+}
+
+function createQuickReviewRecording(
+  overrides: Partial<ReviewRecording> = {}
+): ReviewRecording {
+  return {
+    id: "quick-review-recording",
+    type: "quick",
+    name: "Quick review take",
+    sessionId: "session-quick-1",
+    sheetId: null,
+    createdAt: "2026-06-21T08:00:00.000Z",
+    durationMs: 9_000,
+    sizeBytes: 64,
+    mimeType: "audio/wav",
+    audioDataUrl: "data:audio/wav;base64,UklGRg==",
+    settings: {
+      bpm: 120,
+      timeSignature: "4/4"
+    },
+    ...overrides
+  };
+}
+
+function createTakeSelectionSnapshot(): RecordingReviewSnapshot {
+  return {
+    sessions: [],
+    recordings: [
+      createReviewSheetRecording({
+        id: "sheet-segment-old",
+        createdAt: "2026-06-21T09:00:00.000Z",
+        segmentContext: createSegmentContext()
+      }),
+      createReviewSheetRecording({
+        id: "sheet-segment-new",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        segmentContext: createSegmentContext()
+      }),
+      createReviewSheetRecording({
+        id: "sheet-whole-legacy",
+        createdAt: "2026-06-21T10:00:00.000Z"
+      }),
+      createReviewSheetRecording({
+        id: "sheet-whole-null",
+        createdAt: "2026-06-21T11:00:00.000Z",
+        segmentContext: null
+      }),
+      createQuickReviewRecording()
+    ],
+    errorMarkers: []
+  };
 }
 
 function createSheetSession(): PracticeSession {

@@ -70,7 +70,7 @@ export function groupRecordingsByTake(
     }
 
     const segmentGroup = getNormalizedSegmentGroup(recording);
-    const groupId = createTakeGroupId({
+    const groupId = createRecordingTakeGroupId({
       sheetId,
       segmentId: segmentGroup.segmentId
     });
@@ -195,7 +195,7 @@ function getGroupingSegmentId(recording: ReviewRecording) {
   return getNormalizedSegmentGroup(recording).segmentId;
 }
 
-function createTakeGroupId({
+export function createRecordingTakeGroupId({
   sheetId,
   segmentId
 }: {

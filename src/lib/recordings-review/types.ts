@@ -34,6 +34,16 @@ export type RecordingReviewSnapshot = {
   sessions: unknown[];
   recordings: ReviewRecording[];
   errorMarkers: RecordingErrorMarker[];
+  takeSelections?: RecordingTakeSelectionMetadata[];
+};
+
+export type RecordingTakeSelectionMetadata = {
+  groupId: string;
+  sheetId: string;
+  segmentId: string | null;
+  bestRecordingId: string | null;
+  activeRecordingId: string | null;
+  updatedAt: string;
 };
 
 export type RecordingTakeGroupKind = "sheet-segment" | "sheet-no-segment";
@@ -55,6 +65,17 @@ export type ReviewRecordingTakeGrouping = {
   takeGroups: RecordingTakeGroup[];
   quickRecordings: ReviewRecording[];
   ungroupedRecordings: ReviewRecording[];
+};
+
+export type ResolvedRecordingTakeSelection = {
+  groupId: string;
+  sheetId: string;
+  segmentId: string | null;
+  bestRecordingId: string | null;
+  activeRecordingId: string | null;
+  updatedAt: string | null;
+  bestRecording: ReviewRecording | null;
+  activeRecording: ReviewRecording | null;
 };
 
 export type RecordingArtifactDetails = {
