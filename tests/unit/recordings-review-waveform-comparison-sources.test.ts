@@ -188,14 +188,20 @@ describe("waveform comparison source boundary", () => {
       "metadata/session",
       "",
       "image/png",
-      "application/pdf",
-      "audio/x-custom"
+      "application/pdf"
     ]) {
       await expectUnavailableReason(
         loadWaveformComparisonSource(createSheetRecording({ mimeType })),
         "unsupported-mime"
       );
     }
+
+    await expectUnavailableReason(
+      loadWaveformComparisonSource(
+        createSheetRecording({ mimeType: "audio/x-custom" })
+      ),
+      "decode-failed"
+    );
 
     await expectUnavailableReason(
       loadWaveformComparisonSource(

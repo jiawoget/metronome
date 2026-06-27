@@ -135,4 +135,66 @@ describe("BrowserMetronomeService Tone adapter", () => {
 
     expect(fakeTone.adapter.scheduleRepeat).toHaveBeenCalledWith(expect.any(Function), 0.25);
   });
+
+  it("schedules 12/8 through the service path with twelve eighth-note ticks per downbeat cycle", async () => {
+    const fakeTone = createFakeToneAdapter();
+    const service = new BrowserMetronomeService(async () => fakeTone.adapter);
+    const traces: MetronomeTraceEventDetail[] = [];
+    const listener = (event: Event) => {
+      traces.push((event as CustomEvent<MetronomeTraceEventDetail>).detail);
+    };
+
+    window.addEventListener(METRONOME_TRACE_EVENT, listener);
+
+    await service.start({
+      ...DEFAULT_METRONOME_SETTINGS,
+      bpm: 120,
+      timeSignature: "12/8",
+      subdivision: "quarter"
+    });
+
+    for (let index = 0; index < 13; index += 1) {
+      fakeTone.callbacks[0]?.(20 + index * 0.25);
+    }
+
+    window.removeEventListener(METRONOME_TRACE_EVENT, listener);
+
+    expect(fakeTone.adapter.scheduleRepeat).toHaveBeenCalledWith(expect.any(Function), 0.25);
+    expect(traces).toHaveLength(13);
+    expect(traces.map((trace) => trace.tickIndex)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+    ]);
+    expect(traces.map((trace) => trace.accented)).toEqual([
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]);
+    expect(traces.every((trace) => trace.timeSignature === "12/8")).toBe(true);
+    expect(traces.every((trace) => trace.expectedIntervalMs === 250)).toBe(true);
+    expect(fakeTone.triggers.map((trigger) => trigger.note)).toEqual([
+      "E6",
+      "B5",
+      "B5",
+      "B5",
+      "B5",
+      "B5",
+      "B5",
+      "B5",
+      "B5",
+      "B5",
+      "B5",
+      "B5",
+      "E6"
+    ]);
+  });
 });

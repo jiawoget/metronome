@@ -4,8 +4,7 @@ import {
   sortSessionsByRecentActivity,
   type PracticeSession
 } from "@/domain/practice";
-import { parseTimeSignature } from "@/lib/quick-metronome/control";
-import type { TimeSignature } from "@/lib/quick-metronome/types";
+import { parsePracticeTimeSignature } from "@/domain/practice/validation";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import type { PracticeSessionRepository } from "@/services/practice-session";
@@ -28,16 +27,6 @@ function getSessionString(value: unknown, key: string) {
   return typeof nextValue === "string" ? nextValue : null;
 }
 
-function parseOptionalTimeSignature(value: unknown): TimeSignature | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const parsed = parseTimeSignature(value);
-
-  return parsed === value ? parsed : null;
-}
-
 function getLegacyRecordingTimeSignature(value: unknown) {
   return typeof value === "string" ? value : null;
 }
@@ -58,7 +47,7 @@ function getQuickSessionSettings(value: unknown) {
 
   return {
     bpm: typeof bpm === "number" ? bpm : null,
-    timeSignature: parseOptionalTimeSignature(timeSignature)
+    timeSignature: parsePracticeTimeSignature(timeSignature)
   };
 }
 

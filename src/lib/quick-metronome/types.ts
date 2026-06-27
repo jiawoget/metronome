@@ -34,13 +34,22 @@ export type QuickRecording = {
   settings: MetronomeSettings;
 };
 
+export type SharedRecordingHistoryEntry =
+  | QuickRecording
+  | {
+      id: string;
+      type: string;
+      sessionId: string;
+      [key: string]: unknown;
+    };
+
 export type RecordingArtifactAnalysis = ServiceRecordingArtifactAnalysis;
 
 export type RecordingArtifact = ServiceRecordingArtifact;
 
 export type QuickMetronomeStoreSnapshot = {
   sessions: unknown[];
-  recordings: QuickRecording[];
+  recordings: SharedRecordingHistoryEntry[];
   errorMarkers: unknown[];
   takeSelections?: unknown[];
   recordingOrganization?: unknown[];

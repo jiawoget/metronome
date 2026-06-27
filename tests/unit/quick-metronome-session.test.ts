@@ -1,12 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { RECORDING_HISTORY_STORAGE_KEY } from "@/infrastructure/storage/storage-contracts";
 import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
 import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
 import { createQuickRecording } from "@/lib/quick-metronome/session";
-import { DEFAULT_METRONOME_SETTINGS, type RecordingArtifact } from "@/lib/quick-metronome/types";
+import { DEFAULT_METRONOME_SETTINGS, type QuickRecording, type RecordingArtifact } from "@/lib/quick-metronome/types";
 
 describe("quick metronome recording metadata", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it("creates quick recording metadata linked to a session and not to a sheet", () => {
     const session = { id: "session-canonical-quick" };
     const artifact: RecordingArtifact = {
@@ -141,7 +145,8 @@ describe("quick metronome recording metadata", () => {
         recordings: [existingRecording],
         errorMarkers: [],
         takeSelections,
-        recordingOrganization
+        recordingOrganization,
+        futureSnapshotField: { preserve: true }
       })
     );
 
@@ -151,10 +156,84 @@ describe("quick metronome recording metadata", () => {
 
     expect(persisted.recordingOrganization).toEqual(recordingOrganization);
     expect(persisted.takeSelections).toEqual(takeSelections);
+    expect(persisted.futureSnapshotField).toEqual({ preserve: true });
     expect(persisted.recordings.map((recording: { id: string }) => recording.id)).toEqual([
       newRecording.id,
       existingRecording.id
     ]);
+  });
+
+  it("clears only quick recordings and explicitly quick unreferenced sessions", () => {
+    const quickRecording = createStoredQuickRecording({
+      id: "quick-recording",
+      sessionId: "quick-session"
+    });
+    const sheetRecording = {
+      ...quickRecording,
+      id: "sheet-recording",
+      type: "sheet",
+      sessionId: "sheet-session",
+      sheetId: "sheet-alpha"
+    };
+    const ambiguousQuickRecording = createStoredQuickRecording({
+      id: "ambiguous-linked-recording",
+      sessionId: "ambiguous-session"
+    });
+    const takeSelections = [
+      {
+        groupId: "sheet:sheet-alpha:segment:none",
+        sheetId: "sheet-alpha",
+        segmentId: null,
+        bestRecordingId: "sheet-recording",
+        activeRecordingId: "sheet-recording",
+        updatedAt: "2026-06-21T08:00:00.000Z"
+      }
+    ];
+    const recordingOrganization = [
+      {
+        recordingId: "sheet-recording",
+        tags: ["Keep"],
+        favorite: true,
+        archived: false,
+        updatedAt: "2026-06-21T08:00:00.000Z"
+      }
+    ];
+
+    window.localStorage.setItem(
+      RECORDING_HISTORY_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [
+          { id: "quick-session", sourceType: "quick" },
+          { id: "sheet-session", sourceType: "sheet", sheetId: "sheet-alpha" },
+          { id: "ambiguous-session" },
+          { id: "future-session", sourceType: "quick" }
+        ],
+        recordings: [quickRecording, sheetRecording, ambiguousQuickRecording],
+        errorMarkers: [
+          { id: "quick-marker", recordingId: "quick-recording", timestampMs: 10, note: null },
+          { id: "sheet-marker", recordingId: "sheet-recording", timestampMs: 10, note: null }
+        ],
+        takeSelections,
+        recordingOrganization,
+        futureSnapshotField: { preserve: true }
+      })
+    );
+
+    quickRecordingRepository.clear();
+
+    const persisted = JSON.parse(window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}");
+
+    expect(persisted.recordings).toEqual([sheetRecording]);
+    expect(persisted.sessions).toEqual([
+      { id: "sheet-session", sourceType: "sheet", sheetId: "sheet-alpha" },
+      { id: "ambiguous-session" }
+    ]);
+    expect(persisted.errorMarkers).toEqual([
+      { id: "sheet-marker", recordingId: "sheet-recording", timestampMs: 10, note: null }
+    ]);
+    expect(persisted.takeSelections).toEqual(takeSelections);
+    expect(persisted.recordingOrganization).toEqual(recordingOrganization);
+    expect(persisted.futureSnapshotField).toEqual({ preserve: true });
   });
 
   it("provides a clearly marked playable demo recording without claiming it is a user take", () => {
@@ -180,3 +259,26 @@ describe("quick metronome recording metadata", () => {
     expect(demoRecording.sheetId).toBeNull();
   });
 });
+
+function createStoredQuickRecording(overrides: Partial<QuickRecording> = {}) {
+  const artifact: RecordingArtifact = {
+    blob: new Blob(["synthetic audio"]),
+    dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
+    durationMs: 1_245.4,
+    mimeType: "audio/webm",
+    sizeBytes: 15,
+    analysis: null
+  };
+
+  const recording = createQuickRecording({
+    artifact,
+    session: { id: "quick-session" },
+    settings: DEFAULT_METRONOME_SETTINGS,
+    createdAt: new Date("2026-06-21T08:01:00Z")
+  });
+
+  return {
+    ...recording,
+    ...overrides
+  };
+}

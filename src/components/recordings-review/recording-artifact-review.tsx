@@ -1,34 +1,25 @@
 "use client";
 
+/* eslint-disable react-hooks/refs */
+
 import { AlertTriangle, Pause, Play } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   useCallback,
   useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent
 } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
-  loadRecordingArtifactDetails,
-  RecordingArtifactError
-} from "@/lib/recordings-review/artifact-service";
+  useRecordingArtifactReviewController,
+  type RecordingArtifactReviewController
+} from "@/lib/recordings-review/artifact-review-controller";
 import type {
   RecordingArtifactDetails,
   ReviewRecording
 } from "@/lib/recordings-review/types";
-import { RecordingWaveformPlaybackAdapter } from "@/lib/recordings-review/wavesurfer-adapter";
 import { cn } from "@/lib/utils";
-
-type ArtifactState =
-  | { status: "idle"; details: null; message: null }
-  | { status: "loading"; details: null; message: null }
-  | { status: "ready"; details: RecordingArtifactDetails; message: null }
-  | { status: "error"; details: null; message: string };
 
 type RecordingArtifactReviewProps = {
   recording: ReviewRecording;
@@ -51,6 +42,7 @@ type RecordingArtifactReviewProps = {
     controls: RecordingPlaybackControls | null
   ) => void;
   onPlaybackTimeChange?: (currentTimeMs: number) => void;
+  controller?: RecordingArtifactReviewController;
 };
 
 export type RecordingPlaybackControls = {
@@ -65,7 +57,36 @@ type RecordingSeekResult = {
   currentTimeMs: number;
 };
 
-export function RecordingArtifactReview({
+export function RecordingArtifactReview(props: RecordingArtifactReviewProps) {
+  if (props.controller) {
+    return (
+      <RecordingArtifactReviewContent
+        {...props}
+        controller={props.controller}
+      />
+    );
+  }
+
+  return <RecordingArtifactReviewWithDefaultController {...props} />;
+}
+
+function RecordingArtifactReviewWithDefaultController(
+  props: RecordingArtifactReviewProps
+) {
+  const controller = useRecordingArtifactReviewController({
+    recording: props.recording,
+    onPlaybackTimeChange: props.onPlaybackTimeChange
+  });
+
+  return (
+    <RecordingArtifactReviewContent
+      {...props}
+      controller={controller}
+    />
+  );
+}
+
+function RecordingArtifactReviewContent({
   recording,
   actions = null,
   adapterClassName,
@@ -83,130 +104,45 @@ export function RecordingArtifactReview({
   sourceTestId,
   warningTestId,
   onPlaybackControlsChange,
-  onPlaybackTimeChange
-}: RecordingArtifactReviewProps) {
-  const adapter = useMemo(() => new RecordingWaveformPlaybackAdapter(), []);
-  const waveformRef = useRef<HTMLDivElement | null>(null);
-  const [artifactState, setArtifactState] = useState<ArtifactState>({
-    status: "idle",
-    details: null,
-    message: null
-  });
-  const [playbackState, setPlaybackState] = useState<"idle" | "playing">(
-    "idle"
-  );
-  const [isPlaybackReady, setIsPlaybackReady] = useState(false);
-  const [currentTimeMs, setCurrentTimeMs] = useState(0);
+  controller
+}: Omit<RecordingArtifactReviewProps, "controller"> & {
+  controller: RecordingArtifactReviewController;
+}) {
+  const artifactState = controller.state;
+  const { playbackState, isPlaybackReady, currentTimeMs } = controller;
 
   useEffect(() => {
-    let cancelled = false;
-
-    adapter.destroy();
-
-    Promise.resolve()
-      .then(() => {
-        if (!cancelled) {
-          setArtifactState({ status: "loading", details: null, message: null });
-          setPlaybackState("idle");
-          setIsPlaybackReady(false);
-          setCurrentTimeMs(0);
-        }
-
-        return loadRecordingArtifactDetails(recording);
-      })
-      .then((details) => {
-        if (!cancelled) {
-          setArtifactState({ status: "ready", details, message: null });
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setArtifactState({
-            status: "error",
-            details: null,
-            message:
-              error instanceof RecordingArtifactError || error instanceof Error
-                ? error.message
-                : "Recording artifact could not be loaded."
-          });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-      adapter.destroy();
-    };
-  }, [adapter, recording]);
-
-  useEffect(() => {
-    if (
-      artifactState.status !== "ready" ||
-      !waveformRef.current ||
-      !recording.audioDataUrl
-    ) {
-      onPlaybackControlsChange?.(null);
-      setIsPlaybackReady(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    adapter
-      .load(waveformRef.current, recording)
-      .then(() => {
-        if (!cancelled) {
-          setIsPlaybackReady(true);
-          onPlaybackControlsChange?.({
+    onPlaybackControlsChange?.(
+      isPlaybackReady
+        ? {
             recordingId: recording.id,
             durationMs: recording.durationMs,
-            getCurrentTimeMs: () => adapter.getCurrentTimeMs(),
-            seekToMs: (timestampMs) => adapter.seekToMs(timestampMs)
-          });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setIsPlaybackReady(false);
-          onPlaybackControlsChange?.(null);
-          setArtifactState({
-            status: "error",
-            details: null,
-            message: "Waveform playback could not load this artifact."
-          });
-        }
-      });
+            getCurrentTimeMs: controller.controls.getCurrentTimeMs,
+            seekToMs: (timestampMs) => {
+              const ratio =
+                recording.durationMs > 0
+                  ? timestampMs / recording.durationMs
+                  : 0;
 
-    return () => {
-      cancelled = true;
-      setIsPlaybackReady(false);
-      onPlaybackControlsChange?.(null);
-    };
-  }, [adapter, artifactState.status, onPlaybackControlsChange, recording]);
+              controller.controls.seekToRatio(ratio);
 
-  useEffect(() => {
-    const handleTimeUpdate = (event: Event) => {
-      const detail = (
-        event as CustomEvent<{ recordingId?: string; currentTimeMs?: number }>
-      ).detail;
+              return {
+                targetTimeMs: timestampMs,
+                currentTimeMs: controller.controls.getCurrentTimeMs()
+              };
+            }
+          }
+        : null
+    );
 
-      if (
-        detail?.recordingId === recording.id &&
-        typeof detail.currentTimeMs === "number"
-      ) {
-        setCurrentTimeMs(detail.currentTimeMs);
-        onPlaybackTimeChange?.(detail.currentTimeMs);
-      }
-    };
-
-    window.addEventListener("recordings-review:timeupdate", handleTimeUpdate);
-
-    return () => {
-      window.removeEventListener(
-        "recordings-review:timeupdate",
-        handleTimeUpdate
-      );
-    };
-  }, [onPlaybackTimeChange, recording.id]);
+    return () => onPlaybackControlsChange?.(null);
+  }, [
+    controller.controls,
+    isPlaybackReady,
+    onPlaybackControlsChange,
+    recording.durationMs,
+    recording.id
+  ]);
 
   const seekWaveformToClientX = useCallback(
     (clientX: number, element: HTMLElement) => {
@@ -217,85 +153,22 @@ export function RecordingArtifactReview({
       const bounds = element.getBoundingClientRect();
       const ratio =
         bounds.width > 0 ? (clientX - bounds.left) / bounds.width : 0;
-      const targetTimeMs = Math.max(
-        0,
-        Math.min(recording.durationMs, Math.round(ratio * recording.durationMs))
-      );
-
-      try {
-        const result = adapter.seekToMs(targetTimeMs);
-
-        setCurrentTimeMs(result.currentTimeMs);
-      } catch {
-        onPlaybackControlsChange?.(null);
-      }
+      controller.controls.seekToRatio(ratio);
     },
-    [
-      adapter,
-      artifactState.status,
-      isPlaybackReady,
-      onPlaybackControlsChange,
-      recording.durationMs
-    ]
+    [artifactState.status, controller.controls, isPlaybackReady]
   );
-
-  useEffect(() => {
-    const element = waveformRef.current;
-
-    if (!element || artifactState.status !== "ready" || !isPlaybackReady) {
-      return;
-    }
-
-    const handleNativeWaveformPointerDown = (event: PointerEvent) => {
-      seekWaveformToClientX(event.clientX, element);
-    };
-
-    const handleNativeWaveformClick = (event: MouseEvent) => {
-      seekWaveformToClientX(event.clientX, element);
-    };
-
-    element.addEventListener(
-      "pointerdown",
-      handleNativeWaveformPointerDown,
-      true
-    );
-    element.addEventListener("click", handleNativeWaveformClick, true);
-
-    return () => {
-      element.removeEventListener(
-        "pointerdown",
-        handleNativeWaveformPointerDown,
-        true
-      );
-      element.removeEventListener("click", handleNativeWaveformClick, true);
-    };
-  }, [artifactState.status, isPlaybackReady, seekWaveformToClientX]);
 
   async function togglePlayback() {
     if (playbackState === "playing") {
-      adapter.pause();
-      setPlaybackState("idle");
+      controller.controls.pause();
       return;
     }
 
-    try {
-      await adapter.play();
-      setPlaybackState("playing");
-    } catch (error) {
-      setPlaybackState("idle");
-      setArtifactState({
-        status: "error",
-        details: null,
-        message: error instanceof Error ? error.message : "Playback failed."
-      });
-    }
-  }
-
-  function handleWaveformClick(event: ReactMouseEvent<HTMLElement>) {
-    seekWaveformToClientX(event.clientX, event.currentTarget);
+    await controller.controls.play();
   }
 
   function handleWaveformPointerDown(event: ReactPointerEvent<HTMLElement>) {
+    event.preventDefault();
     seekWaveformToClientX(event.clientX, event.currentTarget);
   }
 
@@ -324,13 +197,11 @@ export function RecordingArtifactReview({
           <div className={readyGapClassName}>
             <div className="relative">
               <div
-                ref={waveformRef}
+                ref={controller.setWaveformElement}
                 data-testid={adapterTestId}
                 data-playback-ready={isPlaybackReady ? "true" : "false"}
                 data-current-time-ms={currentTimeMs}
                 className={cn(adapterClassName, "cursor-pointer")}
-                onPointerDownCapture={handleWaveformPointerDown}
-                onClickCapture={handleWaveformClick}
               />
               <button
                 type="button"
@@ -338,7 +209,6 @@ export function RecordingArtifactReview({
                 data-testid={`${adapterTestId}-seek-surface`}
                 className="absolute inset-0 z-10 cursor-pointer rounded-md bg-transparent"
                 onPointerDown={handleWaveformPointerDown}
-                onClick={handleWaveformClick}
               />
             </div>
             <DerivedPeaks

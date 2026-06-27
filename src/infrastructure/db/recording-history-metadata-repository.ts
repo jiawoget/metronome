@@ -5,19 +5,12 @@ import {
   type PracticeSession,
   type SheetRecordingMetadata
 } from "@/domain/practice";
+import { parsePracticeTimeSignature } from "@/domain/practice/validation";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import { removeRecordingOrganizations } from "@/lib/recordings-review/recording-organization-metadata";
 import { removeRecordingReferencesFromTakeSelections } from "@/lib/recordings-review/take-selection-metadata";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
-import { parseTimeSignature } from "@/lib/quick-metronome/control";
-import type { TimeSignature } from "@/lib/quick-metronome/types";
 import type { PracticeRecordingMetadataRepository } from "@/services/practice-session";
-
-function parseOptionalTimeSignature(value: string): TimeSignature | null {
-  const parsed = parseTimeSignature(value);
-
-  return parsed === value ? parsed : null;
-}
 
 function toSheetRecordingMetadata(
   recording: ReviewRecording
@@ -31,7 +24,7 @@ function toSheetRecordingMetadata(
     createdAt: recording.createdAt,
     durationMs: recording.durationMs,
     bpm: recording.settings.bpm,
-    timeSignature: parseOptionalTimeSignature(recording.settings.timeSignature),
+    timeSignature: parsePracticeTimeSignature(recording.settings.timeSignature),
     segmentContext: recording.segmentContext ?? null
   });
 
