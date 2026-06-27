@@ -1,8 +1,10 @@
 import type {
   RecordingErrorMarker,
+  RecordingOrganizationMetadata,
   RecordingTakeGroup,
   RecordingTakeSelectionMetadata,
   RecordingReviewSnapshot,
+  ResolvedRecordingOrganization,
   ResolvedRecordingTakeSelection,
   ReviewRecordingTakeGrouping,
   ReviewRecording
@@ -18,6 +20,13 @@ import {
   removeRecordingReferencesFromTakeSelections,
   resolveTakeSelectionForGroup
 } from "@/lib/recordings-review/take-selection-metadata";
+import {
+  createRecordingOrganizationMetadata,
+  normalizeRecordingOrganizationEntries,
+  normalizeRecordingTagForWrite,
+  removeRecordingOrganizations,
+  resolveRecordingOrganization as resolveRecordingOrganizationMetadata
+} from "@/lib/recordings-review/recording-organization-metadata";
 import {
   createErrorMarker,
   normalizePersistedErrorMarker,
@@ -156,6 +165,10 @@ function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | Record
     : [];
   const markers = Array.isArray(value.errorMarkers) ? value.errorMarkers : [];
   const takeSelections = normalizeTakeSelectionMetadataEntries(value.takeSelections);
+  const recordingOrganization = normalizeRecordingOrganizationEntries(
+    value.recordingOrganization,
+    recordings.map((recording) => recording.id)
+  );
 
   return buildSnapshot({
     sessions: Array.isArray(value.sessions) ? value.sessions : [],
@@ -164,7 +177,8 @@ function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | Record
       markers,
       recordings
     }),
-    takeSelections
+    takeSelections,
+    recordingOrganization
   });
 }
 
@@ -218,28 +232,76 @@ function buildSnapshot({
   sessions,
   recordings,
   errorMarkers,
-  takeSelections
+  takeSelections,
+  recordingOrganization
 }: RecordingReviewSnapshot & {
   takeSelections?: RecordingTakeSelectionMetadata[];
+  recordingOrganization?: RecordingOrganizationMetadata[];
 }): RecordingReviewSnapshot {
-  if (!takeSelections || takeSelections.length === 0) {
-    return {
-      sessions,
-      recordings,
-      errorMarkers
-    };
-  }
-
-  return {
+  const snapshot: RecordingReviewSnapshot = {
     sessions,
     recordings,
-    errorMarkers,
-    takeSelections
+    errorMarkers
   };
+
+  if (takeSelections && takeSelections.length > 0) {
+    snapshot.takeSelections = takeSelections;
+  }
+
+  if (recordingOrganization && recordingOrganization.length > 0) {
+    snapshot.recordingOrganization = recordingOrganization;
+  }
+
+  return snapshot;
 }
 
 function getNormalizedTakeSelections(snapshot: RecordingReviewSnapshot) {
   return normalizeTakeSelectionMetadataEntries(snapshot.takeSelections);
+}
+
+function getNormalizedRecordingOrganizations(snapshot: RecordingReviewSnapshot) {
+  return normalizeRecordingOrganizationEntries(
+    snapshot.recordingOrganization,
+    snapshot.recordings.map((recording) => recording.id)
+  );
+}
+
+function getRecordingOrganizationByRecordingId({
+  snapshot,
+  recordingId
+}: {
+  snapshot: RecordingReviewSnapshot;
+  recordingId: string;
+}) {
+  const normalizedRecordingId = recordingId.trim();
+
+  return getNormalizedRecordingOrganizations(snapshot).find(
+    (organization) => organization.recordingId === normalizedRecordingId
+  ) ?? null;
+}
+
+function requireCurrentRecording({
+  snapshot,
+  recordingId
+}: {
+  snapshot: RecordingReviewSnapshot;
+  recordingId: string;
+}) {
+  const normalizedRecordingId = recordingId.trim();
+
+  if (normalizedRecordingId.length === 0) {
+    throw new Error("Recording organization requires a recording id.");
+  }
+
+  const recording = snapshot.recordings.find(
+    (candidate) => candidate.id === normalizedRecordingId
+  );
+
+  if (!recording) {
+    throw new Error(`Recording ${normalizedRecordingId} no longer exists.`);
+  }
+
+  return recording;
 }
 
 function getTakeSelectionByGroupId({
@@ -351,6 +413,47 @@ function updateTakeSelection({
   return nextSnapshot;
 }
 
+function updateRecordingOrganization({
+  snapshot,
+  recordingId,
+  tags,
+  favorite,
+  archived
+}: {
+  snapshot: RecordingReviewSnapshot;
+  recordingId: string;
+  tags: string[];
+  favorite: boolean;
+  archived: boolean;
+}) {
+  const nextOrganization = createRecordingOrganizationMetadata({
+    recordingId,
+    tags,
+    favorite,
+    archived,
+    updatedAt: new Date().toISOString()
+  });
+  const recordingOrganization = getNormalizedRecordingOrganizations(snapshot);
+  const nextRecordingOrganization = nextOrganization
+    ? [
+        ...recordingOrganization.filter(
+          (organization) => organization.recordingId !== recordingId
+        ),
+        nextOrganization
+      ]
+    : recordingOrganization.filter(
+        (organization) => organization.recordingId !== recordingId
+      );
+  const nextSnapshot = buildSnapshot({
+    ...snapshot,
+    recordingOrganization: nextRecordingOrganization
+  });
+
+  writeSnapshot(nextSnapshot);
+
+  return nextSnapshot;
+}
+
 export const recordingHistoryRepository = {
   getSnapshot() {
     return readSnapshot();
@@ -362,6 +465,29 @@ export const recordingHistoryRepository = {
 
   getTakeSelections() {
     return getNormalizedTakeSelections(readSnapshot());
+  },
+
+  getRecordingOrganizations() {
+    return getNormalizedRecordingOrganizations(readSnapshot());
+  },
+
+  getRecordingOrganization(recordingId: string) {
+    return getRecordingOrganizationByRecordingId({
+      snapshot: readSnapshot(),
+      recordingId
+    });
+  },
+
+  resolveRecordingOrganization(
+    recording: ReviewRecording
+  ): ResolvedRecordingOrganization {
+    return resolveRecordingOrganizationMetadata({
+      recording,
+      organization: getRecordingOrganizationByRecordingId({
+        snapshot: readSnapshot(),
+        recordingId: recording.id
+      })
+    });
   },
 
   getTakeSelection(groupId: string) {
@@ -473,6 +599,119 @@ export const recordingHistoryRepository = {
     return nextSnapshot;
   },
 
+  setRecordingTags(recordingId: string, tags: string[]) {
+    const snapshot = readSnapshot();
+    const recording = requireCurrentRecording({ snapshot, recordingId });
+    const currentOrganization = getRecordingOrganizationByRecordingId({
+      snapshot,
+      recordingId: recording.id
+    });
+
+    return updateRecordingOrganization({
+      snapshot,
+      recordingId: recording.id,
+      tags,
+      favorite: currentOrganization?.favorite ?? false,
+      archived: currentOrganization?.archived ?? false
+    });
+  },
+
+  addRecordingTag(recordingId: string, tag: string) {
+    const snapshot = readSnapshot();
+    const recording = requireCurrentRecording({ snapshot, recordingId });
+    const currentOrganization = getRecordingOrganizationByRecordingId({
+      snapshot,
+      recordingId: recording.id
+    });
+    const normalizedTag = normalizeRecordingTagForWrite(tag);
+    const existingTags = currentOrganization?.tags ?? [];
+
+    if (
+      existingTags.some(
+        (existingTag) => existingTag.toLowerCase() === normalizedTag.toLowerCase()
+      )
+    ) {
+      throw new Error("Recording tags must not contain duplicates.");
+    }
+
+    return updateRecordingOrganization({
+      snapshot,
+      recordingId: recording.id,
+      tags: [...existingTags, normalizedTag],
+      favorite: currentOrganization?.favorite ?? false,
+      archived: currentOrganization?.archived ?? false
+    });
+  },
+
+  removeRecordingTag(recordingId: string, tag: string) {
+    const snapshot = readSnapshot();
+    const recording = requireCurrentRecording({ snapshot, recordingId });
+    const currentOrganization = getRecordingOrganizationByRecordingId({
+      snapshot,
+      recordingId: recording.id
+    });
+    const normalizedTag = normalizeRecordingTagForWrite(tag);
+
+    return updateRecordingOrganization({
+      snapshot,
+      recordingId: recording.id,
+      tags: (currentOrganization?.tags ?? []).filter(
+        (existingTag) => existingTag.toLowerCase() !== normalizedTag.toLowerCase()
+      ),
+      favorite: currentOrganization?.favorite ?? false,
+      archived: currentOrganization?.archived ?? false
+    });
+  },
+
+  setRecordingFavorite(recordingId: string, favorite: boolean) {
+    const snapshot = readSnapshot();
+    const recording = requireCurrentRecording({ snapshot, recordingId });
+    const currentOrganization = getRecordingOrganizationByRecordingId({
+      snapshot,
+      recordingId: recording.id
+    });
+
+    return updateRecordingOrganization({
+      snapshot,
+      recordingId: recording.id,
+      tags: currentOrganization?.tags ?? [],
+      favorite,
+      archived: currentOrganization?.archived ?? false
+    });
+  },
+
+  setRecordingArchived(recordingId: string, archived: boolean) {
+    const snapshot = readSnapshot();
+    const recording = requireCurrentRecording({ snapshot, recordingId });
+    const currentOrganization = getRecordingOrganizationByRecordingId({
+      snapshot,
+      recordingId: recording.id
+    });
+
+    return updateRecordingOrganization({
+      snapshot,
+      recordingId: recording.id,
+      tags: currentOrganization?.tags ?? [],
+      favorite: currentOrganization?.favorite ?? false,
+      archived
+    });
+  },
+
+  clearRecordingOrganization(recordingId: string) {
+    const snapshot = readSnapshot();
+    const recording = requireCurrentRecording({ snapshot, recordingId });
+    const nextSnapshot = buildSnapshot({
+      ...snapshot,
+      recordingOrganization: getNormalizedRecordingOrganizations(snapshot).filter(
+        (organization) => organization.recordingId !== recording.id
+      )
+    });
+
+    writeSnapshot(nextSnapshot);
+
+    return nextSnapshot;
+  },
+
   createErrorMarker(input: Omit<CreateErrorMarkerInput, "durationMs"> & { durationMs?: number }) {
     const snapshot = readSnapshot();
     const recordingId = input.recordingId ?? "";
@@ -522,6 +761,10 @@ export const recordingHistoryRepository = {
         takeSelections: getNormalizedTakeSelections(snapshot),
         recordingIds: [recordingId],
         updatedAt: new Date().toISOString()
+      }),
+      recordingOrganization: removeRecordingOrganizations({
+        organizations: getNormalizedRecordingOrganizations(snapshot),
+        recordingIds: [recordingId]
       })
     });
 

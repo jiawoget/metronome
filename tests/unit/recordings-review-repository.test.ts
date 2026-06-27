@@ -517,6 +517,203 @@ describe("recording history repository", () => {
     );
   });
 
+  it("stores recording-level tags, favorites, and archive metadata separately from take selections", () => {
+    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+
+    const quickRecording = recordingHistoryRepository.getRecording(
+      "quick-review-recording"
+    );
+
+    expect(quickRecording).not.toBeNull();
+    expect(
+      recordingHistoryRepository.resolveRecordingOrganization(quickRecording!)
+    ).toEqual({
+      recordingId: "quick-review-recording",
+      tags: [],
+      favorite: false,
+      archived: false,
+      updatedAt: null
+    });
+
+    recordingHistoryRepository.setRecordingTags("quick-review-recording", [
+      "  Warmup  ",
+      "Clean tone"
+    ]);
+    recordingHistoryRepository.setRecordingFavorite(
+      "quick-review-recording",
+      true
+    );
+    recordingHistoryRepository.setRecordingArchived(
+      "quick-review-recording",
+      true
+    );
+    recordingHistoryRepository.addRecordingTag(
+      "quick-review-recording",
+      "Review"
+    );
+    recordingHistoryRepository.removeRecordingTag(
+      "quick-review-recording",
+      "clean tone"
+    );
+
+    expect(
+      recordingHistoryRepository.resolveRecordingOrganization(quickRecording!)
+    ).toMatchObject({
+      recordingId: "quick-review-recording",
+      tags: ["Warmup", "Review"],
+      favorite: true,
+      archived: true
+    });
+
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
+
+    expect(persisted.recordingOrganization).toEqual([
+      expect.objectContaining({
+        recordingId: "quick-review-recording",
+        tags: ["Warmup", "Review"],
+        favorite: true,
+        archived: true
+      })
+    ]);
+    expect(persisted.takeSelections).toBeUndefined();
+  });
+
+  it("rejects invalid tag writes atomically and omits empty organization metadata", () => {
+    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+    recordingHistoryRepository.setRecordingTags("quick-review-recording", [
+      "Warmup"
+    ]);
+
+    const beforeInvalidWrite = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
+
+    expect(() =>
+      recordingHistoryRepository.setRecordingTags("quick-review-recording", [
+        "Warmup",
+        "warmup"
+      ])
+    ).toThrow("duplicates");
+    expect(() =>
+      recordingHistoryRepository.addRecordingTag("quick-review-recording", "")
+    ).toThrow("empty");
+    expect(() =>
+      recordingHistoryRepository.addRecordingTag(
+        "quick-review-recording",
+        "comma,tag"
+      )
+    ).toThrow("empty");
+    expect(() =>
+      recordingHistoryRepository.addRecordingTag(
+        "quick-review-recording",
+        "x".repeat(25)
+      )
+    ).toThrow("empty");
+    expect(() =>
+      recordingHistoryRepository.setRecordingTags("quick-review-recording", [
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight",
+        "nine"
+      ])
+    ).toThrow("up to 8 tags");
+
+    expect(
+      JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}")
+        .recordingOrganization
+    ).toEqual(beforeInvalidWrite.recordingOrganization);
+
+    recordingHistoryRepository.setRecordingTags("quick-review-recording", []);
+
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
+
+    expect(persisted.recordingOrganization).toBeUndefined();
+  });
+
+  it("normalizes duplicate, invalid, and stale persisted recording organization metadata", () => {
+    const seededSnapshot = createTakeSelectionSnapshot();
+
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        ...seededSnapshot,
+        recordingOrganization: [
+          {
+            recordingId: "quick-review-recording",
+            tags: ["Warmup", "warmup", "bad,tag", "  Clean   Tone  "],
+            favorite: false,
+            archived: false,
+            updatedAt: "2026-06-21T10:00:00.000Z"
+          },
+          {
+            recordingId: "quick-review-recording",
+            tags: ["Keeper"],
+            favorite: true,
+            archived: true,
+            updatedAt: "2026-06-21T12:00:00.000Z"
+          },
+          {
+            recordingId: "missing-recording",
+            tags: ["Ghost"],
+            favorite: true,
+            archived: true,
+            updatedAt: "2026-06-21T13:00:00.000Z"
+          },
+          {
+            recordingId: "sheet-segment-old",
+            tags: ["Only invalid, really"],
+            favorite: false,
+            archived: false,
+            updatedAt: "2026-06-21T11:00:00.000Z"
+          }
+        ]
+      })
+    );
+
+    expect(recordingHistoryRepository.getRecordingOrganizations()).toEqual([
+      {
+        recordingId: "quick-review-recording",
+        tags: ["Keeper"],
+        favorite: true,
+        archived: true,
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      }
+    ]);
+  });
+
+  it("removes recording organization metadata when deleting recordings", () => {
+    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+
+    recordingHistoryRepository.setRecordingTags("quick-review-recording", [
+      "Warmup"
+    ]);
+    recordingHistoryRepository.setRecordingFavorite(
+      "sheet-segment-old",
+      true
+    );
+
+    recordingHistoryRepository.deleteRecording("quick-review-recording");
+
+    expect(recordingHistoryRepository.getRecordingOrganization("quick-review-recording")).toBeNull();
+    expect(recordingHistoryRepository.getRecordingOrganization("sheet-segment-old")).toMatchObject({
+      recordingId: "sheet-segment-old",
+      favorite: true
+    });
+
+    recordingHistoryRepository.deleteRecording("sheet-segment-old");
+
+    expect(recordingHistoryRepository.getRecordingOrganizations()).toEqual([]);
+  });
+
   it("stores 05e sheet recording metadata in the shared recording history boundary", async () => {
     await recordingHistoryMetadataRepository.saveRecordingMetadata(createSheetRecording(), createSheetSession());
 
@@ -556,13 +753,18 @@ describe("recording history repository", () => {
     ]);
   });
 
-  it("preserves take selections across metadata-only sheet snapshot writes and clears them with sheet metadata cleanup", async () => {
+  it("preserves review metadata across sheet snapshot writes and clears sheet organization with sheet metadata cleanup", async () => {
     recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
 
     const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
 
     recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old");
     recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-new");
+    recordingHistoryRepository.setRecordingTags("sheet-segment-old", [
+      "Bridge"
+    ]);
+    recordingHistoryRepository.setRecordingFavorite("quick-review-recording", true);
+    recordingHistoryRepository.setRecordingArchived("quick-review-recording", true);
 
     await recordingHistoryMetadataRepository.saveRecordingMetadata(
       createSheetRecording({
@@ -578,10 +780,36 @@ describe("recording history repository", () => {
       bestRecordingId: "sheet-segment-old",
       activeRecordingId: "sheet-segment-new"
     });
+    expect(recordingHistoryRepository.getRecordingOrganization("sheet-segment-old")).toMatchObject({
+      tags: ["Bridge"]
+    });
+    expect(recordingHistoryRepository.getRecordingOrganization("quick-review-recording")).toMatchObject({
+      favorite: true,
+      archived: true
+    });
+
+    const persistedAfterMetadataWrite = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
+
+    expect(persistedAfterMetadataWrite.recordingOrganization).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          recordingId: "quick-review-recording",
+          favorite: true,
+          archived: true
+        })
+      ])
+    );
 
     await recordingHistoryMetadataRepository.clear();
 
     expect(recordingHistoryRepository.getTakeSelections()).toEqual([]);
+    expect(recordingHistoryRepository.getRecordingOrganization("sheet-segment-old")).toBeNull();
+    expect(recordingHistoryRepository.getRecordingOrganization("quick-review-recording")).toMatchObject({
+      favorite: true,
+      archived: true
+    });
   });
 
   it("preserves valid segment context through raw recording history snapshots", () => {

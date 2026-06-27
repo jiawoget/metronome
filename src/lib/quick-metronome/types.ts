@@ -42,6 +42,8 @@ export type QuickMetronomeStoreSnapshot = {
   sessions: unknown[];
   recordings: QuickRecording[];
   errorMarkers: unknown[];
+  takeSelections?: unknown[];
+  recordingOrganization?: unknown[];
 };
 
 export const DEFAULT_METRONOME_SETTINGS: MetronomeSettings = {

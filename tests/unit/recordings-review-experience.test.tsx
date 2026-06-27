@@ -245,10 +245,93 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("recordings-filter-empty-state")).toHaveTextContent(
-        "No recording groups match"
+        "No recordings match"
       );
     });
     expect(screen.queryByTestId("quick-recordings-section")).not.toBeInTheDocument();
+  });
+
+  it("edits tags, favorites, archive state, and combines organization filters", async () => {
+    const user = userEvent.setup();
+
+    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+
+    render(<RecordingsReviewExperience />);
+
+    await expect(screen.findByTestId("recordings-list")).resolves.toBeVisible();
+    expect(screen.getByTestId("recording-details")).toHaveAttribute(
+      "data-recording-id",
+      "sheet-bridge-new"
+    );
+
+    await user.type(screen.getByLabelText("Add recording tag"), "Warmup");
+    await user.click(screen.getByRole("button", { name: "Add Tag" }));
+    await user.click(
+      screen.getByTestId("details-favorite-control-sheet-bridge-new")
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("recording-details")).toHaveTextContent("Warmup");
+      expect(
+        screen.getByTestId("details-favorite-control-sheet-bridge-new")
+      ).toHaveAttribute("aria-pressed", "true");
+    });
+    expect(screen.getByLabelText("Tag filter")).toHaveTextContent("Warmup");
+    expect(
+      screen.getByTestId("favorite-recording-control-sheet-bridge-new")
+    ).toHaveAttribute("aria-pressed", "true");
+
+    await user.selectOptions(screen.getByLabelText("Tag filter"), "Warmup");
+
+    expect(
+      screen.getByTestId("take-group-sheet:sheet-alpha:segment:segment-bridge")
+    ).toBeVisible();
+    expect(screen.getByTestId("recording-row-sheet-bridge-new")).toBeVisible();
+    expect(screen.queryByTestId("recording-row-sheet-bridge-old")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("quick-recordings-section")).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Tag filter"), "all");
+    await user.click(screen.getByTestId("favorite-recording-control-quick-alpha"));
+    await user.click(screen.getByRole("button", { name: "Show favorites only" }));
+
+    expect(screen.getByTestId("recording-row-sheet-bridge-new")).toBeVisible();
+    expect(screen.getByTestId("recording-row-quick-alpha")).toBeVisible();
+    expect(screen.queryByTestId("recording-row-sheet-bridge-old")).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("details-archive-control-sheet-bridge-new"));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("recording-row-sheet-bridge-new")).not.toBeInTheDocument();
+      expect(screen.getByTestId("recording-details")).toHaveAttribute(
+        "data-recording-id",
+        "quick-alpha"
+      );
+    });
+
+    await user.selectOptions(screen.getByLabelText("Archive filter"), "archived");
+
+    expect(screen.getByTestId("recording-row-sheet-bridge-new")).toBeVisible();
+    expect(screen.getByTestId("recording-details")).toHaveAttribute(
+      "data-recording-id",
+      "sheet-bridge-new"
+    );
+    expect(screen.getByTestId("recording-details")).toHaveTextContent("Archived");
+    expect(
+      screen.getByTestId("details-archive-control-sheet-bridge-new")
+    ).toHaveTextContent("Unarchive");
+
+    await user.click(screen.getByTestId("details-archive-control-sheet-bridge-new"));
+    await user.selectOptions(screen.getByLabelText("Archive filter"), "active");
+
+    expect(screen.getByTestId("recording-row-sheet-bridge-new")).toBeVisible();
+    expect(screen.getByTestId("recording-row-quick-alpha")).toBeVisible();
+    expect(
+      recordingHistoryRepository.getRecordingOrganization("sheet-bridge-new")
+    ).toMatchObject({
+      tags: ["Warmup"],
+      favorite: true,
+      archived: false
+    });
   });
 
   it("falls back to the expected visible recording after deleting or filtering the selected take", async () => {

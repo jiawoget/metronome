@@ -673,7 +673,7 @@ test("recordings review renders grouped take history, filters it, deletes a take
 
   await page.getByRole("textbox", { name: "Search recordings" }).fill("nomatch");
   await expect(page.getByTestId("recordings-filter-empty-state")).toContainText(
-    "No recording groups match"
+    "No recordings match"
   );
   await expect(alphaBridgeGroup).toBeHidden();
 
@@ -712,6 +712,226 @@ test("recordings review renders grouped take history, filters it, deletes a take
     await expect(
       page.getByTestId("recording-row-sheet-alpha-bridge-new")
     ).toBeVisible();
+    await expectNoHorizontalOverflow(page, viewport.label);
+  }
+});
+
+test("recordings review organizes recordings with tags favorites and archive recovery", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.goto("/recordings");
+  await page.evaluate(() => window.localStorage.clear());
+
+  const quickArtifact = await createWavDataUrl(page, 440, 0.8);
+  const sheetArtifact = await createWavDataUrl(page, 330, 0.9);
+
+  await seedRecordingHistory(page, {
+    sessions: [
+      { id: "session-org-quick", sourceType: "quick" },
+      { id: "session-org-sheet", sourceType: "sheet" }
+    ],
+    recordings: [
+      {
+        id: "org-sheet-old",
+        type: "sheet",
+        origin: "user",
+        name: "Archive one take",
+        sessionId: "session-org-sheet",
+        sheetId: "sheet-org",
+        sheetName: "Organization Etude",
+        createdAt: "2026-06-21T09:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-org",
+          segmentName: "Organize bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "org-sheet-new",
+        type: "sheet",
+        origin: "user",
+        name: "Tagged favorite take",
+        sessionId: "session-org-sheet",
+        sheetId: "sheet-org",
+        sheetName: "Organization Etude",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-org",
+          segmentName: "Organize bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "org-quick",
+        type: "quick",
+        origin: "user",
+        name: "Quick favorite take",
+        sessionId: "session-org-quick",
+        sheetId: null,
+        createdAt: "2026-06-21T13:00:00.000Z",
+        durationMs: quickArtifact.durationMs,
+        sizeBytes: quickArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: quickArtifact.dataUrl,
+        trustedPeaks: [0.2, 0.8, 0.4],
+        settings: {
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "org-legacy",
+        type: "sheet",
+        origin: "user",
+        name: "Legacy missing link",
+        sessionId: "session-org-sheet",
+        sheetId: null,
+        sheetName: null,
+        createdAt: "2026-06-21T08:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: null,
+        settings: {
+          bpm: 88,
+          timeSignature: "4/4"
+        }
+      }
+    ],
+    errorMarkers: []
+  });
+
+  await page.reload();
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "org-sheet-new"
+  );
+
+  await page.getByLabel("Add recording tag").fill("Warmup");
+  await page.getByRole("button", { name: "Add Tag" }).click();
+  await page.getByTestId("details-favorite-control-org-sheet-new").click();
+  await expect(page.getByTestId("recording-details")).toContainText("Warmup");
+  await expect(
+    page.getByTestId("details-favorite-control-org-sheet-new")
+  ).toHaveAttribute("aria-pressed", "true");
+
+  await page.reload();
+  await expect(page.getByTestId("recording-details")).toContainText("Warmup");
+  await expect(
+    page.getByTestId("favorite-recording-control-org-sheet-new")
+  ).toHaveAttribute("aria-pressed", "true");
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Warmup");
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
+  await expect(page.getByTestId("quick-recordings-section")).toBeHidden();
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("");
+  await page.getByLabel("Tag filter").selectOption("Warmup");
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
+
+  await page.getByLabel("Tag filter").selectOption("all");
+  await page
+    .getByRole("button", { name: "Mark Quick favorite take as favorite" })
+    .click();
+  await page.getByRole("button", { name: "Show favorites only" }).click();
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+  await expect(page.getByTestId("recording-row-org-quick")).toBeVisible();
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
+
+  await page.getByTestId("details-archive-control-org-sheet-new").click();
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeHidden();
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "org-quick"
+  );
+
+  let persisted = await readRecordingHistory(page);
+  expect(persisted.recordings.map((recording: { id: string }) => recording.id)).toContain(
+    "org-sheet-new"
+  );
+  expect(persisted.recordingOrganization).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        recordingId: "org-sheet-new",
+        tags: ["Warmup"],
+        favorite: true,
+        archived: true
+      })
+    ])
+  );
+
+  await page.getByLabel("Archive filter").selectOption("archived");
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "trusted-peaks",
+    peakCount: 4,
+    label: "archived recording remains reviewable"
+  });
+  await page.getByTestId("details-archive-control-org-sheet-new").click();
+  await page.getByLabel("Archive filter").selectOption("active");
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+
+  await page.getByRole("button", { name: "Show favorites only" }).click();
+  await page.getByTestId("recording-row-org-sheet-old").click();
+  await page.getByTestId("details-archive-control-org-sheet-old").click();
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
+  await expect(
+    page.getByTestId("take-group-sheet:sheet-org:segment:segment-org")
+  ).toContainText("1 take");
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+
+  await page.getByLabel("Archive filter").selectOption("archived");
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeVisible();
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeHidden();
+  await page.getByRole("button", { name: "Delete Recording" }).click();
+  await page.getByRole("button", { name: "Confirm Delete" }).click();
+
+  persisted = await readRecordingHistory(page);
+  expect(persisted.recordings.map((recording: { id: string }) => recording.id)).not.toContain(
+    "org-sheet-old"
+  );
+  expect(
+    persisted.recordingOrganization?.some(
+      (organization: { recordingId: string }) =>
+        organization.recordingId === "org-sheet-old"
+    )
+  ).not.toBe(true);
+
+  const pageText = (await page.locator("body").innerText()).toLowerCase();
+  expect(pageText).not.toMatch(/archive .*delete|delete .*archive|archive .*remove/);
+
+  for (const viewport of [
+    { width: 1024, height: 768, label: "tablet organization" },
+    { width: 390, height: 844, label: "mobile organization" }
+  ]) {
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height
+    });
+    await expect(page.getByLabel("Archive filter")).toBeVisible();
+    await expect(page.getByLabel("Tag filter")).toBeVisible();
     await expectNoHorizontalOverflow(page, viewport.label);
   }
 });

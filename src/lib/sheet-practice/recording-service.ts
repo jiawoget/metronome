@@ -103,7 +103,8 @@ function saveSheetReviewRecording(recording: ReviewRecording) {
       ...snapshot.recordings.filter((item) => item.id !== recording.id)
     ],
     errorMarkers: snapshot.errorMarkers,
-    takeSelections: snapshot.takeSelections
+    takeSelections: snapshot.takeSelections,
+    recordingOrganization: snapshot.recordingOrganization
   });
 }
 

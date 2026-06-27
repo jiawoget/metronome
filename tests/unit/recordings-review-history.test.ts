@@ -10,6 +10,7 @@ import {
   filterRecordings,
   getErrorMarkerSeekTarget,
   getContinuePracticeHref,
+  getRecordingTagOptions,
   getTakeGroupPracticeHref,
   sortErrorMarkers,
   sortRecordingsByNewest
@@ -118,6 +119,86 @@ describe("recordings review history helpers", () => {
         type: "all"
       })
     ).toEqual([segmentSheetRecording]);
+  });
+
+  it("combines type, archive, favorite, tag, and tag-search filters before grouping", () => {
+    const recordingOrganization = [
+      {
+        recordingId: "quick-1",
+        tags: ["Warmup"],
+        favorite: true,
+        archived: false,
+        updatedAt: "2026-06-21T11:00:00.000Z"
+      },
+      {
+        recordingId: "sheet-1",
+        tags: ["Keeper", "Bridge"],
+        favorite: true,
+        archived: true,
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      },
+      {
+        recordingId: "sheet-segment-1",
+        tags: ["Bridge"],
+        favorite: false,
+        archived: false,
+        updatedAt: "2026-06-21T13:00:00.000Z"
+      }
+    ];
+    const recordings = [quickRecording, sheetRecording, segmentSheetRecording];
+
+    expect(
+      filterRecordings({
+        recordings,
+        query: "",
+        type: "all",
+        recordingOrganization
+      }).map((recording) => recording.id)
+    ).toEqual(["sheet-segment-1", "quick-1"]);
+    expect(
+      filterRecordings({
+        recordings,
+        query: "",
+        type: "sheet",
+        archiveMode: "archived",
+        favoritesOnly: true,
+        tag: "keeper",
+        recordingOrganization
+      })
+    ).toEqual([sheetRecording]);
+    expect(
+      filterRecordings({
+        recordings,
+        query: "",
+        type: "all",
+        archiveMode: "all",
+        tag: "bridge",
+        recordingOrganization
+      }).map((recording) => recording.id)
+    ).toEqual(["sheet-1", "sheet-segment-1"]);
+    expect(
+      filterRecordings({
+        recordings,
+        query: "warmup",
+        type: "quick",
+        recordingOrganization
+      })
+    ).toEqual([quickRecording]);
+    expect(
+      getRecordingTagOptions({
+        recordings,
+        recordingOrganization: [
+          ...recordingOrganization,
+          {
+            recordingId: "missing-recording",
+            tags: ["Ghost"],
+            favorite: true,
+            archived: true,
+            updatedAt: "2026-06-21T14:00:00.000Z"
+          }
+        ]
+      })
+    ).toEqual(["Bridge", "Keeper", "Warmup"]);
   });
 
   it("sorts recordings by newest first", () => {

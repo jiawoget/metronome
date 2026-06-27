@@ -35,6 +35,7 @@ export type RecordingReviewSnapshot = {
   recordings: ReviewRecording[];
   errorMarkers: RecordingErrorMarker[];
   takeSelections?: RecordingTakeSelectionMetadata[];
+  recordingOrganization?: RecordingOrganizationMetadata[];
 };
 
 export type RecordingTakeSelectionMetadata = {
@@ -76,6 +77,22 @@ export type ResolvedRecordingTakeSelection = {
   updatedAt: string | null;
   bestRecording: ReviewRecording | null;
   activeRecording: ReviewRecording | null;
+};
+
+export type RecordingOrganizationMetadata = {
+  recordingId: string;
+  tags: string[];
+  favorite: boolean;
+  archived: boolean;
+  updatedAt: string;
+};
+
+export type ResolvedRecordingOrganization = {
+  recordingId: string;
+  tags: string[];
+  favorite: boolean;
+  archived: boolean;
+  updatedAt: string | null;
 };
 
 export type RecordingArtifactDetails = {

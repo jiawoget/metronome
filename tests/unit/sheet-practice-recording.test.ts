@@ -258,6 +258,70 @@ describe("sheet practice recording service", () => {
     expect(recordingHistoryRepository.getRecording("recording-sheet-1")?.segmentContext).toEqual(segmentContext);
   });
 
+  it("preserves review organization and take selection metadata when saving a new sheet recording", async () => {
+    const existingRecording = createSheetReviewRecording({
+      metadata: {
+        ...metadata,
+        id: "recording-sheet-existing",
+        createdAt: "2026-06-22T05:58:00.000Z"
+      },
+      artifact: createArtifact(),
+      settings
+    });
+    const takeSelections = [
+      {
+        groupId: "sheet:sheet-alpha:segment:none",
+        sheetId: "sheet-alpha",
+        segmentId: null,
+        bestRecordingId: existingRecording.id,
+        activeRecordingId: existingRecording.id,
+        updatedAt: "2026-06-22T05:59:00.000Z"
+      }
+    ];
+    const recordingOrganization = [
+      {
+        recordingId: existingRecording.id,
+        tags: ["Warmup"],
+        favorite: true,
+        archived: true,
+        updatedAt: "2026-06-22T05:59:00.000Z"
+      }
+    ];
+    const capture = createCaptureService();
+    const sessionService = {
+      createSheetRecordingMetadata: vi.fn(async () => metadata),
+      getRecentSheetSession: vi.fn(async () => previousSession),
+      deletePracticeSessionSnapshot: vi.fn(async () => undefined),
+      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
+    };
+    const service = new BrowserSheetRecordingService(capture.service);
+
+    recordingHistoryRepository.saveSnapshot({
+      sessions: [previousSession],
+      recordings: [existingRecording],
+      errorMarkers: [],
+      takeSelections,
+      recordingOrganization
+    });
+
+    await service.stopAndSave({
+      sheetId: "sheet-alpha",
+      sessionId: "session-new",
+      settings,
+      forceNewSession: false,
+      sessionService
+    });
+
+    const snapshot = recordingHistoryRepository.getSnapshot();
+
+    expect(snapshot.recordingOrganization).toEqual(recordingOrganization);
+    expect(snapshot.takeSelections).toEqual(takeSelections);
+    expect(snapshot.recordings.map((recording) => recording.id)).toEqual([
+      "recording-sheet-1",
+      existingRecording.id
+    ]);
+  });
+
   it("rejects silent captures before creating sheet metadata", async () => {
     const capture = createCaptureService(
       createArtifact({

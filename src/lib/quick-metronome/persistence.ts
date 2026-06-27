@@ -45,7 +45,11 @@ function readSnapshot(): QuickMetronomeStoreSnapshot {
     cachedSnapshot = {
       sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
       recordings: Array.isArray(parsed.recordings) ? parsed.recordings : [],
-      errorMarkers: Array.isArray(parsed.errorMarkers) ? parsed.errorMarkers : []
+      errorMarkers: Array.isArray(parsed.errorMarkers) ? parsed.errorMarkers : [],
+      ...(Array.isArray(parsed.takeSelections) ? { takeSelections: parsed.takeSelections } : {}),
+      ...(Array.isArray(parsed.recordingOrganization)
+        ? { recordingOrganization: parsed.recordingOrganization }
+        : {})
     };
 
     return cachedSnapshot;
@@ -96,7 +100,15 @@ export const quickRecordingRepository = {
       ...snapshot.recordings.filter((item) => item.id !== recordingToSave.id)
     ];
 
-    writeSnapshot({ sessions: snapshot.sessions, recordings, errorMarkers: snapshot.errorMarkers });
+    writeSnapshot({
+      sessions: snapshot.sessions,
+      recordings,
+      errorMarkers: snapshot.errorMarkers,
+      ...(snapshot.takeSelections ? { takeSelections: snapshot.takeSelections } : {}),
+      ...(snapshot.recordingOrganization
+        ? { recordingOrganization: snapshot.recordingOrganization }
+        : {})
+    });
 
     return recordingToSave;
   },

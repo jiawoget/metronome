@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { RECORDING_HISTORY_STORAGE_KEY } from "@/infrastructure/storage/storage-contracts";
 import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
 import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
 import { createQuickRecording } from "@/lib/quick-metronome/session";
@@ -82,6 +83,78 @@ describe("quick metronome recording metadata", () => {
       recording.audioDataUrl
     );
     expect(snapshot.recordings.find((item) => item.id === continuedSave.id)?.durationMs).toBe(900);
+  });
+
+  it("preserves review organization and take selection metadata when saving a new quick recording", () => {
+    quickRecordingRepository.clear();
+    const artifact: RecordingArtifact = {
+      blob: new Blob(["synthetic audio"]),
+      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
+      durationMs: 1_245.4,
+      mimeType: "audio/webm",
+      sizeBytes: 15,
+      analysis: {
+        decodedDurationMs: 1_230,
+        sampleRate: 48_000,
+        peakAmplitude: 0.2,
+        rmsAmplitude: 0.12,
+        estimatedFrequencyHz: 440,
+        isSilent: false
+      }
+    };
+    const existingRecording = createQuickRecording({
+      artifact,
+      session: { id: "session-existing-quick" },
+      settings: DEFAULT_METRONOME_SETTINGS,
+      createdAt: new Date("2026-06-21T08:01:00Z")
+    });
+    const newRecording = createQuickRecording({
+      artifact,
+      session: { id: "session-new-quick" },
+      settings: DEFAULT_METRONOME_SETTINGS,
+      createdAt: new Date("2026-06-21T08:02:00Z")
+    });
+    const takeSelections = [
+      {
+        groupId: "sheet:sheet-alpha:segment:none",
+        sheetId: "sheet-alpha",
+        segmentId: null,
+        bestRecordingId: "recording-sheet-best",
+        activeRecordingId: "recording-sheet-active",
+        updatedAt: "2026-06-21T08:00:00.000Z"
+      }
+    ];
+    const recordingOrganization = [
+      {
+        recordingId: existingRecording.id,
+        tags: ["Warmup"],
+        favorite: true,
+        archived: true,
+        updatedAt: "2026-06-21T08:00:00.000Z"
+      }
+    ];
+
+    window.localStorage.setItem(
+      RECORDING_HISTORY_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [],
+        recordings: [existingRecording],
+        errorMarkers: [],
+        takeSelections,
+        recordingOrganization
+      })
+    );
+
+    quickRecordingRepository.saveQuickRecording(newRecording);
+
+    const persisted = JSON.parse(window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}");
+
+    expect(persisted.recordingOrganization).toEqual(recordingOrganization);
+    expect(persisted.takeSelections).toEqual(takeSelections);
+    expect(persisted.recordings.map((recording: { id: string }) => recording.id)).toEqual([
+      newRecording.id,
+      existingRecording.id
+    ]);
   });
 
   it("provides a clearly marked playable demo recording without claiming it is a user take", () => {
