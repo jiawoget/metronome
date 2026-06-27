@@ -753,6 +753,27 @@ describe("recording history repository", () => {
     ]);
   });
 
+  it("preserves 12/8 sheet recording metadata through the practice metadata boundary", async () => {
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecording({ timeSignature: "12/8" }),
+      createSheetSession({ timeSignature: "12/8" })
+    );
+
+    expect(recordingHistoryRepository.getRecording("sheet-metadata-1")?.settings.timeSignature).toBe(
+      "12/8"
+    );
+    await expect(
+      recordingHistoryMetadataRepository.listRecordingMetadataForSession(
+        "session-sheet-1"
+      )
+    ).resolves.toEqual([
+      expect.objectContaining({
+        id: "sheet-metadata-1",
+        timeSignature: "12/8"
+      })
+    ]);
+  });
+
   it("preserves review metadata across sheet snapshot writes and clears sheet organization with sheet metadata cleanup", async () => {
     recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
 
@@ -1038,7 +1059,7 @@ function createTakeSelectionSnapshot(): RecordingReviewSnapshot {
   };
 }
 
-function createSheetSession(): PracticeSession {
+function createSheetSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
   return {
     id: "session-sheet-1",
     sourceType: "sheet",
@@ -1050,6 +1071,7 @@ function createSheetSession(): PracticeSession {
     timeSignature: "4/4",
     recordingCount: 1,
     latestRecordingId: "sheet-metadata-1",
-    updatedAt: "2026-06-21T12:00:00.000Z"
+    updatedAt: "2026-06-21T12:00:00.000Z",
+    ...overrides
   };
 }

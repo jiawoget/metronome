@@ -10,7 +10,6 @@ import {
   measureGridSchema,
   measureRangeSchema
 } from "@/domain/practice/measure-grid";
-import { TIME_SIGNATURES } from "@/lib/quick-metronome/control";
 
 const isoDateSchema = z.iso
   .datetime({ offset: true })
@@ -18,7 +17,16 @@ const isoDateSchema = z.iso
     message: "Expected a strict ISO datetime with a real calendar date."
   });
 
-const practiceTimeSignatureSchema = z.enum(TIME_SIGNATURES);
+const PRACTICE_TIME_SIGNATURES = ["2/4", "3/4", "4/4", "6/8", "12/8"] as const;
+
+export function parsePracticeTimeSignature(value: unknown) {
+  return typeof value === "string" &&
+    (PRACTICE_TIME_SIGNATURES as readonly string[]).includes(value)
+    ? value
+    : null;
+}
+
+const practiceTimeSignatureSchema = z.enum(PRACTICE_TIME_SIGNATURES);
 const trimmedRequiredStringSchema = z.string().trim().min(1);
 const segmentNameSchema = z.string().trim().min(1).max(80);
 const targetBpmSchema = z.number().finite().int().min(30).max(300).nullable();

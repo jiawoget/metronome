@@ -4,8 +4,8 @@ import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { browserAudioDownloadAdapter } from "@/lib/recordings-review/browser-audio-download-adapter";
 import {
   getDataUrlMimeType,
-  getSupportedRecordingAudioMimeInfo,
-  hasMatchingSupportedRecordingAudioMime
+  getKnownExportAudioMimeInfo,
+  hasMatchingKnownExportAudioMime
 } from "@/lib/recordings-review/audio-mime";
 
 export type RecordingAudioExportRequest = {
@@ -206,7 +206,7 @@ function unavailableResult({
 }
 
 export function getAudioExportMimeInfo(mimeType: string) {
-  const mimeInfo = getSupportedRecordingAudioMimeInfo(mimeType);
+  const mimeInfo = getKnownExportAudioMimeInfo(mimeType);
 
   return mimeInfo
     ? {
@@ -237,7 +237,7 @@ function dataUrlToBlob({
   const dataUrlMimeType = getDataUrlMimeType(metadata);
 
   if (
-    !hasMatchingSupportedRecordingAudioMime({
+    !hasMatchingKnownExportAudioMime({
       expectedMimeType: mimeType,
       actualMimeType: dataUrlMimeType
     })

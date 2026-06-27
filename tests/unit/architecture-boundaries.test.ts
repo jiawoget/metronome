@@ -92,7 +92,9 @@ describe("source architecture boundaries", () => {
     const violations = matchingFiles(files, [
       /@\/lib\/recordings-review\/repository/,
       /\brecordingHistoryRepository\b/,
-      /\brecordingAudioExportService\b/
+      /\brecordingAudioExportService\b/,
+      /\bRecordingWaveformPlaybackAdapter\b/,
+      /\bloadRecordingArtifactDetails\b/
     ]);
 
     expect(violations).toEqual([]);

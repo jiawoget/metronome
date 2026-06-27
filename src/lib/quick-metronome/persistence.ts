@@ -1,4 +1,8 @@
-import type { QuickMetronomeStoreSnapshot, QuickRecording } from "@/lib/quick-metronome/types";
+import type {
+  QuickMetronomeStoreSnapshot,
+  QuickRecording,
+  SharedRecordingHistoryEntry
+} from "@/lib/quick-metronome/types";
 import { RECORDING_HISTORY_STORAGE_KEY } from "@/infrastructure/storage/storage-contracts";
 
 const STORE_EVENT = "quick-metronome-recordings-change";
@@ -10,6 +14,8 @@ const emptySnapshot: QuickMetronomeStoreSnapshot = {
 };
 let cachedRawValue: string | null = null;
 let cachedSnapshot: QuickMetronomeStoreSnapshot = emptySnapshot;
+
+type RawSnapshotObject = Record<string, unknown>;
 
 function getStorage() {
   if (typeof window === "undefined") {
@@ -60,14 +66,52 @@ function readSnapshot(): QuickMetronomeStoreSnapshot {
   }
 }
 
-function writeSnapshot(snapshot: QuickMetronomeStoreSnapshot) {
+function readRawSnapshotObject(): RawSnapshotObject {
+  const storage = getStorage();
+
+  if (!storage) {
+    return {};
+  }
+
+  const rawValue = storage.getItem(RECORDING_HISTORY_STORAGE_KEY);
+
+  if (!rawValue) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as RawSnapshotObject)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSnapshot(snapshot: QuickMetronomeStoreSnapshot, rawBase: RawSnapshotObject = {}) {
   const storage = getStorage();
 
   if (!storage) {
     return;
   }
 
-  storage.setItem(RECORDING_HISTORY_STORAGE_KEY, JSON.stringify(snapshot));
+  const nextSnapshot = {
+    ...rawBase,
+    sessions: snapshot.sessions,
+    recordings: snapshot.recordings,
+    errorMarkers: snapshot.errorMarkers,
+    ...(snapshot.takeSelections ? { takeSelections: snapshot.takeSelections } : {}),
+    ...(snapshot.recordingOrganization
+      ? { recordingOrganization: snapshot.recordingOrganization }
+      : {})
+  };
+  const serializedSnapshot = JSON.stringify(nextSnapshot);
+
+  storage.setItem(RECORDING_HISTORY_STORAGE_KEY, serializedSnapshot);
+  cachedRawValue = serializedSnapshot;
+  cachedSnapshot = snapshot;
   window.dispatchEvent(new Event(STORE_EVENT));
 }
 
@@ -79,6 +123,12 @@ function createRecordingId() {
   return `recording_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
+function isQuickRecording(
+  recording: SharedRecordingHistoryEntry
+): recording is QuickRecording {
+  return recording.type === "quick";
+}
+
 export const quickRecordingRepository = {
   getSnapshot() {
     return readSnapshot();
@@ -87,10 +137,11 @@ export const quickRecordingRepository = {
   getLatestQuickRecording() {
     const snapshot = readSnapshot();
 
-    return snapshot.recordings.find((recording) => recording.type === "quick") ?? null;
+    return snapshot.recordings.find(isQuickRecording) ?? null;
   },
 
   saveQuickRecording(recording: QuickRecording) {
+    const rawBase = readRawSnapshotObject();
     const snapshot = readSnapshot();
     const recordingToSave = snapshot.recordings.some((item) => item.id === recording.id)
       ? { ...recording, id: createRecordingId() }
@@ -108,18 +159,50 @@ export const quickRecordingRepository = {
       ...(snapshot.recordingOrganization
         ? { recordingOrganization: snapshot.recordingOrganization }
         : {})
-    });
+    }, rawBase);
 
     return recordingToSave;
   },
 
   clear() {
-    const storage = getStorage();
+    const rawBase = readRawSnapshotObject();
+    const snapshot = readSnapshot();
+    const removedQuickRecordingIds = new Set(
+      snapshot.recordings
+        .filter(isQuickRecording)
+        .map((recording) => recording.id)
+    );
+    const retainedRecordings = snapshot.recordings.filter(
+      (recording) => recording.type !== "quick"
+    );
+    const retainedSessionIds = new Set(
+      retainedRecordings.map((recording) => recording.sessionId)
+    );
+    const retainedSessions = snapshot.sessions.filter((session) => {
+      if (!session || typeof session !== "object") {
+        return true;
+      }
 
-    if (storage) {
-      storage.removeItem(RECORDING_HISTORY_STORAGE_KEY);
-      window.dispatchEvent(new Event(STORE_EVENT));
-    }
+      const maybeSession = session as { id?: unknown; sourceType?: unknown };
+
+      return !(
+        maybeSession.sourceType === "quick" &&
+        typeof maybeSession.id === "string" &&
+        !retainedSessionIds.has(maybeSession.id)
+      );
+    });
+
+    writeSnapshot({
+      sessions: retainedSessions,
+      recordings: retainedRecordings,
+      errorMarkers: snapshot.errorMarkers.filter(
+        (marker) => !removedQuickRecordingIds.has(String((marker as { recordingId?: unknown }).recordingId ?? ""))
+      ),
+      ...(snapshot.takeSelections ? { takeSelections: snapshot.takeSelections } : {}),
+      ...(snapshot.recordingOrganization
+        ? { recordingOrganization: snapshot.recordingOrganization }
+        : {})
+    }, rawBase);
   },
 
   subscribe(listener: () => void) {

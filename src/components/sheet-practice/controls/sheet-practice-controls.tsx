@@ -62,6 +62,31 @@ function segmentContextsMatch(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function formatRerecordUnavailableMessage(
+  reason: SheetPracticeRerecordUnavailableReason
+) {
+  switch (reason) {
+    case "no-source-recording":
+      return "Practice Again source is unavailable.";
+    case "no-segment-context":
+      return "Practice Again opened the sheet, but this take is not linked to a segment.";
+    case "source-not-sheet":
+      return "Practice Again source is not a sheet recording.";
+    case "sheet-mismatch":
+      return "Practice Again source belongs to a different sheet.";
+    case "selection-changed":
+      return "Record Again is only available for the original segment.";
+    case "source-recording-missing":
+      return "Practice Again source recording was not found.";
+    case "source-segment-missing":
+      return "Practice Again source segment no longer exists.";
+    case "source-segment-invalid":
+      return "Practice Again source segment no longer matches this sheet.";
+    case "recording-active":
+      return "Record Again is unavailable while recording is active.";
+  }
+}
+
 function getRerecordSourceInvalidReason({
   recording,
   sheetId,
@@ -75,11 +100,11 @@ function getRerecordSourceInvalidReason({
     return "source-recording-missing";
   }
 
-  if (
-    recording.type !== "sheet" ||
-    recording.sheetId !== sheetId ||
-    recording.sheetId !== source.sheetId
-  ) {
+  if (recording.type !== "sheet") {
+    return "source-not-sheet";
+  }
+
+  if (recording.sheetId !== sheetId || recording.sheetId !== source.sheetId) {
     return "sheet-mismatch";
   }
 
@@ -174,6 +199,12 @@ export function SheetPracticeControls({
   const invalidateRerecordSource = useSheetPracticeRecordingWorkflowStore(
     (state) => state.invalidateRerecordSource
   );
+  const clearRerecordSource = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.clearRerecordSource
+  );
+  const setRerecordReady = useSheetPracticeRecordingWorkflowStore(
+    (state) => state.setRerecordReady
+  );
   const rerecordStatus = useSheetPracticeRecordingWorkflowStore(
     (state) => state.rerecord.status
   );
@@ -242,6 +273,129 @@ export function SheetPracticeControls({
       unsubscribeRecordings();
     };
   }, [refreshSession, sessionService, sheetRecordingService]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydratePracticeAgainSource() {
+      const normalizedSourceRecordingId = sourceRecordingId?.trim() ?? "";
+
+      if (!normalizedSourceRecordingId) {
+        clearRerecordSource(sheetId, "no-source-recording");
+        return;
+      }
+
+      const sourceRecording = sheetRecordingService.getRecording(
+        normalizedSourceRecordingId
+      );
+
+      if (!sourceRecording) {
+        invalidateRerecordSource(sheetId, "source-recording-missing");
+        setMessage(formatRerecordUnavailableMessage("source-recording-missing"));
+        return;
+      }
+
+      if (sourceRecording.type !== "sheet") {
+        invalidateRerecordSource(sheetId, "source-not-sheet");
+        setMessage(formatRerecordUnavailableMessage("source-not-sheet"));
+        return;
+      }
+
+      if (sourceRecording.sheetId !== sheetId) {
+        invalidateRerecordSource(sheetId, "sheet-mismatch");
+        setMessage(formatRerecordUnavailableMessage("sheet-mismatch"));
+        return;
+      }
+
+      const sourceSegmentContext = sourceRecording.segmentContext;
+
+      if (!sourceSegmentContext) {
+        clearRerecordSource(sheetId, "no-segment-context");
+        setMessage(formatRerecordUnavailableMessage("no-segment-context"));
+        return;
+      }
+
+      if (
+        returnSegmentId &&
+        returnSegmentId.trim() &&
+        returnSegmentId.trim() !== sourceSegmentContext.segmentId
+      ) {
+        invalidateRerecordSource(sheetId, "selection-changed");
+        setMessage(formatRerecordUnavailableMessage("selection-changed"));
+        return;
+      }
+
+      const liveSegment = await practiceSegmentService.getSegment(
+        sheetId,
+        sourceSegmentContext.segmentId
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      if (!liveSegment) {
+        setActiveRecordingSegment(sheetId, null);
+        invalidateRerecordSource(sheetId, "source-segment-missing");
+        setMessage(formatRerecordUnavailableMessage("source-segment-missing"));
+        return;
+      }
+
+      let liveSegmentContext: SheetRecordingSegmentContext;
+
+      try {
+        liveSegmentContext = createSheetRecordingSegmentContext(liveSegment);
+      } catch {
+        invalidateRerecordSource(sheetId, "source-segment-invalid");
+        setMessage(formatRerecordUnavailableMessage("source-segment-invalid"));
+        return;
+      }
+
+      if (!segmentContextsMatch(liveSegmentContext, sourceSegmentContext)) {
+        invalidateRerecordSource(sheetId, "source-segment-invalid");
+        setMessage(formatRerecordUnavailableMessage("source-segment-invalid"));
+        return;
+      }
+
+      setActiveRecordingSegment(sheetId, sourceSegmentContext.segmentId);
+      setRerecordReady(sheetId, {
+        recordingId: sourceRecording.id,
+        sheetId,
+        segmentContext: sourceSegmentContext
+      });
+      setMessage(
+        `Practice Again ready for ${sourceSegmentContext.segmentName}.`
+      );
+    }
+
+    void hydratePracticeAgainSource().catch((error) => {
+      if (!cancelled) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Practice Again source could not be loaded.";
+
+        useSheetPracticeRecordingWorkflowStore
+          .getState()
+          .failRerecord(sheetId, message);
+        setErrorMessage(message);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    clearRerecordSource,
+    invalidateRerecordSource,
+    practiceSegmentService,
+    returnSegmentId,
+    setActiveRecordingSegment,
+    setRerecordReady,
+    sheetId,
+    sheetRecordingService,
+    sourceRecordingId
+  ]);
 
   useEffect(() => {
     if (

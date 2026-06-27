@@ -2,7 +2,7 @@ import {
   hasUsablePeaks,
   loadRecordingArtifactDetails
 } from "@/lib/recordings-review/artifact-service";
-import { isKnownRecordingAudioMime } from "@/lib/recordings-review/audio-mime";
+import { isPotentiallyDecodableAudioMime } from "@/lib/recordings-review/audio-mime";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type {
   RecordingArtifactDetails,
@@ -292,7 +292,7 @@ function createUnavailableSource({
 }
 
 function isSupportedAudioMime(mimeType: string) {
-  return isKnownRecordingAudioMime(mimeType);
+  return isPotentiallyDecodableAudioMime(mimeType);
 }
 
 function normalizeRequiredString(value: unknown) {

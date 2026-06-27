@@ -7,6 +7,7 @@ import {
   getAudioExportMimeInfo,
   getRecordingAudioExportEligibility
 } from "@/lib/recordings-review/audio-export";
+import { isPotentiallyDecodableAudioMime } from "@/lib/recordings-review/audio-mime";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 
 describe("recordings review audio export", () => {
@@ -125,26 +126,27 @@ describe("recordings review audio export", () => {
     expect(betaFilename.length).toBeLessThanOrEqual(145);
   });
 
-  it("maps known audio MIME types and falls back unknown audio MIME types to webm", () => {
+  it("maps only known export MIME types and rejects unknown audio fallbacks", () => {
     expect(getAudioExportExtension("audio/webm")).toBe("webm");
     expect(getAudioExportExtension("audio/webm;codecs=opus")).toBe("webm");
     expect(getAudioExportExtension("audio/ogg;codecs=opus")).toBe("ogg");
     expect(getAudioExportExtension("audio/mp4")).toBe("mp4");
     expect(getAudioExportExtension("audio/mpeg")).toBe("mp3");
     expect(getAudioExportExtension("audio/wav")).toBe("wav");
-    expect(getAudioExportExtension("audio/x-custom")).toBe("webm");
+    expect(getAudioExportExtension("audio/x-custom")).toBeNull();
+    expect(getAudioExportExtension("audio/flac")).toBeNull();
+    expect(getAudioExportExtension("audio/aiff")).toBeNull();
+    expect(getAudioExportExtension("audio/anything")).toBeNull();
     expect(getAudioExportExtension("application/octet-stream")).toBeNull();
     expect(getAudioExportMimeInfo("audio/webm;codecs=opus")).toEqual({
       mimeType: "audio/webm;codecs=opus",
       extension: "webm"
     });
-    expect(getAudioExportMimeInfo("audio/x-custom;codecs=opus")).toEqual({
-      mimeType: "audio/x-custom;codecs=opus",
-      extension: "webm"
-    });
+    expect(getAudioExportMimeInfo("audio/x-custom;codecs=opus")).toBeNull();
+    expect(isPotentiallyDecodableAudioMime("audio/x-custom;codecs=opus")).toBe(true);
   });
 
-  it("exports unknown audio MIME artifacts with the documented webm fallback", async () => {
+  it("rejects unknown audio MIME artifacts without using a webm fallback", async () => {
     const recording = createQuickRecording({
       id: "custom-audio",
       mimeType: "audio/x-custom;codecs=opus",
@@ -161,15 +163,11 @@ describe("recordings review audio export", () => {
     });
 
     expect(result).toMatchObject({
-      ok: true,
-      filename:
-        "metronome-quick-quick-take-20260621-090000-custom-audio.webm",
-      mimeType: "audio/x-custom;codecs=opus",
-      sizeBytes: 3
+      ok: false,
+      reason: "unsupported-mime",
+      message: "This recording artifact is not a supported audio file."
     });
-    expect(downloadBlob.mock.calls[0]?.[0].blob.type).toBe(
-      "audio/x-custom;codecs=opus"
-    );
+    expect(downloadBlob).not.toHaveBeenCalled();
   });
 
   it("returns clear unavailable results without attempting a download", async () => {
@@ -254,7 +252,7 @@ describe("recordings review audio export", () => {
       service.exportRecordingAudio({ recordingId: "mismatched-unknown-mime" })
     ).resolves.toMatchObject({
       ok: false,
-      reason: "invalid-artifact"
+      reason: "unsupported-mime"
     });
     expect(downloadBlob).not.toHaveBeenCalled();
   });
@@ -303,9 +301,8 @@ describe("recordings review audio export", () => {
         createQuickRecording({ mimeType: "audio/x-custom" })
       )
     ).toMatchObject({
-      available: true,
-      extension: "webm",
-      mimeType: "audio/x-custom"
+      available: false,
+      reason: "unsupported-mime"
     });
     expect(
       getRecordingAudioExportEligibility(

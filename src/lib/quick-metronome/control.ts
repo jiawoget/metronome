@@ -17,7 +17,8 @@ export const TIME_SIGNATURES = [
   "2/4",
   "3/4",
   "4/4",
-  "6/8"
+  "6/8",
+  "12/8"
 ] as const satisfies readonly TimeSignature[];
 export const SUBDIVISIONS = [
   "quarter",

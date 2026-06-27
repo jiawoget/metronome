@@ -556,6 +556,256 @@ describe("sheet practice controls segment recording context", () => {
     expect(recordingService.service.startCapture).toHaveBeenCalledOnce();
   });
 
+  it("hydrates Practice Again from a validated source recording after client repositories are available", async () => {
+    const grid = createTestGrid();
+    const segment = createTestSegment();
+    const expectedContext = createSheetRecordingSegmentContext(segment);
+    const segmentService = createPracticeSegmentService([segment]);
+    const recordingService = createInspectableSheetRecordingService({
+      initialRecordings: [
+        createReviewRecordingForControls({
+          id: "source-recording",
+          segmentContext: expectedContext
+        })
+      ],
+      latestRecordingId: "source-recording"
+    });
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        sourceRecordingId="source-recording"
+        returnSegmentId="segment-alpha"
+        createSheetRecordingService={() => recordingService.service}
+        sessionService={createIdleSessionService()}
+        measureGridService={createMeasureGridService(grid)}
+        practiceSegmentService={segmentService}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Practice Again ready for Opening phrase.")).toBeVisible();
+    });
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: "segment-alpha",
+      rerecord: {
+        status: "ready",
+        source: {
+          recordingId: "source-recording",
+          sheetId: "sheet-alpha",
+          segmentContext: expectedContext
+        }
+      }
+    });
+    expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+  });
+
+  it.each([
+    {
+      name: "missing source",
+      sourceRecordingId: "source-recording",
+      recordings: [],
+      expectedStatus: "invalid",
+      expectedReason: "source-recording-missing",
+      expectedMessage: "Practice Again source recording was not found."
+    },
+    {
+      name: "non-sheet quick source",
+      sourceRecordingId: "source-recording",
+      recordingOverrides: {
+        type: "quick" as const,
+        sheetId: null
+      },
+      expectedStatus: "invalid",
+      expectedReason: "source-not-sheet",
+      expectedMessage: "Practice Again source is not a sheet recording."
+    },
+    {
+      name: "sheet mismatch",
+      sourceRecordingId: "source-recording",
+      recordingOverrides: {
+        sheetId: "sheet-bravo"
+      },
+      expectedStatus: "invalid",
+      expectedReason: "sheet-mismatch",
+      expectedMessage: "Practice Again source belongs to a different sheet."
+    },
+    {
+      name: "missing segment",
+      sourceRecordingId: "source-recording",
+      segments: [],
+      expectedStatus: "invalid",
+      expectedReason: "source-segment-missing",
+      expectedMessage: "Practice Again source segment no longer exists."
+    },
+    {
+      name: "no segment context",
+      sourceRecordingId: "source-recording",
+      recordingOverrides: {
+        segmentContext: null
+      },
+      expectedStatus: "unavailable",
+      expectedReason: "no-segment-context",
+      expectedMessage: "Practice Again opened the sheet, but this take is not linked to a segment."
+    },
+    {
+      name: "blank source id",
+      sourceRecordingId: "   ",
+      expectedStatus: "unavailable",
+      expectedReason: "no-source-recording"
+    },
+    {
+      name: "malformed source id",
+      sourceRecordingId: "bad/id",
+      recordings: [],
+      expectedStatus: "invalid",
+      expectedReason: "source-recording-missing",
+      expectedMessage: "Practice Again source recording was not found."
+    },
+    {
+      name: "return segment mismatch",
+      sourceRecordingId: "source-recording",
+      returnSegmentId: "segment-beta",
+      segments: [
+        createTestSegment(),
+        createTestSegment({
+          id: "segment-beta",
+          name: "Bridge",
+          range: {
+            startMeasure: 13,
+            endMeasure: 16
+          }
+        })
+      ],
+      expectedStatus: "invalid",
+      expectedReason: "selection-changed",
+      expectedMessage: "Record Again is only available for the original segment."
+    },
+    {
+      name: "stored segment context mismatch",
+      sourceRecordingId: "source-recording",
+      liveSegmentOverrides: {
+        range: {
+          startMeasure: 6,
+          endMeasure: 12
+        }
+      },
+      expectedStatus: "invalid",
+      expectedReason: "source-segment-invalid",
+      expectedMessage: "Practice Again source segment no longer matches this sheet."
+    }
+  ])(
+    "keeps Record again unavailable for Practice Again invalid source: $name",
+    async ({
+      sourceRecordingId,
+      returnSegmentId,
+      recordings,
+      recordingOverrides,
+      segments,
+      liveSegmentOverrides,
+      expectedStatus,
+      expectedReason,
+      expectedMessage
+    }) => {
+      const grid = createTestGrid();
+      const sourceSegment = createTestSegment();
+      const sourceContext = createSheetRecordingSegmentContext(sourceSegment);
+      const liveSegment = createTestSegment(liveSegmentOverrides ?? {});
+      const initialRecordings =
+        recordings ??
+        [
+          createReviewRecordingForControls({
+            id: "source-recording",
+            segmentContext: sourceContext,
+            ...recordingOverrides
+          })
+        ];
+      const recordingService = createInspectableSheetRecordingService({
+        initialRecordings
+      });
+
+      render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={72}
+          defaultTimeSignature="4/4"
+          sourceRecordingId={sourceRecordingId}
+          returnSegmentId={returnSegmentId ?? "segment-alpha"}
+          createSheetRecordingService={() => recordingService.service}
+          sessionService={createIdleSessionService()}
+          measureGridService={createMeasureGridService(grid)}
+          practiceSegmentService={createPracticeSegmentService(
+            segments ?? [liveSegment]
+          )}
+        />
+      );
+
+      if (expectedMessage) {
+        await waitFor(() => {
+          expect(screen.getByText(expectedMessage)).toBeVisible();
+        });
+      }
+
+      await waitFor(() => {
+        expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+          status: expectedStatus,
+          source: null,
+          unavailableReason: expectedReason
+        });
+      });
+      expect(screen.queryByRole("button", { name: "Record again" })).not.toBeInTheDocument();
+    }
+  );
+
+  it("keeps Record again unavailable when Practice Again source segment context is invalid", async () => {
+    const grid = createTestGrid();
+    const sourceSegment = createTestSegment();
+    const changedSegment = createTestSegment({
+      range: {
+        startMeasure: 6,
+        endMeasure: 12
+      }
+    });
+    const recordingService = createInspectableSheetRecordingService({
+      initialRecordings: [
+        createReviewRecordingForControls({
+          id: "source-recording",
+          segmentContext: createSheetRecordingSegmentContext(sourceSegment)
+        })
+      ]
+    });
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        sourceRecordingId="source-recording"
+        returnSegmentId="segment-alpha"
+        createSheetRecordingService={() => recordingService.service}
+        sessionService={createIdleSessionService()}
+        measureGridService={createMeasureGridService(grid)}
+        practiceSegmentService={createPracticeSegmentService([changedSegment])}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Practice Again source segment no longer matches this sheet.")).toBeVisible();
+    });
+    expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+      status: "invalid",
+      source: null,
+      unavailableReason: "source-segment-invalid"
+    });
+    expect(screen.queryByRole("button", { name: "Record again" })).not.toBeInTheDocument();
+  });
+
   it("prevents rapid double-start for Record again", async () => {
     const user = userEvent.setup();
     const grid = createTestGrid();

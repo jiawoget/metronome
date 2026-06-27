@@ -189,7 +189,7 @@ describe("sheet practice recording workflow store", () => {
     expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
       status: "invalid",
       source: null,
-      unavailableReason: "sheet-mismatch"
+      unavailableReason: "source-not-sheet"
     });
 
     store.finishRecording("sheet-alpha", {

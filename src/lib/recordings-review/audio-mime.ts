@@ -8,23 +8,22 @@ const AUDIO_EXTENSION_BY_BASE_TYPE = new Map<string, string>([
   ["audio/aac", "aac"]
 ]);
 
-export type SupportedRecordingAudioMimeInfo = {
+export type ExportAudioMimeInfo = {
   mimeType: string;
   baseMimeType: string;
   canonicalBaseMimeType: string;
   extension: string;
-  isFallback: boolean;
 };
 
-export function getSupportedRecordingAudioMimeInfo(
+export function getKnownExportAudioMimeInfo(
   mimeType: string
-): SupportedRecordingAudioMimeInfo | null {
+): ExportAudioMimeInfo | null {
   const normalizedMimeType = normalizeMimeType(mimeType);
   const baseMimeType = getBaseMimeType(normalizedMimeType);
   const canonicalBaseMimeType = getCanonicalBaseMimeType(baseMimeType);
   const extension = AUDIO_EXTENSION_BY_BASE_TYPE.get(baseMimeType);
 
-  if (!extension && !isAudioMimeType(baseMimeType)) {
+  if (!extension) {
     return null;
   }
 
@@ -32,20 +31,19 @@ export function getSupportedRecordingAudioMimeInfo(
     mimeType: normalizedMimeType,
     baseMimeType,
     canonicalBaseMimeType,
-    extension: extension ?? "webm",
-    isFallback: !extension
+    extension
   };
 }
 
-export function isSupportedRecordingAudioMime(mimeType: string) {
-  return getSupportedRecordingAudioMimeInfo(mimeType) !== null;
+export function isKnownExportAudioMime(mimeType: string) {
+  return getKnownExportAudioMimeInfo(mimeType) !== null;
 }
 
-export function isKnownRecordingAudioMime(mimeType: string) {
+export function isPotentiallyDecodableAudioMime(mimeType: string) {
   const normalizedMimeType = normalizeMimeType(mimeType);
   const baseMimeType = getBaseMimeType(normalizedMimeType);
 
-  return AUDIO_EXTENSION_BY_BASE_TYPE.has(baseMimeType);
+  return isAudioMimeType(baseMimeType);
 }
 
 export function getDataUrlMimeType(dataUrlMetadata: string) {
@@ -61,15 +59,15 @@ export function getDataUrlMimeType(dataUrlMetadata: string) {
   return normalizeMimeType([mimeType, ...mimeParameters].join(";"));
 }
 
-export function hasMatchingSupportedRecordingAudioMime({
+export function hasMatchingKnownExportAudioMime({
   expectedMimeType,
   actualMimeType
 }: {
   expectedMimeType: string;
   actualMimeType: string;
 }) {
-  const expected = getSupportedRecordingAudioMimeInfo(expectedMimeType);
-  const actual = getSupportedRecordingAudioMimeInfo(actualMimeType);
+  const expected = getKnownExportAudioMimeInfo(expectedMimeType);
+  const actual = getKnownExportAudioMimeInfo(actualMimeType);
 
   return (
     expected !== null &&
