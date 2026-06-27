@@ -133,14 +133,6 @@ export async function loadWaveformComparisonSource(
   try {
     const artifactDetails = await loadRecordingArtifactDetails(recording);
 
-    if (Array.isArray(recording.trustedPeaks) && recording.trustedPeaks.length === 0) {
-      return createUnavailableSource({
-        recordingId: recording.id,
-        recording,
-        reason: "invalid-peaks"
-      });
-    }
-
     if (!hasUsablePeaks(artifactDetails.peaks)) {
       return createUnavailableSource({
         recordingId: recording.id,

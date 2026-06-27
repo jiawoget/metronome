@@ -169,9 +169,36 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   await bpmInput.press("Enter");
   await expect(page.getByText(/Tick interval 500 ms/i)).toBeVisible();
 
+  await expect(page.getByLabel("Time signature").locator("option")).toHaveText([
+    "2/4",
+    "3/4",
+    "4/4",
+    "6/8",
+    "12/8"
+  ]);
+  await expect(page.getByLabel("Countdown").locator("option")).toHaveText([
+    "Off",
+    "1 bar",
+    "2 bars"
+  ]);
+  await page.getByLabel("Time signature").selectOption("12/8");
+  await expect(page.getByText(/Tick interval 250 ms/i)).toBeVisible();
+  await expect(
+    page.getByLabel("Countdown").locator("option")
+  ).toHaveText(["Off", "1 bar", "2 bars"]);
+  const countdownOptionValues = await page
+    .getByLabel("Countdown")
+    .locator("option")
+    .evaluateAll((options) =>
+      options.map((option) => (option as HTMLOptionElement).value)
+    );
+
+  expect(countdownOptionValues).toEqual(["0", "12", "24"]);
+  await page.getByLabel("Countdown").selectOption("24");
   await page.getByLabel("Time signature").selectOption("3/4");
+  await expect(page.getByLabel("Countdown")).toHaveValue("6");
+  await page.getByLabel("Countdown").selectOption("3");
   await page.getByLabel("Subdivision").selectOption("eighth");
-  await page.getByLabel("Countdown").selectOption("4");
   await page.getByRole("button", { name: "Every beat" }).click();
   await expect(
     page.getByRole("button", { name: "Every beat" })

@@ -20,7 +20,7 @@ export type MeasureRangeMs = {
   endMs: number;
 };
 
-const practiceTimeSignatureSchema = z.enum(["2/4", "3/4", "4/4", "6/8"]);
+const practiceTimeSignatureSchema = z.enum(["2/4", "3/4", "4/4", "6/8", "12/8"]);
 
 const measureNumberSchema = z.number().finite().int().min(1);
 

@@ -23,6 +23,7 @@ type SheetPracticeSessionService = Pick<
 export type SheetPracticeRecordingService = Pick<
   SheetRecordingService,
   | "isRecording"
+  | "getRecording"
   | "startCapture"
   | "stopAndSave"
   | "discardCapture"

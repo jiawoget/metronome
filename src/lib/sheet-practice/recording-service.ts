@@ -115,6 +115,10 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
     return this.captureService.isRecording;
   }
 
+  getRecording(recordingId: string) {
+    return recordingHistoryRepository.getRecording(recordingId);
+  }
+
   getLatestSheetRecording(sheetId: string) {
     return recordingHistoryRepository
       .getSnapshot()

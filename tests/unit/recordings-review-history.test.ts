@@ -540,15 +540,23 @@ describe("recordings review artifact helpers", () => {
       samples: new Float32Array([0, 0.5, -1, 0.25])
     });
 
-    const details = await loadRecordingArtifactDetails({
+    const missingDetails = await loadRecordingArtifactDetails({
       ...sheetRecording,
       durationMs: 1_000,
       trustedPeaks: undefined
     });
+    const emptyDetails = await loadRecordingArtifactDetails({
+      ...sheetRecording,
+      durationMs: 1_000,
+      trustedPeaks: []
+    });
 
-    expect(details.source).toBe("decoded-audio");
-    expect(details.peaks).toContain(1);
-    expect(details.durationWarning).toBeNull();
+    expect(missingDetails.source).toBe("decoded-audio");
+    expect(missingDetails.peaks).toContain(1);
+    expect(missingDetails.durationWarning).toBeNull();
+    expect(emptyDetails.source).toBe("decoded-audio");
+    expect(emptyDetails.peaks).toContain(1);
+    expect(emptyDetails.durationWarning).toBeNull();
   });
 
   it("rejects trusted peaks with missing audio", async () => {

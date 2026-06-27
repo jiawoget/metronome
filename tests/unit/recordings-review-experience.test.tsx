@@ -72,7 +72,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     await expect(screen.findByTestId("recordings-list")).resolves.toBeVisible();
 
     const segmentGroup = screen.getByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
     expect(segmentGroup).toHaveTextContent("Segment take history");
     expect(segmentGroup).toHaveTextContent("Alpha Etude");
@@ -246,7 +246,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     await user.type(screen.getByRole("textbox", { name: "Search recordings" }), "bridge");
 
     expect(
-      screen.getByTestId("take-group-sheet:sheet-alpha:segment:segment-bridge")
+      screen.getByTestId("take-group-sheet:sheet-alpha:segment:id:segment-bridge")
     ).toBeVisible();
     expect(
       screen.queryByTestId("take-group-sheet:sheet-alpha:segment:none")
@@ -258,7 +258,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     expect(screen.getByTestId("quick-recordings-section")).toBeVisible();
     expect(
-      screen.queryByTestId("take-group-sheet:sheet-alpha:segment:segment-bridge")
+      screen.queryByTestId("take-group-sheet:sheet-alpha:segment:id:segment-bridge")
     ).not.toBeInTheDocument();
 
     await user.type(screen.getByRole("textbox", { name: "Search recordings" }), "no match");
@@ -304,7 +304,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     await user.selectOptions(screen.getByLabelText("Tag filter"), "Warmup");
 
     expect(
-      screen.getByTestId("take-group-sheet:sheet-alpha:segment:segment-bridge")
+      screen.getByTestId("take-group-sheet:sheet-alpha:segment:id:segment-bridge")
     ).toBeVisible();
     expect(screen.getByTestId("recording-row-sheet-bridge-new")).toBeVisible();
     expect(screen.queryByTestId("recording-row-sheet-bridge-old")).not.toBeInTheDocument();
@@ -948,7 +948,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
 
     await user.click(
@@ -992,7 +992,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
 
     await user.click(
@@ -1041,7 +1041,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
     const oldBestControl = within(segmentGroup).getByTestId(
       "best-take-control-sheet-bridge-old"
@@ -1123,7 +1123,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
       ...createMixedSnapshot(),
       takeSelections: [
         {
-          groupId: "sheet:sheet-alpha:segment:segment-bridge",
+          groupId: "sheet:sheet-alpha:segment:id:segment-bridge",
           sheetId: "sheet-alpha",
           segmentId: "segment-bridge",
           bestRecordingId: "missing-best",
@@ -1136,7 +1136,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
 
     expect(segmentGroup).toHaveTextContent("Best: none");
@@ -1161,13 +1161,13 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     expect(screen.getByTestId("quick-recordings-section")).toBeVisible();
     expect(
-      screen.queryByTestId("take-group-sheet:sheet-alpha:segment:segment-bridge")
+      screen.queryByTestId("take-group-sheet:sheet-alpha:segment:id:segment-bridge")
     ).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Type filter"), "sheet");
 
     const restoredSegmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
 
     expect(restoredSegmentGroup).toHaveTextContent("Best: Bridge take 1");
@@ -1230,7 +1230,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
 
     await user.click(
@@ -1261,7 +1261,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
     const activeControl = within(segmentGroup).getByTestId(
       "active-take-control-sheet-bridge-old"
@@ -1287,11 +1287,11 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
 
     expect(
-      within(segmentGroup).getByTestId("waveform-comparison-sheet:sheet-alpha:segment:segment-bridge")
+      within(segmentGroup).getByTestId("waveform-comparison-sheet:sheet-alpha:segment:id:segment-bridge")
     ).toHaveTextContent("Select takes to compare");
     expect(
       within(segmentGroup).getByTestId("compare-take-control-sheet-bridge-new")
@@ -1339,7 +1339,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
 
     await user.click(
@@ -1350,7 +1350,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
       expect(loadWaveformComparisonSourcesForGroupMock).toHaveBeenLastCalledWith(
         expect.objectContaining({
           group: expect.objectContaining({
-            groupId: "sheet:sheet-alpha:segment:segment-bridge"
+            groupId: "sheet:sheet-alpha:segment:id:segment-bridge"
           }),
           recordingIds: ["sheet-bridge-old"]
         })
@@ -1427,7 +1427,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
     const oldCompareControl = within(segmentGroup).getByTestId(
       "compare-take-control-sheet-bridge-old"
@@ -1523,7 +1523,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
     const oldCompareControl = within(segmentGroup).getByTestId(
       "compare-take-control-sheet-bridge-old"
@@ -1593,7 +1593,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
     const oldCompareControl = within(segmentGroup).getByTestId(
       "compare-take-control-sheet-bridge-old"
@@ -1690,7 +1690,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
 
     await user.click(
@@ -1755,7 +1755,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
     const oldCompareControl = within(segmentGroup).getByTestId(
       "compare-take-control-sheet-bridge-old"
@@ -1814,7 +1814,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const { unmount } = render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
 
     await user.click(
@@ -1860,12 +1860,12 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const restoredSegmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
 
     expect(
       within(restoredSegmentGroup).getByTestId(
-        "waveform-comparison-sheet:sheet-alpha:segment:segment-bridge"
+        "waveform-comparison-sheet:sheet-alpha:segment:id:segment-bridge"
       )
     ).toHaveTextContent("Select takes to compare");
     expect(
@@ -1884,7 +1884,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     render(<RecordingsReviewExperience />);
 
     const segmentGroup = await screen.findByTestId(
-      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+      "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
     );
 
     await user.click(
@@ -2077,7 +2077,7 @@ function createComparisonResult(
     allReady: sources.length > 0 && unavailableSources.length === 0,
     readyCount: readySources.length,
     requestedCount: sources.length,
-    groupId: "sheet:sheet-alpha:segment:segment-bridge",
+    groupId: "sheet:sheet-alpha:segment:id:segment-bridge",
     sheetId: "sheet-alpha",
     segmentId: "segment-bridge"
   };

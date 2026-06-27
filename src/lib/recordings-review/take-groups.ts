@@ -203,7 +203,7 @@ export function createRecordingTakeGroupId({
   segmentId: string | null;
 }) {
   return `sheet:${encodeURIComponent(sheetId)}:segment:${
-    segmentId === null ? "none" : encodeURIComponent(segmentId)
+    segmentId === null ? "none" : `id:${encodeURIComponent(segmentId)}`
   }`;
 }
 

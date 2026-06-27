@@ -29,7 +29,11 @@ import {
 import { PracticeStatusPanel } from "@/components/sheet-practice/controls/practice-status-panel";
 import { TransportActionsPanel } from "@/components/sheet-practice/controls/transport-actions-panel";
 import type { SheetPracticeControlsProps } from "@/components/sheet-practice/controls/types";
-import { useSheetPracticeRecordingWorkflowStore } from "@/stores/sheet-practice-recording-workflow-store";
+import {
+  type SheetPracticeRerecordSource,
+  type SheetPracticeRerecordUnavailableReason,
+  useSheetPracticeRecordingWorkflowStore
+} from "@/stores/sheet-practice-recording-workflow-store";
 
 const SHEET_RECORDING_HARNESS_EVENT =
   "sheet-practice-controls:set-recording-harness-active";
@@ -56,6 +60,37 @@ function segmentContextsMatch(
   right: SheetRecordingSegmentContext
 ) {
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function getRerecordSourceInvalidReason({
+  recording,
+  sheetId,
+  source
+}: {
+  recording: ReviewRecording | null;
+  sheetId: string;
+  source: SheetPracticeRerecordSource;
+}): SheetPracticeRerecordUnavailableReason | null {
+  if (!recording) {
+    return "source-recording-missing";
+  }
+
+  if (
+    recording.type !== "sheet" ||
+    recording.sheetId !== sheetId ||
+    recording.sheetId !== source.sheetId
+  ) {
+    return "sheet-mismatch";
+  }
+
+  if (
+    !recording.segmentContext ||
+    !segmentContextsMatch(recording.segmentContext, source.segmentContext)
+  ) {
+    return "source-segment-invalid";
+  }
+
+  return null;
 }
 
 export function SheetPracticeControls({
@@ -212,22 +247,33 @@ export function SheetPracticeControls({
     if (
       activeRecordingWorkflowSheetId !== sheetId ||
       rerecordStatus !== "ready" ||
+      !rerecordSource ||
       !rerecordSourceRecordingId
     ) {
       return;
     }
 
-    if (latestSheetRecording?.id === rerecordSourceRecordingId) {
+    const sourceRecording = sheetRecordingService.getRecording(
+      rerecordSourceRecordingId
+    );
+    const invalidReason = getRerecordSourceInvalidReason({
+      recording: sourceRecording,
+      sheetId,
+      source: rerecordSource
+    });
+
+    if (!invalidReason) {
       return;
     }
 
-    invalidateRerecordSource(sheetId, "source-recording-missing");
+    invalidateRerecordSource(sheetId, invalidReason);
   }, [
     activeRecordingWorkflowSheetId,
     invalidateRerecordSource,
-    latestSheetRecording?.id,
+    rerecordSource,
     rerecordSourceRecordingId,
     rerecordStatus,
+    sheetRecordingService,
     sheetId
   ]);
 
@@ -383,6 +429,18 @@ export function SheetPracticeControls({
       workflowState.activeSegmentId !== source.segmentContext.segmentId
     ) {
       invalidateRerecordSource(sheetId, "selection-changed");
+      throw new Error("Record again is not available for this segment.");
+    }
+
+    const sourceRecording = sheetRecordingService.getRecording(source.recordingId);
+    const invalidReason = getRerecordSourceInvalidReason({
+      recording: sourceRecording,
+      sheetId,
+      source
+    });
+
+    if (invalidReason) {
+      invalidateRerecordSource(sheetId, invalidReason);
       throw new Error("Record again is not available for this segment.");
     }
 

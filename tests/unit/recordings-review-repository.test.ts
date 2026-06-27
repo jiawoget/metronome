@@ -255,7 +255,7 @@ describe("recording history repository", () => {
     recordingHistoryRepository.setActiveTake(noSegmentGroup, "sheet-whole-legacy");
 
     expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({
-      groupId: "sheet:sheet-alpha:segment:segment-alpha",
+      groupId: "sheet:sheet-alpha:segment:id:segment-alpha",
       bestRecordingId: "sheet-segment-old",
       activeRecordingId: "sheet-segment-new",
       bestRecording: {
@@ -361,7 +361,7 @@ describe("recording history repository", () => {
     const seededSnapshot = createTakeSelectionSnapshot();
     const duplicateEntries = [
       {
-        groupId: "sheet:sheet-alpha:segment:segment-alpha",
+        groupId: "sheet:sheet-alpha:segment:id:segment-alpha",
         sheetId: "sheet-alpha",
         segmentId: "segment-alpha",
         bestRecordingId: "sheet-segment-old",
@@ -369,7 +369,7 @@ describe("recording history repository", () => {
         updatedAt: "2026-06-21T11:00:00.000Z"
       },
       {
-        groupId: "sheet:sheet-alpha:segment:segment-alpha",
+        groupId: "sheet:sheet-alpha:segment:id:segment-alpha",
         sheetId: "sheet-alpha",
         segmentId: "segment-alpha",
         bestRecordingId: "missing-recording",
@@ -393,7 +393,7 @@ describe("recording history repository", () => {
         updatedAt: "2026-06-21T09:00:00.000Z"
       },
       {
-        groupId: "sheet:sheet-alpha:segment:segment-alpha",
+        groupId: "sheet:sheet-alpha:segment:id:segment-alpha",
         sheetId: "sheet-alpha",
         segmentId: "segment-alpha",
         bestRecordingId: null,
@@ -414,20 +414,20 @@ describe("recording history repository", () => {
 
     expect(recordingHistoryRepository.getTakeSelections()).toEqual([
       {
+        groupId: "sheet:sheet-alpha:segment:id:segment-alpha",
+        sheetId: "sheet-alpha",
+        segmentId: "segment-alpha",
+        bestRecordingId: "missing-recording",
+        activeRecordingId: "sheet-segment-new",
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      },
+      {
         groupId: "sheet:sheet-alpha:segment:none",
         sheetId: "sheet-alpha",
         segmentId: null,
         bestRecordingId: "missing-recording",
         activeRecordingId: null,
         updatedAt: "2026-06-21T10:00:00.000Z"
-      },
-      {
-        groupId: "sheet:sheet-alpha:segment:segment-alpha",
-        sheetId: "sheet-alpha",
-        segmentId: "segment-alpha",
-        bestRecordingId: "missing-recording",
-        activeRecordingId: "sheet-segment-new",
-        updatedAt: "2026-06-21T12:00:00.000Z"
       }
     ]);
     expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({

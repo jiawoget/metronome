@@ -210,17 +210,18 @@ function unavailableResult({
   };
 }
 
-function getAudioExportMimeInfo(mimeType: string) {
+export function getAudioExportMimeInfo(mimeType: string) {
   const normalizedMimeType = mimeType.trim().toLowerCase();
   const baseMimeType = normalizedMimeType.split(";")[0]?.trim() ?? "";
+  const extension = MIME_EXTENSION_BY_BASE_TYPE.get(baseMimeType);
 
-  if (!baseMimeType.startsWith("audio/")) {
+  if (!extension) {
     return null;
   }
 
   return {
     mimeType: normalizedMimeType,
-    extension: MIME_EXTENSION_BY_BASE_TYPE.get(baseMimeType) ?? "webm"
+    extension
   };
 }
 

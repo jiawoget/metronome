@@ -99,10 +99,10 @@ describe("recordings review take grouping", () => {
     ]);
 
     expect(grouping.takeGroups.map((group) => group.groupId)).toEqual([
-      "sheet:sheet-alpha:segment:segment-a",
+      "sheet:sheet-alpha:segment:id:segment-a",
       "sheet:sheet-alpha:segment:none",
-      "sheet:sheet-beta:segment:segment-a",
-      "sheet:sheet-alpha:segment:segment-b"
+      "sheet:sheet-beta:segment:id:segment-a",
+      "sheet:sheet-alpha:segment:id:segment-b"
     ]);
 
     expect(grouping.takeGroups[0]).toMatchObject({
@@ -175,6 +175,39 @@ describe("recordings review take grouping", () => {
       "empty-segment-id",
       "explicit-null-segment",
       "legacy-missing-segment"
+    ]);
+  });
+
+  it("does not collide a real segment id named none with the no-segment bucket", () => {
+    const grouping = groupRecordingsByTake([
+      createSheetRecording({
+        id: "real-none-segment",
+        createdAt: "2026-06-21T11:00:00.000Z",
+        segmentContext: createSegmentContext({
+          segmentId: "none",
+          segmentName: "Segment named none"
+        })
+      }),
+      createSheetRecording({
+        id: "whole-sheet",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        segmentContext: null
+      })
+    ]);
+
+    expect(grouping.takeGroups.map((group) => group.groupId)).toEqual([
+      "sheet:sheet-alpha:segment:none",
+      "sheet:sheet-alpha:segment:id:none"
+    ]);
+    expect(grouping.takeGroups.map((group) => group.kind)).toEqual([
+      "sheet-no-segment",
+      "sheet-segment"
+    ]);
+    expect(grouping.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
+      "whole-sheet"
+    ]);
+    expect(grouping.takeGroups[1].recordings.map((recording) => recording.id)).toEqual([
+      "real-none-segment"
     ]);
   });
 
@@ -306,9 +339,9 @@ describe("recordings review take grouping", () => {
     ]);
 
     expect(firstOrder.takeGroups.map((group) => group.groupId)).toEqual([
-      "sheet:sheet-a:segment:segment-a",
-      "sheet:sheet-a:segment:segment-b",
-      "sheet:sheet-b:segment:segment-a"
+      "sheet:sheet-a:segment:id:segment-a",
+      "sheet:sheet-a:segment:id:segment-b",
+      "sheet:sheet-b:segment:id:segment-a"
     ]);
     expect(firstOrder.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
       "sheet-a-segment-a-1",
@@ -389,9 +422,9 @@ describe("recordings review take grouping", () => {
     ]);
 
     expect(firstOrder.takeGroups.map((group) => group.groupId)).toEqual([
-      "sheet:sheet-a:segment:segment-a",
-      "sheet:sheet-a:segment:segment-b",
-      "sheet:sheet-b:segment:segment-a"
+      "sheet:sheet-a:segment:id:segment-a",
+      "sheet:sheet-a:segment:id:segment-b",
+      "sheet:sheet-b:segment:id:segment-a"
     ]);
     expect(firstOrder.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
       "sheet-a-segment-a-invalid-1",

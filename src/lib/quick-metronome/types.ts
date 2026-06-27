@@ -7,7 +7,7 @@ export const MIN_BPM = 30;
 export const MAX_BPM = 240;
 export const DEFAULT_BPM = 96;
 
-export type TimeSignature = "2/4" | "3/4" | "4/4" | "6/8";
+export type TimeSignature = "2/4" | "3/4" | "4/4" | "6/8" | "12/8";
 export type Subdivision = "quarter" | "eighth" | "triplet" | "sixteenth";
 export type AccentMode = "downbeat" | "every-beat" | "off";
 

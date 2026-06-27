@@ -8,7 +8,9 @@ import type { PracticeTimeSignature } from "@/domain/practice";
 import { createPracticeSessionService, type PracticeSessionSheetGateway } from "@/services/practice-session";
 
 function toPracticeTimeSignature(value: string): PracticeTimeSignature | null {
-  return value === "2/4" || value === "3/4" || value === "4/4" || value === "6/8" ? value : null;
+  return value === "2/4" || value === "3/4" || value === "4/4" || value === "6/8" || value === "12/8"
+    ? value
+    : null;
 }
 
 const sheetGateway: PracticeSessionSheetGateway = {

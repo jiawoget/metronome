@@ -71,6 +71,21 @@ describe("measure grid domain", () => {
     });
   });
 
+  it("uses the shared denominator-aware timing policy for 12/8", () => {
+    const grid: MeasureGrid = {
+      bpm: 120,
+      timeSignature: "12/8",
+      pickupBeats: 0,
+      measureOneOffsetMs: 0
+    };
+
+    expect(getMeasureDurationMs(grid)).toBe(3_000);
+    expect(getMeasureRangeMs(grid, { startMeasure: 1, endMeasure: 2 })).toEqual({
+      startMs: 0,
+      endMs: 6_000
+    });
+  });
+
   it("stores pickup beats without shifting numbered measure 1 away from measureOneOffsetMs", () => {
     const grid: MeasureGrid = {
       bpm: 120,

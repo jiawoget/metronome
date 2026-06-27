@@ -4,7 +4,7 @@ type PracticeSourceType = "quick" | "sheet";
 
 export type PracticeActivityTrigger = "metronome" | "recording" | "reference";
 
-export type PracticeTimeSignature = "2/4" | "3/4" | "4/4" | "6/8";
+export type PracticeTimeSignature = "2/4" | "3/4" | "4/4" | "6/8" | "12/8";
 
 export type PracticeSession = {
   id: string;

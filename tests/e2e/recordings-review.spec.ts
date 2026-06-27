@@ -481,7 +481,7 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await expect(page.getByRole("heading", { name: "Take History" })).toBeVisible();
 
   const alphaBridgeGroup = page.getByTestId(
-    "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
   );
   await expect(alphaBridgeGroup).toContainText("Segment take history");
   await expect(alphaBridgeGroup).toContainText("Alpha Etude");
@@ -542,7 +542,7 @@ test("recordings review renders grouped take history, filters it, deletes a take
     "/sheet-practice?recordingId=sheet-alpha-whole-null&sheetId=sheet-alpha"
   );
   await expect(
-    page.getByTestId("take-group-sheet:sheet-beta:segment:segment-bridge")
+    page.getByTestId("take-group-sheet:sheet-beta:segment:id:segment-bridge")
   ).toContainText("Beta Study");
   await expect(page.getByTestId("quick-recordings-section")).toContainText(
     "Grouped quick take"
@@ -900,7 +900,7 @@ test("recordings review organizes recordings with tags favorites and archive rec
   await page.getByTestId("details-archive-control-org-sheet-old").click();
   await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
   await expect(
-    page.getByTestId("take-group-sheet:sheet-org:segment:segment-org")
+    page.getByTestId("take-group-sheet:sheet-org:segment:id:segment-org")
   ).toContainText("1 take");
   await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
 
@@ -1302,7 +1302,7 @@ test("recordings review compares selected sheet takes with waveform evidence", a
   await page.reload();
 
   const group = page.getByTestId(
-    "take-group-sheet:sheet-wave:segment:segment-wave"
+    "take-group-sheet:sheet-wave:segment:id:segment-wave"
   );
   await expect(group).toBeVisible();
   await expect(group.getByTestId("take-history-summary")).toContainText(
@@ -1534,7 +1534,7 @@ test("recordings review compares selected sheet takes with waveform evidence", a
 
   await page.reload();
   const restoredGroup = page.getByTestId(
-    "take-group-sheet:sheet-wave:segment:segment-wave"
+    "take-group-sheet:sheet-wave:segment:id:segment-wave"
   );
   await expect(restoredGroup).toContainText("Select takes to compare");
   await expect(
@@ -1718,7 +1718,7 @@ test("recordings review returns to sheet practice with segment validation and st
   await page.goto("/recordings");
 
   const segmentGroup = page.getByTestId(
-    `take-group-sheet:${sheetId}:segment:${segmentId}`
+    `take-group-sheet:${sheetId}:segment:id:${segmentId}`
   );
   await expect(segmentGroup).toBeVisible();
   await expect(
@@ -1890,7 +1890,7 @@ test("recordings review keeps summary chips readable at a narrow viewport", asyn
   await page.reload();
 
   const group = page.getByTestId(
-    "take-group-sheet:sheet-readability:segment:segment-readability"
+    "take-group-sheet:sheet-readability:segment:id:segment-readability"
   );
   const summary = group.getByTestId("take-history-summary");
 

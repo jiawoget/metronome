@@ -59,6 +59,7 @@ export type SaveSheetRecordingResult = {
 
 export type SheetRecordingService = {
   readonly isRecording: boolean;
+  getRecording: (recordingId: string) => ReviewRecording | null;
   getLatestSheetRecording: (sheetId: string) => ReviewRecording | null;
   subscribe: (listener: () => void) => () => void;
   startCapture: () => Promise<void>;

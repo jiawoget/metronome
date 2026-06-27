@@ -126,7 +126,6 @@ describe("waveform comparison source boundary", () => {
 
   it.each([
     { trustedPeaks: [0, 0], label: "all-zero" },
-    { trustedPeaks: [], label: "empty" },
     { trustedPeaks: [Number.NaN, 0.5], label: "NaN" },
     { trustedPeaks: [Number.POSITIVE_INFINITY, 0.5], label: "infinite" }
   ])("returns invalid-peaks for $label trusted peak data", async ({ trustedPeaks }) => {
@@ -139,6 +138,26 @@ describe("waveform comparison source boundary", () => {
       loadWaveformComparisonSource(createSheetRecording({ trustedPeaks })),
       "invalid-peaks"
     );
+  });
+
+  it("falls back to decoded audio when trusted peaks are empty", async () => {
+    installAudioContextMock({
+      durationSeconds: 12,
+      samples: new Float32Array([0, 0.25, -0.5, 1])
+    });
+
+    const source = await loadWaveformComparisonSource(
+      createSheetRecording({
+        trustedPeaks: []
+      })
+    );
+
+    expect(source).toMatchObject({
+      status: "ready",
+      source: "decoded-audio",
+      durationMs: 12_000
+    });
+    expect(source.status === "ready" ? source.peaks : []).toContain(1);
   });
 
   it("does not trust peaks without a local artifact and maps decode failures explicitly", async () => {
@@ -332,7 +351,7 @@ describe("waveform comparison source boundary", () => {
     });
 
     expect(segmentResult).toMatchObject({
-      groupId: "sheet:sheet-alpha:segment:segment-alpha",
+      groupId: "sheet:sheet-alpha:segment:id:segment-alpha",
       sheetId: "sheet-alpha",
       segmentId: "segment-alpha",
       readyCount: 1,
