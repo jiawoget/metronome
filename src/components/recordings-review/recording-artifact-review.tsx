@@ -1,12 +1,13 @@
 "use client";
 
-/* eslint-disable react-hooks/refs */
-
 import { AlertTriangle, Pause, Play } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   useCallback,
   useEffect,
+  useRef,
+  type MouseEvent as ReactMouseEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent
 } from "react";
 
@@ -108,8 +109,10 @@ function RecordingArtifactReviewContent({
 }: Omit<RecordingArtifactReviewProps, "controller"> & {
   controller: RecordingArtifactReviewController;
 }) {
-  const artifactState = controller.state;
+  const reviewState = controller.state;
   const { playbackState, isPlaybackReady, currentTimeMs } = controller;
+  const ignoreNextClickRef = useRef(false);
+  const canUsePlayback = reviewState.status === "ready" && isPlaybackReady;
 
   useEffect(() => {
     onPlaybackControlsChange?.(
@@ -146,7 +149,7 @@ function RecordingArtifactReviewContent({
 
   const seekWaveformToClientX = useCallback(
     (clientX: number, element: HTMLElement) => {
-      if (artifactState.status !== "ready" || !isPlaybackReady) {
+      if (!canUsePlayback) {
         return;
       }
 
@@ -155,7 +158,25 @@ function RecordingArtifactReviewContent({
         bounds.width > 0 ? (clientX - bounds.left) / bounds.width : 0;
       controller.controls.seekToRatio(ratio);
     },
-    [artifactState.status, controller.controls, isPlaybackReady]
+    [canUsePlayback, controller.controls]
+  );
+
+  const seekWaveformToRatio = useCallback(
+    (ratio: number) => {
+      if (!canUsePlayback) {
+        return;
+      }
+
+      controller.controls.seekToRatio(ratio);
+    },
+    [canUsePlayback, controller.controls]
+  );
+
+  const setWaveformElement = useCallback(
+    (element: HTMLDivElement | null) => {
+      controller.setWaveformElement(element);
+    },
+    [controller]
   );
 
   async function togglePlayback() {
@@ -169,18 +190,41 @@ function RecordingArtifactReviewContent({
 
   function handleWaveformPointerDown(event: ReactPointerEvent<HTMLElement>) {
     event.preventDefault();
+    ignoreNextClickRef.current = true;
     seekWaveformToClientX(event.clientX, event.currentTarget);
+  }
+
+  function handleWaveformClick(event: ReactMouseEvent<HTMLElement>) {
+    if (ignoreNextClickRef.current) {
+      ignoreNextClickRef.current = false;
+      return;
+    }
+
+    if (event.detail === 0) {
+      return;
+    }
+
+    seekWaveformToClientX(event.clientX, event.currentTarget);
+  }
+
+  function handleWaveformKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    seekWaveformToRatio(0.5);
   }
 
   return (
     <div className="grid gap-3">
       <div className="border-border bg-muted rounded-md border px-3 py-3">
-        {artifactState.status === "loading" ? (
+        {reviewState.status === "loading" ? (
           <p role="status" className="text-sm font-medium">
             Loading recording artifact.
           </p>
         ) : null}
-        {artifactState.status === "error" ? (
+        {reviewState.status === "error" ? (
           <div
             role="alert"
             data-testid={errorTestId}
@@ -190,14 +234,14 @@ function RecordingArtifactReviewContent({
               className="mt-0.5 h-4 w-4 shrink-0"
               aria-hidden="true"
             />
-            <span>{artifactState.message}</span>
+            <span>{reviewState.message}</span>
           </div>
         ) : null}
-        {artifactState.status === "ready" ? (
+        {reviewState.status === "ready" ? (
           <div className={readyGapClassName}>
             <div className="relative">
               <div
-                ref={controller.setWaveformElement}
+                ref={setWaveformElement}
                 data-testid={adapterTestId}
                 data-playback-ready={isPlaybackReady ? "true" : "false"}
                 data-current-time-ms={currentTimeMs}
@@ -209,25 +253,32 @@ function RecordingArtifactReviewContent({
                 data-testid={`${adapterTestId}-seek-surface`}
                 className="absolute inset-0 z-10 cursor-pointer rounded-md bg-transparent"
                 onPointerDown={handleWaveformPointerDown}
+                onClick={handleWaveformClick}
+                onKeyDown={handleWaveformKeyDown}
               />
             </div>
+            {!isPlaybackReady ? (
+              <p role="status" className="text-sm font-medium">
+                Preparing waveform playback.
+              </p>
+            ) : null}
             <DerivedPeaks
-              details={artifactState.details}
+              details={reviewState.details}
               maxHeightPx={peakHeightPx}
               testId={derivedWaveformTestId}
               className={derivedWaveformClassName}
             />
             <p
               data-testid={sourceTestId}
-              data-recording-id={artifactState.details.recordingId}
+              data-recording-id={reviewState.details.recordingId}
               className="text-muted-foreground text-xs font-medium"
             >
               Waveform source:{" "}
-              {artifactState.details.source === "decoded-audio"
+              {reviewState.details.source === "decoded-audio"
                 ? "decoded audio artifact"
                 : "trusted peaks"}
             </p>
-            {artifactState.details.durationWarning ? (
+            {reviewState.details.durationWarning ? (
               <div
                 role="status"
                 data-testid={warningTestId}
@@ -237,7 +288,7 @@ function RecordingArtifactReviewContent({
                   className="mt-0.5 h-4 w-4 shrink-0"
                   aria-hidden="true"
                 />
-                <span>{artifactState.details.durationWarning}</span>
+                <span>{reviewState.details.durationWarning}</span>
               </div>
             ) : null}
           </div>
@@ -248,7 +299,7 @@ function RecordingArtifactReviewContent({
         <Button
           type="button"
           onClick={togglePlayback}
-          disabled={artifactState.status !== "ready"}
+          disabled={!canUsePlayback}
           variant={playbackState === "playing" ? "secondary" : "default"}
           aria-label={
             playbackState === "playing" ? pauseAriaLabel : playAriaLabel
