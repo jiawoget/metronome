@@ -15,7 +15,7 @@ describe("recordings review audio export", () => {
       name: "Quick Alpha",
       createdAt: "2026-06-21T09:08:07",
       mimeType: "audio/webm;codecs=opus",
-      audioDataUrl: "data:audio/webm;base64,AQID"
+      audioDataUrl: "data:audio/webm;codecs=opus;base64,AQID"
     });
     const downloadBlob = vi.fn();
     const service = createRecordingAudioExportService({

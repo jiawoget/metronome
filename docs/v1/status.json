@@ -428,7 +428,7 @@
                                          },
                                          {
                                              "pack":  "pack-2-segment-take-review",
-                                             "status":  "not_started",
+                                             "status":  "verified",
                                              "slices":  [
                                                             {
                                                                 "slice":  "P2-01 take-grouping-domain",

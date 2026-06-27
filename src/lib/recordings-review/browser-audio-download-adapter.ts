@@ -1,5 +1,7 @@
 import type { RecordingAudioDownloadAdapter } from "@/lib/recordings-review/audio-export";
 
+const DOWNLOAD_CLEANUP_DELAY_MS = 30_000;
+
 export const browserAudioDownloadAdapter: RecordingAudioDownloadAdapter = {
   downloadBlob({ blob, filename }) {
     if (
@@ -21,8 +23,10 @@ export const browserAudioDownloadAdapter: RecordingAudioDownloadAdapter = {
       document.body.appendChild(link);
       link.click();
     } finally {
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+      window.setTimeout(() => {
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+      }, DOWNLOAD_CLEANUP_DELAY_MS);
     }
   }
 };

@@ -137,7 +137,9 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   ).toBeVisible();
   await page.getByRole("button", { name: "Stop Replay" }).click();
   await page.goto("/recordings");
-  await expect(page.getByRole("heading", { name: "Recordings" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Recordings", exact: true })
+  ).toBeVisible();
   await expect(page.getByTestId("recordings-empty-state")).toBeVisible();
   await page.goto("/quick-metronome");
 
@@ -408,7 +410,9 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   await expect(page.getByText("Metronome stopped.")).toBeVisible();
 
   await page.goto("/recordings");
-  await expect(page.getByRole("heading", { name: "Recordings" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Recordings", exact: true })
+  ).toBeVisible();
   await expect(page.getByTestId("recordings-list")).toBeVisible();
   await expect(
     page.getByText("Quick metronome recording").first()

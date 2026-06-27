@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   createWavDataUrl,
@@ -938,7 +940,7 @@ test("recordings review organizes recordings with tags favorites and archive rec
 
 test("recordings review exports one visible audio artifact and respects archived visibility", async ({
   page
-}) => {
+}, testInfo) => {
   await page.goto("/recordings");
   await clearRecordingHistory(page);
 
@@ -1060,6 +1062,9 @@ test("recordings review exports one visible audio artifact and respects archived
   expect(quickDownload.suggestedFilename()).toBe(
     "metronome-quick-export-quick-20260621-100000-quick-export.wav"
   );
+  const quickDownloadPath = testInfo.outputPath("quick-export.wav");
+  await quickDownload.saveAs(quickDownloadPath);
+  await expect.poll(async () => (await fs.stat(quickDownloadPath)).size).toBeGreaterThan(0);
   await expect(page.getByTestId("recording-audio-export-status")).toContainText(
     "Audio export started."
   );
@@ -1090,6 +1095,9 @@ test("recordings review exports one visible audio artifact and respects archived
   expect(archivedDownload.suggestedFilename()).toBe(
     "metronome-sheet-export-etude-export-bridge-20260621-120000-archived-export.wav"
   );
+  const archivedDownloadPath = testInfo.outputPath("archived-export.wav");
+  await archivedDownload.saveAs(archivedDownloadPath);
+  await expect.poll(async () => (await fs.stat(archivedDownloadPath)).size).toBeGreaterThan(0);
   await expect(page.getByTestId("recording-details")).toHaveAttribute(
     "data-recording-id",
     "archived-export"

@@ -231,14 +231,17 @@ function dataUrlToBlob({
   dataUrl: string;
   mimeType: string;
 }) {
-  const match = /^data:([^;,]*)(;base64)?,([\s\S]*)$/.exec(dataUrl.trim());
+  const match = /^data:([^,]*),([\s\S]*)$/.exec(dataUrl.trim());
 
   if (!match) {
     return null;
   }
 
-  const isBase64 = Boolean(match[2]);
-  const payload = match[3] ?? "";
+  const metadata = match[1] ?? "";
+  const isBase64 = metadata
+    .split(";")
+    .some((part) => part.trim().toLowerCase() === "base64");
+  const payload = match[2] ?? "";
 
   try {
     const bytes = isBase64

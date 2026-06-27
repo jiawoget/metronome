@@ -5,7 +5,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { cn } from "@/lib/utils";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
+  "../../../../node_modules/.pnpm/pdfjs-dist@5.4.296/node_modules/pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url
 ).toString();
 
