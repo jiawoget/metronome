@@ -6,7 +6,17 @@ import type { ReactNode } from "react";
 import type { SheetRecordingSegmentContext } from "@/domain/practice";
 import { RecordingsReviewExperience } from "@/components/recordings-review/recordings-review-experience";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
-import type { RecordingReviewSnapshot, ReviewRecording } from "@/lib/recordings-review/types";
+import type {
+  RecordingArtifactDetails,
+  RecordingReviewSnapshot,
+  ReviewRecording
+} from "@/lib/recordings-review/types";
+import type {
+  WaveformComparisonSourceState,
+  WaveformComparisonSourcesResult
+} from "@/lib/recordings-review/waveform-comparison-sources";
+
+const loadWaveformComparisonSourcesForGroupMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/components/recordings-review/recording-artifact-review", () => ({
   RecordingArtifactReview: ({ actions }: { actions?: ReactNode }) => (
@@ -14,8 +24,20 @@ vi.mock("@/components/recordings-review/recording-artifact-review", () => ({
   )
 }));
 
+vi.mock("@/lib/recordings-review/waveform-comparison-sources", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/recordings-review/waveform-comparison-sources")>();
+
+  return {
+    ...actual,
+    loadWaveformComparisonSourcesForGroup:
+      loadWaveformComparisonSourcesForGroupMock
+  };
+});
+
 afterEach(() => {
   cleanup();
+  loadWaveformComparisonSourcesForGroupMock.mockReset();
   recordingHistoryRepository.clear();
 });
 
@@ -608,6 +630,628 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     setActiveSpy.mockRestore();
   });
+
+  it("renders explicit waveform comparison controls only for grouped sheet takes", async () => {
+    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+
+    expect(
+      within(segmentGroup).getByTestId("waveform-comparison-sheet:sheet-alpha:segment:segment-bridge")
+    ).toHaveTextContent("Select takes to compare");
+    expect(
+      within(segmentGroup).getByTestId("compare-take-control-sheet-bridge-new")
+    ).toHaveAccessibleName("Select Bridge take 2 for waveform comparison");
+    expect(
+      screen.queryByTestId("compare-take-control-quick-alpha")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("compare-take-control-sheet-missing-link")
+    ).not.toBeInTheDocument();
+    expect(loadWaveformComparisonSourcesForGroupMock).not.toHaveBeenCalled();
+  });
+
+  it("loads selected waveform comparison sources through the P2-07 group boundary", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForGroupMock.mockImplementation(
+      async ({
+        recordingIds
+      }: {
+        recordingIds: string[];
+      }) =>
+        createComparisonResult(
+          recordingIds.map((recordingId) => {
+            const recording =
+              snapshot.recordings.find(
+                (item) => item.id === recordingId
+              ) ?? createSheetRecording({ id: recordingId });
+
+            return createReadyComparisonSource(
+              recording,
+              recordingId === "sheet-bridge-new"
+                ? {
+                    durationWarning:
+                      "Decoded duration differs from saved metadata."
+                  }
+                : {}
+            );
+          })
+        )
+    );
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+
+    await user.click(
+      within(segmentGroup).getByTestId("compare-take-control-sheet-bridge-old")
+    );
+
+    await waitFor(() => {
+      expect(loadWaveformComparisonSourcesForGroupMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          group: expect.objectContaining({
+            groupId: "sheet:sheet-alpha:segment:segment-bridge"
+          }),
+          recordingIds: ["sheet-bridge-old"]
+        })
+      );
+    });
+    expect(segmentGroup).toHaveTextContent("Select another take to compare");
+
+    await user.click(
+      within(segmentGroup).getByTestId("compare-take-control-sheet-bridge-new")
+    );
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId(
+          "waveform-comparison-row-sheet-bridge-old"
+        )
+      ).toHaveAttribute("data-waveform-state", "ready");
+      expect(
+        within(segmentGroup).getByTestId(
+          "waveform-comparison-row-sheet-bridge-new"
+        )
+      ).toHaveAttribute("data-waveform-state", "ready");
+    });
+    expect(
+      within(segmentGroup).getByTestId("comparison-waveform-sheet-bridge-old")
+    ).toHaveAttribute("data-waveform-source", "decoded-audio");
+    expect(
+      within(segmentGroup).getByTestId("comparison-waveform-sheet-bridge-new")
+    ).toHaveAttribute("data-peak-count", "4");
+    expect(
+      within(segmentGroup).getByTestId(
+        "waveform-comparison-duration-warning-sheet-bridge-new"
+      )
+    ).toHaveTextContent("Decoded duration differs from saved metadata.");
+    expect(segmentGroup).toHaveTextContent("Decoded audio");
+    expect(segmentGroup).toHaveTextContent("Duration 0:12");
+    expect(document.body.textContent?.toLowerCase() ?? "").not.toMatch(
+      /score|accuracy|correct|recommended|improved|cleanest|most accurate|mistakes|timing quality/
+    );
+  });
+
+  it("shows fresh loading on same-key waveform retry instead of the prior result", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+    const pendingRetry = createDeferred<WaveformComparisonSourcesResult>();
+    let twoTakeRequestCount = 0;
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForGroupMock.mockImplementation(
+      async ({
+        recordingIds
+      }: {
+        recordingIds: string[];
+      }) => {
+        const sources = recordingIds.map((recordingId) =>
+          createReadyComparisonSource(
+            snapshot.recordings.find((recording) => recording.id === recordingId) ??
+              createSheetRecording({ id: recordingId })
+          )
+        );
+
+        if (recordingIds.length === 2) {
+          twoTakeRequestCount += 1;
+
+          if (twoTakeRequestCount === 2) {
+            return pendingRetry.promise;
+          }
+        }
+
+        return createComparisonResult(sources);
+      }
+    );
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+    const oldCompareControl = within(segmentGroup).getByTestId(
+      "compare-take-control-sheet-bridge-old"
+    );
+    const newCompareControl = within(segmentGroup).getByTestId(
+      "compare-take-control-sheet-bridge-new"
+    );
+
+    await user.click(oldCompareControl);
+    await user.click(newCompareControl);
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId(
+          "waveform-comparison-row-sheet-bridge-old"
+        )
+      ).toBeVisible();
+      expect(
+        within(segmentGroup).getByTestId(
+          "waveform-comparison-row-sheet-bridge-new"
+        )
+      ).toBeVisible();
+    });
+
+    await user.click(newCompareControl);
+    await user.click(newCompareControl);
+
+    expect(
+      within(segmentGroup).getByTestId("waveform-comparison-loading")
+    ).toHaveTextContent("Loading waveform comparison sources.");
+    expect(
+      within(segmentGroup).queryByTestId("waveform-comparison-results")
+    ).not.toBeInTheDocument();
+    expect(
+      within(segmentGroup).queryByTestId(
+        "waveform-comparison-row-sheet-bridge-new"
+      )
+    ).not.toBeInTheDocument();
+
+    pendingRetry.resolve(
+      createComparisonResult([
+        createReadyComparisonSource(snapshot.recordings[0]),
+        createReadyComparisonSource(snapshot.recordings[1], {
+          peaks: [0.3, 0.9]
+        })
+      ])
+    );
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId(
+          "waveform-comparison-row-sheet-bridge-new"
+        )
+      ).toHaveAttribute("data-waveform-state", "ready");
+    });
+    expect(
+      within(segmentGroup).getByTestId("comparison-waveform-sheet-bridge-new")
+    ).toHaveAttribute("data-peak-count", "2");
+  });
+
+  it("clears a prior same-key waveform success before retry failure", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+    const pendingRetry = createDeferred<WaveformComparisonSourcesResult>();
+    let twoTakeRequestCount = 0;
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForGroupMock.mockImplementation(
+      async ({
+        recordingIds
+      }: {
+        recordingIds: string[];
+      }) => {
+        const sources = recordingIds.map((recordingId) =>
+          createReadyComparisonSource(
+            snapshot.recordings.find((recording) => recording.id === recordingId) ??
+              createSheetRecording({ id: recordingId })
+          )
+        );
+
+        if (recordingIds.length === 2) {
+          twoTakeRequestCount += 1;
+
+          if (twoTakeRequestCount === 2) {
+            return pendingRetry.promise;
+          }
+        }
+
+        return createComparisonResult(sources);
+      }
+    );
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+    const oldCompareControl = within(segmentGroup).getByTestId(
+      "compare-take-control-sheet-bridge-old"
+    );
+    const newCompareControl = within(segmentGroup).getByTestId(
+      "compare-take-control-sheet-bridge-new"
+    );
+
+    await user.click(oldCompareControl);
+    await user.click(newCompareControl);
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId(
+          "waveform-comparison-row-sheet-bridge-old"
+        )
+      ).toBeVisible();
+      expect(
+        within(segmentGroup).getByTestId(
+          "waveform-comparison-row-sheet-bridge-new"
+        )
+      ).toBeVisible();
+    });
+
+    await user.click(newCompareControl);
+    await user.click(newCompareControl);
+
+    expect(
+      within(segmentGroup).getByTestId("waveform-comparison-loading")
+    ).toHaveTextContent("Loading waveform comparison sources.");
+    expect(
+      within(segmentGroup).queryByTestId("waveform-comparison-results")
+    ).not.toBeInTheDocument();
+    expect(
+      within(segmentGroup).queryByTestId(
+        "waveform-comparison-row-sheet-bridge-new"
+      )
+    ).not.toBeInTheDocument();
+
+    pendingRetry.reject(new Error("source lookup failed"));
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId("waveform-comparison-error")
+      ).toHaveTextContent("Waveform comparison sources could not be loaded.");
+    });
+    expect(
+      within(segmentGroup).queryByTestId("waveform-comparison-results")
+    ).not.toBeInTheDocument();
+    expect(
+      within(segmentGroup).queryByTestId(
+        "waveform-comparison-row-sheet-bridge-old"
+      )
+    ).not.toBeInTheDocument();
+  });
+
+  it("clears a prior same-key waveform error before retry success", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+    const pendingRetry = createDeferred<WaveformComparisonSourcesResult>();
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForGroupMock
+      .mockRejectedValueOnce(new Error("source lookup failed"))
+      .mockImplementationOnce(() => pendingRetry.promise);
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+    const oldCompareControl = within(segmentGroup).getByTestId(
+      "compare-take-control-sheet-bridge-old"
+    );
+
+    await user.click(oldCompareControl);
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId("waveform-comparison-error")
+      ).toHaveTextContent("Waveform comparison sources could not be loaded.");
+    });
+
+    await user.click(oldCompareControl);
+    await user.click(oldCompareControl);
+
+    expect(
+      within(segmentGroup).getByTestId("waveform-comparison-loading")
+    ).toBeVisible();
+    expect(
+      within(segmentGroup).queryByTestId("waveform-comparison-error")
+    ).not.toBeInTheDocument();
+
+    pendingRetry.resolve(
+      createComparisonResult([
+        createReadyComparisonSource(snapshot.recordings[0])
+      ])
+    );
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId(
+          "waveform-comparison-row-sheet-bridge-old"
+        )
+      ).toHaveAttribute("data-waveform-state", "ready");
+    });
+    expect(
+      within(segmentGroup).queryByTestId("waveform-comparison-error")
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders unavailable comparison states without fake waveform bars", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForGroupMock.mockResolvedValue(
+      createComparisonResult([
+        createReadyComparisonSource(snapshot.recordings[0]),
+        createUnavailableComparisonSource({
+          recording: snapshot.recordings[1],
+          reason: "missing-artifact",
+          message: "This recording has no accessible local audio artifact."
+        }),
+        createUnavailableComparisonSource({
+          recordingId: "deleted-take",
+          recording: null,
+          reason: "missing-recording",
+          message: "This recording is no longer available in local review history."
+        }),
+        createUnavailableComparisonSource({
+          recording: snapshot.recordings[1],
+          reason: "unsupported-mime",
+          message: "This recording artifact is not a supported audio type."
+        }),
+        createUnavailableComparisonSource({
+          recording: snapshot.recordings[1],
+          reason: "invalid-peaks",
+          message: "This recording has invalid waveform peak data."
+        }),
+        createUnavailableComparisonSource({
+          recording: snapshot.recordings[1],
+          reason: "stale-group-membership",
+          message: "This recording is no longer part of the selected take group."
+        }),
+        createUnavailableComparisonSource({
+          recording: snapshot.recordings[1],
+          reason: "decode-failed",
+          message: "This recording artifact could not be decoded locally."
+        }),
+        createUnavailableComparisonSource({
+          recording: snapshot.recordings[1],
+          reason: "empty-audio",
+          message: "This recording artifact decoded as empty audio."
+        }),
+        createUnavailableComparisonSource({
+          recording: snapshot.recordings[1],
+          reason: "invalid-duration",
+          message: "This recording has invalid duration metadata."
+        })
+      ])
+    );
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+
+    await user.click(
+      within(segmentGroup).getByTestId("compare-take-control-sheet-bridge-old")
+    );
+
+    await waitFor(() => {
+      expect(segmentGroup).toHaveTextContent(
+        "This recording has no accessible local audio artifact."
+      );
+      expect(segmentGroup).toHaveTextContent(
+        "This recording is no longer available in local review history."
+      );
+      expect(segmentGroup).toHaveTextContent(
+        "This recording artifact is not a supported audio type."
+      );
+      expect(segmentGroup).toHaveTextContent(
+        "This recording has invalid waveform peak data."
+      );
+      expect(segmentGroup).toHaveTextContent(
+        "This recording is no longer part of the selected take group."
+      );
+      expect(segmentGroup).toHaveTextContent(
+        "This recording artifact could not be decoded locally."
+      );
+      expect(segmentGroup).toHaveTextContent(
+        "This recording artifact decoded as empty audio."
+      );
+      expect(segmentGroup).toHaveTextContent(
+        "This recording has invalid duration metadata."
+      );
+    });
+    expect(
+      within(segmentGroup).getAllByTestId(/^comparison-waveform-/)
+    ).toHaveLength(1);
+    expect(
+      within(segmentGroup).getByTestId("waveform-comparison-row-deleted-take")
+    ).toHaveAttribute("data-unavailable-reason", "missing-recording");
+  });
+
+  it("keeps manual comparison selection separate from best and active take controls", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForGroupMock.mockImplementation(
+      async ({
+        recordingIds
+      }: {
+        recordingIds: string[];
+      }) =>
+        createComparisonResult(
+          recordingIds.map((recordingId) =>
+            createReadyComparisonSource(
+              snapshot.recordings.find((recording) => recording.id === recordingId) ??
+                createSheetRecording({ id: recordingId })
+            )
+          )
+        )
+    );
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+    const oldCompareControl = within(segmentGroup).getByTestId(
+      "compare-take-control-sheet-bridge-old"
+    );
+    const newCompareControl = within(segmentGroup).getByTestId(
+      "compare-take-control-sheet-bridge-new"
+    );
+
+    await user.click(oldCompareControl);
+    await user.click(newCompareControl);
+
+    await waitFor(() => {
+      expect(oldCompareControl).toBeChecked();
+      expect(newCompareControl).toBeChecked();
+    });
+
+    await user.click(
+      within(segmentGroup).getByTestId("best-take-control-sheet-bridge-old")
+    );
+    await user.click(
+      within(segmentGroup).getByTestId("active-take-control-sheet-bridge-new")
+    );
+
+    await waitFor(() => {
+      expect(segmentGroup).toHaveTextContent("Best: Bridge take 1");
+      expect(segmentGroup).toHaveTextContent("Active: Bridge take 2");
+    });
+    expect(oldCompareControl).toBeChecked();
+    expect(newCompareControl).toBeChecked();
+    expect(
+      within(segmentGroup).getByTestId("waveform-comparison-results")
+    ).toHaveTextContent("Bridge take 1");
+  });
+
+  it("prunes selected comparison takes after delete and resets transient selection on reload", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForGroupMock.mockImplementation(
+      async ({
+        recordingIds
+      }: {
+        recordingIds: string[];
+      }) =>
+        createComparisonResult(
+          recordingIds.map((recordingId) =>
+            createReadyComparisonSource(
+              snapshot.recordings.find((recording) => recording.id === recordingId) ??
+                createSheetRecording({ id: recordingId })
+            )
+          )
+        )
+    );
+
+    const { unmount } = render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+
+    await user.click(
+      within(segmentGroup).getByTestId("compare-take-control-sheet-bridge-old")
+    );
+    await user.click(
+      within(segmentGroup).getByTestId("compare-take-control-sheet-bridge-new")
+    );
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId(
+          "waveform-comparison-row-sheet-bridge-old"
+        )
+      ).toBeVisible();
+      expect(
+        within(segmentGroup).getByTestId(
+          "waveform-comparison-row-sheet-bridge-new"
+        )
+      ).toBeVisible();
+    });
+
+    await user.click(
+      within(segmentGroup).getByTestId("recording-row-sheet-bridge-old")
+    );
+    await user.click(screen.getByRole("button", { name: "Delete Recording" }));
+    await user.click(screen.getByRole("button", { name: "Confirm Delete" }));
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).queryByTestId(
+          "waveform-comparison-row-sheet-bridge-old"
+        )
+      ).not.toBeInTheDocument();
+      expect(
+        within(segmentGroup).getByTestId(
+          "waveform-comparison-row-sheet-bridge-new"
+        )
+      ).toBeVisible();
+    });
+
+    unmount();
+    render(<RecordingsReviewExperience />);
+
+    const restoredSegmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+
+    expect(
+      within(restoredSegmentGroup).getByTestId(
+        "waveform-comparison-sheet:sheet-alpha:segment:segment-bridge"
+      )
+    ).toHaveTextContent("Select takes to compare");
+    expect(
+      within(restoredSegmentGroup).queryByTestId("waveform-comparison-results")
+    ).not.toBeInTheDocument();
+  });
+
+  it("reports waveform comparison service failures without blocking the group", async () => {
+    const user = userEvent.setup();
+
+    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    loadWaveformComparisonSourcesForGroupMock.mockRejectedValue(
+      new Error("source lookup failed")
+    );
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+
+    await user.click(
+      within(segmentGroup).getByTestId("compare-take-control-sheet-bridge-old")
+    );
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId("waveform-comparison-error")
+      ).toHaveTextContent(
+        "Waveform comparison sources could not be loaded."
+      );
+    });
+    expect(
+      within(segmentGroup).getByTestId("recording-row-sheet-bridge-new")
+    ).toBeVisible();
+  });
 });
 
 function createMixedSnapshot(): RecordingReviewSnapshot {
@@ -756,4 +1400,96 @@ function createSheetRecording(
     },
     ...recordingOverrides
   };
+}
+
+function createComparisonResult(
+  sources: WaveformComparisonSourceState[]
+): WaveformComparisonSourcesResult {
+  const readySources = sources.filter(
+    (
+      source
+    ): source is Extract<WaveformComparisonSourceState, { status: "ready" }> =>
+      source.status === "ready"
+  );
+  const unavailableSources = sources.filter(
+    (
+      source
+    ): source is Extract<
+      WaveformComparisonSourceState,
+      { status: "unavailable" }
+    > => source.status === "unavailable"
+  );
+
+  return {
+    sources,
+    readySources,
+    unavailableSources,
+    allReady: sources.length > 0 && unavailableSources.length === 0,
+    readyCount: readySources.length,
+    requestedCount: sources.length,
+    groupId: "sheet:sheet-alpha:segment:segment-bridge",
+    sheetId: "sheet-alpha",
+    segmentId: "segment-bridge"
+  };
+}
+
+function createReadyComparisonSource(
+  recording: ReviewRecording,
+  overrides: Partial<Extract<WaveformComparisonSourceState, { status: "ready" }>> = {}
+): Extract<WaveformComparisonSourceState, { status: "ready" }> {
+  const artifactDetails: RecordingArtifactDetails = {
+    recordingId: recording.id,
+    decodedDurationMs: recording.durationMs,
+    metadataDurationMs: recording.durationMs,
+    durationDifferenceMs: 0,
+    durationWarning: null,
+    peaks: [0.2, 0.6, 1, 0.4],
+    source: "decoded-audio"
+  };
+
+  return {
+    status: "ready",
+    recordingId: recording.id,
+    recording,
+    artifactDetails,
+    source: artifactDetails.source,
+    peaks: artifactDetails.peaks,
+    durationMs: artifactDetails.decodedDurationMs,
+    durationWarning: null,
+    ...overrides
+  };
+}
+
+function createUnavailableComparisonSource({
+  recordingId,
+  recording,
+  reason,
+  message
+}: {
+  recordingId?: string;
+  recording: ReviewRecording | null;
+  reason: Extract<
+    WaveformComparisonSourceState,
+    { status: "unavailable" }
+  >["reason"];
+  message: string;
+}): Extract<WaveformComparisonSourceState, { status: "unavailable" }> {
+  return {
+    status: "unavailable",
+    recordingId: recordingId ?? recording?.id ?? "missing-recording",
+    recording,
+    reason,
+    message
+  };
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+
+  return { promise, resolve, reject };
 }

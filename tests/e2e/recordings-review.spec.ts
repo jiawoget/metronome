@@ -716,6 +716,335 @@ test("recordings review renders grouped take history, filters it, deletes a take
   }
 });
 
+test("recordings review compares selected sheet takes with waveform evidence", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.goto("/recordings");
+  await page.evaluate(() => window.localStorage.clear());
+
+  const decodedArtifact = await createWavDataUrl(page, 440, 0.9);
+  const trustedArtifact = await createWavDataUrl(page, 330, 1);
+
+  await seedRecordingHistory(page, {
+    sessions: [
+      { id: "session-waveform-sheet", sourceType: "sheet" },
+      { id: "session-waveform-quick", sourceType: "quick" }
+    ],
+    recordings: [
+      {
+        id: "wave-decoded",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison decoded",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T09:00:00.000Z",
+        durationMs: decodedArtifact.durationMs,
+        sizeBytes: decodedArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: decodedArtifact.dataUrl,
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "wave-trusted",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison trusted",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T10:00:00.000Z",
+        durationMs: trustedArtifact.durationMs,
+        sizeBytes: trustedArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: trustedArtifact.dataUrl,
+        trustedPeaks: [0.15, 0.55, 0.95, 0.35],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "wave-missing",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison missing artifact",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T11:00:00.000Z",
+        durationMs: 1_000,
+        sizeBytes: 0,
+        mimeType: "audio/wav",
+        audioDataUrl: null,
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "wave-unsupported",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison unsupported artifact",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: trustedArtifact.durationMs,
+        sizeBytes: trustedArtifact.sizeBytes,
+        mimeType: "application/pdf",
+        audioDataUrl: trustedArtifact.dataUrl,
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "wave-invalid-peaks",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison invalid peaks",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T13:00:00.000Z",
+        durationMs: trustedArtifact.durationMs,
+        sizeBytes: trustedArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: trustedArtifact.dataUrl,
+        trustedPeaks: [0, 0],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "wave-quick",
+        type: "quick",
+        origin: "user",
+        name: "Comparison quick take",
+        sessionId: "session-waveform-quick",
+        sheetId: null,
+        createdAt: "2026-06-21T14:00:00.000Z",
+        durationMs: decodedArtifact.durationMs,
+        sizeBytes: decodedArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: decodedArtifact.dataUrl,
+        settings: {
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      }
+    ],
+    errorMarkers: []
+  });
+
+  await page.reload();
+
+  const group = page.getByTestId(
+    "take-group-sheet:sheet-wave:segment:segment-wave"
+  );
+  await expect(group).toBeVisible();
+  await expect(group.getByTestId("take-history-summary")).toContainText(
+    /Latest: .*Comparison invalid peaks/
+  );
+  await expect(
+    page
+      .getByTestId("quick-recordings-section")
+      .getByTestId("compare-take-control-wave-quick")
+  ).toHaveCount(0);
+
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison decoded for waveform comparison"
+    })
+    .check();
+  await expect(group).toContainText("Select another take to compare");
+
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison trusted for waveform comparison"
+    })
+    .check();
+
+  await expect(group.getByTestId("waveform-comparison-results")).toBeVisible();
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "decoded-audio",
+    peakCount: 48,
+    label: "comparison decoded source",
+    testId: "comparison-waveform-wave-decoded"
+  });
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "trusted-peaks",
+    peakCount: 4,
+    label: "comparison trusted source",
+    testId: "comparison-waveform-wave-trusted"
+  });
+  await expect(group).toContainText("Decoded audio");
+  await expect(group).toContainText("Trusted peaks");
+
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await group.scrollIntoViewIfNeeded();
+  await expectNoHorizontalOverflow(page, "tablet waveform comparison");
+  const tabletComparisonLayout = await group
+    .getByTestId("waveform-comparison-results")
+    .evaluate((element) => {
+      const panelBounds = element.getBoundingClientRect();
+      const rowBounds = Array.from(element.children).map((child) =>
+        child.getBoundingClientRect()
+      );
+
+      return {
+        panelWidth: panelBounds.width,
+        overflowingRows: rowBounds.filter(
+          (bounds) =>
+            bounds.left < panelBounds.left - 1 ||
+            bounds.right > panelBounds.right + 1
+        ).length
+      };
+    });
+
+  expect(
+    tabletComparisonLayout.panelWidth,
+    "tablet waveform comparison keeps layout width"
+  ).toBeGreaterThan(280);
+  expect(
+    tabletComparisonLayout.overflowingRows,
+    "tablet waveform comparison rows stay inside the panel"
+  ).toBe(0);
+  await page.setViewportSize({ width: 1280, height: 820 });
+
+  await page
+    .getByRole("button", { name: "Mark Comparison decoded as best take" })
+    .click();
+  await page
+    .getByRole("button", { name: "Mark Comparison trusted as active take" })
+    .click();
+  await expect(group).toContainText("Best: Comparison decoded");
+  await expect(group).toContainText("Active: Comparison trusted");
+  await expect(
+    group.getByRole("checkbox", {
+      name: "Select Comparison decoded for waveform comparison"
+    })
+  ).toBeChecked();
+  await expect(
+    group.getByRole("checkbox", {
+      name: "Select Comparison trusted for waveform comparison"
+    })
+  ).toBeChecked();
+
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison missing artifact for waveform comparison"
+    })
+    .check();
+  await expect(group).toContainText(
+    "This recording has no accessible local audio artifact."
+  );
+  await expect(group.getByTestId("comparison-waveform-wave-missing")).toHaveCount(
+    0
+  );
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison missing artifact for waveform comparison"
+    })
+    .uncheck();
+
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison unsupported artifact for waveform comparison"
+    })
+    .check();
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison invalid peaks for waveform comparison"
+    })
+    .check();
+  await expect(group).toContainText(
+    "This recording artifact is not a supported audio type."
+  );
+  await expect(group).toContainText(
+    "This recording has invalid waveform peak data."
+  );
+  await expect(group.getByTestId("waveform-comparison-limit")).toContainText(
+    "Up to 4 takes can be compared at once."
+  );
+  await expect(
+    group.getByRole("checkbox", {
+      name: "Select Comparison missing artifact for waveform comparison"
+    })
+  ).toBeDisabled();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await group.scrollIntoViewIfNeeded();
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "trusted-peaks",
+    peakCount: 4,
+    label: "mobile comparison trusted source",
+    testId: "comparison-waveform-wave-trusted"
+  });
+  await expectNoHorizontalOverflow(page, "mobile waveform comparison");
+
+  const prohibitedText = (await page.locator("body").innerText()).toLowerCase();
+  expect(prohibitedText).not.toMatch(
+    /score|accuracy|correct|recommended|improved|cleanest|most accurate|mistakes|timing quality/
+  );
+
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.getByTestId("recording-row-wave-decoded").click();
+  await page.getByRole("button", { name: "Delete Recording" }).click();
+  await page.getByRole("button", { name: "Confirm Delete" }).click();
+  await expect(
+    group.getByTestId("waveform-comparison-row-wave-decoded")
+  ).toHaveCount(0);
+  await expect(
+    group.getByTestId("waveform-comparison-row-wave-trusted")
+  ).toBeVisible();
+
+  await page.reload();
+  const restoredGroup = page.getByTestId(
+    "take-group-sheet:sheet-wave:segment:segment-wave"
+  );
+  await expect(restoredGroup).toContainText("Select takes to compare");
+  await expect(
+    restoredGroup.getByTestId("waveform-comparison-results")
+  ).toHaveCount(0);
+  await expect(
+    restoredGroup.getByRole("checkbox", {
+      name: "Select Comparison trusted for waveform comparison"
+    })
+  ).not.toBeChecked();
+});
+
 test("recordings review returns to sheet practice with segment validation and stale fallback", async ({
   page
 }) => {

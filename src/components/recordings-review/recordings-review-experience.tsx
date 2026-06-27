@@ -44,6 +44,11 @@ import {
   createTakeHistorySummary,
   type TakeHistorySummary
 } from "@/lib/recordings-review/take-history-summary";
+import {
+  loadWaveformComparisonSourcesForGroup,
+  type WaveformComparisonSourceState,
+  type WaveformComparisonSourcesResult
+} from "@/lib/recordings-review/waveform-comparison-sources";
 import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
 import { seekToErrorMarker } from "@/lib/recordings-review/error-markers";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
@@ -53,6 +58,8 @@ import type {
   ResolvedRecordingTakeSelection,
   ReviewRecording
 } from "@/lib/recordings-review/types";
+
+const MAX_WAVEFORM_COMPARISON_TAKES = 4;
 
 const emptyClientSnapshot = {
   sessions: [],
@@ -388,6 +395,21 @@ function TakeGroupSection({
   const [selectionErrorMessage, setSelectionErrorMessage] = useState<
     string | null
   >(null);
+  const [comparisonSelection, setComparisonSelection] = useState<{
+    recordingIds: string[];
+    requestVersion: number;
+  }>({
+    recordingIds: [],
+    requestVersion: 0
+  });
+  const [resolvedComparison, setResolvedComparison] = useState<{
+    key: string;
+    result: WaveformComparisonSourcesResult;
+  } | null>(null);
+  const [comparisonLoadError, setComparisonLoadError] = useState<{
+    key: string;
+    message: string;
+  } | null>(null);
   const resolvedSelection = recordingHistoryRepository.resolveTakeSelection(group);
   const takeHistorySummary = createTakeHistorySummary({
     group,
@@ -404,6 +426,66 @@ function TakeGroupSection({
     group.kind === "sheet-segment"
       ? `Return to practice for ${contextLabel} on ${sheetLabel}`
       : `Return to sheet practice for ${sheetLabel}`;
+  const visibleComparisonRecordingIds = useMemo(() => {
+    const visibleIds = new Set(group.recordings.map((recording) => recording.id));
+
+    return comparisonSelection.recordingIds.filter((recordingId) =>
+      visibleIds.has(recordingId)
+    );
+  }, [comparisonSelection.recordingIds, group.recordings]);
+  const comparisonRequestKey = visibleComparisonRecordingIds.join("|");
+  const comparisonRequestId = `${comparisonRequestKey}:${comparisonSelection.requestVersion}`;
+  const comparisonResult =
+    resolvedComparison?.key === comparisonRequestId
+      ? resolvedComparison.result
+      : null;
+  const comparisonErrorMessage =
+    comparisonLoadError?.key === comparisonRequestId
+      ? comparisonLoadError.message
+      : null;
+  const comparisonLoading =
+    visibleComparisonRecordingIds.length > 0 &&
+    !comparisonResult &&
+    !comparisonErrorMessage;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (visibleComparisonRecordingIds.length === 0) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    loadWaveformComparisonSourcesForGroup({
+      group,
+      recordingIds: visibleComparisonRecordingIds
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
+        setResolvedComparison({
+          key: comparisonRequestId,
+          result
+        });
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setComparisonLoadError({
+          key: comparisonRequestId,
+          message: "Waveform comparison sources could not be loaded."
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [comparisonRequestId, group, visibleComparisonRecordingIds]);
 
   function updateBestTake(recording: ReviewRecording) {
     try {
@@ -432,6 +514,42 @@ function TakeGroupSection({
     } catch {
       setSelectionErrorMessage("Active take could not be updated.");
     }
+  }
+
+  function toggleWaveformComparison(recording: ReviewRecording) {
+    setComparisonSelection((currentSelection) => {
+      const visibleIds = new Set(group.recordings.map((item) => item.id));
+      const currentVisibleIds = currentSelection.recordingIds.filter((recordingId) =>
+        visibleIds.has(recordingId)
+      );
+
+      if (currentVisibleIds.includes(recording.id)) {
+        return {
+          recordingIds: currentSelection.recordingIds.filter(
+            (recordingId) => recordingId !== recording.id
+          ),
+          requestVersion: currentSelection.requestVersion + 1
+        };
+      }
+
+      if (currentVisibleIds.length >= MAX_WAVEFORM_COMPARISON_TAKES) {
+        if (
+          currentVisibleIds.length === currentSelection.recordingIds.length
+        ) {
+          return currentSelection;
+        }
+
+        return {
+          recordingIds: currentVisibleIds,
+          requestVersion: currentSelection.requestVersion + 1
+        };
+      }
+
+      return {
+        recordingIds: [...currentVisibleIds, recording.id],
+        requestVersion: currentSelection.requestVersion + 1
+      };
+    });
   }
 
   return (
@@ -479,6 +597,14 @@ function TakeGroupSection({
           </p>
         ) : null}
       </div>
+      <WaveformComparisonPanel
+        group={group}
+        titleId={`${titleId}-waveform-comparison`}
+        selectedRecordingIds={visibleComparisonRecordingIds}
+        loading={comparisonLoading}
+        result={comparisonResult}
+        errorMessage={comparisonErrorMessage}
+      />
       <div className="divide-border divide-y">
         {group.recordings.map((recording) => (
           <RecordingListItem
@@ -491,6 +617,13 @@ function TakeGroupSection({
             takeSelection={resolvedSelection}
             onToggleBest={() => updateBestTake(recording)}
             onToggleActive={() => updateActiveTake(recording)}
+            comparisonSelected={visibleComparisonRecordingIds.includes(recording.id)}
+            comparisonDisabled={
+              visibleComparisonRecordingIds.length >=
+                MAX_WAVEFORM_COMPARISON_TAKES &&
+              !visibleComparisonRecordingIds.includes(recording.id)
+            }
+            onToggleComparison={() => toggleWaveformComparison(recording)}
           />
         ))}
       </div>
@@ -554,7 +687,10 @@ function RecordingListItem({
   onSelect,
   takeSelection,
   onToggleBest,
-  onToggleActive
+  onToggleActive,
+  comparisonSelected,
+  comparisonDisabled = false,
+  onToggleComparison
 }: {
   recording: ReviewRecording;
   contextLabel: string;
@@ -564,12 +700,16 @@ function RecordingListItem({
   takeSelection?: ResolvedRecordingTakeSelection;
   onToggleBest?: () => void;
   onToggleActive?: () => void;
+  comparisonSelected?: boolean;
+  comparisonDisabled?: boolean;
+  onToggleComparison?: () => void;
 }) {
   const displayName = getRecordingDisplayName(recording);
   const recordedDate = formatRecordingDate(recording.createdAt);
   const isBest = takeSelection?.bestRecording?.id === recording.id;
   const isActive = takeSelection?.activeRecording?.id === recording.id;
   const showTakeControls = !!takeSelection && !!onToggleBest && !!onToggleActive;
+  const showComparisonControl = !!onToggleComparison;
 
   return (
     <div className="bg-background grid gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
@@ -604,37 +744,291 @@ function RecordingListItem({
           </span>
         </span>
       </button>
-      {showTakeControls ? (
+      {showTakeControls || showComparisonControl ? (
         <div
           aria-label={`${displayName} take selection controls`}
           className="flex flex-wrap gap-2 sm:justify-end"
         >
-          <TakeSelectionButton
-            icon={<Star className="h-4 w-4" aria-hidden="true" />}
-            label={isBest ? "Best set" : "Best"}
-            pressed={isBest}
-            ariaLabel={
-              isBest
-                ? `Clear best take for ${displayName}`
-                : `Mark ${displayName} as best take`
-            }
-            testId={`best-take-control-${recording.id}`}
-            onClick={onToggleBest}
-          />
-          <TakeSelectionButton
-            icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
-            label={isActive ? "Active set" : "Active"}
-            pressed={isActive}
-            ariaLabel={
-              isActive
-                ? `Clear active take for ${displayName}`
-                : `Mark ${displayName} as active take`
-            }
-            testId={`active-take-control-${recording.id}`}
-            onClick={onToggleActive}
-          />
+          {showComparisonControl ? (
+            <CompareTakeCheckbox
+              recordingId={recording.id}
+              displayName={displayName}
+              checked={!!comparisonSelected}
+              disabled={comparisonDisabled}
+              onChange={onToggleComparison}
+            />
+          ) : null}
+          {showTakeControls ? (
+            <>
+              <TakeSelectionButton
+                icon={<Star className="h-4 w-4" aria-hidden="true" />}
+                label={isBest ? "Best set" : "Best"}
+                pressed={isBest}
+                ariaLabel={
+                  isBest
+                    ? `Clear best take for ${displayName}`
+                    : `Mark ${displayName} as best take`
+                }
+                testId={`best-take-control-${recording.id}`}
+                onClick={onToggleBest}
+              />
+              <TakeSelectionButton
+                icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+                label={isActive ? "Active set" : "Active"}
+                pressed={isActive}
+                ariaLabel={
+                  isActive
+                    ? `Clear active take for ${displayName}`
+                    : `Mark ${displayName} as active take`
+                }
+                testId={`active-take-control-${recording.id}`}
+                onClick={onToggleActive}
+              />
+            </>
+          ) : null}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function CompareTakeCheckbox({
+  recordingId,
+  displayName,
+  checked,
+  disabled,
+  onChange
+}: {
+  recordingId: string;
+  displayName: string;
+  checked: boolean;
+  disabled: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label
+      className={`border-border bg-background focus-within:ring-ring inline-flex h-9 min-w-28 items-center justify-center gap-2 rounded-md border px-3 text-xs font-semibold transition-colors focus-within:ring-2 ${
+        checked ? "border-accent bg-accent/20" : "hover:bg-muted"
+      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+    >
+      <input
+        type="checkbox"
+        data-testid={`compare-take-control-${recordingId}`}
+        aria-label={`Select ${displayName} for waveform comparison`}
+        checked={checked}
+        disabled={disabled}
+        onChange={onChange}
+        className="accent-accent h-4 w-4"
+      />
+      <span>Compare</span>
+    </label>
+  );
+}
+
+function WaveformComparisonPanel({
+  group,
+  titleId,
+  selectedRecordingIds,
+  loading,
+  result,
+  errorMessage
+}: {
+  group: RecordingTakeGroup;
+  titleId: string;
+  selectedRecordingIds: string[];
+  loading: boolean;
+  result: WaveformComparisonSourcesResult | null;
+  errorMessage: string | null;
+}) {
+  const groupLabel =
+    group.kind === "sheet-segment"
+      ? `${group.sheetName ?? group.sheetId}, ${group.segmentName ?? group.segmentId ?? "saved segment"}`
+      : `${group.sheetName ?? group.sheetId}, whole sheet`;
+  const selectedCount = selectedRecordingIds.length;
+  const statusText =
+    selectedCount === 0
+      ? "Select takes to compare"
+      : selectedCount === 1
+        ? "Select another take to compare"
+        : `${selectedCount} selected takes`;
+  const limitText =
+    selectedCount >= MAX_WAVEFORM_COMPARISON_TAKES
+      ? `Up to ${MAX_WAVEFORM_COMPARISON_TAKES} takes can be compared at once.`
+      : null;
+
+  return (
+    <div
+      data-testid={`waveform-comparison-${group.groupId}`}
+      aria-labelledby={titleId}
+      className="border-border bg-background border-b px-3 py-3"
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h4 id={titleId} className="text-sm font-semibold break-words">
+            Waveform comparison for {groupLabel}
+          </h4>
+          <p className="text-muted-foreground mt-1 text-xs break-words">
+            {statusText}
+          </p>
+        </div>
+        <MetadataPill
+          value={`${selectedCount}/${MAX_WAVEFORM_COMPARISON_TAKES} selected`}
+          wrap
+        />
+      </div>
+
+      {limitText ? (
+        <p
+          role="status"
+          data-testid="waveform-comparison-limit"
+          className="text-muted-foreground mt-3 text-xs font-medium"
+        >
+          {limitText}
+        </p>
+      ) : null}
+
+      {loading ? (
+        <p
+          role="status"
+          data-testid="waveform-comparison-loading"
+          className="text-muted-foreground mt-3 text-sm font-medium"
+        >
+          Loading waveform comparison sources.
+        </p>
+      ) : null}
+
+      {errorMessage ? (
+        <p
+          role="alert"
+          data-testid="waveform-comparison-error"
+          className="text-destructive mt-3 text-sm font-medium"
+        >
+          {errorMessage}
+        </p>
+      ) : null}
+
+      {result ? (
+        <div
+          data-testid="waveform-comparison-results"
+          className="mt-3 grid gap-2"
+        >
+          {result.sources.map((source) => (
+            <WaveformComparisonRow
+              key={`${source.recordingId}-${source.status}`}
+              source={source}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function WaveformComparisonRow({
+  source
+}: {
+  source: WaveformComparisonSourceState;
+}) {
+  const displayName = source.recording
+    ? getRecordingDisplayName(source.recording)
+    : source.recordingId;
+
+  if (source.status === "unavailable") {
+    return (
+      <div
+        data-testid={`waveform-comparison-row-${source.recordingId}`}
+        data-waveform-state="unavailable"
+        data-unavailable-reason={source.reason}
+        className="border-border bg-muted/50 rounded-md border px-3 py-3"
+      >
+        <div className="flex flex-col gap-1 text-sm">
+          <span className="font-semibold break-words">{displayName}</span>
+          <span className="text-muted-foreground break-words">
+            {source.message}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  const sourceLabel =
+    source.source === "trusted-peaks" ? "Trusted peaks" : "Decoded audio";
+  const durationLabel = formatDuration(source.durationMs);
+
+  return (
+    <div
+      data-testid={`waveform-comparison-row-${source.recordingId}`}
+      data-waveform-state="ready"
+      className="border-border bg-muted/50 rounded-md border px-3 py-3"
+    >
+      <div className="grid gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold break-words">{displayName}</p>
+            <p className="text-muted-foreground mt-1 text-xs break-words">
+              {sourceLabel} · Duration {durationLabel}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs sm:justify-end">
+            <MetadataPill value={sourceLabel} wrap />
+            <MetadataPill value={durationLabel} wrap />
+          </div>
+        </div>
+        <PeakWaveform
+          recordingName={displayName}
+          peaks={source.peaks}
+          source={source.source}
+          recordingId={source.recordingId}
+        />
+        {source.durationWarning ? (
+          <p
+            data-testid={`waveform-comparison-duration-warning-${source.recordingId}`}
+            className="text-muted-foreground text-xs font-medium break-words"
+          >
+            {source.durationWarning}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function PeakWaveform({
+  recordingName,
+  peaks,
+  source,
+  recordingId
+}: {
+  recordingName: string;
+  peaks: number[];
+  source: string;
+  recordingId: string;
+}) {
+  const usablePeaks = peaks.filter((peak) => Number.isFinite(peak) && peak >= 0);
+  const maxPeak = Math.max(...usablePeaks, 0);
+
+  return (
+    <div
+      role="img"
+      aria-label={`${recordingName} waveform from ${source === "trusted-peaks" ? "trusted peaks" : "decoded audio"}`}
+      data-testid={`comparison-waveform-${recordingId}`}
+      data-waveform-source={source}
+      data-peak-count={String(usablePeaks.length)}
+      className="border-border bg-background flex h-14 w-full min-w-0 items-center gap-1 overflow-hidden rounded-md border px-2"
+    >
+      {usablePeaks.map((peak, index) => {
+        const normalizedPeak = maxPeak > 0 ? peak / maxPeak : 0;
+        const heightPercent = Math.max(10, Math.min(100, normalizedPeak * 100));
+
+        return (
+          <span
+            key={`${recordingId}-peak-${index}`}
+            aria-hidden="true"
+            className="bg-accent min-w-1 flex-1 rounded-full"
+            style={{ height: `${heightPercent}%` }}
+          />
+        );
+      })}
     </div>
   );
 }
