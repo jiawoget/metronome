@@ -1080,9 +1080,55 @@ test("recordings review compares selected sheet takes with waveform evidence", a
           bpm: 120,
           timeSignature: "4/4"
         }
+      },
+      {
+        id: "wave-archived",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison archived take",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T15:00:00.000Z",
+        durationMs: trustedArtifact.durationMs,
+        sizeBytes: trustedArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: trustedArtifact.dataUrl,
+        trustedPeaks: [0.2, 0.65, 0.9, 0.25],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
       }
     ],
-    errorMarkers: []
+    errorMarkers: [
+      {
+        id: "marker-wave-quick",
+        recordingId: "wave-quick",
+        timestampMs: 250,
+        note: "Manual quick note"
+      }
+    ],
+    recordingOrganization: [
+      {
+        recordingId: "wave-trusted",
+        tags: ["review"],
+        favorite: true,
+        archived: false,
+        updatedAt: "2026-06-22T09:00:00.000Z"
+      },
+      {
+        recordingId: "wave-archived",
+        tags: ["review"],
+        favorite: false,
+        archived: true,
+        updatedAt: "2026-06-22T09:30:00.000Z"
+      }
+    ]
   });
 
   await page.reload();
@@ -1099,6 +1145,74 @@ test("recordings review compares selected sheet takes with waveform evidence", a
       .getByTestId("quick-recordings-section")
       .getByTestId("compare-take-control-wave-quick")
   ).toHaveCount(0);
+  await expect(
+    page.getByTestId("compare-recording-control-wave-archived")
+  ).toHaveCount(0);
+
+  const recordingComparison = page.getByTestId("recording-comparison");
+  await expect(recordingComparison).toContainText("Select recordings to compare");
+
+  await page
+    .getByRole("checkbox", {
+      name: "Select Comparison decoded for recording comparison"
+    })
+    .check();
+  await page
+    .getByRole("checkbox", {
+      name: "Select Comparison quick take for recording comparison"
+    })
+    .check();
+
+  await expect(recordingComparison).toContainText("2 selected recordings");
+  await expect(
+    recordingComparison.getByTestId("recording-comparison-metadata-wave-decoded")
+  ).toContainText("Sheet recording");
+  await expect(
+    recordingComparison.getByTestId("recording-comparison-metadata-wave-quick")
+  ).toContainText("Quick recording");
+  await expect(
+    recordingComparison.getByTestId("recording-comparison-metadata-wave-quick")
+  ).toContainText("1 manual marker");
+  await expect(
+    recordingComparison.getByTestId("waveform-comparison-row-wave-quick")
+  ).toContainText("Only saved sheet takes can be used for waveform comparison.");
+  await expect(
+    recordingComparison.getByTestId("comparison-waveform-wave-quick")
+  ).toHaveCount(0);
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "decoded-audio",
+    peakCount: 48,
+    label: "review-wide decoded comparison source",
+    testId: "comparison-waveform-wave-decoded"
+  });
+
+  await page.getByLabel("Type filter").selectOption("quick");
+  await expect(recordingComparison).toContainText(
+    "Select another recording to compare"
+  );
+  await expect(
+    recordingComparison.getByTestId("waveform-comparison-row-wave-decoded")
+  ).toHaveCount(0);
+  await page.getByLabel("Type filter").selectOption("all");
+  await page.getByLabel("Archive filter").selectOption("archived");
+  await page
+    .getByRole("checkbox", {
+      name: "Select Comparison archived take for recording comparison"
+    })
+    .check();
+  await expect(
+    recordingComparison.getByTestId("recording-comparison-metadata-wave-archived")
+  ).toContainText("Archived");
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "trusted-peaks",
+    peakCount: 4,
+    label: "archived review-wide comparison source",
+    testId: "comparison-waveform-wave-archived"
+  });
+  await page.getByLabel("Archive filter").selectOption("active");
+  await expect(recordingComparison).toContainText("Select recordings to compare");
 
   await group
     .getByRole("checkbox", {

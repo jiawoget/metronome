@@ -49,6 +49,7 @@ import {
   type TakeHistorySummary
 } from "@/lib/recordings-review/take-history-summary";
 import {
+  loadWaveformComparisonSourcesForRecordingIds,
   loadWaveformComparisonSourcesForGroup,
   type WaveformComparisonSourceState,
   type WaveformComparisonSourcesResult
@@ -67,11 +68,18 @@ import type {
 } from "@/lib/recordings-review/types";
 
 const MAX_WAVEFORM_COMPARISON_TAKES = 4;
+const MAX_RECORDING_COMPARISON_RECORDINGS = 4;
 
 const emptyClientSnapshot: RecordingReviewSnapshot = {
   sessions: [],
   recordings: [],
   errorMarkers: []
+};
+
+type RecordingComparisonTakeContext = {
+  group: RecordingTakeGroup;
+  selection: ResolvedRecordingTakeSelection;
+  isLatest: boolean;
 };
 
 export function RecordingsReviewExperience() {
@@ -94,6 +102,24 @@ export function RecordingsReviewExperience() {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(
     null
   );
+  const [recordingComparisonSelection, setRecordingComparisonSelection] =
+    useState<{
+      recordingIds: string[];
+      requestVersion: number;
+    }>({
+      recordingIds: [],
+      requestVersion: 0
+    });
+  const [resolvedRecordingComparison, setResolvedRecordingComparison] =
+    useState<{
+      key: string;
+      result: WaveformComparisonSourcesResult;
+    } | null>(null);
+  const [recordingComparisonLoadError, setRecordingComparisonLoadError] =
+    useState<{
+      key: string;
+      message: string;
+    } | null>(null);
 
   const recordingOrganization = useMemo(
     () => snapshot.recordingOrganization ?? [],
@@ -149,6 +175,62 @@ export function RecordingsReviewExperience() {
     ],
     [groupedRecordings]
   );
+  const visibleRecordingIds = useMemo(
+    () => new Set(visibleRecordings.map((recording) => recording.id)),
+    [visibleRecordings]
+  );
+  const visibleRecordingComparisonIds = useMemo(
+    () =>
+      recordingComparisonSelection.recordingIds.filter((recordingId) =>
+        visibleRecordingIds.has(recordingId)
+      ),
+    [recordingComparisonSelection.recordingIds, visibleRecordingIds]
+  );
+  const visibleRecordingById = useMemo(
+    () =>
+      new Map(
+        visibleRecordings.map((recording) => [recording.id, recording] as const)
+      ),
+    [visibleRecordings]
+  );
+  const selectedComparisonRecordings = useMemo(
+    () =>
+      visibleRecordingComparisonIds
+        .map((recordingId) => visibleRecordingById.get(recordingId))
+        .filter((recording): recording is ReviewRecording => Boolean(recording)),
+    [visibleRecordingById, visibleRecordingComparisonIds]
+  );
+  const comparisonTakeContextByRecordingId = useMemo(() => {
+    const contextById = new Map<string, RecordingComparisonTakeContext>();
+
+    for (const group of groupedRecordings.takeGroups) {
+      const selection = recordingHistoryRepository.resolveTakeSelection(group);
+
+      for (const recording of group.recordings) {
+        contextById.set(recording.id, {
+          group,
+          selection,
+          isLatest: group.latestRecording.id === recording.id
+        });
+      }
+    }
+
+    return contextById;
+  }, [groupedRecordings]);
+  const recordingComparisonRequestKey = visibleRecordingComparisonIds.join("|");
+  const recordingComparisonRequestId = `${recordingComparisonRequestKey}:${recordingComparisonSelection.requestVersion}`;
+  const recordingComparisonResult =
+    resolvedRecordingComparison?.key === recordingComparisonRequestId
+      ? resolvedRecordingComparison.result
+      : null;
+  const recordingComparisonErrorMessage =
+    recordingComparisonLoadError?.key === recordingComparisonRequestId
+      ? recordingComparisonLoadError.message
+      : null;
+  const recordingComparisonLoading =
+    visibleRecordingComparisonIds.length > 0 &&
+    !recordingComparisonResult &&
+    !recordingComparisonErrorMessage;
   const selectedRecording =
     visibleRecordings.find(
       (recording) => recording.id === selectedRecordingId
@@ -179,10 +261,58 @@ export function RecordingsReviewExperience() {
     return () => window.clearTimeout(timerId);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (visibleRecordingComparisonIds.length === 0) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    loadWaveformComparisonSourcesForRecordingIds(visibleRecordingComparisonIds)
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
+        setResolvedRecordingComparison({
+          key: recordingComparisonRequestId,
+          result
+        });
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setRecordingComparisonLoadError({
+          key: recordingComparisonRequestId,
+          message: "Recording comparison waveform evidence could not be loaded."
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [recordingComparisonRequestId, visibleRecordingComparisonIds]);
+
   function deleteSelectedRecording(recording: ReviewRecording) {
     recordingHistoryRepository.deleteRecording(recording.id);
     setSelectedRecordingId(null);
     setConfirmingDeleteId(null);
+    setRecordingComparisonSelection((currentSelection) => {
+      if (!currentSelection.recordingIds.includes(recording.id)) {
+        return currentSelection;
+      }
+
+      return {
+        recordingIds: currentSelection.recordingIds.filter(
+          (recordingId) => recordingId !== recording.id
+        ),
+        requestVersion: currentSelection.requestVersion + 1
+      };
+    });
   }
 
   function toggleFavorite(recording: ReviewRecording) {
@@ -195,6 +325,39 @@ export function RecordingsReviewExperience() {
       recording.id,
       !organization.favorite
     );
+  }
+
+  function toggleRecordingComparison(recording: ReviewRecording) {
+    setRecordingComparisonSelection((currentSelection) => {
+      const currentVisibleIds = currentSelection.recordingIds.filter(
+        (recordingId) => visibleRecordingIds.has(recordingId)
+      );
+
+      if (currentVisibleIds.includes(recording.id)) {
+        return {
+          recordingIds: currentVisibleIds.filter(
+            (recordingId) => recordingId !== recording.id
+          ),
+          requestVersion: currentSelection.requestVersion + 1
+        };
+      }
+
+      if (currentVisibleIds.length >= MAX_RECORDING_COMPARISON_RECORDINGS) {
+        if (currentVisibleIds.length === currentSelection.recordingIds.length) {
+          return currentSelection;
+        }
+
+        return {
+          recordingIds: currentVisibleIds,
+          requestVersion: currentSelection.requestVersion + 1
+        };
+      }
+
+      return {
+        recordingIds: [...currentVisibleIds, recording.id],
+        requestVersion: currentSelection.requestVersion + 1
+      };
+    });
   }
 
   if (snapshot.recordings.length === 0) {
@@ -325,6 +488,21 @@ export function RecordingsReviewExperience() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardContent className="pt-5">
+          <RecordingComparisonPanel
+            selectedRecordings={selectedComparisonRecordings}
+            selectedRecordingIds={visibleRecordingComparisonIds}
+            organizationByRecordingId={recordingOrganizationById}
+            markers={snapshot.errorMarkers}
+            takeContextByRecordingId={comparisonTakeContextByRecordingId}
+            loading={recordingComparisonLoading}
+            result={recordingComparisonResult}
+            errorMessage={recordingComparisonErrorMessage}
+          />
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <Card>
           <CardHeader>
@@ -345,11 +523,15 @@ export function RecordingsReviewExperience() {
                   markers={snapshot.errorMarkers}
                   organizationByRecordingId={recordingOrganizationById}
                   selectedRecordingId={selectedRecording?.id ?? null}
+                  recordingComparisonSelectedIds={
+                    visibleRecordingComparisonIds
+                  }
                   onSelectRecording={(recordingId) => {
                     setSelectedRecordingId(recordingId);
                     setConfirmingDeleteId(null);
                   }}
                   onToggleFavorite={toggleFavorite}
+                  onToggleRecordingComparison={toggleRecordingComparison}
                 />
               </div>
             )}
@@ -452,15 +634,19 @@ function GroupedRecordingList({
   markers,
   organizationByRecordingId,
   selectedRecordingId,
+  recordingComparisonSelectedIds,
   onSelectRecording,
-  onToggleFavorite
+  onToggleFavorite,
+  onToggleRecordingComparison
 }: {
   grouping: ReturnType<typeof groupRecordingsByTake>;
   markers: RecordingErrorMarker[];
   organizationByRecordingId: Map<string, RecordingOrganizationMetadata>;
   selectedRecordingId: string | null;
+  recordingComparisonSelectedIds: string[];
   onSelectRecording: (recordingId: string) => void;
   onToggleFavorite: (recording: ReviewRecording) => void;
+  onToggleRecordingComparison: (recording: ReviewRecording) => void;
 }) {
   return (
     <>
@@ -471,8 +657,10 @@ function GroupedRecordingList({
           markers={markers}
           organizationByRecordingId={organizationByRecordingId}
           selectedRecordingId={selectedRecordingId}
+          recordingComparisonSelectedIds={recordingComparisonSelectedIds}
           onSelectRecording={onSelectRecording}
           onToggleFavorite={onToggleFavorite}
+          onToggleRecordingComparison={onToggleRecordingComparison}
         />
       ))}
 
@@ -495,6 +683,17 @@ function GroupedRecordingList({
                 selected={selectedRecordingId === recording.id}
                 onSelect={() => onSelectRecording(recording.id)}
                 onToggleFavorite={() => onToggleFavorite(recording)}
+                recordingComparisonSelected={recordingComparisonSelectedIds.includes(
+                  recording.id
+                )}
+                recordingComparisonDisabled={
+                  recordingComparisonSelectedIds.length >=
+                    MAX_RECORDING_COMPARISON_RECORDINGS &&
+                  !recordingComparisonSelectedIds.includes(recording.id)
+                }
+                onToggleRecordingComparison={() =>
+                  onToggleRecordingComparison(recording)
+                }
               />
             ))}
           </div>
@@ -520,6 +719,17 @@ function GroupedRecordingList({
                 selected={selectedRecordingId === recording.id}
                 onSelect={() => onSelectRecording(recording.id)}
                 onToggleFavorite={() => onToggleFavorite(recording)}
+                recordingComparisonSelected={recordingComparisonSelectedIds.includes(
+                  recording.id
+                )}
+                recordingComparisonDisabled={
+                  recordingComparisonSelectedIds.length >=
+                    MAX_RECORDING_COMPARISON_RECORDINGS &&
+                  !recordingComparisonSelectedIds.includes(recording.id)
+                }
+                onToggleRecordingComparison={() =>
+                  onToggleRecordingComparison(recording)
+                }
               />
             ))}
           </div>
@@ -534,15 +744,19 @@ function TakeGroupSection({
   markers,
   organizationByRecordingId,
   selectedRecordingId,
+  recordingComparisonSelectedIds,
   onSelectRecording,
-  onToggleFavorite
+  onToggleFavorite,
+  onToggleRecordingComparison
 }: {
   group: RecordingTakeGroup;
   markers: RecordingErrorMarker[];
   organizationByRecordingId: Map<string, RecordingOrganizationMetadata>;
   selectedRecordingId: string | null;
+  recordingComparisonSelectedIds: string[];
   onSelectRecording: (recordingId: string) => void;
   onToggleFavorite: (recording: ReviewRecording) => void;
+  onToggleRecordingComparison: (recording: ReviewRecording) => void;
 }) {
   const titleId = `take-group-title-${group.groupId}`;
   const sheetLabel = group.sheetName ?? group.sheetId;
@@ -785,6 +999,17 @@ function TakeGroupSection({
             selected={selectedRecordingId === recording.id}
             onSelect={() => onSelectRecording(recording.id)}
             onToggleFavorite={() => onToggleFavorite(recording)}
+            recordingComparisonSelected={recordingComparisonSelectedIds.includes(
+              recording.id
+            )}
+            recordingComparisonDisabled={
+              recordingComparisonSelectedIds.length >=
+                MAX_RECORDING_COMPARISON_RECORDINGS &&
+              !recordingComparisonSelectedIds.includes(recording.id)
+            }
+            onToggleRecordingComparison={() =>
+              onToggleRecordingComparison(recording)
+            }
             takeSelection={resolvedSelection}
             onToggleBest={() => updateBestTake(recording)}
             onToggleActive={() => updateActiveTake(recording)}
@@ -858,6 +1083,9 @@ function RecordingListItem({
   selected,
   onSelect,
   onToggleFavorite,
+  recordingComparisonSelected,
+  recordingComparisonDisabled = false,
+  onToggleRecordingComparison,
   takeSelection,
   onToggleBest,
   onToggleActive,
@@ -872,6 +1100,9 @@ function RecordingListItem({
   selected: boolean;
   onSelect: () => void;
   onToggleFavorite: () => void;
+  recordingComparisonSelected?: boolean;
+  recordingComparisonDisabled?: boolean;
+  onToggleRecordingComparison?: () => void;
   takeSelection?: ResolvedRecordingTakeSelection;
   onToggleBest?: () => void;
   onToggleActive?: () => void;
@@ -884,6 +1115,7 @@ function RecordingListItem({
   const isBest = takeSelection?.bestRecording?.id === recording.id;
   const isActive = takeSelection?.activeRecording?.id === recording.id;
   const showTakeControls = !!takeSelection && !!onToggleBest && !!onToggleActive;
+  const showRecordingComparisonControl = !!onToggleRecordingComparison;
   const showComparisonControl = !!onToggleComparison;
   const favoriteLabel = organization.favorite
     ? `Remove favorite from ${displayName}`
@@ -947,6 +1179,15 @@ function RecordingListItem({
           <Star className="h-4 w-4" aria-hidden="true" />
           <span>{organization.favorite ? "Favorited" : "Favorite"}</span>
         </button>
+        {showRecordingComparisonControl ? (
+          <CompareRecordingCheckbox
+            recordingId={recording.id}
+            displayName={displayName}
+            checked={!!recordingComparisonSelected}
+            disabled={recordingComparisonDisabled}
+            onChange={onToggleRecordingComparison}
+          />
+        ) : null}
         {showComparisonControl ? (
           <CompareTakeCheckbox
             recordingId={recording.id}
@@ -987,6 +1228,302 @@ function RecordingListItem({
       </div>
     </div>
   );
+}
+
+function CompareRecordingCheckbox({
+  recordingId,
+  displayName,
+  checked,
+  disabled,
+  onChange
+}: {
+  recordingId: string;
+  displayName: string;
+  checked: boolean;
+  disabled: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label
+      className={`border-border bg-background focus-within:ring-ring inline-flex h-9 min-w-28 items-center justify-center gap-2 rounded-md border px-3 text-xs font-semibold transition-colors focus-within:ring-2 ${
+        checked ? "border-accent bg-accent/20" : "hover:bg-muted"
+      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+    >
+      <input
+        type="checkbox"
+        data-testid={`compare-recording-control-${recordingId}`}
+        aria-label={`Select ${displayName} for recording comparison`}
+        checked={checked}
+        disabled={disabled}
+        onChange={onChange}
+        className="accent-accent h-4 w-4"
+      />
+      <span>Review</span>
+    </label>
+  );
+}
+
+function RecordingComparisonPanel({
+  selectedRecordings,
+  selectedRecordingIds,
+  organizationByRecordingId,
+  markers,
+  takeContextByRecordingId,
+  loading,
+  result,
+  errorMessage
+}: {
+  selectedRecordings: ReviewRecording[];
+  selectedRecordingIds: string[];
+  organizationByRecordingId: Map<string, RecordingOrganizationMetadata>;
+  markers: RecordingErrorMarker[];
+  takeContextByRecordingId: Map<string, RecordingComparisonTakeContext>;
+  loading: boolean;
+  result: WaveformComparisonSourcesResult | null;
+  errorMessage: string | null;
+}) {
+  const selectedCount = selectedRecordingIds.length;
+  const statusText =
+    selectedCount === 0
+      ? "Select recordings to compare"
+      : selectedCount === 1
+        ? "Select another recording to compare"
+        : `${selectedCount} selected recordings`;
+  const limitText =
+    selectedCount >= MAX_RECORDING_COMPARISON_RECORDINGS
+      ? `Up to ${MAX_RECORDING_COMPARISON_RECORDINGS} recordings can be compared at once.`
+      : null;
+
+  return (
+    <section
+      aria-labelledby="recording-comparison-title"
+      data-testid="recording-comparison"
+      className="grid gap-4"
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 id="recording-comparison-title" className="text-base font-semibold">
+            Recording comparison
+          </h2>
+          <p
+            data-testid="recording-comparison-status"
+            className="text-muted-foreground mt-1 text-sm break-words"
+          >
+            {statusText}
+          </p>
+        </div>
+        <MetadataPill
+          value={`${selectedCount}/${MAX_RECORDING_COMPARISON_RECORDINGS} selected`}
+          wrap
+        />
+      </div>
+
+      {limitText ? (
+        <p
+          role="status"
+          data-testid="recording-comparison-limit"
+          className="text-muted-foreground text-xs font-medium"
+        >
+          {limitText}
+        </p>
+      ) : null}
+
+      {selectedRecordings.length > 0 ? (
+        <div
+          data-testid="recording-comparison-metadata"
+          className="grid gap-3 xl:grid-cols-2"
+        >
+          {selectedRecordings.map((recording) => (
+            <RecordingComparisonMetadataCard
+              key={recording.id}
+              recording={recording}
+              organization={resolveRecordingOrganizationForRecord(
+                recording,
+                organizationByRecordingId
+              )}
+              markerCount={
+                markers.filter((marker) => marker.recordingId === recording.id)
+                  .length
+              }
+              takeContext={takeContextByRecordingId.get(recording.id) ?? null}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <p
+          role="status"
+          data-testid="recording-comparison-loading"
+          className="text-muted-foreground text-sm font-medium"
+        >
+          Loading recording comparison waveform evidence.
+        </p>
+      ) : null}
+
+      {errorMessage ? (
+        <p
+          role="alert"
+          data-testid="recording-comparison-error"
+          className="text-destructive text-sm font-medium"
+        >
+          {errorMessage}
+        </p>
+      ) : null}
+
+      {result ? (
+        <div data-testid="recording-comparison-waveform" className="grid gap-2">
+          <h3 className="text-sm font-semibold">Waveform evidence</h3>
+          <div
+            data-testid="recording-comparison-waveform-results"
+            className="grid gap-2"
+          >
+            {result.sources.map((source) => (
+              <WaveformComparisonRow
+                key={`recording-${source.recordingId}-${source.status}`}
+                source={source}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function RecordingComparisonMetadataCard({
+  recording,
+  organization,
+  markerCount,
+  takeContext
+}: {
+  recording: ReviewRecording;
+  organization: ResolvedRecordingOrganization;
+  markerCount: number;
+  takeContext: RecordingComparisonTakeContext | null;
+}) {
+  const displayName = getRecordingDisplayName(recording);
+  const fields = getRecordingComparisonMetadataFields({
+    recording,
+    organization,
+    markerCount,
+    takeContext
+  });
+
+  return (
+    <section
+      data-testid={`recording-comparison-metadata-${recording.id}`}
+      aria-label={`${displayName} comparison metadata`}
+      className="border-border bg-muted/40 min-w-0 rounded-md border px-3 py-3"
+    >
+      <h3 className="text-sm font-semibold break-words">{displayName}</h3>
+      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+        {fields.map((field) => (
+          <div
+            key={field.label}
+            className="border-border bg-background rounded-md border px-2 py-2"
+          >
+            <dt className="text-muted-foreground text-xs font-medium">
+              {field.label}
+            </dt>
+            <dd className="mt-1 font-semibold break-words">{field.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function getRecordingComparisonMetadataFields({
+  recording,
+  organization,
+  markerCount,
+  takeContext
+}: {
+  recording: ReviewRecording;
+  organization: ResolvedRecordingOrganization;
+  markerCount: number;
+  takeContext: RecordingComparisonTakeContext | null;
+}) {
+  const sheetLabel = recording.sheetName?.trim() || recording.sheetId?.trim();
+  const segmentLabel =
+    recording.segmentContext?.segmentName?.trim() ||
+    recording.segmentContext?.segmentId?.trim();
+  const artifactSizeKb = Math.max(1, Math.round(recording.sizeBytes / 1_024));
+
+  return [
+    {
+      label: "Type",
+      value: recording.type === "sheet" ? "Sheet recording" : "Quick recording"
+    },
+    { label: "Recorded", value: formatRecordingDate(recording.createdAt) },
+    { label: "Duration", value: formatDuration(recording.durationMs) },
+    { label: "BPM", value: `${recording.settings.bpm} BPM` },
+    { label: "Time signature", value: recording.settings.timeSignature },
+    {
+      label: "Sheet",
+      value:
+        recording.type === "sheet"
+          ? sheetLabel || "No sheet linked"
+          : "Quick metronome"
+    },
+    {
+      label: "Segment",
+      value:
+        recording.type === "quick"
+          ? "Quick metronome"
+          : segmentLabel || "Whole sheet / no segment"
+    },
+    {
+      label: "Artifact",
+      value: `${artifactSizeKb} KB ${recording.mimeType || "unknown type"}`
+    },
+    {
+      label: "Tags",
+      value: organization.tags.length > 0 ? organization.tags.join(", ") : "No tags"
+    },
+    {
+      label: "Organization",
+      value: getRecordingOrganizationSummary(organization)
+    },
+    {
+      label: "Take state",
+      value: getRecordingTakeStateSummary(recording, takeContext)
+    },
+    {
+      label: "Markers",
+      value:
+        markerCount === 1 ? "1 manual marker" : `${markerCount} manual markers`
+    }
+  ];
+}
+
+function getRecordingOrganizationSummary(
+  organization: ResolvedRecordingOrganization
+) {
+  const states = [
+    organization.favorite ? "Favorite" : null,
+    organization.archived ? "Archived" : null
+  ].filter((state): state is string => Boolean(state));
+
+  return states.length > 0 ? states.join(", ") : "Not favorite, active view";
+}
+
+function getRecordingTakeStateSummary(
+  recording: ReviewRecording,
+  takeContext: RecordingComparisonTakeContext | null
+) {
+  if (!takeContext) {
+    return recording.type === "sheet" ? "No grouped take state" : "Quick take";
+  }
+
+  const states = [
+    takeContext.isLatest ? "Latest" : null,
+    takeContext.selection.bestRecording?.id === recording.id ? "Best" : null,
+    takeContext.selection.activeRecording?.id === recording.id ? "Active" : null
+  ].filter((state): state is string => Boolean(state));
+
+  return states.length > 0 ? states.join(", ") : "Take in history";
 }
 
 function CompareTakeCheckbox({

@@ -17,6 +17,9 @@ import type {
 } from "@/lib/recordings-review/waveform-comparison-sources";
 
 const loadWaveformComparisonSourcesForGroupMock = vi.hoisted(() => vi.fn());
+const loadWaveformComparisonSourcesForRecordingIdsMock = vi.hoisted(() =>
+  vi.fn()
+);
 
 vi.mock("@/components/recordings-review/recording-artifact-review", () => ({
   RecordingArtifactReview: ({ actions }: { actions?: ReactNode }) => (
@@ -30,6 +33,8 @@ vi.mock("@/lib/recordings-review/waveform-comparison-sources", async (importOrig
 
   return {
     ...actual,
+    loadWaveformComparisonSourcesForRecordingIds:
+      loadWaveformComparisonSourcesForRecordingIdsMock,
     loadWaveformComparisonSourcesForGroup:
       loadWaveformComparisonSourcesForGroupMock
   };
@@ -37,6 +42,7 @@ vi.mock("@/lib/recordings-review/waveform-comparison-sources", async (importOrig
 
 afterEach(() => {
   cleanup();
+  loadWaveformComparisonSourcesForRecordingIdsMock.mockReset();
   loadWaveformComparisonSourcesForGroupMock.mockReset();
   recordingHistoryRepository.clear();
 });
@@ -371,6 +377,347 @@ describe("RecordingsReviewExperience grouped take history", () => {
       "sheet-whole-null"
     );
     expect(screen.queryByTestId("recording-row-quick-alpha")).not.toBeInTheDocument();
+  });
+
+  it("compares visible recordings through the P2-07 recording-id boundary without changing group waveform selection", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForRecordingIdsMock.mockImplementation(
+      async (recordingIds: string[]) =>
+        createComparisonResult(
+          recordingIds.map((recordingId) => {
+            const recording =
+              snapshot.recordings.find((item) => item.id === recordingId) ??
+              createSheetRecording({ id: recordingId });
+
+            if (recording.type === "quick") {
+              return createUnavailableComparisonSource({
+                recording,
+                reason: "not-sheet-take",
+                message: "Only saved sheet takes can be used for waveform comparison."
+              });
+            }
+
+            return createReadyComparisonSource(recording);
+          })
+        )
+    );
+
+    render(<RecordingsReviewExperience />);
+
+    await expect(screen.findByTestId("recording-comparison")).resolves.toHaveTextContent(
+      "Select recordings to compare"
+    );
+
+    await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-new"));
+    await user.click(screen.getByTestId("compare-recording-control-quick-alpha"));
+
+    await waitFor(() => {
+      expect(loadWaveformComparisonSourcesForRecordingIdsMock).toHaveBeenLastCalledWith([
+        "sheet-bridge-new",
+        "quick-alpha"
+      ]);
+      expect(
+        within(screen.getByTestId("recording-comparison")).getByTestId(
+          "waveform-comparison-row-sheet-bridge-new"
+        )
+      ).toHaveAttribute("data-waveform-state", "ready");
+    });
+
+    const comparisonPanel = screen.getByTestId("recording-comparison");
+    expect(comparisonPanel).toHaveTextContent("2 selected recordings");
+    expect(
+      within(comparisonPanel).getByTestId(
+        "recording-comparison-metadata-sheet-bridge-new"
+      )
+    ).toHaveTextContent("Sheet recording");
+    expect(
+      within(comparisonPanel).getByTestId(
+        "recording-comparison-metadata-sheet-bridge-new"
+      )
+    ).toHaveTextContent("Latest");
+    expect(
+      within(comparisonPanel).getByTestId("recording-comparison-metadata-quick-alpha")
+    ).toHaveTextContent("Quick recording");
+    expect(
+      within(comparisonPanel).getByTestId("recording-comparison-metadata-quick-alpha")
+    ).toHaveTextContent("1 manual marker");
+    expect(
+      within(comparisonPanel).getByTestId("waveform-comparison-row-quick-alpha")
+    ).toHaveAttribute("data-unavailable-reason", "not-sheet-take");
+    expect(
+      within(comparisonPanel).getByTestId("waveform-comparison-row-quick-alpha")
+    ).toHaveTextContent("Only saved sheet takes can be used for waveform comparison.");
+    expect(
+      within(comparisonPanel).queryByTestId("comparison-waveform-quick-alpha")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("compare-take-control-sheet-bridge-new")
+    ).not.toBeChecked();
+    expect(loadWaveformComparisonSourcesForGroupMock).not.toHaveBeenCalled();
+    expect(document.body.textContent?.toLowerCase() ?? "").not.toMatch(
+      /score|accuracy|correct|recommended|improved|cleanest|most accurate|mistakes|timing quality/
+    );
+  });
+
+  it("compares legacy and explicit no-segment sheet recordings review-wide by recording id", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForRecordingIdsMock.mockImplementation(
+      async (recordingIds: string[]) =>
+        createComparisonResult(
+          recordingIds.map((recordingId) =>
+            createReadyComparisonSource(
+              snapshot.recordings.find((recording) => recording.id === recordingId) ??
+                createSheetRecording({ id: recordingId })
+            )
+          )
+        )
+    );
+
+    render(<RecordingsReviewExperience />);
+
+    await expect(screen.findByTestId("recording-comparison")).resolves.toBeVisible();
+
+    await user.click(screen.getByTestId("compare-recording-control-sheet-whole-legacy"));
+    await user.click(screen.getByTestId("compare-recording-control-sheet-whole-null"));
+
+    await waitFor(() => {
+      expect(loadWaveformComparisonSourcesForRecordingIdsMock).toHaveBeenLastCalledWith([
+        "sheet-whole-legacy",
+        "sheet-whole-null"
+      ]);
+      expect(
+        within(screen.getByTestId("recording-comparison")).getByTestId(
+          "waveform-comparison-row-sheet-whole-legacy"
+        )
+      ).toHaveAttribute("data-waveform-state", "ready");
+      expect(
+        within(screen.getByTestId("recording-comparison")).getByTestId(
+          "waveform-comparison-row-sheet-whole-null"
+        )
+      ).toHaveAttribute("data-waveform-state", "ready");
+    });
+
+    const comparisonPanel = screen.getByTestId("recording-comparison");
+    expect(comparisonPanel).toHaveTextContent("2 selected recordings");
+    expect(
+      within(comparisonPanel).getByTestId(
+        "recording-comparison-metadata-sheet-whole-legacy"
+      )
+    ).toHaveTextContent("Whole sheet / no segment");
+    expect(
+      within(comparisonPanel).getByTestId(
+        "recording-comparison-metadata-sheet-whole-null"
+      )
+    ).toHaveTextContent("Whole sheet / no segment");
+    expect(loadWaveformComparisonSourcesForGroupMock).not.toHaveBeenCalled();
+  });
+
+  it("shows unavailable waveform evidence for review-wide sheet comparison without fake waveform bars", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForRecordingIdsMock.mockResolvedValue(
+      createComparisonResult([
+        createUnavailableComparisonSource({
+          recording:
+            snapshot.recordings.find((recording) => recording.id === "sheet-bridge-new") ??
+            null,
+          reason: "missing-artifact",
+          message: "This recording has no accessible local audio artifact."
+        }),
+        createUnavailableComparisonSource({
+          recording:
+            snapshot.recordings.find((recording) => recording.id === "sheet-whole-null") ??
+            null,
+          reason: "unsupported-mime",
+          message: "This recording artifact is not a supported audio type."
+        }),
+        createUnavailableComparisonSource({
+          recording:
+            snapshot.recordings.find((recording) => recording.id === "sheet-whole-legacy") ??
+            null,
+          reason: "invalid-peaks",
+          message: "This recording has invalid waveform peak data."
+        })
+      ])
+    );
+
+    render(<RecordingsReviewExperience />);
+
+    await expect(screen.findByTestId("recording-comparison")).resolves.toBeVisible();
+
+    await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-new"));
+    await user.click(screen.getByTestId("compare-recording-control-sheet-whole-null"));
+    await user.click(screen.getByTestId("compare-recording-control-sheet-whole-legacy"));
+
+    await waitFor(() => {
+      expect(loadWaveformComparisonSourcesForRecordingIdsMock).toHaveBeenLastCalledWith([
+        "sheet-bridge-new",
+        "sheet-whole-null",
+        "sheet-whole-legacy"
+      ]);
+      expect(
+        within(screen.getByTestId("recording-comparison")).getByTestId(
+          "waveform-comparison-row-sheet-bridge-new"
+        )
+      ).toHaveAttribute("data-unavailable-reason", "missing-artifact");
+    });
+
+    const comparisonPanel = screen.getByTestId("recording-comparison");
+    expect(comparisonPanel).toHaveTextContent(
+      "This recording has no accessible local audio artifact."
+    );
+    expect(comparisonPanel).toHaveTextContent(
+      "This recording artifact is not a supported audio type."
+    );
+    expect(comparisonPanel).toHaveTextContent(
+      "This recording has invalid waveform peak data."
+    );
+    expect(
+      within(comparisonPanel).queryByTestId("comparison-waveform-sheet-bridge-new")
+    ).not.toBeInTheDocument();
+    expect(
+      within(comparisonPanel).queryByTestId("comparison-waveform-sheet-whole-null")
+    ).not.toBeInTheDocument();
+    expect(
+      within(comparisonPanel).queryByTestId("comparison-waveform-sheet-whole-legacy")
+    ).not.toBeInTheDocument();
+    expect(loadWaveformComparisonSourcesForGroupMock).not.toHaveBeenCalled();
+  });
+
+  it("limits recording comparison to visible filters and exposes archived recordings only when included", async () => {
+    const user = userEvent.setup();
+    const snapshot = {
+      ...createMixedSnapshot(),
+      recordingOrganization: [
+        {
+          recordingId: "sheet-bridge-old",
+          tags: ["Archive check"],
+          favorite: false,
+          archived: true,
+          updatedAt: "2026-06-22T09:00:00.000Z"
+        }
+      ]
+    };
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForRecordingIdsMock.mockImplementation(
+      async (recordingIds: string[]) =>
+        createComparisonResult(
+          recordingIds.map((recordingId) =>
+            createReadyComparisonSource(
+              snapshot.recordings.find((recording) => recording.id === recordingId) ??
+                createSheetRecording({ id: recordingId })
+            )
+          )
+        )
+    );
+
+    render(<RecordingsReviewExperience />);
+
+    await expect(screen.findByTestId("recordings-list")).resolves.toBeVisible();
+    expect(
+      screen.queryByTestId("compare-recording-control-sheet-bridge-old")
+    ).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Archive filter"), "archived");
+    await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-old"));
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("recording-comparison")).getByTestId(
+          "waveform-comparison-row-sheet-bridge-old"
+        )
+      ).toBeVisible();
+    });
+    expect(screen.getByTestId("recording-comparison")).toHaveTextContent(
+      "Archived"
+    );
+
+    await user.selectOptions(screen.getByLabelText("Archive filter"), "active");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("recording-comparison-status")).toHaveTextContent(
+        "Select recordings to compare"
+      );
+    });
+    expect(
+      screen.queryByTestId("waveform-comparison-row-sheet-bridge-old")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("compare-recording-control-sheet-bridge-old")
+    ).not.toBeInTheDocument();
+  });
+
+  it("prunes recording comparison after delete and resets transient review selection on reload", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+
+    recordingHistoryRepository.saveSnapshot(snapshot);
+    loadWaveformComparisonSourcesForRecordingIdsMock.mockImplementation(
+      async (recordingIds: string[]) =>
+        createComparisonResult(
+          recordingIds.map((recordingId) =>
+            createReadyComparisonSource(
+              snapshot.recordings.find((recording) => recording.id === recordingId) ??
+                createSheetRecording({ id: recordingId })
+            )
+          )
+        )
+    );
+
+    const { unmount } = render(<RecordingsReviewExperience />);
+
+    await expect(screen.findByTestId("recording-comparison")).resolves.toBeVisible();
+    await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-old"));
+    await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-new"));
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("recording-comparison")).getByTestId(
+          "waveform-comparison-row-sheet-bridge-old"
+        )
+      ).toBeVisible();
+      expect(
+        within(screen.getByTestId("recording-comparison")).getByTestId(
+          "waveform-comparison-row-sheet-bridge-new"
+        )
+      ).toBeVisible();
+    });
+
+    await user.click(screen.getByTestId("recording-row-sheet-bridge-old"));
+    await user.click(screen.getByRole("button", { name: "Delete Recording" }));
+    await user.click(screen.getByRole("button", { name: "Confirm Delete" }));
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("recording-comparison")).queryByTestId(
+          "waveform-comparison-row-sheet-bridge-old"
+        )
+      ).not.toBeInTheDocument();
+      expect(
+        within(screen.getByTestId("recording-comparison")).getByTestId(
+          "waveform-comparison-row-sheet-bridge-new"
+        )
+      ).toBeVisible();
+    });
+
+    unmount();
+    render(<RecordingsReviewExperience />);
+
+    await expect(screen.findByTestId("recording-comparison-status")).resolves.toHaveTextContent(
+      "Select recordings to compare"
+    );
+    expect(
+      screen.queryByTestId("recording-comparison-waveform-results")
+    ).not.toBeInTheDocument();
   });
 
   it("clears active-only take UI state after deleting the active recording", async () => {
