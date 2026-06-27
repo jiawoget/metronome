@@ -4,8 +4,6 @@ import {
   calculateTapTempo,
   clampBpm,
   commitBpmDraft,
-  getCountdownBars,
-  getCountdownBeatsForBars,
   getCountdownOptions,
   getTickIntervalMs,
   isAccentTick,
@@ -35,32 +33,25 @@ describe("quick metronome controls", () => {
 
   it("validates time signature, subdivision, accent, and countdown selections", () => {
     expect(parseTimeSignature("3/4")).toBe("3/4");
-    expect(parseTimeSignature("12/8")).toBe("12/8");
+    expect(parseTimeSignature("12/8")).toBe(DEFAULT_METRONOME_SETTINGS.timeSignature);
     expect(parseTimeSignature("5/4")).toBe(DEFAULT_METRONOME_SETTINGS.timeSignature);
     expect(parseSubdivision("triplet")).toBe("triplet");
     expect(parseSubdivision("quintuplet")).toBe(DEFAULT_METRONOME_SETTINGS.subdivision);
     expect(parseAccentMode("every-beat")).toBe("every-beat");
     expect(parseAccentMode("random")).toBe(DEFAULT_METRONOME_SETTINGS.accent);
     expect(parseCountdownBeats("8")).toBe(8);
-    expect(parseCountdownBeats("3", "3/4")).toBe(3);
-    expect(parseCountdownBeats("12", "12/8")).toBe(12);
-    expect(parseCountdownBeats("16")).toBe(0);
-    expect(parseCountdownBeats("5", "3/4")).toBe(0);
+    expect(parseCountdownBeats("16")).toBe(16);
+    expect(parseCountdownBeats("3")).toBe(0);
+    expect(parseCountdownBeats("12")).toBe(0);
   });
 
-  it("derives countdown choices from bars in the selected meter", () => {
-    expect(getCountdownOptions("3/4")).toEqual([
-      { bars: 0, beats: 0, label: "Off" },
-      { bars: 1, beats: 3, label: "1 bar" },
-      { bars: 2, beats: 6, label: "2 bars" }
+  it("keeps countdown choices as fixed beat counts", () => {
+    expect(getCountdownOptions()).toEqual([
+      { beats: 0, label: "Off" },
+      { beats: 4, label: "4 beats" },
+      { beats: 8, label: "8 beats" },
+      { beats: 16, label: "16 beats" }
     ]);
-    expect(getCountdownOptions("12/8")).toEqual([
-      { bars: 0, beats: 0, label: "Off" },
-      { bars: 1, beats: 12, label: "1 bar" },
-      { bars: 2, beats: 24, label: "2 bars" }
-    ]);
-    expect(getCountdownBars(8, "4/4")).toBe(2);
-    expect(getCountdownBeatsForBars(2, "6/8")).toBe(12);
   });
 
   it("calculates deterministic tap tempo from recent tap intervals", () => {
@@ -74,7 +65,6 @@ describe("quick metronome controls", () => {
     expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "4/4", subdivision: "quarter" }))).toBe(500);
     expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "4/4", subdivision: "eighth" }))).toBe(250);
     expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "6/8", subdivision: "quarter" }))).toBe(250);
-    expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "12/8", subdivision: "quarter" }))).toBe(250);
 
     expect(
       isAccentTick(0, {

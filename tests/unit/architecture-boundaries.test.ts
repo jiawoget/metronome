@@ -103,9 +103,24 @@ describe("source architecture boundaries", () => {
       "src/components/sheet-practice/viewer/pdf-sheet-renderer.tsx",
       "utf8"
     );
+    const pdfImportAdapter = readFileSync(
+      "src/infrastructure/files/sheet-import-adapter.ts",
+      "utf8"
+    );
+    const pdfViewerAdapter = readFileSync(
+      "src/infrastructure/sheet-viewer/browser-sheet-viewer-adapter.ts",
+      "utf8"
+    );
 
     expect(pdfRenderer).not.toMatch(/https?:\/\//);
     expect(pdfRenderer).not.toContain("unpkg.com");
     expect(pdfRenderer).toContain("pdfjs-dist/build/pdf.worker.min.mjs");
+    for (const source of [pdfRenderer, pdfImportAdapter, pdfViewerAdapter]) {
+      expect(source).not.toContain("pdfjs-dist/legacy");
+    }
+    expect(pdfImportAdapter).toContain('import("pdfjs-dist")');
+    expect(pdfViewerAdapter).toContain('import("pdfjs-dist")');
+    expect(pdfImportAdapter).toContain("pdfjs-dist/build/pdf.worker.min.mjs");
+    expect(pdfViewerAdapter).toContain("pdfjs-dist/build/pdf.worker.min.mjs");
   });
 });

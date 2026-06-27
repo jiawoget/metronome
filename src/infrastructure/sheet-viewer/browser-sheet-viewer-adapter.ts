@@ -4,7 +4,13 @@ import type { ImportedSheet, SheetArtifact, SheetImageDimensions } from "@/domai
 import type { SheetViewerAdapter, SheetViewerInspection } from "@/services/sheet-viewer";
 
 async function readPdfPageCount(blob: Blob) {
-  const pdfjs = await import("pdfjs-dist/legacy/webpack.mjs");
+  const pdfjs = await import("pdfjs-dist");
+
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.mjs",
+    import.meta.url
+  ).toString();
+
   const data = new Uint8Array(await blob.arrayBuffer());
   const loadingTask = pdfjs.getDocument({
     data,

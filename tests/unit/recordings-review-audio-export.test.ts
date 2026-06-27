@@ -125,20 +125,51 @@ describe("recordings review audio export", () => {
     expect(betaFilename.length).toBeLessThanOrEqual(145);
   });
 
-  it("maps only supported audio MIME types while rejecting unknown audio and non-audio MIME types", () => {
+  it("maps known audio MIME types and falls back unknown audio MIME types to webm", () => {
     expect(getAudioExportExtension("audio/webm")).toBe("webm");
     expect(getAudioExportExtension("audio/webm;codecs=opus")).toBe("webm");
     expect(getAudioExportExtension("audio/ogg;codecs=opus")).toBe("ogg");
     expect(getAudioExportExtension("audio/mp4")).toBe("mp4");
     expect(getAudioExportExtension("audio/mpeg")).toBe("mp3");
     expect(getAudioExportExtension("audio/wav")).toBe("wav");
-    expect(getAudioExportExtension("audio/x-custom")).toBeNull();
+    expect(getAudioExportExtension("audio/x-custom")).toBe("webm");
     expect(getAudioExportExtension("application/octet-stream")).toBeNull();
     expect(getAudioExportMimeInfo("audio/webm;codecs=opus")).toEqual({
       mimeType: "audio/webm;codecs=opus",
       extension: "webm"
     });
-    expect(getAudioExportMimeInfo("audio/x-custom;codecs=opus")).toBeNull();
+    expect(getAudioExportMimeInfo("audio/x-custom;codecs=opus")).toEqual({
+      mimeType: "audio/x-custom;codecs=opus",
+      extension: "webm"
+    });
+  });
+
+  it("exports unknown audio MIME artifacts with the documented webm fallback", async () => {
+    const recording = createQuickRecording({
+      id: "custom-audio",
+      mimeType: "audio/x-custom;codecs=opus",
+      audioDataUrl: "data:audio/x-custom;codecs=opus;base64,AQID"
+    });
+    const downloadBlob = vi.fn();
+    const service = createRecordingAudioExportService({
+      repository: createRepository([recording]),
+      downloadAdapter: { downloadBlob }
+    });
+
+    const result = await service.exportRecordingAudio({
+      recordingId: "custom-audio"
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      filename:
+        "metronome-quick-quick-take-20260621-090000-custom-audio.webm",
+      mimeType: "audio/x-custom;codecs=opus",
+      sizeBytes: 3
+    });
+    expect(downloadBlob.mock.calls[0]?.[0].blob.type).toBe(
+      "audio/x-custom;codecs=opus"
+    );
   });
 
   it("returns clear unavailable results without attempting a download", async () => {
@@ -148,7 +179,7 @@ describe("recordings review audio export", () => {
     });
     const unsupported = createQuickRecording({
       id: "unsupported",
-      mimeType: "audio/x-custom"
+      mimeType: "application/octet-stream"
     });
     const malformed = createQuickRecording({
       id: "malformed",
@@ -163,6 +194,11 @@ describe("recordings review audio export", () => {
       mimeType: "audio/wav",
       audioDataUrl: "data:audio/webm;base64,AQID"
     });
+    const mismatchedUnknownMime = createQuickRecording({
+      id: "mismatched-unknown-mime",
+      mimeType: "audio/x-custom",
+      audioDataUrl: "data:audio/webm;base64,AQID"
+    });
     const downloadBlob = vi.fn();
     const service = createRecordingAudioExportService({
       repository: createRepository([
@@ -170,7 +206,8 @@ describe("recordings review audio export", () => {
         unsupported,
         malformed,
         empty,
-        mismatchedMime
+        mismatchedMime,
+        mismatchedUnknownMime
       ]),
       downloadAdapter: { downloadBlob }
     });
@@ -209,6 +246,12 @@ describe("recordings review audio export", () => {
     });
     await expect(
       service.exportRecordingAudio({ recordingId: "mismatched-mime" })
+    ).resolves.toMatchObject({
+      ok: false,
+      reason: "invalid-artifact"
+    });
+    await expect(
+      service.exportRecordingAudio({ recordingId: "mismatched-unknown-mime" })
     ).resolves.toMatchObject({
       ok: false,
       reason: "invalid-artifact"
@@ -259,7 +302,11 @@ describe("recordings review audio export", () => {
       getRecordingAudioExportEligibility(
         createQuickRecording({ mimeType: "audio/x-custom" })
       )
-    ).toMatchObject({ available: false, reason: "unsupported-mime" });
+    ).toMatchObject({
+      available: true,
+      extension: "webm",
+      mimeType: "audio/x-custom"
+    });
     expect(
       getRecordingAudioExportEligibility(
         createQuickRecording({ mimeType: "text/plain" })

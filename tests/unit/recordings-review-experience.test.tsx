@@ -632,6 +632,25 @@ describe("RecordingsReviewExperience grouped take history", () => {
     );
 
     await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-new"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("recording-comparison-status")).toHaveTextContent(
+        "Select another recording to compare"
+      );
+    });
+    expect(
+      within(screen.getByTestId("recording-comparison")).getByTestId(
+        "recording-comparison-metadata-sheet-bridge-new"
+      )
+    ).toHaveTextContent("Sheet recording");
+    expect(loadWaveformComparisonSourcesForRecordingIdsMock).not.toHaveBeenCalled();
+    expect(
+      screen.queryByTestId("recording-comparison-loading")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("recording-comparison-waveform-results")
+    ).not.toBeInTheDocument();
+
     await user.click(screen.getByTestId("compare-recording-control-quick-alpha"));
 
     await waitFor(() => {
@@ -851,15 +870,17 @@ describe("RecordingsReviewExperience grouped take history", () => {
     await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-old"));
 
     await waitFor(() => {
-      expect(
-        within(screen.getByTestId("recording-comparison")).getByTestId(
-          "waveform-comparison-row-sheet-bridge-old"
-        )
-      ).toBeVisible();
+      expect(screen.getByTestId("recording-comparison-status")).toHaveTextContent(
+        "Select another recording to compare"
+      );
     });
     expect(screen.getByTestId("recording-comparison")).toHaveTextContent(
       "Archived"
     );
+    expect(loadWaveformComparisonSourcesForRecordingIdsMock).not.toHaveBeenCalled();
+    expect(
+      screen.queryByTestId("recording-comparison-waveform-results")
+    ).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Archive filter"), "active");
 
@@ -923,11 +944,25 @@ describe("RecordingsReviewExperience grouped take history", () => {
         )
       ).not.toBeInTheDocument();
       expect(
-        within(screen.getByTestId("recording-comparison")).getByTestId(
-          "waveform-comparison-row-sheet-bridge-new"
-        )
-      ).toBeVisible();
+        screen.getByTestId("recording-comparison-status")
+      ).toHaveTextContent("Select another recording to compare");
     });
+    expect(
+      within(screen.getByTestId("recording-comparison")).getByTestId(
+        "recording-comparison-metadata-sheet-bridge-new"
+      )
+    ).toBeVisible();
+    expect(
+      screen.queryByTestId("recording-comparison-waveform-results")
+    ).not.toBeInTheDocument();
+    expect(
+      loadWaveformComparisonSourcesForRecordingIdsMock.mock.calls.some(
+        ([recordingIds]) =>
+          Array.isArray(recordingIds) &&
+          recordingIds.length === 1 &&
+          recordingIds[0] === "sheet-bridge-new"
+      )
+    ).toBe(false);
 
     unmount();
     render(<RecordingsReviewExperience />);

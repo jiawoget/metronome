@@ -94,7 +94,7 @@ export function useRecordingComparisonWaveformSources({
 }) {
   return useWaveformComparisonSources({
     requestId,
-    enabled: recordingIds.length > 0,
+    enabled: recordingIds.length > 1,
     loadSources: useCallback(
       () => service.loadWaveformComparisonSourcesForRecordingIds(recordingIds),
       [recordingIds, service]
@@ -141,8 +141,9 @@ function useWaveformComparisonSources({
   errorMessage: string;
 }) {
   const [state, setState] = useState<WaveformComparisonState | null>(null);
-  const result = state?.key === requestId ? state.result : null;
-  const currentErrorMessage = state?.key === requestId ? state.errorMessage : null;
+  const result = enabled && state?.key === requestId ? state.result : null;
+  const currentErrorMessage =
+    enabled && state?.key === requestId ? state.errorMessage : null;
   const loading = enabled && !result && !currentErrorMessage;
 
   useEffect(() => {

@@ -22,7 +22,13 @@ import {
   RecordingArtifactReview,
   type RecordingPlaybackControls
 } from "@/components/recordings-review/recording-artifact-review";
+import {
+  RecordingComparisonPanel,
+  type RecordingComparisonTakeContext
+} from "@/components/recordings-review/recording-comparison-panel";
+import { MetadataPill } from "@/components/recordings-review/metadata-pill";
 import { useBoundedRecordingSelection } from "@/components/recordings-review/use-bounded-recording-selection";
+import { WaveformComparisonPanel } from "@/components/recordings-review/waveform-comparison-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RecordingAudioExportResult } from "@/lib/recordings-review/audio-export";
@@ -45,10 +51,6 @@ import {
   createTakeHistorySummary,
   type TakeHistorySummary
 } from "@/lib/recordings-review/take-history-summary";
-import {
-  type WaveformComparisonSourceState,
-  type WaveformComparisonSourcesResult
-} from "@/lib/recordings-review/waveform-comparison-sources";
 import { resolveRecordingOrganization } from "@/lib/recordings-review/recording-organization-metadata";
 import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
 import { seekToErrorMarker } from "@/lib/recordings-review/error-markers";
@@ -69,12 +71,6 @@ import type {
 
 const MAX_WAVEFORM_COMPARISON_TAKES = 4;
 const MAX_RECORDING_COMPARISON_RECORDINGS = 4;
-
-type RecordingComparisonTakeContext = {
-  group: RecordingTakeGroup;
-  selection: ResolvedRecordingTakeSelection;
-  isLatest: boolean;
-};
 
 export function RecordingsReviewExperience() {
   const {
@@ -375,6 +371,7 @@ export function RecordingsReviewExperience() {
             organizationByRecordingId={recordingOrganizationById}
             markers={snapshot.errorMarkers}
             takeContextByRecordingId={comparisonTakeContextByRecordingId}
+            maxSelected={MAX_RECORDING_COMPARISON_RECORDINGS}
             loading={recordingComparisonSources.loading}
             result={recordingComparisonSources.result}
             errorMessage={recordingComparisonSources.errorMessage}
@@ -749,6 +746,7 @@ function TakeGroupSection({
         group={group}
         titleId={`${titleId}-waveform-comparison`}
         selectedRecordingIds={visibleComparisonRecordingIds}
+        maxSelected={MAX_WAVEFORM_COMPARISON_TAKES}
         loading={comparisonSources.loading}
         result={comparisonSources.result}
         errorMessage={comparisonSources.errorMessage}
@@ -1036,477 +1034,6 @@ function ComparisonCheckbox({
       />
       <span>{label}</span>
     </label>
-  );
-}
-
-function RecordingComparisonPanel({
-  selectedRecordings,
-  selectedRecordingIds,
-  organizationByRecordingId,
-  markers,
-  takeContextByRecordingId,
-  loading,
-  result,
-  errorMessage
-}: {
-  selectedRecordings: ReviewRecording[];
-  selectedRecordingIds: string[];
-  organizationByRecordingId: Map<string, RecordingOrganizationMetadata>;
-  markers: RecordingErrorMarker[];
-  takeContextByRecordingId: Map<string, RecordingComparisonTakeContext>;
-  loading: boolean;
-  result: WaveformComparisonSourcesResult | null;
-  errorMessage: string | null;
-}) {
-  const selectedCount = selectedRecordingIds.length;
-  const statusText =
-    selectedCount === 0
-      ? "Select recordings to compare"
-      : selectedCount === 1
-        ? "Select another recording to compare"
-        : `${selectedCount} selected recordings`;
-  const limitText =
-    selectedCount >= MAX_RECORDING_COMPARISON_RECORDINGS
-      ? `Up to ${MAX_RECORDING_COMPARISON_RECORDINGS} recordings can be compared at once.`
-      : null;
-
-  return (
-    <section
-      aria-labelledby="recording-comparison-title"
-      data-testid="recording-comparison"
-      className="grid gap-4"
-    >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2 id="recording-comparison-title" className="text-base font-semibold">
-            Recording comparison
-          </h2>
-          <p
-            data-testid="recording-comparison-status"
-            className="text-muted-foreground mt-1 text-sm break-words"
-          >
-            {statusText}
-          </p>
-        </div>
-        <MetadataPill
-          value={`${selectedCount}/${MAX_RECORDING_COMPARISON_RECORDINGS} selected`}
-          wrap
-        />
-      </div>
-
-      {limitText ? (
-        <p
-          role="status"
-          data-testid="recording-comparison-limit"
-          className="text-muted-foreground text-xs font-medium"
-        >
-          {limitText}
-        </p>
-      ) : null}
-
-      {selectedRecordings.length > 0 ? (
-        <div
-          data-testid="recording-comparison-metadata"
-          className="grid gap-3 xl:grid-cols-2"
-        >
-          {selectedRecordings.map((recording) => (
-            <RecordingComparisonMetadataCard
-              key={recording.id}
-              recording={recording}
-              organization={resolveRecordingOrganizationForRecord(
-                recording,
-                organizationByRecordingId
-              )}
-              markerCount={
-                markers.filter((marker) => marker.recordingId === recording.id)
-                  .length
-              }
-              takeContext={takeContextByRecordingId.get(recording.id) ?? null}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {loading ? (
-        <p
-          role="status"
-          data-testid="recording-comparison-loading"
-          className="text-muted-foreground text-sm font-medium"
-        >
-          Loading recording comparison waveform evidence.
-        </p>
-      ) : null}
-
-      {errorMessage ? (
-        <p
-          role="alert"
-          data-testid="recording-comparison-error"
-          className="text-destructive text-sm font-medium"
-        >
-          {errorMessage}
-        </p>
-      ) : null}
-
-      {result ? (
-        <div data-testid="recording-comparison-waveform" className="grid gap-2">
-          <h3 className="text-sm font-semibold">Waveform evidence</h3>
-          <div
-            data-testid="recording-comparison-waveform-results"
-            className="grid gap-2"
-          >
-            {result.sources.map((source) => (
-              <WaveformComparisonRow
-                key={`recording-${source.recordingId}-${source.status}`}
-                source={source}
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function RecordingComparisonMetadataCard({
-  recording,
-  organization,
-  markerCount,
-  takeContext
-}: {
-  recording: ReviewRecording;
-  organization: ResolvedRecordingOrganization;
-  markerCount: number;
-  takeContext: RecordingComparisonTakeContext | null;
-}) {
-  const displayName = getRecordingDisplayName(recording);
-  const fields = getRecordingComparisonMetadataFields({
-    recording,
-    organization,
-    markerCount,
-    takeContext
-  });
-
-  return (
-    <section
-      data-testid={`recording-comparison-metadata-${recording.id}`}
-      aria-label={`${displayName} comparison metadata`}
-      className="border-border bg-muted/40 min-w-0 rounded-md border px-3 py-3"
-    >
-      <h3 className="text-sm font-semibold break-words">{displayName}</h3>
-      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-        {fields.map((field) => (
-          <div
-            key={field.label}
-            className="border-border bg-background rounded-md border px-2 py-2"
-          >
-            <dt className="text-muted-foreground text-xs font-medium">
-              {field.label}
-            </dt>
-            <dd className="mt-1 font-semibold break-words">{field.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
-
-function getRecordingComparisonMetadataFields({
-  recording,
-  organization,
-  markerCount,
-  takeContext
-}: {
-  recording: ReviewRecording;
-  organization: ResolvedRecordingOrganization;
-  markerCount: number;
-  takeContext: RecordingComparisonTakeContext | null;
-}) {
-  const sheetLabel = recording.sheetName?.trim() || recording.sheetId?.trim();
-  const segmentLabel =
-    recording.segmentContext?.segmentName?.trim() ||
-    recording.segmentContext?.segmentId?.trim();
-  const artifactSizeKb = Math.max(1, Math.round(recording.sizeBytes / 1_024));
-
-  return [
-    {
-      label: "Type",
-      value: recording.type === "sheet" ? "Sheet recording" : "Quick recording"
-    },
-    { label: "Recorded", value: formatRecordingDate(recording.createdAt) },
-    { label: "Duration", value: formatDuration(recording.durationMs) },
-    { label: "BPM", value: `${recording.settings.bpm} BPM` },
-    { label: "Time signature", value: recording.settings.timeSignature },
-    {
-      label: "Sheet",
-      value:
-        recording.type === "sheet"
-          ? sheetLabel || "No sheet linked"
-          : "Quick metronome"
-    },
-    {
-      label: "Segment",
-      value:
-        recording.type === "quick"
-          ? "Quick metronome"
-          : segmentLabel || "Whole sheet / no segment"
-    },
-    {
-      label: "Artifact",
-      value: `${artifactSizeKb} KB ${recording.mimeType || "unknown type"}`
-    },
-    {
-      label: "Tags",
-      value: organization.tags.length > 0 ? organization.tags.join(", ") : "No tags"
-    },
-    {
-      label: "Organization",
-      value: getRecordingOrganizationSummary(organization)
-    },
-    {
-      label: "Take state",
-      value: getRecordingTakeStateSummary(recording, takeContext)
-    },
-    {
-      label: "Markers",
-      value:
-        markerCount === 1 ? "1 manual marker" : `${markerCount} manual markers`
-    }
-  ];
-}
-
-function getRecordingOrganizationSummary(
-  organization: ResolvedRecordingOrganization
-) {
-  const states = [
-    organization.favorite ? "Favorite" : null,
-    organization.archived ? "Archived" : null
-  ].filter((state): state is string => Boolean(state));
-
-  return states.length > 0 ? states.join(", ") : "Not favorite, active view";
-}
-
-function getRecordingTakeStateSummary(
-  recording: ReviewRecording,
-  takeContext: RecordingComparisonTakeContext | null
-) {
-  if (!takeContext) {
-    return recording.type === "sheet" ? "No grouped take state" : "Quick take";
-  }
-
-  const states = [
-    takeContext.isLatest ? "Latest" : null,
-    takeContext.selection.bestRecording?.id === recording.id ? "Best" : null,
-    takeContext.selection.activeRecording?.id === recording.id ? "Active" : null
-  ].filter((state): state is string => Boolean(state));
-
-  return states.length > 0 ? states.join(", ") : "Take in history";
-}
-
-function WaveformComparisonPanel({
-  group,
-  titleId,
-  selectedRecordingIds,
-  loading,
-  result,
-  errorMessage
-}: {
-  group: RecordingTakeGroup;
-  titleId: string;
-  selectedRecordingIds: string[];
-  loading: boolean;
-  result: WaveformComparisonSourcesResult | null;
-  errorMessage: string | null;
-}) {
-  const groupLabel =
-    group.kind === "sheet-segment"
-      ? `${group.sheetName ?? group.sheetId}, ${group.segmentName ?? group.segmentId ?? "saved segment"}`
-      : `${group.sheetName ?? group.sheetId}, whole sheet`;
-  const selectedCount = selectedRecordingIds.length;
-  const statusText =
-    selectedCount === 0
-      ? "Select takes to compare"
-      : selectedCount === 1
-        ? "Select another take to compare"
-        : `${selectedCount} selected takes`;
-  const limitText =
-    selectedCount >= MAX_WAVEFORM_COMPARISON_TAKES
-      ? `Up to ${MAX_WAVEFORM_COMPARISON_TAKES} takes can be compared at once.`
-      : null;
-
-  return (
-    <div
-      data-testid={`waveform-comparison-${group.groupId}`}
-      aria-labelledby={titleId}
-      className="border-border bg-background border-b px-3 py-3"
-    >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h4 id={titleId} className="text-sm font-semibold break-words">
-            Waveform comparison for {groupLabel}
-          </h4>
-          <p className="text-muted-foreground mt-1 text-xs break-words">
-            {statusText}
-          </p>
-        </div>
-        <MetadataPill
-          value={`${selectedCount}/${MAX_WAVEFORM_COMPARISON_TAKES} selected`}
-          wrap
-        />
-      </div>
-
-      {limitText ? (
-        <p
-          role="status"
-          data-testid="waveform-comparison-limit"
-          className="text-muted-foreground mt-3 text-xs font-medium"
-        >
-          {limitText}
-        </p>
-      ) : null}
-
-      {loading ? (
-        <p
-          role="status"
-          data-testid="waveform-comparison-loading"
-          className="text-muted-foreground mt-3 text-sm font-medium"
-        >
-          Loading waveform comparison sources.
-        </p>
-      ) : null}
-
-      {errorMessage ? (
-        <p
-          role="alert"
-          data-testid="waveform-comparison-error"
-          className="text-destructive mt-3 text-sm font-medium"
-        >
-          {errorMessage}
-        </p>
-      ) : null}
-
-      {result ? (
-        <div
-          data-testid="waveform-comparison-results"
-          className="mt-3 grid gap-2"
-        >
-          {result.sources.map((source) => (
-            <WaveformComparisonRow
-              key={`${source.recordingId}-${source.status}`}
-              source={source}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function WaveformComparisonRow({
-  source
-}: {
-  source: WaveformComparisonSourceState;
-}) {
-  const displayName = source.recording
-    ? getRecordingDisplayName(source.recording)
-    : source.recordingId;
-
-  if (source.status === "unavailable") {
-    return (
-      <div
-        data-testid={`waveform-comparison-row-${source.recordingId}`}
-        data-waveform-state="unavailable"
-        data-unavailable-reason={source.reason}
-        className="border-border bg-muted/50 rounded-md border px-3 py-3"
-      >
-        <div className="flex flex-col gap-1 text-sm">
-          <span className="font-semibold break-words">{displayName}</span>
-          <span className="text-muted-foreground break-words">
-            {source.message}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  const sourceLabel =
-    source.source === "trusted-peaks" ? "Trusted peaks" : "Decoded audio";
-  const durationLabel = formatDuration(source.durationMs);
-
-  return (
-    <div
-      data-testid={`waveform-comparison-row-${source.recordingId}`}
-      data-waveform-state="ready"
-      className="border-border bg-muted/50 rounded-md border px-3 py-3"
-    >
-      <div className="grid gap-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold break-words">{displayName}</p>
-            <p className="text-muted-foreground mt-1 text-xs break-words">
-              {sourceLabel} · Duration {durationLabel}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 text-xs sm:justify-end">
-            <MetadataPill value={sourceLabel} wrap />
-            <MetadataPill value={durationLabel} wrap />
-          </div>
-        </div>
-        <PeakWaveform
-          recordingName={displayName}
-          peaks={source.peaks}
-          source={source.source}
-          recordingId={source.recordingId}
-        />
-        {source.durationWarning ? (
-          <p
-            data-testid={`waveform-comparison-duration-warning-${source.recordingId}`}
-            className="text-muted-foreground text-xs font-medium break-words"
-          >
-            {source.durationWarning}
-          </p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function PeakWaveform({
-  recordingName,
-  peaks,
-  source,
-  recordingId
-}: {
-  recordingName: string;
-  peaks: number[];
-  source: string;
-  recordingId: string;
-}) {
-  const usablePeaks = peaks.filter((peak) => Number.isFinite(peak) && peak >= 0);
-  const maxPeak = Math.max(...usablePeaks, 0);
-
-  return (
-    <div
-      role="img"
-      aria-label={`${recordingName} waveform from ${source === "trusted-peaks" ? "trusted peaks" : "decoded audio"}`}
-      data-testid={`comparison-waveform-${recordingId}`}
-      data-waveform-source={source}
-      data-peak-count={String(usablePeaks.length)}
-      className="border-border bg-background flex h-14 w-full min-w-0 items-center gap-1 overflow-hidden rounded-md border px-2"
-    >
-      {usablePeaks.map((peak, index) => {
-        const normalizedPeak = maxPeak > 0 ? peak / maxPeak : 0;
-        const heightPercent = Math.max(10, Math.min(100, normalizedPeak * 100));
-
-        return (
-          <span
-            key={`${recordingId}-peak-${index}`}
-            aria-hidden="true"
-            className="bg-accent min-w-1 flex-1 rounded-full"
-            style={{ height: `${heightPercent}%` }}
-          />
-        );
-      })}
-    </div>
   );
 }
 
@@ -2021,24 +1548,6 @@ function getPracticeAgainAccessibleName(recording: ReviewRecording) {
   }
 
   return `Practice again for sheet recording ${displayName} without a linked sheet`;
-}
-
-function MetadataPill({
-  value,
-  wrap = false
-}: {
-  value: string;
-  wrap?: boolean;
-}) {
-  return (
-    <span
-      className={`border-border bg-muted inline-block max-w-full rounded-md border px-2 py-1 font-medium ${
-        wrap ? "whitespace-normal break-words" : "truncate"
-      }`}
-    >
-      {value}
-    </span>
-  );
 }
 
 function DetailTile({ label, value }: { label: string; value: string }) {

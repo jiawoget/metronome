@@ -4,8 +4,6 @@ import {
   ACCENT_MODES,
   SUBDIVISIONS,
   TIME_SIGNATURES,
-  getCountdownBars,
-  getCountdownBeatsForBars,
   getCountdownOptions,
   getTickIntervalMs,
   parseAccentMode,
@@ -68,23 +66,15 @@ export function MetronomeSettingsPanel({
 }: MetronomeSettingsPanelProps) {
   function handleTimeSignatureChange(value: string) {
     const nextTimeSignature = parseTimeSignature(value);
-    const countdownBars = getCountdownBars(
-      settings.countdownBeats,
-      settings.timeSignature
-    );
 
     updateSettings({
-      timeSignature: nextTimeSignature,
-      countdownBeats: getCountdownBeatsForBars(
-        countdownBars,
-        nextTimeSignature
-      )
+      timeSignature: nextTimeSignature
     });
   }
 
   function handleCountdownChange(value: string) {
     updateSettings({
-      countdownBeats: parseCountdownBeats(value, settings.timeSignature)
+      countdownBeats: parseCountdownBeats(value)
     });
   }
 
@@ -191,12 +181,10 @@ export function MetronomeSettingsPanel({
           value={String(settings.countdownBeats)}
           disabled={arePreRunSettingsLocked}
           onChange={handleCountdownChange}
-          options={getCountdownOptions(settings.timeSignature).map(
-            (option) => ({
-              value: String(option.beats),
-              label: option.label
-            })
-          )}
+          options={getCountdownOptions().map((option) => ({
+            value: String(option.beats),
+            label: option.label
+          }))}
         />
       </div>
 

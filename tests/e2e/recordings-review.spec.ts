@@ -1372,13 +1372,15 @@ test("recordings review compares selected sheet takes with waveform evidence", a
   await expect(
     recordingComparison.getByTestId("recording-comparison-metadata-wave-archived")
   ).toContainText("Archived");
-  await expectVisibleDerivedWaveform({
-    page,
-    source: "trusted-peaks",
-    peakCount: 4,
-    label: "archived review-wide comparison source",
-    testId: "comparison-waveform-wave-archived"
-  });
+  await expect(recordingComparison).toContainText(
+    "Select another recording to compare"
+  );
+  await expect(
+    recordingComparison.getByTestId("comparison-waveform-wave-archived")
+  ).toHaveCount(0);
+  await expect(
+    recordingComparison.getByTestId("recording-comparison-waveform-results")
+  ).toHaveCount(0);
   await page.getByLabel("Archive filter").selectOption("active");
   await expect(recordingComparison).toContainText("Select recordings to compare");
 

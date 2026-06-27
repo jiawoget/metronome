@@ -11,7 +11,9 @@ const AUDIO_EXTENSION_BY_BASE_TYPE = new Map<string, string>([
 export type SupportedRecordingAudioMimeInfo = {
   mimeType: string;
   baseMimeType: string;
+  canonicalBaseMimeType: string;
   extension: string;
+  isFallback: boolean;
 };
 
 export function getSupportedRecordingAudioMimeInfo(
@@ -19,21 +21,31 @@ export function getSupportedRecordingAudioMimeInfo(
 ): SupportedRecordingAudioMimeInfo | null {
   const normalizedMimeType = normalizeMimeType(mimeType);
   const baseMimeType = getBaseMimeType(normalizedMimeType);
+  const canonicalBaseMimeType = getCanonicalBaseMimeType(baseMimeType);
   const extension = AUDIO_EXTENSION_BY_BASE_TYPE.get(baseMimeType);
 
-  if (!extension) {
+  if (!extension && !isAudioMimeType(baseMimeType)) {
     return null;
   }
 
   return {
     mimeType: normalizedMimeType,
     baseMimeType,
-    extension
+    canonicalBaseMimeType,
+    extension: extension ?? "webm",
+    isFallback: !extension
   };
 }
 
 export function isSupportedRecordingAudioMime(mimeType: string) {
   return getSupportedRecordingAudioMimeInfo(mimeType) !== null;
+}
+
+export function isKnownRecordingAudioMime(mimeType: string) {
+  const normalizedMimeType = normalizeMimeType(mimeType);
+  const baseMimeType = getBaseMimeType(normalizedMimeType);
+
+  return AUDIO_EXTENSION_BY_BASE_TYPE.has(baseMimeType);
 }
 
 export function getDataUrlMimeType(dataUrlMetadata: string) {
@@ -59,7 +71,11 @@ export function hasMatchingSupportedRecordingAudioMime({
   const expected = getSupportedRecordingAudioMimeInfo(expectedMimeType);
   const actual = getSupportedRecordingAudioMimeInfo(actualMimeType);
 
-  return expected !== null && actual !== null && expected.baseMimeType === actual.baseMimeType;
+  return (
+    expected !== null &&
+    actual !== null &&
+    expected.canonicalBaseMimeType === actual.canonicalBaseMimeType
+  );
 }
 
 function normalizeMimeType(mimeType: string) {
@@ -68,4 +84,14 @@ function normalizeMimeType(mimeType: string) {
 
 function getBaseMimeType(mimeType: string) {
   return mimeType.split(";")[0]?.trim() ?? "";
+}
+
+function getCanonicalBaseMimeType(baseMimeType: string) {
+  return baseMimeType === "audio/x-wav" ? "audio/wav" : baseMimeType;
+}
+
+function isAudioMimeType(baseMimeType: string) {
+  const [type, subtype] = baseMimeType.split("/");
+
+  return type === "audio" && Boolean(subtype?.trim());
 }

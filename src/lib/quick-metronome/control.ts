@@ -1,7 +1,6 @@
 import {
   getMeterTickIntervalMs,
-  getMeterTicksPerMeasure,
-  getMeterTimeSignatureParts
+  getMeterTicksPerMeasure
 } from "@/domain/practice/meter-timing";
 import {
   DEFAULT_BPM,
@@ -18,8 +17,7 @@ export const TIME_SIGNATURES = [
   "2/4",
   "3/4",
   "4/4",
-  "6/8",
-  "12/8"
+  "6/8"
 ] as const satisfies readonly TimeSignature[];
 export const SUBDIVISIONS = [
   "quarter",
@@ -28,7 +26,7 @@ export const SUBDIVISIONS = [
   "sixteenth"
 ] as const satisfies readonly Subdivision[];
 export const ACCENT_MODES: AccentMode[] = ["downbeat", "every-beat", "off"];
-export const COUNTDOWN_BAR_OPTIONS = [0, 1, 2] as const;
+export const COUNTDOWN_BEAT_OPTIONS = [0, 4, 8, 16] as const;
 
 export function clampBpm(value: number) {
   if (!Number.isFinite(value)) {
@@ -53,11 +51,17 @@ export function commitBpmDraft(value: string, fallbackBpm = DEFAULT_BPM) {
 }
 
 export function parseTimeSignature(value: string): TimeSignature {
-  if (TIME_SIGNATURES.includes(value as TimeSignature)) {
+  if (isQuickMetronomeTimeSignature(value)) {
     return value as TimeSignature;
   }
 
   return DEFAULT_METRONOME_SETTINGS.timeSignature;
+}
+
+export function isQuickMetronomeTimeSignature(
+  value: string | null
+): value is TimeSignature {
+  return value !== null && (TIME_SIGNATURES as readonly string[]).includes(value);
 }
 
 export function parseSubdivision(value: string): Subdivision {
@@ -76,56 +80,21 @@ export function parseAccentMode(value: string): AccentMode {
   return DEFAULT_METRONOME_SETTINGS.accent;
 }
 
-export function getCountdownOptions(timeSignature: TimeSignature) {
-  const { numerator } = getMeterTimeSignatureParts(timeSignature);
-
-  return COUNTDOWN_BAR_OPTIONS.map((bars) => ({
-    bars,
-    beats: bars * numerator,
-    label: bars === 0 ? "Off" : bars === 1 ? "1 bar" : "2 bars"
+export function getCountdownOptions() {
+  return COUNTDOWN_BEAT_OPTIONS.map((beats) => ({
+    beats,
+    label: beats === 0 ? "Off" : `${beats} beats`
   }));
 }
 
-export function getCountdownBars(
-  countdownBeats: number,
-  timeSignature: TimeSignature
-) {
-  const { numerator } = getMeterTimeSignatureParts(timeSignature);
-
-  if (countdownBeats === numerator) {
-    return 1;
-  }
-
-  if (countdownBeats === numerator * 2) {
-    return 2;
-  }
-
-  return 0;
-}
-
-export function getCountdownBeatsForBars(
-  bars: number,
-  timeSignature: TimeSignature
-) {
-  const { numerator } = getMeterTimeSignatureParts(timeSignature);
-
-  return COUNTDOWN_BAR_OPTIONS.includes(
-    bars as (typeof COUNTDOWN_BAR_OPTIONS)[number]
-  )
-    ? bars * numerator
-    : 0;
-}
-
-export function parseCountdownBeats(
-  value: string | number,
-  timeSignature: TimeSignature = DEFAULT_METRONOME_SETTINGS.timeSignature
-) {
+export function parseCountdownBeats(value: string | number) {
   const parsed = typeof value === "number" ? value : Number.parseInt(value, 10);
-  const validOptions = getCountdownOptions(timeSignature).map(
-    (option) => option.beats
-  );
 
-  return validOptions.includes(parsed) ? parsed : 0;
+  return COUNTDOWN_BEAT_OPTIONS.includes(
+    parsed as (typeof COUNTDOWN_BEAT_OPTIONS)[number]
+  )
+    ? parsed
+    : 0;
 }
 
 export function getSubdivisionMultiplier(subdivision: Subdivision) {
