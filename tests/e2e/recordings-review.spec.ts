@@ -64,6 +64,7 @@ async function expectVisibleDerivedWaveform({
   const waveform = page.getByTestId(testId);
 
   await expect(waveform, `${label}: waveform container visible`).toBeVisible();
+  await waveform.scrollIntoViewIfNeeded();
   await expect(waveform, `${label}: waveform source`).toHaveAttribute(
     "data-waveform-source",
     source
@@ -341,6 +342,14 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await expect(
     alphaBridgeGroup.getByTestId("recording-row-sheet-alpha-bridge-new")
   ).toBeVisible();
+  await expect(alphaBridgeGroup).toContainText("Best: none");
+  await expect(alphaBridgeGroup).toContainText("Active: none");
+  await expect(
+    alphaBridgeGroup.getByTestId("best-take-control-sheet-alpha-bridge-old")
+  ).toHaveAttribute("aria-pressed", "false");
+  await expect(
+    alphaBridgeGroup.getByTestId("active-take-control-sheet-alpha-bridge-new")
+  ).toHaveAttribute("aria-pressed", "false");
 
   const alphaWholeGroup = page.getByTestId(
     "take-group-sheet:sheet-alpha:segment:none"
@@ -353,9 +362,21 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await expect(page.getByTestId("quick-recordings-section")).toContainText(
     "Grouped quick take"
   );
+  await expect(page.getByTestId("best-take-control-quick-grouped")).toHaveCount(
+    0
+  );
+  await expect(
+    page.getByTestId("active-take-control-quick-grouped")
+  ).toHaveCount(0);
   await expect(page.getByTestId("ungrouped-recordings-section")).toContainText(
     "Missing sheet link take"
   );
+  await expect(
+    page.getByTestId("best-take-control-sheet-missing-link")
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId("active-take-control-sheet-missing-link")
+  ).toHaveCount(0);
 
   await page.getByTestId("recording-row-sheet-alpha-bridge-old").click();
   await expect(page.getByTestId("recording-details")).toHaveAttribute(
@@ -373,6 +394,65 @@ test("recordings review renders grouped take history, filters it, deletes a take
     "/quick-metronome?recordingId=quick-grouped"
   );
 
+  await page
+    .getByRole("button", { name: "Mark Bridge take 1 as best take" })
+    .click();
+  await expect(
+    alphaBridgeGroup.getByTestId("best-take-control-sheet-alpha-bridge-old")
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
+  await expect(alphaBridgeGroup).toContainText("Active: none");
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "quick-grouped"
+  );
+
+  await page
+    .getByRole("button", { name: "Mark Bridge take 2 as active take" })
+    .click();
+  await expect(
+    alphaBridgeGroup.getByTestId("active-take-control-sheet-alpha-bridge-new")
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+
+  await page
+    .getByRole("button", { name: "Mark Bridge take 2 as best take" })
+    .click();
+  await expect(
+    alphaBridgeGroup.getByTestId("best-take-control-sheet-alpha-bridge-new")
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    alphaBridgeGroup.getByTestId("active-take-control-sheet-alpha-bridge-new")
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 2");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+
+  await page
+    .getByRole("button", { name: "Clear best take for Bridge take 2" })
+    .click();
+  await expect(alphaBridgeGroup).toContainText("Best: none");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+
+  await page
+    .getByRole("button", { name: "Clear active take for Bridge take 2" })
+    .click();
+  await expect(alphaBridgeGroup).toContainText("Best: none");
+  await expect(alphaBridgeGroup).toContainText("Active: none");
+
+  await page
+    .getByRole("button", { name: "Mark Bridge take 1 as best take" })
+    .click();
+  await page
+    .getByRole("button", { name: "Mark Bridge take 2 as active take" })
+    .click();
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+
+  await page.reload();
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+
   await page.getByRole("textbox", { name: "Search recordings" }).fill("Bridge");
   await expect(alphaBridgeGroup).toBeVisible();
   await expect(alphaWholeGroup).toBeHidden();
@@ -381,10 +461,15 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await page.getByRole("textbox", { name: "Search recordings" }).fill("");
   await page.getByLabel("Type filter").selectOption("quick");
   await expect(page.getByTestId("quick-recordings-section")).toBeVisible();
+  await expect(page.getByTestId("best-take-control-quick-grouped")).toHaveCount(
+    0
+  );
   await expect(alphaBridgeGroup).toBeHidden();
 
   await page.getByLabel("Type filter").selectOption("sheet");
   await expect(alphaBridgeGroup).toBeVisible();
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
   await expect(page.getByTestId("quick-recordings-section")).toBeHidden();
 
   await page.getByRole("textbox", { name: "Search recordings" }).fill("nomatch");
@@ -399,10 +484,14 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await page.getByRole("button", { name: "Confirm Delete" }).click();
   await expect(page.getByTestId("recording-row-sheet-alpha-bridge-old")).toBeHidden();
   await expect(alphaBridgeGroup).toContainText("1 take");
+  await expect(alphaBridgeGroup).toContainText("Best: none");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
 
   await page.reload();
   await expect(page.getByTestId("recording-row-sheet-alpha-bridge-old")).toBeHidden();
   await expect(alphaBridgeGroup).toContainText("1 take");
+  await expect(alphaBridgeGroup).toContainText("Best: none");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
 
   for (const viewport of [
     { width: 1280, height: 900, label: "desktop" },

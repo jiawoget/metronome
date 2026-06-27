@@ -42,6 +42,14 @@ describe("RecordingsReviewExperience grouped take history", () => {
     expect(
       within(segmentGroup).getByTestId("recording-row-sheet-bridge-old")
     ).toBeVisible();
+    expect(segmentGroup).toHaveTextContent("Best: none");
+    expect(segmentGroup).toHaveTextContent("Active: none");
+    expect(
+      within(segmentGroup).getByTestId("best-take-control-sheet-bridge-new")
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(
+      within(segmentGroup).getByTestId("active-take-control-sheet-bridge-new")
+    ).toHaveAttribute("aria-pressed", "false");
 
     const noSegmentGroup = screen.getByTestId(
       "take-group-sheet:sheet-alpha:segment:none"
@@ -53,10 +61,18 @@ describe("RecordingsReviewExperience grouped take history", () => {
       "Quick recordings"
     );
     expect(screen.getByTestId("recording-row-quick-alpha")).toBeVisible();
+    expect(screen.queryByTestId("best-take-control-quick-alpha")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("active-take-control-quick-alpha")).not.toBeInTheDocument();
     expect(screen.getByTestId("ungrouped-recordings-section")).toHaveTextContent(
       "Legacy recordings with missing sheet links"
     );
     expect(screen.getByTestId("recording-row-sheet-missing-link")).toBeVisible();
+    expect(
+      screen.queryByTestId("best-take-control-sheet-missing-link")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("active-take-control-sheet-missing-link")
+    ).not.toBeInTheDocument();
 
     expect(screen.getByTestId("recording-row-sheet-bridge-new")).toHaveAttribute(
       "aria-pressed",
@@ -163,6 +179,300 @@ describe("RecordingsReviewExperience grouped take history", () => {
       "sheet-whole-null"
     );
     expect(screen.queryByTestId("recording-row-quick-alpha")).not.toBeInTheDocument();
+  });
+
+  it("clears active-only take UI state after deleting the active recording", async () => {
+    const user = userEvent.setup();
+
+    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+
+    await user.click(
+      within(segmentGroup).getByTestId("active-take-control-sheet-bridge-old")
+    );
+
+    await waitFor(() => {
+      expect(segmentGroup).toHaveTextContent("Best: none");
+      expect(segmentGroup).toHaveTextContent("Active: Bridge take 1");
+    });
+
+    await user.click(
+      within(segmentGroup).getByTestId("recording-row-sheet-bridge-old")
+    );
+    await user.click(screen.getByRole("button", { name: "Delete Recording" }));
+    await user.click(screen.getByRole("button", { name: "Confirm Delete" }));
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).queryByTestId("recording-row-sheet-bridge-old")
+      ).not.toBeInTheDocument();
+    });
+    expect(segmentGroup).toHaveTextContent("1 take");
+    expect(segmentGroup).toHaveTextContent("Best: none");
+    expect(segmentGroup).toHaveTextContent("Active: none");
+    expect(
+      within(segmentGroup).getByTestId("active-take-control-sheet-bridge-new")
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("recording-details")).toHaveAttribute(
+      "data-recording-id",
+      "sheet-bridge-new"
+    );
+  });
+
+  it("clears best and active UI state after deleting a recording marked as both", async () => {
+    const user = userEvent.setup();
+
+    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+
+    await user.click(
+      within(segmentGroup).getByTestId("best-take-control-sheet-bridge-old")
+    );
+    await user.click(
+      within(segmentGroup).getByTestId("active-take-control-sheet-bridge-old")
+    );
+
+    await waitFor(() => {
+      expect(segmentGroup).toHaveTextContent("Best: Bridge take 1");
+      expect(segmentGroup).toHaveTextContent("Active: Bridge take 1");
+    });
+
+    await user.click(
+      within(segmentGroup).getByTestId("recording-row-sheet-bridge-old")
+    );
+    await user.click(screen.getByRole("button", { name: "Delete Recording" }));
+    await user.click(screen.getByRole("button", { name: "Confirm Delete" }));
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).queryByTestId("recording-row-sheet-bridge-old")
+      ).not.toBeInTheDocument();
+    });
+    expect(segmentGroup).toHaveTextContent("1 take");
+    expect(segmentGroup).toHaveTextContent("Best: none");
+    expect(segmentGroup).toHaveTextContent("Active: none");
+    expect(
+      within(segmentGroup).getByTestId("best-take-control-sheet-bridge-new")
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(
+      within(segmentGroup).getByTestId("active-take-control-sheet-bridge-new")
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("recording-details")).toHaveAttribute(
+      "data-recording-id",
+      "sheet-bridge-new"
+    );
+  });
+
+  it("marks, changes, and clears best and active takes independently", async () => {
+    const user = userEvent.setup();
+
+    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+    const oldBestControl = within(segmentGroup).getByTestId(
+      "best-take-control-sheet-bridge-old"
+    );
+    const newBestControl = within(segmentGroup).getByTestId(
+      "best-take-control-sheet-bridge-new"
+    );
+    const oldActiveControl = within(segmentGroup).getByTestId(
+      "active-take-control-sheet-bridge-old"
+    );
+    const newActiveControl = within(segmentGroup).getByTestId(
+      "active-take-control-sheet-bridge-new"
+    );
+
+    await user.click(oldBestControl);
+
+    await waitFor(() => {
+      expect(oldBestControl).toHaveAttribute("aria-pressed", "true");
+    });
+    expect(segmentGroup).toHaveTextContent("Best: Bridge take 1");
+    expect(segmentGroup).toHaveTextContent("Active: none");
+    expect(screen.getByTestId("recording-details")).toHaveAttribute(
+      "data-recording-id",
+      "sheet-bridge-new"
+    );
+
+    await user.click(newActiveControl);
+
+    await waitFor(() => {
+      expect(newActiveControl).toHaveAttribute("aria-pressed", "true");
+    });
+    expect(oldBestControl).toHaveAttribute("aria-pressed", "true");
+    expect(segmentGroup).toHaveTextContent("Best: Bridge take 1");
+    expect(segmentGroup).toHaveTextContent("Active: Bridge take 2");
+
+    await user.click(newBestControl);
+
+    await waitFor(() => {
+      expect(newBestControl).toHaveAttribute("aria-pressed", "true");
+    });
+    expect(oldBestControl).toHaveAttribute("aria-pressed", "false");
+    expect(newActiveControl).toHaveAttribute("aria-pressed", "true");
+    expect(segmentGroup).toHaveTextContent("Best: Bridge take 2");
+    expect(segmentGroup).toHaveTextContent("Active: Bridge take 2");
+
+    await user.click(newBestControl);
+
+    await waitFor(() => {
+      expect(newBestControl).toHaveAttribute("aria-pressed", "false");
+    });
+    expect(newActiveControl).toHaveAttribute("aria-pressed", "true");
+    expect(segmentGroup).toHaveTextContent("Best: none");
+    expect(segmentGroup).toHaveTextContent("Active: Bridge take 2");
+
+    await user.click(newActiveControl);
+
+    await waitFor(() => {
+      expect(newActiveControl).toHaveAttribute("aria-pressed", "false");
+    });
+    expect(oldActiveControl).toHaveAttribute("aria-pressed", "false");
+    expect(segmentGroup).toHaveTextContent("Best: none");
+    expect(segmentGroup).toHaveTextContent("Active: none");
+
+    await user.click(screen.getByTestId("recording-row-sheet-bridge-old"));
+
+    expect(screen.getByTestId("recording-details")).toHaveAttribute(
+      "data-recording-id",
+      "sheet-bridge-old"
+    );
+  });
+
+  it("keeps persisted take selections through filters and shows stale refs as unselected", async () => {
+    const user = userEvent.setup();
+
+    recordingHistoryRepository.saveSnapshot({
+      ...createMixedSnapshot(),
+      takeSelections: [
+        {
+          groupId: "sheet:sheet-alpha:segment:segment-bridge",
+          sheetId: "sheet-alpha",
+          segmentId: "segment-bridge",
+          bestRecordingId: "missing-best",
+          activeRecordingId: "missing-active",
+          updatedAt: "2026-06-22T00:00:00.000Z"
+        }
+      ]
+    });
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+
+    expect(segmentGroup).toHaveTextContent("Best: none");
+    expect(segmentGroup).toHaveTextContent("Active: none");
+    expect(
+      within(segmentGroup).getByTestId("best-take-control-sheet-bridge-old")
+    ).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(
+      within(segmentGroup).getByTestId("best-take-control-sheet-bridge-old")
+    );
+    await user.click(
+      within(segmentGroup).getByTestId("active-take-control-sheet-bridge-new")
+    );
+
+    await waitFor(() => {
+      expect(segmentGroup).toHaveTextContent("Best: Bridge take 1");
+      expect(segmentGroup).toHaveTextContent("Active: Bridge take 2");
+    });
+
+    await user.selectOptions(screen.getByLabelText("Type filter"), "quick");
+
+    expect(screen.getByTestId("quick-recordings-section")).toBeVisible();
+    expect(
+      screen.queryByTestId("take-group-sheet:sheet-alpha:segment:segment-bridge")
+    ).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Type filter"), "sheet");
+
+    const restoredSegmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+
+    expect(restoredSegmentGroup).toHaveTextContent("Best: Bridge take 1");
+    expect(restoredSegmentGroup).toHaveTextContent("Active: Bridge take 2");
+  });
+
+  it("reports repository failures without crashing the review route", async () => {
+    const user = userEvent.setup();
+    const setBestSpy = vi
+      .spyOn(recordingHistoryRepository, "setBestTake")
+      .mockImplementation(() => {
+        throw new Error("failed write");
+      });
+
+    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+
+    await user.click(
+      within(segmentGroup).getByTestId("best-take-control-sheet-bridge-old")
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Best take could not be updated."
+    );
+    expect(screen.getByTestId("recording-details")).toHaveAttribute(
+      "data-recording-id",
+      "sheet-bridge-new"
+    );
+
+    setBestSpy.mockRestore();
+  });
+
+  it("reports active take repository failures without crashing the review route", async () => {
+    const user = userEvent.setup();
+    const setActiveSpy = vi
+      .spyOn(recordingHistoryRepository, "setActiveTake")
+      .mockImplementation(() => {
+        throw new Error("failed active write");
+      });
+
+    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+
+    render(<RecordingsReviewExperience />);
+
+    const segmentGroup = await screen.findByTestId(
+      "take-group-sheet:sheet-alpha:segment:segment-bridge"
+    );
+    const activeControl = within(segmentGroup).getByTestId(
+      "active-take-control-sheet-bridge-old"
+    );
+
+    await user.click(activeControl);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Active take could not be updated."
+    );
+    expect(activeControl).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("recording-details")).toHaveAttribute(
+      "data-recording-id",
+      "sheet-bridge-new"
+    );
+
+    setActiveSpy.mockRestore();
   });
 });
 

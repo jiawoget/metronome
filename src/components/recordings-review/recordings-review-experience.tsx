@@ -2,11 +2,13 @@
 
 import {
   AudioLines,
+  CheckCircle2,
   Clock3,
   Filter,
   ListMusic,
   RotateCcw,
   Search,
+  Star,
   Trash2
 } from "lucide-react";
 import Link from "next/link";
@@ -43,6 +45,7 @@ import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type {
   RecordingTakeGroup,
   RecordingErrorMarker,
+  ResolvedRecordingTakeSelection,
   ReviewRecording
 } from "@/lib/recordings-review/types";
 
@@ -371,6 +374,45 @@ function TakeGroupSection({
     group.kind === "sheet-segment"
       ? "Segment take history"
       : "Sheet take history";
+  const [selectionErrorMessage, setSelectionErrorMessage] = useState<
+    string | null
+  >(null);
+  const resolvedSelection = recordingHistoryRepository.resolveTakeSelection(group);
+  const bestTakeLabel = resolvedSelection.bestRecording
+    ? getRecordingDisplayName(resolvedSelection.bestRecording)
+    : "none";
+  const activeTakeLabel = resolvedSelection.activeRecording
+    ? getRecordingDisplayName(resolvedSelection.activeRecording)
+    : "none";
+
+  function updateBestTake(recording: ReviewRecording) {
+    try {
+      const isCurrentBest = resolvedSelection.bestRecording?.id === recording.id;
+
+      recordingHistoryRepository.setBestTake(
+        group,
+        isCurrentBest ? null : recording.id
+      );
+      setSelectionErrorMessage(null);
+    } catch {
+      setSelectionErrorMessage("Best take could not be updated.");
+    }
+  }
+
+  function updateActiveTake(recording: ReviewRecording) {
+    try {
+      const isCurrentActive =
+        resolvedSelection.activeRecording?.id === recording.id;
+
+      recordingHistoryRepository.setActiveTake(
+        group,
+        isCurrentActive ? null : recording.id
+      );
+      setSelectionErrorMessage(null);
+    } catch {
+      setSelectionErrorMessage("Active take could not be updated.");
+    }
+  }
 
   return (
     <section
@@ -400,8 +442,18 @@ function TakeGroupSection({
             <MetadataPill
               value={`Latest ${formatRecordingDate(group.latestRecordedAt)}`}
             />
+            <MetadataPill value={`Best: ${bestTakeLabel}`} wrap />
+            <MetadataPill value={`Active: ${activeTakeLabel}`} wrap />
           </div>
         </div>
+        {selectionErrorMessage ? (
+          <p
+            role="alert"
+            className="text-destructive mt-3 text-sm font-medium"
+          >
+            {selectionErrorMessage}
+          </p>
+        ) : null}
       </div>
       <div className="divide-border divide-y">
         {group.recordings.map((recording) => (
@@ -412,6 +464,9 @@ function TakeGroupSection({
             ariaContextLabel={ariaContextLabel}
             selected={selectedRecordingId === recording.id}
             onSelect={() => onSelectRecording(recording.id)}
+            takeSelection={resolvedSelection}
+            onToggleBest={() => updateBestTake(recording)}
+            onToggleActive={() => updateActiveTake(recording)}
           />
         ))}
       </div>
@@ -450,48 +505,120 @@ function RecordingListItem({
   contextLabel,
   ariaContextLabel = contextLabel,
   selected,
-  onSelect
+  onSelect,
+  takeSelection,
+  onToggleBest,
+  onToggleActive
 }: {
   recording: ReviewRecording;
   contextLabel: string;
   ariaContextLabel?: string;
   selected: boolean;
   onSelect: () => void;
+  takeSelection?: ResolvedRecordingTakeSelection;
+  onToggleBest?: () => void;
+  onToggleActive?: () => void;
 }) {
   const displayName = getRecordingDisplayName(recording);
   const recordedDate = formatRecordingDate(recording.createdAt);
+  const isBest = takeSelection?.bestRecording?.id === recording.id;
+  const isActive = takeSelection?.activeRecording?.id === recording.id;
+  const showTakeControls = !!takeSelection && !!onToggleBest && !!onToggleActive;
 
+  return (
+    <div className="bg-background grid gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+      <button
+        type="button"
+        data-testid={`recording-row-${recording.id}`}
+        aria-pressed={selected}
+        aria-label={`${displayName}, ${ariaContextLabel}, recorded ${recordedDate}`}
+        onClick={onSelect}
+        className="hover:bg-muted focus-visible:ring-ring aria-pressed:bg-muted aria-pressed:ring-accent -m-2 rounded-md p-2 text-left text-sm transition-colors aria-pressed:ring-2 aria-pressed:ring-inset focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <span className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <span className="min-w-0">
+            <span className="block truncate font-semibold">{displayName}</span>
+            <span className="text-muted-foreground mt-1 block break-words">
+              {contextLabel}
+            </span>
+            <span className="text-muted-foreground mt-1 block">
+              {recordedDate}
+            </span>
+            {recording.sheetName && recording.sheetName !== contextLabel ? (
+              <span className="text-foreground mt-1 block font-medium">
+                {recording.sheetName}
+              </span>
+            ) : null}
+          </span>
+          <span className="grid grid-cols-2 gap-2 text-xs sm:w-44">
+            <MetadataPill value={recording.type} />
+            <MetadataPill value={formatDuration(recording.durationMs)} />
+            <MetadataPill value={`${recording.settings.bpm} BPM`} />
+            <MetadataPill value={recording.settings.timeSignature} />
+          </span>
+        </span>
+      </button>
+      {showTakeControls ? (
+        <div
+          aria-label={`${displayName} take selection controls`}
+          className="flex flex-wrap gap-2 sm:justify-end"
+        >
+          <TakeSelectionButton
+            icon={<Star className="h-4 w-4" aria-hidden="true" />}
+            label={isBest ? "Best set" : "Best"}
+            pressed={isBest}
+            ariaLabel={
+              isBest
+                ? `Clear best take for ${displayName}`
+                : `Mark ${displayName} as best take`
+            }
+            testId={`best-take-control-${recording.id}`}
+            onClick={onToggleBest}
+          />
+          <TakeSelectionButton
+            icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+            label={isActive ? "Active set" : "Active"}
+            pressed={isActive}
+            ariaLabel={
+              isActive
+                ? `Clear active take for ${displayName}`
+                : `Mark ${displayName} as active take`
+            }
+            testId={`active-take-control-${recording.id}`}
+            onClick={onToggleActive}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TakeSelectionButton({
+  icon,
+  label,
+  pressed,
+  ariaLabel,
+  testId,
+  onClick
+}: {
+  icon: ReactNode;
+  label: string;
+  pressed: boolean;
+  ariaLabel: string;
+  testId: string;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
-      data-testid={`recording-row-${recording.id}`}
-      aria-pressed={selected}
-      aria-label={`${displayName}, ${ariaContextLabel}, recorded ${recordedDate}`}
-      onClick={onSelect}
-      className="bg-background hover:bg-muted focus-visible:ring-ring aria-pressed:bg-muted aria-pressed:ring-accent w-full px-3 py-3 text-left text-sm transition-colors aria-pressed:ring-2 aria-pressed:ring-inset focus-visible:ring-2 focus-visible:outline-none"
+      data-testid={testId}
+      aria-label={ariaLabel}
+      aria-pressed={pressed}
+      onClick={onClick}
+      className="border-border bg-background hover:bg-muted focus-visible:ring-ring aria-pressed:border-accent aria-pressed:bg-accent/20 inline-flex h-9 min-w-24 items-center justify-center gap-1 rounded-md border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
     >
-      <span className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <span className="min-w-0">
-          <span className="block truncate font-semibold">{displayName}</span>
-          <span className="text-muted-foreground mt-1 block break-words">
-            {contextLabel}
-          </span>
-          <span className="text-muted-foreground mt-1 block">
-            {recordedDate}
-          </span>
-          {recording.sheetName && recording.sheetName !== contextLabel ? (
-            <span className="text-foreground mt-1 block font-medium">
-              {recording.sheetName}
-            </span>
-          ) : null}
-        </span>
-        <span className="grid grid-cols-2 gap-2 text-xs sm:w-44">
-          <MetadataPill value={recording.type} />
-          <MetadataPill value={formatDuration(recording.durationMs)} />
-          <MetadataPill value={`${recording.settings.bpm} BPM`} />
-          <MetadataPill value={recording.settings.timeSignature} />
-        </span>
-      </span>
+      {icon}
+      <span>{label}</span>
     </button>
   );
 }
@@ -691,9 +818,19 @@ function RecordingDetails({
   );
 }
 
-function MetadataPill({ value }: { value: string }) {
+function MetadataPill({
+  value,
+  wrap = false
+}: {
+  value: string;
+  wrap?: boolean;
+}) {
   return (
-    <span className="border-border bg-muted truncate rounded-md border px-2 py-1 font-medium">
+    <span
+      className={`border-border bg-muted inline-block max-w-full rounded-md border px-2 py-1 font-medium ${
+        wrap ? "whitespace-normal break-words" : "truncate"
+      }`}
+    >
       {value}
     </span>
   );
