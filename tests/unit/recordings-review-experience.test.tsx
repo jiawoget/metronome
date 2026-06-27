@@ -20,12 +20,25 @@ const loadWaveformComparisonSourcesForGroupMock = vi.hoisted(() => vi.fn());
 const loadWaveformComparisonSourcesForRecordingIdsMock = vi.hoisted(() =>
   vi.fn()
 );
+const exportRecordingAudioMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/components/recordings-review/recording-artifact-review", () => ({
   RecordingArtifactReview: ({ actions }: { actions?: ReactNode }) => (
     <div data-testid="mock-recording-artifact-review">{actions}</div>
   )
 }));
+
+vi.mock("@/lib/recordings-review/audio-export", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/recordings-review/audio-export")>();
+
+  return {
+    ...actual,
+    recordingAudioExportService: {
+      exportRecordingAudio: exportRecordingAudioMock
+    }
+  };
+});
 
 vi.mock("@/lib/recordings-review/waveform-comparison-sources", async (importOriginal) => {
   const actual =
@@ -42,6 +55,7 @@ vi.mock("@/lib/recordings-review/waveform-comparison-sources", async (importOrig
 
 afterEach(() => {
   cleanup();
+  exportRecordingAudioMock.mockReset();
   loadWaveformComparisonSourcesForRecordingIdsMock.mockReset();
   loadWaveformComparisonSourcesForGroupMock.mockReset();
   recordingHistoryRepository.clear();
@@ -337,6 +351,212 @@ describe("RecordingsReviewExperience grouped take history", () => {
       tags: ["Warmup"],
       favorite: true,
       archived: false
+    });
+  });
+
+  it("exports supported visible quick and sheet recordings from the details panel", async () => {
+    const user = userEvent.setup();
+
+    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    exportRecordingAudioMock.mockResolvedValue({
+      ok: true,
+      recordingId: "sheet-bridge-new",
+      filename: "metronome-sheet-alpha-etude-bridge.webm",
+      mimeType: "audio/webm",
+      sizeBytes: 3
+    });
+
+    render(<RecordingsReviewExperience />);
+
+    await expect(screen.findByTestId("recordings-list")).resolves.toBeVisible();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Export audio for Bridge take 2"
+      })
+    );
+
+    await waitFor(() => {
+      expect(exportRecordingAudioMock).toHaveBeenCalledTimes(1);
+      expect(exportRecordingAudioMock).toHaveBeenLastCalledWith({
+        recordingId: "sheet-bridge-new"
+      });
+      expect(screen.getByTestId("recording-audio-export-status")).toHaveTextContent(
+        "Audio export started."
+      );
+    });
+    expect(screen.getByTestId("recording-details")).toHaveAttribute(
+      "data-recording-id",
+      "sheet-bridge-new"
+    );
+
+    exportRecordingAudioMock.mockResolvedValue({
+      ok: true,
+      recordingId: "quick-alpha",
+      filename: "metronome-quick-quick-alpha.webm",
+      mimeType: "audio/webm",
+      sizeBytes: 3
+    });
+
+    await user.click(screen.getByTestId("recording-row-quick-alpha"));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Export audio for Quick alpha"
+      })
+    );
+
+    await waitFor(() => {
+      expect(exportRecordingAudioMock).toHaveBeenCalledTimes(2);
+      expect(exportRecordingAudioMock).toHaveBeenLastCalledWith({
+        recordingId: "quick-alpha"
+      });
+    });
+    expect(screen.queryByRole("button", { name: /Export all/i })).not.toBeInTheDocument();
+  });
+
+  it("shows unavailable export states for missing and unsupported artifacts without downloading", async () => {
+    const user = userEvent.setup();
+    const snapshot = createMixedSnapshot();
+
+    recordingHistoryRepository.saveSnapshot({
+      ...snapshot,
+      recordings: [
+        createQuickRecording({
+          id: "quick-missing-artifact",
+          name: "Quick missing artifact",
+          audioDataUrl: null
+        }),
+        createSheetRecording({
+          id: "sheet-unsupported-artifact",
+          name: "Unsupported sheet artifact",
+          mimeType: "application/octet-stream"
+        }),
+        ...snapshot.recordings
+      ]
+    });
+
+    render(<RecordingsReviewExperience />);
+
+    await expect(screen.findByTestId("recordings-list")).resolves.toBeVisible();
+
+    await user.click(screen.getByTestId("recording-row-quick-missing-artifact"));
+
+    expect(
+      screen.getByRole("button", {
+        name: "Export audio for Quick missing artifact"
+      })
+    ).toBeDisabled();
+    expect(screen.getByTestId("recording-audio-export-unavailable")).toHaveTextContent(
+      "This recording has no local audio artifact to export."
+    );
+
+    await user.click(screen.getByTestId("recording-row-sheet-unsupported-artifact"));
+
+    expect(
+      screen.getByRole("button", {
+        name: "Export audio for Unsupported sheet artifact"
+      })
+    ).toBeDisabled();
+    expect(screen.getByTestId("recording-audio-export-unavailable")).toHaveTextContent(
+      "This recording artifact is not a supported audio file."
+    );
+    expect(exportRecordingAudioMock).not.toHaveBeenCalled();
+  });
+
+  it("reports a recoverable export error without changing organization or comparison state", async () => {
+    const user = userEvent.setup();
+
+    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    loadWaveformComparisonSourcesForRecordingIdsMock.mockResolvedValue(
+      createComparisonResult([createReadyComparisonSource(createSheetRecording())])
+    );
+    exportRecordingAudioMock.mockResolvedValue({
+      ok: false,
+      recordingId: "sheet-bridge-new",
+      reason: "invalid-artifact",
+      message: "This recording artifact could not be prepared for export."
+    });
+
+    render(<RecordingsReviewExperience />);
+
+    await expect(screen.findByTestId("recordings-list")).resolves.toBeVisible();
+
+    await user.type(screen.getByLabelText("Add recording tag"), "Keep");
+    await user.click(screen.getByRole("button", { name: "Add Tag" }));
+    await user.click(
+      screen.getByTestId("compare-recording-control-sheet-bridge-new")
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "Export audio for Bridge take 2"
+      })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("recording-audio-export-error")).toHaveTextContent(
+        "This recording artifact could not be prepared for export."
+      );
+    });
+    expect(
+      screen.getByTestId("compare-recording-control-sheet-bridge-new")
+    ).toBeChecked();
+    expect(screen.getByTestId("recording-details")).toHaveTextContent("Keep");
+    expect(
+      recordingHistoryRepository.getRecordingOrganization("sheet-bridge-new")
+    ).toMatchObject({
+      tags: ["Keep"],
+      favorite: false,
+      archived: false
+    });
+  });
+
+  it("only exposes archived recording export when archive filters make the recording visible", async () => {
+    const user = userEvent.setup();
+
+    recordingHistoryRepository.saveSnapshot({
+      ...createMixedSnapshot(),
+      recordingOrganization: [
+        {
+          recordingId: "sheet-bridge-new",
+          tags: [],
+          favorite: false,
+          archived: true,
+          updatedAt: "2026-06-21T15:00:00.000Z"
+        }
+      ]
+    });
+    exportRecordingAudioMock.mockResolvedValue({
+      ok: true,
+      recordingId: "sheet-bridge-new",
+      filename: "metronome-sheet-alpha-etude-bridge.webm",
+      mimeType: "audio/webm",
+      sizeBytes: 3
+    });
+
+    render(<RecordingsReviewExperience />);
+
+    await expect(screen.findByTestId("recordings-list")).resolves.toBeVisible();
+
+    expect(screen.queryByTestId("recording-row-sheet-bridge-new")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Export audio for Bridge take 2" })
+    ).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Archive filter"), "archived");
+
+    await expect(
+      screen.findByTestId("recording-row-sheet-bridge-new")
+    ).resolves.toBeVisible();
+    await user.click(
+      screen.getByRole("button", {
+        name: "Export audio for Bridge take 2"
+      })
+    );
+
+    await waitFor(() => {
+      expect(exportRecordingAudioMock).toHaveBeenCalledWith({
+        recordingId: "sheet-bridge-new"
+      });
     });
   });
 

@@ -5,6 +5,7 @@ import {
   Archive,
   CheckCircle2,
   Clock3,
+  Download,
   Filter,
   ListMusic,
   RotateCcw,
@@ -29,6 +30,11 @@ import {
 } from "@/components/recordings-review/recording-artifact-review";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  getRecordingAudioExportEligibility,
+  recordingAudioExportService,
+  type RecordingAudioExportResult
+} from "@/lib/recordings-review/audio-export";
 import {
   formatDuration,
   formatRecordingDate,
@@ -1824,8 +1830,15 @@ function RecordingDetails({
   const [organizationErrorMessage, setOrganizationErrorMessage] = useState<
     string | null
   >(null);
+  const [audioExportState, setAudioExportState] = useState<
+    | { status: "idle"; message: null }
+    | { status: "exporting"; message: string }
+    | { status: "success"; message: string }
+    | { status: "error"; message: string }
+  >({ status: "idle", message: null });
   const resolvedOrganization =
     organization ?? createDefaultRecordingOrganization(recording);
+  const audioExportEligibility = getRecordingAudioExportEligibility(recording);
   const handlePlaybackControlsChange = useCallback(
     (controls: RecordingPlaybackControls | null) => {
       setPlaybackControls(controls);
@@ -1834,6 +1847,48 @@ function RecordingDetails({
   );
   const practiceAgainAccessibleName =
     getPracticeAgainAccessibleName(recording);
+  const exportAudioAccessibleName = `Export audio for ${getRecordingDisplayName(
+    recording
+  )}`;
+  const exportUnavailableMessage = audioExportEligibility.available
+    ? null
+    : audioExportEligibility.message;
+  const exportButtonDisabled =
+    audioExportState.status === "exporting" || !audioExportEligibility.available;
+
+  async function exportRecordingAudio() {
+    setAudioExportState({
+      status: "exporting",
+      message: "Preparing audio export."
+    });
+
+    let result: RecordingAudioExportResult;
+
+    try {
+      result = await recordingAudioExportService.exportRecordingAudio({
+        recordingId: recording.id
+      });
+    } catch {
+      setAudioExportState({
+        status: "error",
+        message: "Audio export could not be started in this browser."
+      });
+      return;
+    }
+
+    if (result.ok) {
+      setAudioExportState({
+        status: "success",
+        message: "Audio export started."
+      });
+      return;
+    }
+
+    setAudioExportState({
+      status: "error",
+      message: result.message
+    });
+  }
 
   function toggleRecordingFavorite() {
     try {
@@ -1938,17 +1993,66 @@ function RecordingDetails({
         warningTestId="recording-duration-warning"
         onPlaybackControlsChange={handlePlaybackControlsChange}
         actions={
-          <Button asChild variant="secondary">
-            <Link
-              href={getContinuePracticeHref(recording)}
-              aria-label={practiceAgainAccessibleName}
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              data-testid={`export-audio-control-${recording.id}`}
+              aria-label={exportAudioAccessibleName}
+              aria-describedby={
+                exportUnavailableMessage
+                  ? `recording-audio-export-unavailable-${recording.id}`
+                  : undefined
+              }
+              disabled={exportButtonDisabled}
+              onClick={exportRecordingAudio}
             >
-              <RotateCcw className="h-4 w-4" aria-hidden="true" />
-              Practice Again
-            </Link>
-          </Button>
+              <Download className="h-4 w-4" aria-hidden="true" />
+              {audioExportState.status === "exporting"
+                ? "Exporting"
+                : "Export Audio"}
+            </Button>
+            <Button asChild variant="secondary">
+              <Link
+                href={getContinuePracticeHref(recording)}
+                aria-label={practiceAgainAccessibleName}
+              >
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                Practice Again
+              </Link>
+            </Button>
+          </>
         }
       />
+
+      {exportUnavailableMessage ? (
+        <p
+          id={`recording-audio-export-unavailable-${recording.id}`}
+          data-testid="recording-audio-export-unavailable"
+          className="text-muted-foreground text-sm font-medium"
+        >
+          {exportUnavailableMessage}
+        </p>
+      ) : null}
+      {audioExportState.status === "exporting" ||
+      audioExportState.status === "success" ? (
+        <p
+          role="status"
+          data-testid="recording-audio-export-status"
+          className="text-muted-foreground text-sm font-medium"
+        >
+          {audioExportState.message}
+        </p>
+      ) : null}
+      {audioExportState.status === "error" ? (
+        <p
+          role="alert"
+          data-testid="recording-audio-export-error"
+          className="text-destructive text-sm font-medium"
+        >
+          {audioExportState.message}
+        </p>
+      ) : null}
 
       <div className="grid gap-2 text-sm sm:grid-cols-2">
         <DetailTile

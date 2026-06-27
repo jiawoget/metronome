@@ -936,6 +936,166 @@ test("recordings review organizes recordings with tags favorites and archive rec
   }
 });
 
+test("recordings review exports one visible audio artifact and respects archived visibility", async ({
+  page
+}) => {
+  await page.goto("/recordings");
+  await clearRecordingHistory(page);
+
+  const quickArtifact = await createWavDataUrl(page, 440, 0.8);
+  const sheetArtifact = await createWavDataUrl(page, 330, 0.8);
+
+  await seedRecordingHistory(page, {
+    sessions: [
+      { id: "session-export-quick", sourceType: "quick" },
+      { id: "session-export-sheet", sourceType: "sheet" }
+    ],
+    recordings: [
+      {
+        id: "quick-export",
+        type: "quick",
+        origin: "user",
+        name: "Export quick",
+        sessionId: "session-export-quick",
+        sheetId: null,
+        createdAt: "2026-06-21T10:00:00",
+        durationMs: quickArtifact.durationMs,
+        sizeBytes: quickArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: quickArtifact.dataUrl,
+        settings: {
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-export",
+        type: "sheet",
+        origin: "user",
+        name: "Export sheet",
+        sessionId: "session-export-sheet",
+        sheetId: "sheet-export-alpha",
+        sheetName: "Export Etude",
+        createdAt: "2026-06-21T11:00:00",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        segmentContext: createSegmentContext({
+          segmentId: "segment-export",
+          segmentName: "Export Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "missing-export",
+        type: "quick",
+        origin: "user",
+        name: "Missing export artifact",
+        sessionId: "session-export-quick",
+        sheetId: null,
+        createdAt: "2026-06-21T09:00:00",
+        durationMs: 800,
+        sizeBytes: 0,
+        mimeType: "audio/wav",
+        audioDataUrl: null,
+        settings: {
+          bpm: 100,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "archived-export",
+        type: "sheet",
+        origin: "user",
+        name: "Archived export",
+        sessionId: "session-export-sheet",
+        sheetId: "sheet-export-alpha",
+        sheetName: "Export Etude",
+        createdAt: "2026-06-21T12:00:00",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        segmentContext: createSegmentContext({
+          segmentId: "segment-export",
+          segmentName: "Export Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      }
+    ],
+    errorMarkers: [],
+    recordingOrganization: [
+      {
+        recordingId: "archived-export",
+        tags: [],
+        favorite: false,
+        archived: true,
+        updatedAt: "2026-06-21T12:30:00.000Z"
+      }
+    ]
+  });
+
+  await page.reload();
+  await expect(page.getByTestId("recordings-list")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Export all/i })).toHaveCount(0);
+  await expect(page.getByTestId("recording-row-archived-export")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Export audio for Archived export" })
+  ).toHaveCount(0);
+
+  await page.getByTestId("recording-row-quick-export").click();
+  const quickDownloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export audio for Export quick" })
+    .click();
+  const quickDownload = await quickDownloadPromise;
+
+  expect(quickDownload.suggestedFilename()).toBe(
+    "metronome-quick-export-quick-20260621-100000-quick-export.wav"
+  );
+  await expect(page.getByTestId("recording-audio-export-status")).toContainText(
+    "Audio export started."
+  );
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "quick-export"
+  );
+
+  await page.getByTestId("recording-row-missing-export").click();
+  await expect(
+    page.getByRole("button", {
+      name: "Export audio for Missing export artifact"
+    })
+  ).toBeDisabled();
+  await expect(page.getByTestId("recording-audio-export-unavailable")).toContainText(
+    "This recording has no local audio artifact to export."
+  );
+
+  await page.getByLabel("Archive filter").selectOption("archived");
+  await expect(page.getByTestId("recording-row-archived-export")).toBeVisible();
+
+  const archivedDownloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export audio for Archived export" })
+    .click();
+  const archivedDownload = await archivedDownloadPromise;
+
+  expect(archivedDownload.suggestedFilename()).toBe(
+    "metronome-sheet-export-etude-export-bridge-20260621-120000-archived-export.wav"
+  );
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "archived-export"
+  );
+});
+
 test("recordings review compares selected sheet takes with waveform evidence", async ({
   page
 }) => {
