@@ -2,6 +2,11 @@ import { getRecordingDisplayName } from "@/lib/recordings-review/history";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { browserAudioDownloadAdapter } from "@/lib/recordings-review/browser-audio-download-adapter";
+import {
+  getDataUrlMimeType,
+  getSupportedRecordingAudioMimeInfo,
+  hasMatchingSupportedRecordingAudioMime
+} from "@/lib/recordings-review/audio-mime";
 
 export type RecordingAudioExportRequest = {
   recordingId: string;
@@ -47,16 +52,6 @@ export type RecordingAudioExportEligibility =
       >;
       message: string;
     };
-
-const MIME_EXTENSION_BY_BASE_TYPE = new Map<string, string>([
-  ["audio/webm", "webm"],
-  ["audio/ogg", "ogg"],
-  ["audio/mp4", "mp4"],
-  ["audio/mpeg", "mp3"],
-  ["audio/wav", "wav"],
-  ["audio/x-wav", "wav"],
-  ["audio/aac", "aac"]
-]);
 
 const MAX_FILENAME_BASE_LENGTH = 140;
 
@@ -211,18 +206,14 @@ function unavailableResult({
 }
 
 export function getAudioExportMimeInfo(mimeType: string) {
-  const normalizedMimeType = mimeType.trim().toLowerCase();
-  const baseMimeType = normalizedMimeType.split(";")[0]?.trim() ?? "";
-  const extension = MIME_EXTENSION_BY_BASE_TYPE.get(baseMimeType);
+  const mimeInfo = getSupportedRecordingAudioMimeInfo(mimeType);
 
-  if (!extension) {
-    return null;
-  }
-
-  return {
-    mimeType: normalizedMimeType,
-    extension
-  };
+  return mimeInfo
+    ? {
+        mimeType: mimeInfo.mimeType,
+        extension: mimeInfo.extension
+      }
+    : null;
 }
 
 function dataUrlToBlob({
@@ -243,6 +234,16 @@ function dataUrlToBlob({
     .split(";")
     .some((part) => part.trim().toLowerCase() === "base64");
   const payload = match[2] ?? "";
+  const dataUrlMimeType = getDataUrlMimeType(metadata);
+
+  if (
+    !hasMatchingSupportedRecordingAudioMime({
+      expectedMimeType: mimeType,
+      actualMimeType: dataUrlMimeType
+    })
+  ) {
+    return null;
+  }
 
   try {
     const bytes = isBase64

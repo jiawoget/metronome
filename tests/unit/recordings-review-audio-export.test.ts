@@ -158,13 +158,19 @@ describe("recordings review audio export", () => {
       id: "empty",
       audioDataUrl: "data:audio/webm;base64,"
     });
+    const mismatchedMime = createQuickRecording({
+      id: "mismatched-mime",
+      mimeType: "audio/wav",
+      audioDataUrl: "data:audio/webm;base64,AQID"
+    });
     const downloadBlob = vi.fn();
     const service = createRecordingAudioExportService({
       repository: createRepository([
         missingArtifact,
         unsupported,
         malformed,
-        empty
+        empty,
+        mismatchedMime
       ]),
       downloadAdapter: { downloadBlob }
     });
@@ -197,6 +203,12 @@ describe("recordings review audio export", () => {
     });
     await expect(
       service.exportRecordingAudio({ recordingId: "empty" })
+    ).resolves.toMatchObject({
+      ok: false,
+      reason: "invalid-artifact"
+    });
+    await expect(
+      service.exportRecordingAudio({ recordingId: "mismatched-mime" })
     ).resolves.toMatchObject({
       ok: false,
       reason: "invalid-artifact"

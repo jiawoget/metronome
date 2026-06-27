@@ -15,13 +15,7 @@ import {
   Trash2
 } from "lucide-react";
 import Link from "next/link";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useSyncExternalStore
-} from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 
 import {
@@ -31,11 +25,7 @@ import {
 import { useBoundedRecordingSelection } from "@/components/recordings-review/use-bounded-recording-selection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  getRecordingAudioExportEligibility,
-  recordingAudioExportService,
-  type RecordingAudioExportResult
-} from "@/lib/recordings-review/audio-export";
+import type { RecordingAudioExportResult } from "@/lib/recordings-review/audio-export";
 import {
   formatDuration,
   formatRecordingDate,
@@ -56,20 +46,22 @@ import {
   type TakeHistorySummary
 } from "@/lib/recordings-review/take-history-summary";
 import {
-  loadWaveformComparisonSourcesForRecordingIds,
-  loadWaveformComparisonSourcesForGroup,
   type WaveformComparisonSourceState,
   type WaveformComparisonSourcesResult
 } from "@/lib/recordings-review/waveform-comparison-sources";
 import { resolveRecordingOrganization } from "@/lib/recordings-review/recording-organization-metadata";
 import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
 import { seekToErrorMarker } from "@/lib/recordings-review/error-markers";
-import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
+import {
+  useRecordingComparisonWaveformSources,
+  useRecordingsReviewController,
+  useTakeGroupWaveformSources
+} from "@/components/recordings-review/use-recordings-review-controller";
+import type { RecordingsReviewService } from "@/services/recordings-review";
 import type {
   RecordingTakeGroup,
   RecordingErrorMarker,
   RecordingOrganizationMetadata,
-  RecordingReviewSnapshot,
   ResolvedRecordingOrganization,
   ResolvedRecordingTakeSelection,
   ReviewRecording
@@ -78,12 +70,6 @@ import type {
 const MAX_WAVEFORM_COMPARISON_TAKES = 4;
 const MAX_RECORDING_COMPARISON_RECORDINGS = 4;
 
-const emptyClientSnapshot: RecordingReviewSnapshot = {
-  sessions: [],
-  recordings: [],
-  errorMarkers: []
-};
-
 type RecordingComparisonTakeContext = {
   group: RecordingTakeGroup;
   selection: ResolvedRecordingTakeSelection;
@@ -91,13 +77,12 @@ type RecordingComparisonTakeContext = {
 };
 
 export function RecordingsReviewExperience() {
-  const liveSnapshot = useSyncExternalStore(
-    recordingHistoryRepository.subscribe,
-    recordingHistoryRepository.getSnapshot,
-    () => emptyClientSnapshot
-  );
-  const [clientReady, setClientReady] = useState(false);
-  const snapshot = clientReady ? liveSnapshot : emptyClientSnapshot;
+  const {
+    snapshot,
+    service: reviewService,
+    deleteRecording,
+    toggleFavorite: toggleRecordingFavoriteAction
+  } = useRecordingsReviewController();
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<RecordingTypeFilter>("all");
   const [archiveFilter, setArchiveFilter] =
@@ -110,16 +95,6 @@ export function RecordingsReviewExperience() {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(
     null
   );
-  const [resolvedRecordingComparison, setResolvedRecordingComparison] =
-    useState<{
-      key: string;
-      result: WaveformComparisonSourcesResult;
-    } | null>(null);
-  const [recordingComparisonLoadError, setRecordingComparisonLoadError] =
-    useState<{
-      key: string;
-      message: string;
-    } | null>(null);
 
   const recordingOrganization = useMemo(
     () => snapshot.recordingOrganization ?? [],
@@ -201,7 +176,7 @@ export function RecordingsReviewExperience() {
     const contextById = new Map<string, RecordingComparisonTakeContext>();
 
     for (const group of groupedRecordings.takeGroups) {
-      const selection = recordingHistoryRepository.resolveTakeSelection(group);
+      const selection = reviewService.resolveTakeSelection(group);
 
       for (const recording of group.recordings) {
         contextById.set(recording.id, {
@@ -213,20 +188,13 @@ export function RecordingsReviewExperience() {
     }
 
     return contextById;
-  }, [groupedRecordings]);
+  }, [groupedRecordings, reviewService]);
   const recordingComparisonRequestId = recordingComparisonSelection.requestId;
-  const recordingComparisonResult =
-    resolvedRecordingComparison?.key === recordingComparisonRequestId
-      ? resolvedRecordingComparison.result
-      : null;
-  const recordingComparisonErrorMessage =
-    recordingComparisonLoadError?.key === recordingComparisonRequestId
-      ? recordingComparisonLoadError.message
-      : null;
-  const recordingComparisonLoading =
-    recordingComparisonSelection.visibleSelectedIds.length > 0 &&
-    !recordingComparisonResult &&
-    !recordingComparisonErrorMessage;
+  const recordingComparisonSources = useRecordingComparisonWaveformSources({
+    service: reviewService,
+    recordingIds: recordingComparisonSelection.visibleSelectedIds,
+    requestId: recordingComparisonRequestId
+  });
   const selectedRecording =
     visibleRecordings.find(
       (recording) => recording.id === selectedRecordingId
@@ -251,55 +219,8 @@ export function RecordingsReviewExperience() {
       )
     : null;
 
-  useEffect(() => {
-    const timerId = window.setTimeout(() => setClientReady(true), 0);
-
-    return () => window.clearTimeout(timerId);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (recordingComparisonSelection.visibleSelectedIds.length === 0) {
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    loadWaveformComparisonSourcesForRecordingIds(
-      recordingComparisonSelection.visibleSelectedIds
-    )
-      .then((result) => {
-        if (cancelled) {
-          return;
-        }
-
-        setResolvedRecordingComparison({
-          key: recordingComparisonRequestId,
-          result
-        });
-      })
-      .catch(() => {
-        if (cancelled) {
-          return;
-        }
-
-        setRecordingComparisonLoadError({
-          key: recordingComparisonRequestId,
-          message: "Recording comparison waveform evidence could not be loaded."
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    recordingComparisonRequestId,
-    recordingComparisonSelection.visibleSelectedIds
-  ]);
-
   function deleteSelectedRecording(recording: ReviewRecording) {
-    recordingHistoryRepository.deleteRecording(recording.id);
+    deleteRecording(recording);
     setSelectedRecordingId(null);
     setConfirmingDeleteId(null);
     recordingComparisonSelection.removeRecordingId(recording.id);
@@ -311,10 +232,7 @@ export function RecordingsReviewExperience() {
       recordingOrganizationById
     );
 
-    recordingHistoryRepository.setRecordingFavorite(
-      recording.id,
-      !organization.favorite
-    );
+    toggleRecordingFavoriteAction(recording, organization.favorite);
   }
 
   function toggleRecordingComparison(recording: ReviewRecording) {
@@ -457,9 +375,9 @@ export function RecordingsReviewExperience() {
             organizationByRecordingId={recordingOrganizationById}
             markers={snapshot.errorMarkers}
             takeContextByRecordingId={comparisonTakeContextByRecordingId}
-            loading={recordingComparisonLoading}
-            result={recordingComparisonResult}
-            errorMessage={recordingComparisonErrorMessage}
+            loading={recordingComparisonSources.loading}
+            result={recordingComparisonSources.result}
+            errorMessage={recordingComparisonSources.errorMessage}
           />
         </CardContent>
       </Card>
@@ -483,6 +401,7 @@ export function RecordingsReviewExperience() {
                   grouping={groupedRecordings}
                   markers={snapshot.errorMarkers}
                   organizationByRecordingId={recordingOrganizationById}
+                  reviewService={reviewService}
                   selectedRecordingId={selectedRecording?.id ?? null}
                   recordingComparisonSelectedIds={
                     recordingComparisonSelection.visibleSelectedIds
@@ -509,6 +428,7 @@ export function RecordingsReviewExperience() {
                 key={selectedRecording.id}
                 recording={selectedRecording}
                 organization={selectedRecordingOrganization}
+                reviewService={reviewService}
                 markers={selectedMarkers}
                 confirmingDelete={confirmingDeleteId === selectedRecording.id}
                 onAskDelete={() => setConfirmingDeleteId(selectedRecording.id)}
@@ -573,6 +493,7 @@ function GroupedRecordingList({
   grouping,
   markers,
   organizationByRecordingId,
+  reviewService,
   selectedRecordingId,
   recordingComparisonSelectedIds,
   onSelectRecording,
@@ -582,6 +503,7 @@ function GroupedRecordingList({
   grouping: ReturnType<typeof groupRecordingsByTake>;
   markers: RecordingErrorMarker[];
   organizationByRecordingId: Map<string, RecordingOrganizationMetadata>;
+  reviewService: RecordingsReviewService;
   selectedRecordingId: string | null;
   recordingComparisonSelectedIds: string[];
   onSelectRecording: (recordingId: string) => void;
@@ -596,6 +518,7 @@ function GroupedRecordingList({
           group={group}
           markers={markers}
           organizationByRecordingId={organizationByRecordingId}
+          reviewService={reviewService}
           selectedRecordingId={selectedRecordingId}
           recordingComparisonSelectedIds={recordingComparisonSelectedIds}
           onSelectRecording={onSelectRecording}
@@ -683,6 +606,7 @@ function TakeGroupSection({
   group,
   markers,
   organizationByRecordingId,
+  reviewService,
   selectedRecordingId,
   recordingComparisonSelectedIds,
   onSelectRecording,
@@ -692,6 +616,7 @@ function TakeGroupSection({
   group: RecordingTakeGroup;
   markers: RecordingErrorMarker[];
   organizationByRecordingId: Map<string, RecordingOrganizationMetadata>;
+  reviewService: RecordingsReviewService;
   selectedRecordingId: string | null;
   recordingComparisonSelectedIds: string[];
   onSelectRecording: (recordingId: string) => void;
@@ -715,15 +640,7 @@ function TakeGroupSection({
   const [selectionErrorMessage, setSelectionErrorMessage] = useState<
     string | null
   >(null);
-  const [resolvedComparison, setResolvedComparison] = useState<{
-    key: string;
-    result: WaveformComparisonSourcesResult;
-  } | null>(null);
-  const [comparisonLoadError, setComparisonLoadError] = useState<{
-    key: string;
-    message: string;
-  } | null>(null);
-  const resolvedSelection = recordingHistoryRepository.resolveTakeSelection(group);
+  const resolvedSelection = reviewService.resolveTakeSelection(group);
   const takeHistorySummary = createTakeHistorySummary({
     group,
     selection: resolvedSelection,
@@ -749,66 +666,18 @@ function TakeGroupSection({
   });
   const visibleComparisonRecordingIds = comparisonSelection.visibleSelectedIds;
   const comparisonRequestId = comparisonSelection.requestId;
-  const comparisonResult =
-    resolvedComparison?.key === comparisonRequestId
-      ? resolvedComparison.result
-      : null;
-  const comparisonErrorMessage =
-    comparisonLoadError?.key === comparisonRequestId
-      ? comparisonLoadError.message
-      : null;
-  const comparisonLoading =
-    visibleComparisonRecordingIds.length > 0 &&
-    !comparisonResult &&
-    !comparisonErrorMessage;
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (visibleComparisonRecordingIds.length === 0) {
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    loadWaveformComparisonSourcesForGroup({
-      group,
-      recordingIds: visibleComparisonRecordingIds
-    })
-      .then((result) => {
-        if (cancelled) {
-          return;
-        }
-
-        setResolvedComparison({
-          key: comparisonRequestId,
-          result
-        });
-      })
-      .catch(() => {
-        if (cancelled) {
-          return;
-        }
-
-        setComparisonLoadError({
-          key: comparisonRequestId,
-          message: "Waveform comparison sources could not be loaded."
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [comparisonRequestId, group, visibleComparisonRecordingIds]);
+  const comparisonSources = useTakeGroupWaveformSources({
+    service: reviewService,
+    group,
+    recordingIds: visibleComparisonRecordingIds,
+    requestId: comparisonRequestId
+  });
 
   function updateBestTake(recording: ReviewRecording) {
     try {
       const isCurrentBest = resolvedSelection.bestRecording?.id === recording.id;
 
-      recordingHistoryRepository.setBestTake(
-        group,
-        isCurrentBest ? null : recording.id
-      );
+      reviewService.setBestTake(group, isCurrentBest ? null : recording.id);
       setSelectionErrorMessage(null);
     } catch {
       setSelectionErrorMessage("Best take could not be updated.");
@@ -820,10 +689,7 @@ function TakeGroupSection({
       const isCurrentActive =
         resolvedSelection.activeRecording?.id === recording.id;
 
-      recordingHistoryRepository.setActiveTake(
-        group,
-        isCurrentActive ? null : recording.id
-      );
+      reviewService.setActiveTake(group, isCurrentActive ? null : recording.id);
       setSelectionErrorMessage(null);
     } catch {
       setSelectionErrorMessage("Active take could not be updated.");
@@ -883,9 +749,9 @@ function TakeGroupSection({
         group={group}
         titleId={`${titleId}-waveform-comparison`}
         selectedRecordingIds={visibleComparisonRecordingIds}
-        loading={comparisonLoading}
-        result={comparisonResult}
-        errorMessage={comparisonErrorMessage}
+        loading={comparisonSources.loading}
+        result={comparisonSources.result}
+        errorMessage={comparisonSources.errorMessage}
       />
       <div className="divide-border divide-y">
         {group.recordings.map((recording) => (
@@ -1677,6 +1543,7 @@ function TakeSelectionButton({
 function RecordingDetails({
   recording,
   organization,
+  reviewService,
   markers,
   confirmingDelete,
   onAskDelete,
@@ -1685,6 +1552,7 @@ function RecordingDetails({
 }: {
   recording: ReviewRecording;
   organization: ResolvedRecordingOrganization | null;
+  reviewService: RecordingsReviewService;
   markers: RecordingErrorMarker[];
   confirmingDelete: boolean;
   onAskDelete: () => void;
@@ -1709,7 +1577,8 @@ function RecordingDetails({
   >({ status: "idle", message: null });
   const resolvedOrganization =
     organization ?? resolveRecordingOrganization({ recording, organization: null });
-  const audioExportEligibility = getRecordingAudioExportEligibility(recording);
+  const audioExportEligibility =
+    reviewService.getRecordingAudioExportEligibility(recording);
   const handlePlaybackControlsChange = useCallback(
     (controls: RecordingPlaybackControls | null) => {
       setPlaybackControls(controls);
@@ -1736,7 +1605,7 @@ function RecordingDetails({
     let result: RecordingAudioExportResult;
 
     try {
-      result = await recordingAudioExportService.exportRecordingAudio({
+      result = await reviewService.exportRecordingAudio({
         recordingId: recording.id
       });
     } catch {
@@ -1763,7 +1632,7 @@ function RecordingDetails({
 
   function toggleRecordingFavorite() {
     try {
-      recordingHistoryRepository.setRecordingFavorite(
+      reviewService.setRecordingFavorite(
         recording.id,
         !resolvedOrganization.favorite
       );
@@ -1775,7 +1644,7 @@ function RecordingDetails({
 
   function toggleRecordingArchive() {
     try {
-      recordingHistoryRepository.setRecordingArchived(
+      reviewService.setRecordingArchived(
         recording.id,
         !resolvedOrganization.archived
       );
@@ -1789,7 +1658,7 @@ function RecordingDetails({
     event.preventDefault();
 
     try {
-      recordingHistoryRepository.addRecordingTag(recording.id, tagInput);
+      reviewService.addRecordingTag(recording.id, tagInput);
       setTagInput("");
       setOrganizationErrorMessage(null);
     } catch (error) {
@@ -1801,7 +1670,7 @@ function RecordingDetails({
 
   function removeRecordingTag(tag: string) {
     try {
-      recordingHistoryRepository.removeRecordingTag(recording.id, tag);
+      reviewService.removeRecordingTag(recording.id, tag);
       setOrganizationErrorMessage(null);
     } catch {
       setOrganizationErrorMessage("Tag could not be removed.");

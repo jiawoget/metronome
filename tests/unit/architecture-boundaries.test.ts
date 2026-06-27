@@ -81,4 +81,31 @@ describe("source architecture boundaries", () => {
     expect(storesReadme).toContain("ephemeral client UI/workflow");
     expect(storesReadme).toContain("must not become a persistence layer");
   });
+
+  it("keeps Recordings Review UI behind the review service boundary", () => {
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src/components/recordings-review"), [
+        ".ts",
+        ".tsx"
+      ])
+    );
+    const violations = matchingFiles(files, [
+      /@\/lib\/recordings-review\/repository/,
+      /\brecordingHistoryRepository\b/,
+      /\brecordingAudioExportService\b/
+    ]);
+
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps the PDF worker local instead of loading it from a CDN", () => {
+    const pdfRenderer = readFileSync(
+      "src/components/sheet-practice/viewer/pdf-sheet-renderer.tsx",
+      "utf8"
+    );
+
+    expect(pdfRenderer).not.toMatch(/https?:\/\//);
+    expect(pdfRenderer).not.toContain("unpkg.com");
+    expect(pdfRenderer).toContain("pdfjs-dist/build/pdf.worker.min.mjs");
+  });
 });

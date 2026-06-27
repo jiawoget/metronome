@@ -2,6 +2,7 @@ import {
   hasUsablePeaks,
   loadRecordingArtifactDetails
 } from "@/lib/recordings-review/artifact-service";
+import { isSupportedRecordingAudioMime } from "@/lib/recordings-review/audio-mime";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type {
   RecordingArtifactDetails,
@@ -291,7 +292,7 @@ function createUnavailableSource({
 }
 
 function isSupportedAudioMime(mimeType: string) {
-  return mimeType.trim().toLowerCase().startsWith("audio/");
+  return isSupportedRecordingAudioMime(mimeType);
 }
 
 function normalizeRequiredString(value: unknown) {

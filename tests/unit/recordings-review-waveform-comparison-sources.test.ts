@@ -184,7 +184,13 @@ describe("waveform comparison source boundary", () => {
   });
 
   it("maps unsupported mime, blank artifacts, empty audio, and invalid duration to per-take states", async () => {
-    for (const mimeType of ["metadata/session", "", "image/png", "application/pdf"]) {
+    for (const mimeType of [
+      "metadata/session",
+      "",
+      "image/png",
+      "application/pdf",
+      "audio/x-custom"
+    ]) {
       await expectUnavailableReason(
         loadWaveformComparisonSource(createSheetRecording({ mimeType })),
         "unsupported-mime"
