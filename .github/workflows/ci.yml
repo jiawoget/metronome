@@ -21,6 +21,14 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      - name: Set up npm
+        run: npm install -g npm@11.17.0
+
+      - name: Show runtime versions
+        run: |
+          node --version
+          npm --version
+
       - name: Install dependencies
         run: npm ci
 
