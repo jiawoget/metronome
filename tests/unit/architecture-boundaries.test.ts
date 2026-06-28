@@ -90,6 +90,9 @@ describe("source architecture boundaries", () => {
       ])
     );
     const violations = matchingFiles(files, [
+      /@\/lib\/recordings-review\/artifact-details/,
+      /@\/lib\/recordings-review\/artifact-migration/,
+      /@\/lib\/recordings-review\/artifact-storage/,
       /@\/lib\/recordings-review\/repository/,
       /\brecordingHistoryRepository\b/,
       /\brecordingAudioExportService\b/,

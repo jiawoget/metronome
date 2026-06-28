@@ -167,6 +167,8 @@ Keep bans for:
 - UI importing browser audio/capture infrastructure;
 - UI importing raw artifact repository/storage modules where the UI should stay
   behind a service/controller boundary;
+- Recordings Review UI importing artifact storage, migration, or decode/detail
+  modules directly instead of using its controller/service boundaries;
 - app/server layers importing browser recording storage;
 - local PDF worker requirements.
 
