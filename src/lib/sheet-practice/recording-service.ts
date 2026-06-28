@@ -1,10 +1,10 @@
 import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
 import {
-  assertRecordingArtifactCleanup,
-  cleanupCommittedRecordingArtifacts,
+  cleanupCommittedRecordingArtifactsOrThrow,
   createRecordingArtifactRef,
   saveCapturedRecordingArtifact
 } from "@/lib/recordings-review/artifact-storage";
+import { restoreOrDeletePracticeSessionSnapshot } from "@/services/practice-session/snapshot-rollback";
 import {
   hasUsablePeaks,
   loadRecordingArtifactDetailsFromBody
@@ -91,11 +91,9 @@ async function rollbackSheetReviewRecordingMetadata(recording: {
     createdAt: recording.createdAt,
     previousSession: recording.previousSession
   });
-  const cleanupResult = await cleanupCommittedRecordingArtifacts(
+  await cleanupCommittedRecordingArtifactsOrThrow(
     [...result.artifactCleanupRecordingIds, recording.id]
   );
-
-  assertRecordingArtifactCleanup(cleanupResult);
 }
 
 export class BrowserSheetRecordingService implements SheetRecordingService {
@@ -228,11 +226,9 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
               previousSession
             });
           } else {
-            const cleanupResult = await cleanupCommittedRecordingArtifacts([
+            await cleanupCommittedRecordingArtifactsOrThrow([
               metadata.id
             ]);
-
-            assertRecordingArtifactCleanup(cleanupResult);
           }
         } catch (rollbackError) {
           rollbackErrors.push(rollbackError);
@@ -240,11 +236,11 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
 
         if (artifactSaved) {
           try {
-            if (previousSession) {
-              await input.sessionService.restorePracticeSessionSnapshot(previousSession);
-            } else {
-              await input.sessionService.deletePracticeSessionSnapshot(metadata.sessionId);
-            }
+            await restoreOrDeletePracticeSessionSnapshot({
+              previousSession,
+              createdSessionId: metadata.sessionId,
+              sessionService: input.sessionService
+            });
           } catch (rollbackError) {
             rollbackErrors.push(rollbackError);
           }
