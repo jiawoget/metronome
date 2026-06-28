@@ -439,6 +439,47 @@ describe("practice session service", () => {
     });
   });
 
+  it("prepares sheet recording metadata without persisting recording metadata or session recording counts until commit", async () => {
+    const { service, repository } = createService();
+
+    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "recording" });
+    nowMs += 12_500;
+
+    const prepared = await service.prepareSheetRecordingMetadata({
+      sheetId: "sheet-alpha",
+      sessionId: session?.id,
+      durationMs: 12_300
+    });
+
+    expect(prepared?.metadata).toEqual({
+      id: "recording-2",
+      type: "sheet",
+      sessionId: "session-1",
+      sheetId: "sheet-alpha",
+      sheetName: "Alpha Sheet",
+      createdAt: "2026-06-21T12:00:12.500Z",
+      durationMs: 12_300,
+      bpm: 96,
+      timeSignature: "4/4",
+      segmentContext: null
+    });
+    await expect(service.listRecordingMetadata()).resolves.toEqual([]);
+    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T12:00:00.000Z"
+    });
+
+    await service.commitPreparedSheetRecordingSession(prepared!);
+
+    await expect(service.listRecordingMetadata()).resolves.toEqual([]);
+    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+      recordingCount: 1,
+      latestRecordingId: "recording-2",
+      updatedAt: "2026-06-21T12:00:12.500Z"
+    });
+  });
+
   it("normalizes legacy and explicit null sheet recording segment context", () => {
     const legacyMetadata = {
       id: "recording-legacy",

@@ -149,6 +149,9 @@ describe("ReferencePanel playback timestamp", () => {
     );
 
     await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
+    await waitFor(() => {
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+    });
 
     dispatchReferenceAudioState(localReference.id, 1.234);
 
@@ -172,6 +175,9 @@ describe("ReferencePanel playback timestamp", () => {
     );
 
     await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
+    await waitFor(() => {
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+    });
     dispatchReferenceAudioState(localReference.id, 1.234);
 
     await waitFor(() => {
@@ -211,6 +217,9 @@ describe("ReferencePanel playback timestamp", () => {
     );
 
     await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
+    await waitFor(() => {
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+    });
     dispatchReferenceAudioState(localReference.id, 1.234);
 
     await waitFor(() => {

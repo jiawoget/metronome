@@ -5,6 +5,7 @@ import {
   type RecordingAudioExportResult
 } from "@/lib/recordings-review/audio-export";
 import {
+  assertRecordingArtifactCleanup,
   cleanupCommittedRecordingArtifacts,
   migrateLegacyRecordingArtifacts
 } from "@/lib/recordings-review/artifact-service";
@@ -75,11 +76,12 @@ export function createRecordingsReviewService({
   },
   async deleteRecording(recordingId) {
     const result = historyRepository.deleteRecording(recordingId);
-
-    await cleanupCommittedRecordingArtifacts(
+    const cleanupResult = await cleanupCommittedRecordingArtifacts(
       result.artifactCleanupRecordingIds,
       artifactRepository
     );
+
+    assertRecordingArtifactCleanup(cleanupResult);
   },
   setRecordingFavorite(recordingId, favorite) {
     historyRepository.setRecordingFavorite(recordingId, favorite);

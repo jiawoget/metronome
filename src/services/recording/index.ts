@@ -36,9 +36,10 @@ export class RecordingPermissionError extends Error {
 
 export type SheetRecordingSessionService = Pick<
   PracticeSessionService,
-  | "createSheetRecordingMetadata"
+  | "commitPreparedSheetRecordingSession"
   | "deletePracticeSessionSnapshot"
   | "getRecentSheetSession"
+  | "prepareSheetRecordingMetadata"
   | "restorePracticeSessionSnapshot"
 >;
 

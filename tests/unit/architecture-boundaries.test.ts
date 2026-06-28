@@ -128,6 +128,21 @@ describe("source architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
+  it("keeps Sheet Practice UI away from recordings-review repositories", () => {
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src/components/sheet-practice"), [
+        ".ts",
+        ".tsx"
+      ])
+    );
+    const violations = matchingFiles(files, [
+      /@\/lib\/recordings-review\/repository/,
+      /\brecordingHistoryRepository\b/
+    ]);
+
+    expect(violations).toEqual([]);
+  });
+
   it("keeps app and server layers away from browser recording storage", () => {
     const appFiles = readSources(
       listSourceFiles(join(repoRoot, "src/app"), [".ts", ".tsx"])

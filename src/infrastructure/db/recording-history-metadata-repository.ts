@@ -7,7 +7,10 @@ import {
 } from "@/domain/practice";
 import { parsePracticeTimeSignature } from "@/domain/practice/validation";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
-import { cleanupCommittedRecordingArtifacts } from "@/lib/recordings-review/artifact-service";
+import {
+  assertRecordingArtifactCleanup,
+  cleanupCommittedRecordingArtifacts
+} from "@/lib/recordings-review/artifact-service";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import type { PracticeRecordingMetadataRepository } from "@/services/practice-session";
 
@@ -111,10 +114,11 @@ export const recordingHistoryMetadataRepository: PracticeRecordingMetadataReposi
 
     async clear() {
       const result = recordingHistoryRepository.clearSheetRecordings();
-
-      await cleanupCommittedRecordingArtifacts(
+      const cleanupResult = await cleanupCommittedRecordingArtifacts(
         result.artifactCleanupRecordingIds
       );
+
+      assertRecordingArtifactCleanup(cleanupResult);
     },
 
     subscribe(listener) {

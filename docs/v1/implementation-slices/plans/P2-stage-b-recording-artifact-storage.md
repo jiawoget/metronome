@@ -998,3 +998,36 @@ Fail the PR if:
 - Current repository normalization rebuilds snapshots from known fields in some paths. Migration and cleanup code must preserve unknown fields deliberately.
 - Dexie quota and browser private-mode behavior may be hard to simulate in automated E2E; fake repositories are acceptable for unit/integration coverage, with real Chrome manual acceptance for confidence.
 - Object URL lifecycle in playback must be tested for rapid recording switching, unmount, and concurrent export/playback, not only the normal playback path.
+
+## Complexity Budget / Reviewer Note
+
+Approximate diff split after the Stage B complexity pass:
+
+- Production: roughly 20+ source files, about +1.9k/-0.7k lines versus `origin/codex/v1-pack-2-segment-take-review`. The largest added production files are now the bounded IndexedDB adapter, artifact migration, recording history repository, and focused artifact/body modules instead of one artifact service god-file.
+- Tests: roughly +1.5k/-0.2k lines. Most test LOC is migration/data-safety coverage: legacy data URL migration, storage failure handling, stale-write protection, clear/delete cleanup, and UI-facing unavailable states.
+- Docs: roughly +1k lines in this plan. The plan is intentionally detailed because Stage B touches persistence, migration, and rollback semantics.
+
+Production module budget:
+
+- `recording-artifact-repository.ts` is the concrete IndexedDB/Dexie adapter. It is necessary because metadata snapshots must stay synchronous while artifact bodies move out of localStorage.
+- `artifact-data-url.ts` owns legacy data URL parsing, MIME validation, and byte conversion only.
+- `artifact-storage.ts` owns artifact refs, save/resolve body behavior, committed-artifact cleanup, and storage error mapping.
+- `artifact-details.ts` owns browser audio decode, duration warnings, and waveform peak derivation.
+- `artifact-migration.ts` owns legacy migration orchestration and the metadata rewrite retry loop.
+- `artifact-service.ts` is now a compatibility facade/barrel so existing callers keep a stable import while responsibilities live in focused modules.
+- `recording-history-snapshot.ts` owns pure snapshot cleanup/normalization helpers used by write operations.
+- `recording-history-operations.ts` owns typed save/delete/rollback/clear operations. `repository.ts` remains the localStorage snapshot/query/normalization boundary and composes those operations without exposing a raw generic write API.
+- `quick-metronome/artifact-controller.ts` is a thin UI boundary adapter only. It should not grow into a second artifact service; new artifact behavior belongs in the recordings-review artifact modules.
+
+Required complexity:
+
+- Migration must save artifact bodies before removing legacy `audioDataUrl`, must preserve the exact legacy bytes on failure, and must report migrated/skipped/failed/orphaned entries.
+- Stale-write protection is required for localStorage rewrites so another tab's newer snapshot is not overwritten during migration, clear, delete, or rollback.
+- Cleanup returns candidate artifact ids from metadata mutations and then deletes only artifacts no longer retained in the latest snapshot.
+- Quick/sheet saves must persist artifact bodies before metadata points at `artifactRef`; metadata must omit new `audioDataUrl` bodies.
+
+Follow-up TODOs that should not block this slice:
+
+- Move error-marker mutation methods out of `repository.ts` if the repository grows again.
+- Consider moving take-selection and recording-organization write methods to their own operation modules after Pack 2 stabilizes.
+- Revisit object URL lifecycle with broader interaction coverage after the storage migration is merged.

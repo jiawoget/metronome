@@ -67,6 +67,8 @@ function createIdleSessionService() {
     updateSheetSessionDuration: vi.fn(async () => null),
     endPracticeSession: vi.fn(async () => null),
     createSheetRecordingMetadata: vi.fn(async () => null),
+    prepareSheetRecordingMetadata: vi.fn(async () => null),
+    commitPreparedSheetRecordingSession: vi.fn(async () => undefined),
     getRecentSession: vi.fn(async () => null),
     getRecentSheetSession: vi.fn(async () => null),
     listRecordingMetadata: vi.fn(async () => []),
@@ -79,6 +81,8 @@ function createIdleSessionService() {
     | "updateSheetSessionDuration"
     | "endPracticeSession"
     | "createSheetRecordingMetadata"
+    | "prepareSheetRecordingMetadata"
+    | "commitPreparedSheetRecordingSession"
     | "getRecentSession"
     | "getRecentSheetSession"
     | "listRecordingMetadata"

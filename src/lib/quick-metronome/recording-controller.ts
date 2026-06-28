@@ -2,6 +2,7 @@ import type { PracticeSession } from "@/domain/practice";
 import type { PracticeSessionService } from "@/services/practice-session";
 import { createQuickRecording } from "@/lib/quick-metronome/session";
 import {
+  assertRecordingArtifactCleanup,
   cleanupCommittedRecordingArtifacts,
   saveCapturedRecordingArtifact
 } from "@/lib/recordings-review/artifact-service";
@@ -68,10 +69,11 @@ export const quickRecordingController = {
   getLatestQuickRecording,
   async clear() {
     const result = recordingHistoryRepository.clearQuickRecordings();
-
-    await cleanupCommittedRecordingArtifacts(
+    const cleanupResult = await cleanupCommittedRecordingArtifacts(
       result.artifactCleanupRecordingIds
     );
+
+    assertRecordingArtifactCleanup(cleanupResult);
   },
   async saveCapturedQuickRecording({
     artifact,
@@ -110,6 +112,7 @@ export const quickRecordingController = {
     let linkedSession: PracticeSession | null = null;
 
     try {
+      // Body first, then session link, then metadata; rollback cleanup stays best-effort.
       await saveCapturedRecordingArtifact({
         recordingId: recording.id,
         recordingType: "quick",
@@ -137,26 +140,41 @@ export const quickRecordingController = {
         session: nextSession
       };
     } catch (error) {
+      const rollbackErrors: unknown[] = [];
+
       if (metadataSaved) {
         try {
           const result =
             deleteQuickRecordingMetadataByIdentity(metadataSaved);
-
-          await cleanupCommittedRecordingArtifacts(
+          const cleanupResult = await cleanupCommittedRecordingArtifacts(
             result.artifactCleanupRecordingIds
           );
-        } catch {
-          // Keep trying to restore session metadata; the original save error remains authoritative.
+
+          assertRecordingArtifactCleanup(cleanupResult);
+        } catch (rollbackError) {
+          rollbackErrors.push(rollbackError);
         }
       } else if (artifactSaved) {
-        await cleanupCommittedRecordingArtifacts([recording.id]);
+        try {
+          const cleanupResult = await cleanupCommittedRecordingArtifacts([recording.id]);
+
+          assertRecordingArtifactCleanup(cleanupResult);
+        } catch (rollbackError) {
+          rollbackErrors.push(rollbackError);
+        }
       }
 
       await restoreLinkedQuickPracticeSession({
         previousSession: session,
         linkedSession,
         sessionService
-      }).catch(() => undefined);
+      }).catch((rollbackError) => {
+        rollbackErrors.push(rollbackError);
+      });
+
+      if (rollbackErrors.length > 0) {
+        throw new Error("Recording save failed, and rollback cleanup could not fully restore local state.");
+      }
 
       throw error;
     }

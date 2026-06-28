@@ -1,5 +1,6 @@
 import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
 import {
+  assertRecordingArtifactCleanup,
   cleanupCommittedRecordingArtifacts,
   createRecordingArtifactRef,
   hasUsablePeaks,
@@ -100,8 +101,17 @@ function createDraftSheetReviewRecording({
   };
 }
 
-function saveSheetReviewRecording(recording: ReviewRecording) {
-  recordingHistoryRepository.saveSheetReviewRecordingMetadata(recording);
+function saveSheetReviewRecordingWithSession({
+  recording,
+  session
+}: {
+  recording: ReviewRecording;
+  session: PracticeSession;
+}) {
+  recordingHistoryRepository.saveSheetRecordingMetadataWithSession({
+    recording,
+    session
+  });
 }
 
 async function rollbackSheetReviewRecordingMetadata(recording: {
@@ -116,8 +126,11 @@ async function rollbackSheetReviewRecordingMetadata(recording: {
     createdAt: recording.createdAt,
     previousSession: recording.previousSession
   });
+  const cleanupResult = await cleanupCommittedRecordingArtifacts(
+    [...result.artifactCleanupRecordingIds, recording.id]
+  );
 
-  await cleanupCommittedRecordingArtifacts(result.artifactCleanupRecordingIds);
+  assertRecordingArtifactCleanup(cleanupResult);
 }
 
 export class BrowserSheetRecordingService implements SheetRecordingService {
@@ -157,6 +170,7 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
   async stopAndSave(input: SaveSheetRecordingInput): Promise<SaveSheetRecordingResult> {
     const artifact = await this.captureService.stop();
     let metadata: SheetRecordingMetadata | null = null;
+    let artifactSaved = false;
     const previousSession = await input.sessionService.getRecentSheetSession(input.sheetId);
 
     if (artifact.sizeBytes <= 0) {
@@ -181,7 +195,7 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
     }
 
     try {
-      metadata = await input.sessionService.createSheetRecordingMetadata({
+      const prepared = await input.sessionService.prepareSheetRecordingMetadata({
         sheetId: input.sheetId,
         sessionId: input.sessionId,
         durationMs: roundDuration(decodedDetails.decodedDurationMs),
@@ -191,9 +205,11 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         forceNewSession: input.forceNewSession
       });
 
-      if (!metadata) {
+      if (!prepared) {
         throw new Error("No valid sheet context. Recording was not saved.");
       }
+
+      metadata = prepared.metadata;
 
       const decodedRecording = createSheetReviewRecording({
         metadata,
@@ -206,6 +222,7 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         artifact,
         createdAt: decodedRecording.createdAt
       });
+      artifactSaved = true;
       const recording = {
         ...decodedRecording,
         durationMs: roundDuration(decodedDetails.decodedDurationMs),
@@ -226,7 +243,11 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         source: "trusted-peaks"
       };
 
-      saveSheetReviewRecording(recording);
+      saveSheetReviewRecordingWithSession({
+        recording,
+        session: prepared.session
+      });
+      await input.sessionService.commitPreparedSheetRecordingSession(prepared);
 
       return {
         metadata,
@@ -238,22 +259,32 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         const rollbackErrors: unknown[] = [];
 
         try {
-          await rollbackSheetReviewRecordingMetadata({
-            ...metadata,
-            previousSession
-          });
+          if (artifactSaved) {
+            await rollbackSheetReviewRecordingMetadata({
+              ...metadata,
+              previousSession
+            });
+          } else {
+            const cleanupResult = await cleanupCommittedRecordingArtifacts([
+              metadata.id
+            ]);
+
+            assertRecordingArtifactCleanup(cleanupResult);
+          }
         } catch (rollbackError) {
           rollbackErrors.push(rollbackError);
         }
 
-        try {
-          if (previousSession) {
-            await input.sessionService.restorePracticeSessionSnapshot(previousSession);
-          } else {
-            await input.sessionService.deletePracticeSessionSnapshot(metadata.sessionId);
+        if (artifactSaved) {
+          try {
+            if (previousSession) {
+              await input.sessionService.restorePracticeSessionSnapshot(previousSession);
+            } else {
+              await input.sessionService.deletePracticeSessionSnapshot(metadata.sessionId);
+            }
+          } catch (rollbackError) {
+            rollbackErrors.push(rollbackError);
           }
-        } catch (rollbackError) {
-          rollbackErrors.push(rollbackError);
         }
 
         if (rollbackErrors.length > 0) {

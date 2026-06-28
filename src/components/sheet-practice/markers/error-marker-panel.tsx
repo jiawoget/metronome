@@ -7,13 +7,17 @@ import { Button } from "@/components/ui/button";
 import type { RecordingPlaybackControls } from "@/components/recordings-review/recording-artifact-review";
 import { seekToErrorMarker } from "@/lib/recordings-review/error-markers";
 import { formatTimestamp } from "@/lib/recordings-review/format";
-import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { RecordingErrorMarker, ReviewRecording } from "@/lib/recordings-review/types";
+import {
+  sheetErrorMarkerService,
+  type SheetErrorMarkerService
+} from "@/lib/sheet-practice/error-marker-service";
 
 type ErrorMarkerPanelProps = {
   recording: ReviewRecording | null;
   playbackControls: RecordingPlaybackControls | null;
   currentTimeMs: number;
+  markerService?: SheetErrorMarkerService;
 };
 
 function formatSecondsInput(timestampMs: number) {
@@ -33,10 +37,11 @@ function parseSecondsInput(value: string) {
 export function ErrorMarkerPanel({
   recording,
   playbackControls,
-  currentTimeMs
+  currentTimeMs,
+  markerService = sheetErrorMarkerService
 }: ErrorMarkerPanelProps) {
   const [markers, setMarkers] = useState<RecordingErrorMarker[]>(() =>
-    recording ? recordingHistoryRepository.getErrorMarkers(recording.id) : []
+    recording ? markerService.getErrorMarkers(recording.id) : []
   );
   const [note, setNote] = useState("");
   const [timestampDraftOverride, setTimestampDraftOverride] = useState<string | null>(null);
@@ -57,11 +62,11 @@ export function ErrorMarkerPanel({
     }
 
     const refreshMarkers = () => {
-      setMarkers(recordingHistoryRepository.getErrorMarkers(recording.id));
+      setMarkers(markerService.getErrorMarkers(recording.id));
     };
 
-    return recordingHistoryRepository.subscribe(refreshMarkers);
-  }, [recording]);
+    return markerService.subscribe(refreshMarkers);
+  }, [markerService, recording]);
 
   const timestampDraft = timestampDraftOverride ?? formatSecondsInput(clampedCurrentTimeMs);
 
@@ -88,7 +93,7 @@ export function ErrorMarkerPanel({
     event.preventDefault();
 
     try {
-      const marker = recordingHistoryRepository.createErrorMarker({
+      const marker = markerService.createErrorMarker({
         recordingId: activeRecording.id,
         timestampMs: parseSecondsInput(timestampDraft),
         durationMs: activeRecording.durationMs,
@@ -123,7 +128,7 @@ export function ErrorMarkerPanel({
   }
 
   function deleteMarker(marker: RecordingErrorMarker) {
-    recordingHistoryRepository.deleteErrorMarker(marker.id);
+    markerService.deleteErrorMarker(marker.id);
     setMessage(`Deleted marker at ${formatTimestamp(marker.timestampMs)}.`);
     setErrorMessage(null);
   }

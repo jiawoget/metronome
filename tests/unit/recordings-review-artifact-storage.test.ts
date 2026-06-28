@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { RECORDINGS_STORAGE_KEY } from "@/lib/recordings-review/repository";
+import {
+  RECORDINGS_STORAGE_KEY,
+  recordingHistoryRepository
+} from "@/lib/recordings-review/repository";
 import {
   createRecordingArtifactRef,
   migrateLegacyRecordingArtifacts,
@@ -388,7 +391,7 @@ describe("recording artifact storage", () => {
     await expect(body.blob.text()).resolves.toBe("audio");
   });
 
-  it("falls back to legacy audioDataUrl and restores deterministic artifact when an artifactRef body is missing", async () => {
+  it("falls back to legacy audioDataUrl without saving an artifact by default", async () => {
     const repository = createMemoryArtifactRepository();
     const recording = createRecording({
       artifactRef: createRecordingArtifactRef("recording-1"),
@@ -403,12 +406,28 @@ describe("recording artifact storage", () => {
       mimeType: "audio/webm"
     });
     await expect(body.blob.text()).resolves.toBe("recovered");
+    expect(repository.artifacts.has("recording-1")).toBe(false);
+  });
+
+  it("requires explicit opt-in before legacy fallback saves an artifact", async () => {
+    const repository = createMemoryArtifactRepository();
+    const recording = createRecording({
+      artifactRef: createRecordingArtifactRef("recording-1"),
+      audioDataUrl: "data:audio/webm;base64,cmVjb3ZlcmVk"
+    });
+
+    const body = await resolveRecordingArtifactBody(recording, {
+      repository,
+      persistLegacyFallback: true
+    });
+
+    await expect(body.blob.text()).resolves.toBe("recovered");
     await expect(repository.artifacts.get("recording-1")?.blob.text()).resolves.toBe(
       "recovered"
     );
   });
 
-  it("removes metadata even when post-commit single-record artifact cleanup rejects", async () => {
+  it("reports post-commit single-record artifact cleanup failure after metadata removal", async () => {
     const repository = createMemoryArtifactRepository({ failDeletes: true });
     const recording = createRecording({
       id: "delete-target",
@@ -439,7 +458,9 @@ describe("recording artifact storage", () => {
       artifactRepository: repository
     });
 
-    await expect(service.deleteRecording("delete-target")).resolves.toBeUndefined();
+    await expect(service.deleteRecording("delete-target")).rejects.toThrow(
+      "artifact cleanup failed"
+    );
     expect(
       JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}")
         .recordings
@@ -605,6 +626,45 @@ describe("recording artifact storage", () => {
     });
   });
 
+  it("reports quick clear artifact cleanup failure after metadata clear", async () => {
+    const quick = createRecording({
+      id: "quick-cleanup-target",
+      audioDataUrl: null,
+      artifactRef: createRecordingArtifactRef("quick-cleanup-target")
+    });
+    const deleteSpy = vi
+      .spyOn(recordingArtifactRepository, "deleteArtifacts")
+      .mockRejectedValueOnce(new Error("IndexedDB delete failed"));
+
+    await recordingArtifactRepository.saveArtifact({
+      artifactId: quick.id,
+      recordingId: quick.id,
+      recordingType: "quick",
+      mimeType: "audio/webm",
+      sizeBytes: 8,
+      blob: new Blob(["orphan"], { type: "audio/webm" }),
+      createdAt: quick.createdAt,
+      updatedAt: quick.createdAt
+    });
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [],
+        recordings: [quick],
+        errorMarkers: []
+      })
+    );
+
+    await expect(quickRecordingController.clear()).rejects.toThrow(
+      "artifact cleanup failed"
+    );
+    expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
+    await expect(recordingArtifactRepository.getArtifact(quick.id)).resolves.toMatchObject({
+      recordingId: quick.id
+    });
+    deleteSpy.mockRestore();
+  });
+
   it("skips post-commit quick clear artifact cleanup when recording history changes before artifact delete", async () => {
     const oldQuick = createRecording({
       id: "same-quick",
@@ -718,6 +778,47 @@ describe("recording artifact storage", () => {
     expect(await recordingArtifactRepository.getArtifact("retained-quick")).toMatchObject({
       recordingId: "retained-quick"
     });
+  });
+
+  it("reports sheet clear artifact cleanup failure after metadata clear", async () => {
+    const sheet = createRecording({
+      id: "sheet-cleanup-target",
+      type: "sheet",
+      sheetId: "sheet-alpha",
+      audioDataUrl: null,
+      artifactRef: createRecordingArtifactRef("sheet-cleanup-target")
+    });
+    const deleteSpy = vi
+      .spyOn(recordingArtifactRepository, "deleteArtifacts")
+      .mockRejectedValueOnce(new Error("IndexedDB delete failed"));
+
+    await recordingArtifactRepository.saveArtifact({
+      artifactId: sheet.id,
+      recordingId: sheet.id,
+      recordingType: "sheet",
+      mimeType: "audio/webm",
+      sizeBytes: 8,
+      blob: new Blob(["orphan"], { type: "audio/webm" }),
+      createdAt: sheet.createdAt,
+      updatedAt: sheet.createdAt
+    });
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [],
+        recordings: [sheet],
+        errorMarkers: []
+      })
+    );
+
+    await expect(recordingHistoryMetadataRepository.clear()).rejects.toThrow(
+      "artifact cleanup failed"
+    );
+    expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
+    await expect(recordingArtifactRepository.getArtifact(sheet.id)).resolves.toMatchObject({
+      recordingId: sheet.id
+    });
+    deleteSpy.mockRestore();
   });
 
   it("skips post-commit sheet clear artifact cleanup when recording history changes before artifact delete", async () => {
