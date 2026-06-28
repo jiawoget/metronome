@@ -885,10 +885,14 @@
                                                             },
                                                             {
                                                                 "slice":  "C2-08 large-unit-fixture-follow-up",
-                                                                "status":  "not_started"
+                                                                "status":  "planning_in_progress"
                                                             },
                                                             {
                                                                 "slice":  "C2-09 e2e-fixture-and-spec-slimming",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "C2-10 shared-unit-audio-artifact-fixtures",
                                                                 "status":  "not_started"
                                                             }
                                                         ]
