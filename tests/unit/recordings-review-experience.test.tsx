@@ -589,7 +589,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     });
     expect(screen.queryByTestId("recording-row-sheet-bridge-new")).not.toBeInTheDocument();
 
-    await user.click(screen.getByTestId("recording-row-quick-alpha"));
+    await user.selectOptions(screen.getByLabelText("Type filter"), "quick");
     await waitFor(() => {
       expect(screen.getByTestId("recording-details")).toHaveAttribute(
         "data-recording-id",
