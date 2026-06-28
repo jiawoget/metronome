@@ -4,7 +4,7 @@
 
 - Workstream: `pack-c-codebase-slimming`
 - Slice: `C2-02 metadata-session-type-split`
-- Current lifecycle state: `review_in_progress`
+- Current lifecycle state: `verified`
 - Parent plan: `docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md`
 - Baseline branch: `main`
 - Baseline commit: `e2b948b006a3acba601ac799cce55fd61869a59b`
@@ -13,6 +13,8 @@
   - Current implementation size review: `SHRINK_BEFORE_CONTINUE`.
   - Revised C2-02A plan review: `PASS_WITH_CHANGES`, then `PASS` after the
     requested scope clarifications.
+  - PR review: `PASS_WITH_CHANGES`, then `PASS` after the metadata bucket
+    normalization fix.
 
 ## Decision
 
