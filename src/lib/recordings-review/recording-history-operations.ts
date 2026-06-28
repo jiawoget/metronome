@@ -2,6 +2,7 @@ import type {
   RecordingReviewSnapshot,
   ReviewRecording
 } from "@/lib/recordings-review/types";
+import type { SheetRecordingMetadata } from "@/domain/practice";
 import {
   buildRecordingReviewSnapshot,
   deleteRecordingFromSnapshot,
@@ -75,6 +76,37 @@ export function createRecordingHistoryOperations({
           recordingToSave,
           ...snapshot.recordings.filter(
             (item) => item.id !== recordingToSave.id
+          )
+        ],
+        sheetRecordingMetadata: (snapshot.sheetRecordingMetadata ?? []).filter(
+          (item) => item.id !== recordingToSave.id
+        )
+      })
+    );
+  }
+
+  function saveSheetRecordingMetadataOnly({
+    recording,
+    session
+  }: {
+    recording: SheetRecordingMetadata;
+    session: unknown;
+  }) {
+    const sessionId = isSessionWithId(session) ? session.id : null;
+
+    return mutateSnapshot((snapshot) =>
+      buildRecordingReviewSnapshot({
+        ...snapshot,
+        sessions: [
+          session,
+          ...snapshot.sessions.filter(
+            (item) => !sessionId || !isSessionWithId(item) || item.id !== sessionId
+          )
+        ],
+        sheetRecordingMetadata: [
+          recording,
+          ...(snapshot.sheetRecordingMetadata ?? []).filter(
+            (item) => item.id !== recording.id
           )
         ]
       })
@@ -256,6 +288,7 @@ export function createRecordingHistoryOperations({
   return {
     saveQuickRecordingMetadata,
     saveSheetRecordingMetadataWithSession,
+    saveSheetRecordingMetadataOnly,
     deleteQuickRecordingMetadataByIdentity,
     rollbackSheetRecordingMetadata,
     clearQuickRecordings() {

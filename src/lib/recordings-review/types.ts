@@ -1,5 +1,8 @@
 import type { MetronomeSettings, RecordingArtifactAnalysis } from "@/lib/quick-metronome/types";
-import type { SheetRecordingSegmentContext } from "@/domain/practice";
+import type {
+  SheetRecordingMetadata,
+  SheetRecordingSegmentContext
+} from "@/domain/practice";
 
 export type RecordingReviewType = "quick" | "sheet";
 
@@ -43,6 +46,7 @@ export type RecordingReviewSnapshot = {
   errorMarkers: RecordingErrorMarker[];
   takeSelections?: RecordingTakeSelectionMetadata[];
   recordingOrganization?: RecordingOrganizationMetadata[];
+  sheetRecordingMetadata?: SheetRecordingMetadata[];
   [futureKey: string]: unknown;
 };
 

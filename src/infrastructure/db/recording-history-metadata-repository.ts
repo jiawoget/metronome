@@ -37,10 +37,10 @@ function toSheetRecordingMetadata(
   return metadata;
 }
 
-function toReviewRecording(
+function validateSheetRecordingMetadataLink(
   recording: SheetRecordingMetadata,
   session: PracticeSession
-): ReviewRecording {
+): { recording: SheetRecordingMetadata; session: PracticeSession } {
   const validRecording = validateSheetRecordingMetadata(recording);
   const validSession = validatePracticeSession(session);
 
@@ -63,34 +63,24 @@ function toReviewRecording(
   }
 
   return {
-    id: validRecording.id,
-    type: "sheet",
-    origin: "user",
-    name: "Sheet practice metadata",
-    sessionId: validRecording.sessionId,
-    sheetId: validRecording.sheetId,
-    sheetName: validRecording.sheetName,
-    createdAt: validRecording.createdAt,
-    durationMs: validRecording.durationMs,
-    sizeBytes: 0,
-    mimeType: "metadata/session",
-    audioDataUrl: null,
-    segmentContext: validRecording.segmentContext,
-    settings: {
-      bpm: validRecording.bpm ?? validSession.bpm ?? 96,
-      timeSignature:
-        validRecording.timeSignature ?? validSession.timeSignature ?? "4/4"
-    }
+    recording: validRecording,
+    session: validSession
   };
 }
 
 async function listRecordingMetadata() {
-  return recordingHistoryRepository
-    .getSnapshot()
-    .recordings.filter(
-      (recording) => recording.type === "sheet" && recording.sheetId
-    )
-    .map(toSheetRecordingMetadata);
+  const snapshot = recordingHistoryRepository.getSnapshot();
+  const realSheetRecordings = snapshot.recordings.filter(
+    (recording) =>
+      recording.type === "sheet" &&
+      !!recording.sheetId &&
+      recording.mimeType !== "metadata/session"
+  );
+
+  return [
+    ...(snapshot.sheetRecordingMetadata ?? []),
+    ...realSheetRecordings.map(toSheetRecordingMetadata)
+  ];
 }
 
 export const recordingHistoryMetadataRepository: PracticeRecordingMetadataRepository =
@@ -104,11 +94,11 @@ export const recordingHistoryMetadataRepository: PracticeRecordingMetadataReposi
     },
 
     async saveRecordingMetadata(recording, session) {
-      const reviewRecording = toReviewRecording(recording, session);
+      const validated = validateSheetRecordingMetadataLink(recording, session);
 
-      recordingHistoryRepository.saveSheetRecordingMetadataWithSession({
-        recording: reviewRecording,
-        session: validatePracticeSession(session)
+      recordingHistoryRepository.saveSheetRecordingMetadataOnly({
+        recording: validated.recording,
+        session: validated.session
       });
     },
 

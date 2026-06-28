@@ -715,41 +715,18 @@ describe("recording history repository", () => {
   });
 
   it("stores 05e sheet recording metadata in the shared recording history boundary", async () => {
-    await recordingHistoryMetadataRepository.saveRecordingMetadata(createSheetRecording(), createSheetSession());
+    const recording = createSheetRecording();
+
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(recording, createSheetSession());
 
     const snapshot = recordingHistoryRepository.getSnapshot();
     const reviewRecording = recordingHistoryRepository.getRecording("sheet-metadata-1");
 
-    expect(snapshot.recordings).toHaveLength(1);
-    expect(reviewRecording).toMatchObject({
-      id: "sheet-metadata-1",
-      type: "sheet",
-      name: "Sheet practice metadata",
-      sessionId: "session-sheet-1",
-      sheetId: "sheet-alpha",
-      sheetName: "Alpha Sheet",
-      sizeBytes: 0,
-      mimeType: "metadata/session",
-      audioDataUrl: null,
-      settings: {
-        bpm: 96,
-        timeSignature: "4/4"
-      }
-    });
-    expect(reviewRecording?.audioDataUrl).toBeNull();
+    expect(snapshot.recordings).toEqual([]);
+    expect(snapshot.sheetRecordingMetadata).toEqual([recording]);
+    expect(reviewRecording).toBeNull();
     await expect(recordingHistoryMetadataRepository.listRecordingMetadataForSession("session-sheet-1")).resolves.toEqual([
-      {
-        id: "sheet-metadata-1",
-        type: "sheet",
-        sessionId: "session-sheet-1",
-        sheetId: "sheet-alpha",
-        sheetName: "Alpha Sheet",
-        createdAt: "2026-06-21T12:00:00.000Z",
-      durationMs: 12_000,
-      bpm: 96,
-      timeSignature: "4/4",
-      segmentContext: null
-      }
+      recording
     ]);
   });
 
@@ -759,9 +736,7 @@ describe("recording history repository", () => {
       createSheetSession({ timeSignature: "12/8" })
     );
 
-    expect(recordingHistoryRepository.getRecording("sheet-metadata-1")?.settings.timeSignature).toBe(
-      "12/8"
-    );
+    expect(recordingHistoryRepository.getSnapshot().sheetRecordingMetadata?.[0].timeSignature).toBe("12/8");
     await expect(
       recordingHistoryMetadataRepository.listRecordingMetadataForSession(
         "session-sheet-1"
@@ -910,6 +885,32 @@ describe("recording history repository", () => {
       errorMarkers: []
     });
 
+    await expect(recordingHistoryMetadataRepository.listRecordingMetadataForSession("session-sheet-1")).resolves.toEqual([
+      recording
+    ]);
+  });
+
+  it("removes same-id metadata-only rows when saving real sheet recordings", async () => {
+    const recording = createSheetRecording({ segmentContext: createSegmentContext() });
+
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(recording, createSheetSession());
+    recordingHistoryRepository.saveSheetRecordingMetadataWithSession({
+      recording: createReviewSheetRecording({
+        id: recording.id,
+        sessionId: recording.sessionId,
+        sheetId: recording.sheetId,
+        sheetName: recording.sheetName,
+        createdAt: recording.createdAt,
+        durationMs: recording.durationMs,
+        segmentContext: recording.segmentContext
+      }),
+      session: createSheetSession()
+    });
+
+    const snapshot = recordingHistoryRepository.getSnapshot();
+
+    expect(snapshot.sheetRecordingMetadata).toBeUndefined();
+    expect(snapshot.recordings.map((item) => item.id)).toEqual([recording.id]);
     await expect(recordingHistoryMetadataRepository.listRecordingMetadataForSession("session-sheet-1")).resolves.toEqual([
       recording
     ]);

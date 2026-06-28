@@ -8,7 +8,9 @@ import type {
   ReviewRecording
 } from "@/lib/recordings-review/types";
 import {
+  parseSheetRecordingMetadata,
   parseSheetRecordingSegmentContext,
+  type SheetRecordingMetadata,
   type SheetRecordingSegmentContext
 } from "@/domain/practice";
 import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
@@ -176,6 +178,16 @@ function normalizeErrorMarkersForRecordings({
   return sortErrorMarkers(normalizedMarkers);
 }
 
+function normalizeSheetRecordingMetadataEntries(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map(parseSheetRecordingMetadata)
+    .filter((recording): recording is SheetRecordingMetadata => recording !== null);
+}
+
 function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | RecordingReviewSnapshot): RecordingReviewSnapshot {
   const recordings = Array.isArray(value.recordings)
     ? value.recordings
@@ -188,6 +200,9 @@ function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | Record
     value.recordingOrganization,
     recordings.map((recording) => recording.id)
   );
+  const sheetRecordingMetadata = normalizeSheetRecordingMetadataEntries(
+    value.sheetRecordingMetadata
+  );
 
   return buildSnapshot({
     ...(value && typeof value === "object" ? value : {}),
@@ -198,7 +213,8 @@ function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | Record
       recordings
     }),
     takeSelections,
-    recordingOrganization
+    recordingOrganization,
+    ...(sheetRecordingMetadata.length > 0 ? { sheetRecordingMetadata } : {})
   });
 }
 
@@ -275,6 +291,15 @@ function serializeSnapshotForWrite({
     nextRaw.recordingOrganization = normalizedSnapshot.recordingOrganization;
   } else {
     delete nextRaw.recordingOrganization;
+  }
+
+  if (
+    normalizedSnapshot.sheetRecordingMetadata &&
+    normalizedSnapshot.sheetRecordingMetadata.length > 0
+  ) {
+    nextRaw.sheetRecordingMetadata = normalizedSnapshot.sheetRecordingMetadata;
+  } else {
+    delete nextRaw.sheetRecordingMetadata;
   }
 
   return {
@@ -636,6 +661,9 @@ export const recordingHistoryRepository = {
 
   saveSheetRecordingMetadataWithSession:
     recordingHistoryOperations.saveSheetRecordingMetadataWithSession,
+
+  saveSheetRecordingMetadataOnly:
+    recordingHistoryOperations.saveSheetRecordingMetadataOnly,
 
   deleteQuickRecordingMetadataByIdentity:
     recordingHistoryOperations.deleteQuickRecordingMetadataByIdentity,
