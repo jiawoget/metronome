@@ -9,6 +9,7 @@ import {
   recordingHistoryRepository,
   seedRecordingHistoryForTests
 } from "@/lib/recordings-review/repository";
+import { createRecordingArtifactRef } from "@/lib/recordings-review/artifact-storage";
 import type {
   RecordingArtifactDetails,
   RecordingReviewSnapshot,
@@ -427,6 +428,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
         createQuickRecording({
           id: "quick-missing-artifact",
           name: "Quick missing artifact",
+          artifactRef: null,
           audioDataUrl: null
         }),
         createSheetRecording({
@@ -588,17 +590,21 @@ describe("RecordingsReviewExperience grouped take history", () => {
     expect(screen.queryByTestId("recording-row-sheet-bridge-new")).not.toBeInTheDocument();
 
     await user.click(screen.getByTestId("recording-row-quick-alpha"));
-    expect(screen.getByTestId("recording-details")).toHaveAttribute(
-      "data-recording-id",
-      "quick-alpha"
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId("recording-details")).toHaveAttribute(
+        "data-recording-id",
+        "quick-alpha"
+      );
+    });
 
     await user.selectOptions(screen.getByLabelText("Type filter"), "sheet");
 
-    expect(screen.getByTestId("recording-details")).toHaveAttribute(
-      "data-recording-id",
-      "sheet-whole-null"
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId("recording-details")).toHaveAttribute(
+        "data-recording-id",
+        "sheet-whole-null"
+      );
+    });
     expect(screen.queryByTestId("recording-row-quick-alpha")).not.toBeInTheDocument();
   });
 
@@ -2086,7 +2092,7 @@ function createSegmentContext(
 function createQuickRecording(
   overrides: Partial<ReviewRecording> = {}
 ): ReviewRecording {
-  return {
+  const recording: ReviewRecording = {
     id: "quick-recording",
     type: "quick",
     name: "Quick take",
@@ -2103,6 +2109,13 @@ function createQuickRecording(
     },
     ...overrides
   };
+
+  return Object.prototype.hasOwnProperty.call(overrides, "artifactRef")
+    ? recording
+    : {
+        ...recording,
+        artifactRef: createRecordingArtifactRef(recording.id)
+      };
 }
 
 function createSheetRecording(
@@ -2113,7 +2126,7 @@ function createSheetRecording(
 ): ReviewRecording {
   const { settings, ...recordingOverrides } = overrides;
 
-  return {
+  const recording: ReviewRecording = {
     id: "sheet-recording",
     type: "sheet",
     name: "Sheet take",
@@ -2132,6 +2145,13 @@ function createSheetRecording(
     },
     ...recordingOverrides
   };
+
+  return Object.prototype.hasOwnProperty.call(recordingOverrides, "artifactRef")
+    ? recording
+    : {
+        ...recording,
+        artifactRef: createRecordingArtifactRef(recording.id)
+      };
 }
 
 function createComparisonResult(

@@ -12,7 +12,6 @@ export type LocalRecordingArtifact = {
   blob: Blob;
   createdAt: string;
   updatedAt: string;
-  legacyMigratedFrom?: "audioDataUrl";
 };
 
 export type RecordingArtifactRepository = {

@@ -7,7 +7,6 @@ import {
 } from "@/infrastructure/db/recording-artifact-repository";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import { isPotentiallyDecodableAudioMime } from "@/lib/recordings-review/audio-mime";
-import { dataUrlToRecordingArtifactBlob } from "@/lib/recordings-review/artifact-data-url";
 import {
   RecordingArtifactError,
   type RecordingArtifactBody
@@ -71,14 +70,12 @@ export function toLocalArtifact({
   recordingId,
   recordingType,
   artifact,
-  createdAt,
-  legacyMigratedFrom
+  createdAt
 }: {
   recordingId: string;
   recordingType: "quick" | "sheet";
   artifact: Pick<RecordingArtifact, "blob" | "mimeType" | "sizeBytes">;
   createdAt: string;
-  legacyMigratedFrom?: "audioDataUrl";
 }): LocalRecordingArtifact {
   return {
     artifactId: recordingId,
@@ -88,25 +85,8 @@ export function toLocalArtifact({
     sizeBytes: artifact.sizeBytes,
     blob: artifact.blob,
     createdAt,
-    updatedAt: new Date().toISOString(),
-    legacyMigratedFrom
+    updatedAt: new Date().toISOString()
   };
-}
-
-export function isValidOwnedArtifactBody(
-  artifact: LocalRecordingArtifact | null,
-  recording: ReviewRecording
-) {
-  return (
-    !!artifact &&
-    artifact.artifactId === recording.id &&
-    artifact.recordingId === recording.id &&
-    artifact.blob instanceof Blob &&
-    artifact.blob.size > 0 &&
-    Number.isFinite(artifact.sizeBytes) &&
-    artifact.sizeBytes > 0 &&
-    isPotentiallyDecodableAudioMime(artifact.mimeType)
-  );
 }
 
 export async function saveCapturedRecordingArtifact(
@@ -205,56 +185,12 @@ export async function resolveRecordingArtifactBody(
   recording: ReviewRecording,
   {
     repository = recordingArtifactRepository,
-    createObjectUrl = false,
-    persistLegacyFallback = false
+    createObjectUrl = false
   }: {
     repository?: RecordingArtifactRepository;
     createObjectUrl?: boolean;
-    persistLegacyFallback?: boolean;
   } = {}
 ): Promise<RecordingArtifactBody> {
-  async function resolveLegacyBody() {
-    if (!recording.audioDataUrl?.trim()) {
-      return null;
-    }
-
-    const { blob } = dataUrlToRecordingArtifactBlob({
-      dataUrl: recording.audioDataUrl,
-      expectedMimeType: recording.mimeType
-    });
-    const body = {
-      artifactId: recording.id,
-      recordingId: recording.id,
-      mimeType: recording.mimeType,
-      sizeBytes: blob.size,
-      blob,
-      objectUrl:
-        createObjectUrl && typeof URL !== "undefined"
-          ? URL.createObjectURL(blob)
-          : undefined
-    };
-
-    if (persistLegacyFallback) {
-      await repository
-        .saveArtifact(
-          toLocalArtifact({
-            recordingId: recording.id,
-            recordingType: recording.type,
-            artifact: {
-              blob,
-              mimeType: recording.mimeType,
-              sizeBytes: blob.size
-            },
-            createdAt: recording.createdAt,
-            legacyMigratedFrom: "audioDataUrl"
-          })
-        )
-        .catch(() => undefined);
-    }
-
-    return body;
-  }
-
   if (isValidArtifactRef(recording.artifactRef)) {
     try {
       const artifact = await repository.getArtifact(recording.id);
@@ -286,31 +222,11 @@ export async function resolveRecordingArtifactBody(
       };
     } catch (error) {
       if (error instanceof RecordingArtifactError) {
-        if (error.reason === "missing-artifact-body") {
-          const legacyBody = await resolveLegacyBody();
-
-          if (legacyBody) {
-            return legacyBody;
-          }
-        }
-
         throw error;
-      }
-
-      const legacyBody = await resolveLegacyBody();
-
-      if (legacyBody) {
-        return legacyBody;
       }
 
       throw mapStorageError(error);
     }
-  }
-
-  const legacyBody = await resolveLegacyBody();
-
-  if (legacyBody) {
-    return legacyBody;
   }
 
   throw new RecordingArtifactError(

@@ -5,6 +5,11 @@ import {
   seedRecordingHistoryForTests
 } from "@/lib/recordings-review/repository";
 import {
+  recordingArtifactRepository,
+  type LocalRecordingArtifact
+} from "@/infrastructure/db/recording-artifact-repository";
+import { createRecordingArtifactRef } from "@/lib/recordings-review/artifact-storage";
+import {
   loadWaveformComparisonSource,
   loadWaveformComparisonSources,
   loadWaveformComparisonSourcesForGroup,
@@ -16,12 +21,19 @@ import type {
 } from "@/lib/recordings-review/types";
 import type { SheetRecordingSegmentContext } from "@/domain/practice";
 
+let artifactBodies: Map<string, LocalRecordingArtifact>;
+
 describe("waveform comparison source boundary", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    artifactBodies = new Map();
+    vi.spyOn(recordingArtifactRepository, "getArtifact").mockImplementation(
+      async (artifactId) => artifactBodies.get(artifactId) ?? null
+    );
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -30,16 +42,16 @@ describe("waveform comparison source boundary", () => {
       durationSeconds: 12,
       samples: new Float32Array([0, 0.25, -0.5, 1])
     });
+    const recording = createSheetRecording({
+      id: "sheet-decoded",
+      trustedPeaks: undefined
+    });
+
+    await saveArtifactForRecording(recording);
 
     const result = await loadWaveformComparisonSources([
-      createSheetRecording({
-        id: "sheet-decoded",
-        trustedPeaks: undefined
-      }),
-      createSheetRecording({
-        id: "sheet-decoded",
-        trustedPeaks: undefined
-      })
+      recording,
+      recording
     ]);
 
     expect(result).toMatchObject({
@@ -78,12 +90,13 @@ describe("waveform comparison source boundary", () => {
       durationSeconds: 12,
       samples: new Float32Array([0, 0.1, 0.2])
     });
+    const recording = createSheetRecording({
+      trustedPeaks: [0.25, 2, 0.5]
+    });
 
-    const source = await loadWaveformComparisonSource(
-      createSheetRecording({
-        trustedPeaks: [0.25, 2, 0.5]
-      })
-    );
+    await saveArtifactForRecording(recording);
+
+    const source = await loadWaveformComparisonSource(recording);
 
     expect(source).toMatchObject({
       status: "ready",
@@ -98,13 +111,14 @@ describe("waveform comparison source boundary", () => {
       durationSeconds: 12,
       samples: new Float32Array([0, 0.25, -0.5, 1])
     });
+    const recording = createSheetRecording({
+      id: "duration-mismatch",
+      durationMs: 9_000
+    });
 
-    const result = await loadWaveformComparisonSources([
-      createSheetRecording({
-        id: "duration-mismatch",
-        durationMs: 9_000
-      })
-    ]);
+    await saveArtifactForRecording(recording);
+
+    const result = await loadWaveformComparisonSources([recording]);
 
     expect(result).toMatchObject({
       allReady: true,
@@ -136,9 +150,12 @@ describe("waveform comparison source boundary", () => {
       durationSeconds: 12,
       samples: new Float32Array([0, 0.25, 0.5])
     });
+    const recording = createSheetRecording({ trustedPeaks });
+
+    await saveArtifactForRecording(recording);
 
     await expectUnavailableReason(
-      loadWaveformComparisonSource(createSheetRecording({ trustedPeaks })),
+      loadWaveformComparisonSource(recording),
       "invalid-peaks"
     );
   });
@@ -148,12 +165,13 @@ describe("waveform comparison source boundary", () => {
       durationSeconds: 12,
       samples: new Float32Array([0, 0.25, -0.5, 1])
     });
+    const recording = createSheetRecording({
+      trustedPeaks: []
+    });
 
-    const source = await loadWaveformComparisonSource(
-      createSheetRecording({
-        trustedPeaks: []
-      })
-    );
+    await saveArtifactForRecording(recording);
+
+    const source = await loadWaveformComparisonSource(recording);
 
     expect(source).toMatchObject({
       status: "ready",
@@ -167,6 +185,7 @@ describe("waveform comparison source boundary", () => {
     await expectUnavailableReason(
       loadWaveformComparisonSource(
         createSheetRecording({
+          artifactRef: null,
           audioDataUrl: null,
           trustedPeaks: [0.2, 0.8]
         })
@@ -175,13 +194,14 @@ describe("waveform comparison source boundary", () => {
     );
 
     installAudioContextMock({ reject: true });
+    const decodeFailure = createSheetRecording({
+      trustedPeaks: [0.2, 0.8]
+    });
+
+    await saveArtifactForRecording(decodeFailure);
 
     await expectUnavailableReason(
-      loadWaveformComparisonSource(
-        createSheetRecording({
-          trustedPeaks: [0.2, 0.8]
-        })
-      ),
+      loadWaveformComparisonSource(decodeFailure),
       "decode-failed"
     );
   });
@@ -201,14 +221,8 @@ describe("waveform comparison source boundary", () => {
 
     await expectUnavailableReason(
       loadWaveformComparisonSource(
-        createSheetRecording({ mimeType: "audio/x-custom" })
-      ),
-      "unsupported-mime"
-    );
-
-    await expectUnavailableReason(
-      loadWaveformComparisonSource(
         createSheetRecording({
+          artifactRef: null,
           audioDataUrl: "   "
         })
       ),
@@ -219,13 +233,14 @@ describe("waveform comparison source boundary", () => {
       durationSeconds: 12,
       samples: new Float32Array([0, 0, 0])
     });
+    const emptyAudio = createSheetRecording({
+      trustedPeaks: undefined
+    });
+
+    await saveArtifactForRecording(emptyAudio);
 
     await expectUnavailableReason(
-      loadWaveformComparisonSource(
-        createSheetRecording({
-          trustedPeaks: undefined
-        })
-      ),
+      loadWaveformComparisonSource(emptyAudio),
       "empty-audio"
     );
 
@@ -245,17 +260,24 @@ describe("waveform comparison source boundary", () => {
 
   it("keeps quick and ungrouped sheet recordings unavailable without hiding valid no-segment takes", async () => {
     installAudioContextMock({ durationSeconds: 12 });
+    const legacyNoSegmentRecording = createSheetRecording({
+      id: "legacy-no-segment"
+    });
+    const explicitNoSegmentRecording = createSheetRecording({
+      id: "explicit-no-segment",
+      segmentContext: null
+    });
+
+    await saveArtifactsForRecordings([
+      legacyNoSegmentRecording,
+      explicitNoSegmentRecording
+    ]);
 
     const legacyNoSegment = await loadWaveformComparisonSource(
-      createSheetRecording({
-        id: "legacy-no-segment"
-      })
+      legacyNoSegmentRecording
     );
     const explicitNoSegment = await loadWaveformComparisonSource(
-      createSheetRecording({
-        id: "explicit-no-segment",
-        segmentContext: null
-      })
+      explicitNoSegmentRecording
     );
     const quick = await loadWaveformComparisonSource(createQuickRecording());
     const missingSheetId = await loadWaveformComparisonSource(
@@ -279,10 +301,13 @@ describe("waveform comparison source boundary", () => {
 
   it("resolves current repository ids and reports missing or deleted recordings", async () => {
     installAudioContextMock({ durationSeconds: 12 });
+    const sheetReady = createSheetRecording({ id: "sheet-ready" });
+
+    await saveArtifactForRecording(sheetReady);
     seedRecordingHistoryForTests({
       sessions: [],
       recordings: [
-        createSheetRecording({ id: "sheet-ready" }),
+        sheetReady,
         createSheetRecording({
           id: "sheet-missing-artifact",
           audioDataUrl: null
@@ -321,9 +346,12 @@ describe("waveform comparison source boundary", () => {
 
   it("preserves duplicate repository ids as separate requested entries", async () => {
     installAudioContextMock({ durationSeconds: 12 });
+    const sheetReady = createSheetRecording({ id: "sheet-ready" });
+
+    await saveArtifactForRecording(sheetReady);
     seedRecordingHistoryForTests({
       sessions: [],
-      recordings: [createSheetRecording({ id: "sheet-ready" })],
+      recordings: [sheetReady],
       errorMarkers: []
     });
 
@@ -353,7 +381,10 @@ describe("waveform comparison source boundary", () => {
 
   it("uses current P2-01 take group membership for segment and no-segment groups", async () => {
     installAudioContextMock({ durationSeconds: 12 });
-    seedRecordingHistoryForTests(createGroupedSnapshot());
+    const groupedSnapshot = createGroupedSnapshot();
+
+    await saveArtifactsForRecordings(groupedSnapshot.recordings);
+    seedRecordingHistoryForTests(groupedSnapshot);
 
     const [segmentGroup, noSegmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
 
@@ -406,7 +437,10 @@ describe("waveform comparison source boundary", () => {
 
   it("does not serve stale group recordings after local review history changes", async () => {
     installAudioContextMock({ durationSeconds: 12 });
-    seedRecordingHistoryForTests(createGroupedSnapshot());
+    const groupedSnapshot = createGroupedSnapshot();
+
+    await saveArtifactsForRecordings(groupedSnapshot.recordings);
+    seedRecordingHistoryForTests(groupedSnapshot);
 
     const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
 
@@ -548,7 +582,7 @@ function createSheetRecording(
     segmentContext?: unknown;
   } = {}
 ): ReviewRecording {
-  return {
+  const recording = {
     id: "sheet-recording",
     type: "sheet",
     name: "Sheet take",
@@ -566,10 +600,17 @@ function createSheetRecording(
     },
     ...overrides
   } as ReviewRecording;
+
+  return Object.prototype.hasOwnProperty.call(overrides, "artifactRef")
+    ? recording
+    : {
+        ...recording,
+        artifactRef: createRecordingArtifactRef(recording.id)
+      };
 }
 
 function createQuickRecording(overrides: Partial<ReviewRecording> = {}): ReviewRecording {
-  return {
+  const recording: ReviewRecording = {
     id: "quick-recording",
     type: "quick",
     name: "Quick take",
@@ -586,4 +627,36 @@ function createQuickRecording(overrides: Partial<ReviewRecording> = {}): ReviewR
     },
     ...overrides
   };
+
+  return Object.prototype.hasOwnProperty.call(overrides, "artifactRef")
+    ? recording
+    : {
+        ...recording,
+        artifactRef: createRecordingArtifactRef(recording.id)
+      };
+}
+
+async function saveArtifactsForRecordings(recordings: ReviewRecording[]) {
+  await Promise.all(
+    recordings
+      .filter((recording) => recording.type === "sheet")
+      .map((recording) => saveArtifactForRecording(recording))
+  );
+}
+
+async function saveArtifactForRecording(recording: ReviewRecording) {
+  if (!recording.artifactRef) {
+    return;
+  }
+
+  artifactBodies.set(recording.id, {
+    artifactId: recording.id,
+    recordingId: recording.id,
+    recordingType: recording.type,
+    mimeType: recording.mimeType,
+    sizeBytes: 5,
+    blob: new Blob(["audio"], { type: recording.mimeType }),
+    createdAt: recording.createdAt,
+    updatedAt: recording.createdAt
+  });
 }

@@ -7,7 +7,6 @@ import {
   resolveRecordingArtifactBody as resolveReviewRecordingArtifactBody,
   saveCapturedRecordingArtifact
 } from "@/lib/recordings-review/artifact-storage";
-import { migrateLegacyRecordingArtifacts } from "@/lib/recordings-review/artifact-migration";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type {
   MetronomeSettings,
@@ -69,9 +68,6 @@ function deleteQuickRecordingMetadataByIdentity(recording: QuickRecording) {
 export const quickRecordingController = {
   subscribe: recordingHistoryRepository.subscribe,
   getLatestQuickRecording,
-  migrateRecordingArtifacts() {
-    return migrateLegacyRecordingArtifacts();
-  },
   resolveRecordingArtifactBody(
     recording: QuickRecording,
     options: { createObjectUrl?: boolean } = {}

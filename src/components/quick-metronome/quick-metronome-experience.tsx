@@ -54,10 +54,6 @@ export function QuickMetronomeExperience() {
     };
   }, [metronomeService]);
 
-  useEffect(() => {
-    void quickRecordingController.migrateRecordingArtifacts().catch(() => undefined);
-  }, []);
-
   const isRecording = recordingState === "recording";
 
   const handleCountdownStarted = useCallback(() => {

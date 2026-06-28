@@ -95,7 +95,7 @@ export function getWaveformComparisonEligibility(
     });
   }
 
-  if (!recording.artifactRef && !normalizeRequiredString(recording.audioDataUrl)) {
+  if (!recording.artifactRef) {
     return createUnavailableSource({
       recordingId: recording.id,
       recording,

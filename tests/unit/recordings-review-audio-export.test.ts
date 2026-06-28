@@ -8,6 +8,8 @@ import {
   getRecordingAudioExportEligibility
 } from "@/lib/recordings-review/audio-export";
 import { isPotentiallyDecodableAudioMime } from "@/lib/recordings-review/audio-mime";
+import { RecordingArtifactError } from "@/lib/recordings-review/artifact-model";
+import { createRecordingArtifactRef } from "@/lib/recordings-review/artifact-storage";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 
 describe("recordings review audio export", () => {
@@ -22,7 +24,8 @@ describe("recordings review audio export", () => {
     const downloadBlob = vi.fn();
     const service = createRecordingAudioExportService({
       repository: createRepository([recording]),
-      downloadAdapter: { downloadBlob }
+      downloadAdapter: { downloadBlob },
+      artifactResolver: createArtifactResolver()
     });
 
     const result = await service.exportRecordingAudio({
@@ -173,41 +176,59 @@ describe("recordings review audio export", () => {
   it("returns clear unavailable results without attempting a download", async () => {
     const missingArtifact = createQuickRecording({
       id: "missing-artifact",
+      artifactRef: null,
       audioDataUrl: null
     });
     const unsupported = createQuickRecording({
       id: "unsupported",
       mimeType: "application/octet-stream"
     });
-    const malformed = createQuickRecording({
-      id: "malformed",
+    const audioDataUrlOnly = createQuickRecording({
+      id: "audio-data-url-only",
+      artifactRef: null,
+      audioDataUrl: "data:audio/webm;base64,AQID"
+    });
+    const invalidAudioDataUrlOnly = createQuickRecording({
+      id: "invalid-audio-data-url-only",
+      artifactRef: null,
       audioDataUrl: "not-a-data-url"
     });
-    const empty = createQuickRecording({
-      id: "empty",
-      audioDataUrl: "data:audio/webm;base64,"
+    const decodeFailed = createQuickRecording({
+      id: "decode-failed"
     });
-    const mismatchedMime = createQuickRecording({
-      id: "mismatched-mime",
-      mimeType: "audio/wav",
-      audioDataUrl: "data:audio/webm;base64,AQID"
-    });
-    const mismatchedUnknownMime = createQuickRecording({
-      id: "mismatched-unknown-mime",
-      mimeType: "audio/x-custom",
-      audioDataUrl: "data:audio/webm;base64,AQID"
+    const emptyBody = createQuickRecording({
+      id: "empty-body"
     });
     const downloadBlob = vi.fn();
     const service = createRecordingAudioExportService({
       repository: createRepository([
         missingArtifact,
         unsupported,
-        malformed,
-        empty,
-        mismatchedMime,
-        mismatchedUnknownMime
+        audioDataUrlOnly,
+        invalidAudioDataUrlOnly,
+        decodeFailed,
+        emptyBody
       ]),
-      downloadAdapter: { downloadBlob }
+      downloadAdapter: { downloadBlob },
+      artifactResolver: {
+        async resolveRecordingArtifactBody(recording) {
+          if (recording.id === "decode-failed") {
+            throw new RecordingArtifactError(
+              "This recording artifact could not be decoded locally.",
+              "decode-failed"
+            );
+          }
+
+          if (recording.id === "empty-body") {
+            throw new RecordingArtifactError(
+              "This recording artifact decoded as empty audio.",
+              "empty-audio"
+            );
+          }
+
+          return createArtifactBody(recording);
+        }
+      }
     });
 
     await expect(
@@ -231,28 +252,30 @@ describe("recordings review audio export", () => {
       message: "This recording artifact is not a supported audio file."
     });
     await expect(
-      service.exportRecordingAudio({ recordingId: "malformed" })
+      service.exportRecordingAudio({ recordingId: "audio-data-url-only" })
+    ).resolves.toMatchObject({
+      ok: false,
+      reason: "missing-artifact",
+      message: "This recording has no local audio artifact to export."
+    });
+    await expect(
+      service.exportRecordingAudio({ recordingId: "invalid-audio-data-url-only" })
+    ).resolves.toMatchObject({
+      ok: false,
+      reason: "missing-artifact",
+      message: "This recording has no local audio artifact to export."
+    });
+    await expect(
+      service.exportRecordingAudio({ recordingId: "decode-failed" })
     ).resolves.toMatchObject({
       ok: false,
       reason: "invalid-artifact"
     });
     await expect(
-      service.exportRecordingAudio({ recordingId: "empty" })
+      service.exportRecordingAudio({ recordingId: "empty-body" })
     ).resolves.toMatchObject({
       ok: false,
       reason: "invalid-artifact"
-    });
-    await expect(
-      service.exportRecordingAudio({ recordingId: "mismatched-mime" })
-    ).resolves.toMatchObject({
-      ok: false,
-      reason: "invalid-artifact"
-    });
-    await expect(
-      service.exportRecordingAudio({ recordingId: "mismatched-unknown-mime" })
-    ).resolves.toMatchObject({
-      ok: false,
-      reason: "unsupported-mime"
     });
     expect(downloadBlob).not.toHaveBeenCalled();
   });
@@ -260,6 +283,7 @@ describe("recordings review audio export", () => {
   it("reports adapter failures as browser download failures", async () => {
     const service = createRecordingAudioExportService({
       repository: createRepository([createQuickRecording()]),
+      artifactResolver: createArtifactResolver(),
       downloadAdapter: {
         downloadBlob: vi.fn(() => {
           throw new Error("blocked");
@@ -293,7 +317,10 @@ describe("recordings review audio export", () => {
     });
     expect(
       getRecordingAudioExportEligibility(
-        createQuickRecording({ audioDataUrl: "" })
+        createQuickRecording({
+          artifactRef: null,
+          audioDataUrl: "data:audio/webm;base64,AQID"
+        })
       )
     ).toMatchObject({ available: false, reason: "missing-artifact" });
     expect(
@@ -322,10 +349,30 @@ function createRepository(recordings: ReviewRecording[]) {
   };
 }
 
+function createArtifactBody(recording: ReviewRecording) {
+  const blob = new Blob([new Uint8Array([1, 2, 3])], {
+    type: recording.mimeType
+  });
+
+  return {
+    blob,
+    mimeType: recording.mimeType,
+    sizeBytes: blob.size
+  };
+}
+
+function createArtifactResolver() {
+  return {
+    async resolveRecordingArtifactBody(recording: ReviewRecording) {
+      return createArtifactBody(recording);
+    }
+  };
+}
+
 function createQuickRecording(
   overrides: Partial<ReviewRecording> = {}
 ): ReviewRecording {
-  return {
+  const recording: ReviewRecording = {
     id: "quick-recording",
     type: "quick",
     name: "Quick take",
@@ -342,12 +389,19 @@ function createQuickRecording(
     },
     ...overrides
   };
+
+  return Object.prototype.hasOwnProperty.call(overrides, "artifactRef")
+    ? recording
+    : {
+        ...recording,
+        artifactRef: createRecordingArtifactRef(recording.id)
+      };
 }
 
 function createSheetRecording(
   overrides: Partial<ReviewRecording> = {}
 ): ReviewRecording {
-  return {
+  const recording: ReviewRecording = {
     id: "sheet-recording",
     type: "sheet",
     name: "Sheet take",
@@ -365,4 +419,11 @@ function createSheetRecording(
     },
     ...overrides
   };
+
+  return Object.prototype.hasOwnProperty.call(overrides, "artifactRef")
+    ? recording
+    : {
+        ...recording,
+        artifactRef: createRecordingArtifactRef(recording.id)
+      };
 }
