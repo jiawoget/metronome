@@ -730,6 +730,34 @@ describe("recording history repository", () => {
     ]);
   });
 
+  it("filters invalid persisted sheet metadata bucket rows before listing", async () => {
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [],
+        recordings: [],
+        errorMarkers: [],
+        sheetRecordingMetadata: [
+          {
+            id: "invalid-metadata-only",
+            type: "sheet",
+            sessionId: "",
+            sheetId: "sheet-alpha",
+            sheetName: "Alpha Sheet",
+            createdAt: "not-a-date",
+            durationMs: -1,
+            bpm: 96,
+            timeSignature: "4/4",
+            segmentContext: null
+          }
+        ]
+      })
+    );
+
+    expect(recordingHistoryRepository.getSnapshot().sheetRecordingMetadata).toBeUndefined();
+    await expect(recordingHistoryMetadataRepository.listRecordingMetadata()).resolves.toEqual([]);
+  });
+
   it("preserves 12/8 sheet recording metadata through the practice metadata boundary", async () => {
     await recordingHistoryMetadataRepository.saveRecordingMetadata(
       createSheetRecording({ timeSignature: "12/8" }),

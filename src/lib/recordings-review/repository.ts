@@ -189,6 +189,10 @@ function normalizeSheetRecordingMetadataEntries(value: unknown) {
 }
 
 function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | RecordingReviewSnapshot): RecordingReviewSnapshot {
+  const rawObject: Record<string, unknown> =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const futureFields = { ...rawObject };
+  delete futureFields.sheetRecordingMetadata;
   const recordings = Array.isArray(value.recordings)
     ? value.recordings
         .map(normalizeRecording)
@@ -205,7 +209,7 @@ function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | Record
   );
 
   return buildSnapshot({
-    ...(value && typeof value === "object" ? value : {}),
+    ...futureFields,
     sessions: Array.isArray(value.sessions) ? value.sessions : [],
     recordings,
     errorMarkers: normalizeErrorMarkersForRecordings({
