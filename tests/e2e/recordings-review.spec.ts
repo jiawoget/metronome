@@ -909,6 +909,7 @@ test("recordings review organizes recordings with tags favorites and archive rec
   await expect(page.getByTestId("recording-row-org-sheet-new")).toBeHidden();
   await page.getByRole("button", { name: "Delete Recording" }).click();
   await page.getByRole("button", { name: "Confirm Delete" }).click();
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
 
   persisted = await readRecordingHistory(page);
   expect(persisted.recordings.map((recording: { id: string }) => recording.id)).not.toContain(
@@ -2441,10 +2442,10 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await page.getByTestId("recording-row-quick-alpha").click();
   await page.getByRole("button", { name: "Delete Recording" }).click();
   await page.getByRole("button", { name: "Confirm Delete" }).click();
-  await expect(page.getByText("Alpha quick take")).toBeHidden();
+  await expect(page.getByTestId("recording-row-quick-alpha")).toBeHidden();
 
   await page.reload();
-  await expect(page.getByText("Alpha quick take")).toBeHidden();
+  await expect(page.getByTestId("recording-row-quick-alpha")).toBeHidden();
   const afterDeleteSnapshot = await readRecordingHistory(page);
   const deletedEvidence = {
     hasDeletedRecording: afterDeleteSnapshot.recordings.some(

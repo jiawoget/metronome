@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PracticeSession, SheetRecordingMetadata, SheetRecordingSegmentContext } from "@/domain/practice";
-import { recordingHistoryRepository, RECORDINGS_STORAGE_KEY } from "@/lib/recordings-review/repository";
+import {
+  recordingHistoryRepository,
+  RECORDINGS_STORAGE_KEY,
+  seedRecordingHistoryForTests
+} from "@/lib/recordings-review/repository";
 import {
   BrowserSheetRecordingService,
   createSheetReviewRecording
 } from "@/lib/sheet-practice/recording-service";
 import type { RecordingArtifact } from "@/lib/quick-metronome/types";
+import { recordingArtifactRepository } from "@/infrastructure/db/recording-artifact-repository";
 
 const settings = {
   bpm: 88,
@@ -132,9 +137,47 @@ function createCaptureService(artifact = createArtifact()) {
   };
 }
 
+function createPreparedSessionService({
+  preparedMetadata = metadata,
+  preparedSession = {
+    ...previousSession,
+    recordingCount: 1,
+    latestRecordingId: preparedMetadata.id
+  },
+  previous = previousSession,
+  onPrepare,
+  onCommit
+}: {
+  preparedMetadata?: SheetRecordingMetadata;
+  preparedSession?: PracticeSession;
+  previous?: PracticeSession | null;
+  onPrepare?: () => void;
+  onCommit?: () => void;
+} = {}) {
+  return {
+    prepareSheetRecordingMetadata: vi.fn(async () => {
+      onPrepare?.();
+
+      return {
+        metadata: preparedMetadata,
+        session: preparedSession
+      };
+    }),
+    commitPreparedSheetRecordingSession: vi.fn(async () => {
+      onCommit?.();
+    }),
+    getRecentSheetSession: vi.fn(async () => previous),
+    deletePracticeSessionSnapshot: vi.fn(async (sessionId: string) => {
+      void sessionId;
+    }),
+    restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
+  };
+}
+
 describe("sheet practice recording service", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     window.localStorage.removeItem(RECORDINGS_STORAGE_KEY);
+    await recordingArtifactRepository.clear().catch(() => undefined);
     vi.unstubAllGlobals();
     installAudioContextMock();
   });
@@ -161,7 +204,12 @@ describe("sheet practice recording service", () => {
       durationMs: 800,
       sizeBytes: 128,
       mimeType: "audio/webm",
-      audioDataUrl: "data:audio/webm;base64,UklGRg==",
+      artifactRef: {
+        kind: "indexeddb",
+        artifactId: "recording-sheet-1",
+        storageVersion: 1
+      },
+      audioDataUrl: null,
       trustedPeaks: [0.25, 1],
       segmentContext,
       settings: {
@@ -173,12 +221,7 @@ describe("sheet practice recording service", () => {
 
   it("saves a decoded sheet artifact with non-empty trusted peaks and matching metadata duration", async () => {
     const capture = createCaptureService();
-    const sessionService = {
-      createSheetRecordingMetadata: vi.fn(async () => metadata),
-      getRecentSheetSession: vi.fn(async () => previousSession),
-      deletePracticeSessionSnapshot: vi.fn(async () => undefined),
-      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
-    };
+    const sessionService = createPreparedSessionService();
     const service = new BrowserSheetRecordingService(capture.service);
 
     await service.startCapture();
@@ -193,7 +236,7 @@ describe("sheet practice recording service", () => {
     });
 
     expect(capture.isActive()).toBe(false);
-    expect(sessionService.createSheetRecordingMetadata).toHaveBeenCalledWith({
+    expect(sessionService.prepareSheetRecordingMetadata).toHaveBeenCalledWith({
       sheetId: "sheet-alpha",
       sessionId: "session-new",
       durationMs: 800,
@@ -202,6 +245,7 @@ describe("sheet practice recording service", () => {
       segmentContext: null,
       forceNewSession: false
     });
+    expect(sessionService.commitPreparedSheetRecordingSession).toHaveBeenCalledOnce();
     expect(result.artifactDetails.peaks.length).toBeGreaterThan(0);
     expect(result.artifactDetails.peaks.some((peak) => peak > 0)).toBe(true);
     expect(result.recording.durationMs).toBe(800);
@@ -215,9 +259,17 @@ describe("sheet practice recording service", () => {
       sessionId: "session-new",
       sheetId: "sheet-alpha",
       durationMs: 800,
-      audioDataUrl: "data:audio/webm;base64,UklGRg=="
+      artifactRef: {
+        kind: "indexeddb",
+        artifactId: "recording-sheet-1",
+        storageVersion: 1
+      },
+      audioDataUrl: null
     });
     expect(persisted?.trustedPeaks?.length).toBeGreaterThan(0);
+    await expect(
+      recordingArtifactRepository.getArtifact("sheet-recording-draft")
+    ).resolves.toBeNull();
   });
 
   it("preserves segment context returned by the session service on final artifact save", async () => {
@@ -227,12 +279,9 @@ describe("sheet practice recording service", () => {
       segmentContext
     };
     const capture = createCaptureService();
-    const sessionService = {
-      createSheetRecordingMetadata: vi.fn(async () => metadataWithSegment),
-      getRecentSheetSession: vi.fn(async () => previousSession),
-      deletePracticeSessionSnapshot: vi.fn(async () => undefined),
-      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
-    };
+    const sessionService = createPreparedSessionService({
+      preparedMetadata: metadataWithSegment
+    });
     const service = new BrowserSheetRecordingService(capture.service);
 
     const result = await service.stopAndSave({
@@ -244,7 +293,7 @@ describe("sheet practice recording service", () => {
       sessionService
     });
 
-    expect(sessionService.createSheetRecordingMetadata).toHaveBeenCalledWith({
+    expect(sessionService.prepareSheetRecordingMetadata).toHaveBeenCalledWith({
       sheetId: "sheet-alpha",
       sessionId: "session-new",
       durationMs: 800,
@@ -288,15 +337,10 @@ describe("sheet practice recording service", () => {
       }
     ];
     const capture = createCaptureService();
-    const sessionService = {
-      createSheetRecordingMetadata: vi.fn(async () => metadata),
-      getRecentSheetSession: vi.fn(async () => previousSession),
-      deletePracticeSessionSnapshot: vi.fn(async () => undefined),
-      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
-    };
+    const sessionService = createPreparedSessionService();
     const service = new BrowserSheetRecordingService(capture.service);
 
-    recordingHistoryRepository.saveSnapshot({
+    seedRecordingHistoryForTests({
       sessions: [previousSession],
       recordings: [existingRecording],
       errorMarkers: [],
@@ -322,6 +366,43 @@ describe("sheet practice recording service", () => {
     ]);
   });
 
+  it("preserves concurrent recording history writes during final sheet save", async () => {
+    const concurrentRecording = createSheetReviewRecording({
+      metadata: {
+        ...metadata,
+        id: "recording-sheet-concurrent",
+        sessionId: "session-concurrent",
+        createdAt: "2026-06-22T05:57:00.000Z"
+      },
+      artifact: createArtifact(),
+      settings
+    });
+    const capture = createCaptureService();
+    const sessionService = createPreparedSessionService({
+      onPrepare: () => {
+        seedRecordingHistoryForTests({
+          sessions: [{ ...previousSession, id: "session-concurrent" }],
+          recordings: [concurrentRecording],
+          errorMarkers: []
+        });
+      }
+    });
+    const service = new BrowserSheetRecordingService(capture.service);
+
+    await service.stopAndSave({
+      sheetId: "sheet-alpha",
+      sessionId: "session-new",
+      settings,
+      forceNewSession: false,
+      sessionService
+    });
+
+    expect(recordingHistoryRepository.getSnapshot().recordings.map((recording) => recording.id)).toEqual([
+      "recording-sheet-1",
+      "recording-sheet-concurrent"
+    ]);
+  });
+
   it("rejects silent captures before creating sheet metadata", async () => {
     const capture = createCaptureService(
       createArtifact({
@@ -335,12 +416,7 @@ describe("sheet practice recording service", () => {
         }
       })
     );
-    const sessionService = {
-      createSheetRecordingMetadata: vi.fn(async () => metadata),
-      getRecentSheetSession: vi.fn(async () => previousSession),
-      deletePracticeSessionSnapshot: vi.fn(async () => undefined),
-      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
-    };
+    const sessionService = createPreparedSessionService();
     const service = new BrowserSheetRecordingService(capture.service);
 
     await expect(
@@ -352,19 +428,14 @@ describe("sheet practice recording service", () => {
         sessionService
       })
     ).rejects.toThrow("audible input");
-    expect(sessionService.createSheetRecordingMetadata).not.toHaveBeenCalled();
+    expect(sessionService.prepareSheetRecordingMetadata).not.toHaveBeenCalled();
   });
 
   it("does not persist sheet metadata or recording history when post-capture decode fails", async () => {
     installAudioContextMock({ reject: true });
 
     const capture = createCaptureService();
-    const sessionService = {
-      createSheetRecordingMetadata: vi.fn(async () => metadata),
-      getRecentSheetSession: vi.fn(async () => previousSession),
-      deletePracticeSessionSnapshot: vi.fn(async () => undefined),
-      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
-    };
+    const sessionService = createPreparedSessionService();
     const service = new BrowserSheetRecordingService(capture.service);
 
     await expect(
@@ -377,59 +448,78 @@ describe("sheet practice recording service", () => {
       })
     ).rejects.toThrow("cannot be decoded");
 
-    expect(sessionService.createSheetRecordingMetadata).not.toHaveBeenCalled();
+    expect(sessionService.prepareSheetRecordingMetadata).not.toHaveBeenCalled();
     expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
   });
 
-  it("rolls back placeholder metadata and session latest recording when final history save fails", async () => {
+  it("does not create sheet metadata when artifact save fails", async () => {
+    const capture = createCaptureService();
+    const sessionService = createPreparedSessionService();
+    const saveArtifactSpy = vi
+      .spyOn(recordingArtifactRepository, "saveArtifact")
+      .mockRejectedValueOnce(new Error("IndexedDB unavailable"));
+    const service = new BrowserSheetRecordingService(capture.service);
+
+    await expect(
+      service.stopAndSave({
+        sheetId: "sheet-alpha",
+        sessionId: "session-new",
+        settings,
+        forceNewSession: false,
+        sessionService
+      })
+    ).rejects.toThrow("unavailable");
+
+    expect(sessionService.prepareSheetRecordingMetadata).toHaveBeenCalledOnce();
+    expect(sessionService.commitPreparedSheetRecordingSession).not.toHaveBeenCalled();
+    expect(recordingHistoryRepository.getRecording(metadata.id)).toBeNull();
+    expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
+    saveArtifactSpy.mockRestore();
+  });
+
+  it("rolls back artifact and session state when final history save fails", async () => {
     let storedSession: PracticeSession = previousSession;
     const capture = createCaptureService();
-    const originalSaveSnapshot = recordingHistoryRepository.saveSnapshot;
+    const originalSaveSnapshot = seedRecordingHistoryForTests;
     originalSaveSnapshot({
       sessions: [previousSession],
       recordings: [],
       errorMarkers: []
     });
     let saveCallCount = 0;
-    const sessionService = {
-      getRecentSheetSession: vi.fn(async () => storedSession),
-      createSheetRecordingMetadata: vi.fn(async () => {
-        const placeholderRecording = createSheetReviewRecording({
-          metadata,
-          artifact: createArtifact({ sizeBytes: 0, dataUrl: "" }),
-          settings
-        });
-
+    const sessionService = createPreparedSessionService({
+      previous: storedSession,
+      preparedSession: {
+        ...previousSession,
+        recordingCount: 1,
+        latestRecordingId: metadata.id
+      },
+      onCommit: () => {
         storedSession = {
           ...previousSession,
           recordingCount: 1,
           latestRecordingId: metadata.id
         };
-        originalSaveSnapshot({
-          sessions: [storedSession],
-          recordings: [placeholderRecording],
-          errorMarkers: []
-        });
-
-        return metadata;
-      }),
-      deletePracticeSessionSnapshot: vi.fn(async () => undefined),
-      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => {
+      }
+    });
+    sessionService.getRecentSheetSession.mockImplementation(async () => storedSession);
+    sessionService.restorePracticeSessionSnapshot.mockImplementation(async (session: PracticeSession) => {
         storedSession = session;
 
         return session;
-      })
-    };
-    const saveSnapshotSpy = vi
-      .spyOn(recordingHistoryRepository, "saveSnapshot")
-      .mockImplementation((snapshot) => {
+      });
+    const originalSaveSheetRecordingMetadataWithSession =
+      recordingHistoryRepository.saveSheetRecordingMetadataWithSession;
+    const saveSheetRecordingMetadataWithSessionSpy = vi
+      .spyOn(recordingHistoryRepository, "saveSheetRecordingMetadataWithSession")
+      .mockImplementation((input) => {
         saveCallCount += 1;
 
         if (saveCallCount === 1) {
           throw new Error("localStorage setItem failed");
         }
 
-        originalSaveSnapshot(snapshot);
+        return originalSaveSheetRecordingMetadataWithSession(input);
       });
     const service = new BrowserSheetRecordingService(capture.service);
 
@@ -443,60 +533,53 @@ describe("sheet practice recording service", () => {
       })
     ).rejects.toThrow("localStorage setItem failed");
 
-    expect(sessionService.createSheetRecordingMetadata).toHaveBeenCalledOnce();
+    expect(sessionService.prepareSheetRecordingMetadata).toHaveBeenCalledOnce();
+    expect(sessionService.commitPreparedSheetRecordingSession).not.toHaveBeenCalled();
     expect(sessionService.restorePracticeSessionSnapshot).toHaveBeenCalledWith(previousSession);
     expect(sessionService.deletePracticeSessionSnapshot).not.toHaveBeenCalled();
     expect(recordingHistoryRepository.getRecording(metadata.id)).toBeNull();
     expect(recordingHistoryRepository.getSnapshot().sessions).toEqual([previousSession]);
+    await expect(
+      recordingArtifactRepository.getArtifact(metadata.id)
+    ).resolves.toBeNull();
     expect(storedSession).toEqual(previousSession);
-    saveSnapshotSpy.mockRestore();
+    saveSheetRecordingMetadataWithSessionSpy.mockRestore();
   });
 
   it("deletes a newly created session snapshot when final history save fails", async () => {
     let storedSession: PracticeSession | null = null;
     const capture = createCaptureService();
-    const originalSaveSnapshot = recordingHistoryRepository.saveSnapshot;
     let saveCallCount = 0;
     const createdSession: PracticeSession = {
       ...previousSession,
       recordingCount: 1,
       latestRecordingId: metadata.id
     };
-    const sessionService = {
-      getRecentSheetSession: vi.fn(async () => storedSession),
-      createSheetRecordingMetadata: vi.fn(async () => {
-        const placeholderRecording = createSheetReviewRecording({
-          metadata,
-          artifact: createArtifact({ sizeBytes: 0, dataUrl: "" }),
-          settings
-        });
-
+    const sessionService = createPreparedSessionService({
+      previous: storedSession,
+      preparedSession: createdSession,
+      onCommit: () => {
         storedSession = createdSession;
-        originalSaveSnapshot({
-          sessions: [createdSession],
-          recordings: [placeholderRecording],
-          errorMarkers: []
-        });
-
-        return metadata;
-      }),
-      deletePracticeSessionSnapshot: vi.fn(async (sessionId: string) => {
+      }
+    });
+    sessionService.getRecentSheetSession.mockImplementation(async () => storedSession);
+    sessionService.deletePracticeSessionSnapshot.mockImplementation(async (sessionId: string) => {
         if (storedSession?.id === sessionId) {
           storedSession = null;
         }
-      }),
-      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
-    };
-    const saveSnapshotSpy = vi
-      .spyOn(recordingHistoryRepository, "saveSnapshot")
-      .mockImplementation((snapshot) => {
+      });
+    const originalSaveSheetRecordingMetadataWithSession =
+      recordingHistoryRepository.saveSheetRecordingMetadataWithSession;
+    const saveSheetRecordingMetadataWithSessionSpy = vi
+      .spyOn(recordingHistoryRepository, "saveSheetRecordingMetadataWithSession")
+      .mockImplementation((input) => {
         saveCallCount += 1;
 
         if (saveCallCount === 1) {
           throw new Error("repository save failed");
         }
 
-        originalSaveSnapshot(snapshot);
+        return originalSaveSheetRecordingMetadataWithSession(input);
       });
     const service = new BrowserSheetRecordingService(capture.service);
 
@@ -517,7 +600,36 @@ describe("sheet practice recording service", () => {
       recordings: [],
       errorMarkers: []
     });
+    await expect(
+      recordingArtifactRepository.getArtifact(metadata.id)
+    ).resolves.toBeNull();
     expect(storedSession).toBeNull();
-    saveSnapshotSpy.mockRestore();
+    saveSheetRecordingMetadataWithSessionSpy.mockRestore();
+  });
+
+  it("cleans artifact and metadata when prepared session commit fails", async () => {
+    const capture = createCaptureService();
+    const sessionService = createPreparedSessionService({
+      onCommit: () => {
+        throw new Error("session commit failed");
+      }
+    });
+    const service = new BrowserSheetRecordingService(capture.service);
+
+    await expect(
+      service.stopAndSave({
+        sheetId: "sheet-alpha",
+        sessionId: "session-new",
+        settings,
+        forceNewSession: false,
+        sessionService
+      })
+    ).rejects.toThrow("session commit failed");
+
+    expect(recordingHistoryRepository.getRecording(metadata.id)).toBeNull();
+    await expect(
+      recordingArtifactRepository.getArtifact(metadata.id)
+    ).resolves.toBeNull();
+    expect(sessionService.restorePracticeSessionSnapshot).toHaveBeenCalledWith(previousSession);
   });
 });

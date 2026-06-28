@@ -8,3 +8,5 @@ export const PRACTICE_SEGMENT_DB_NAME =
   "metronome-practice-v1-practice-segments";
 export const RECORDING_HISTORY_STORAGE_KEY =
   "metronome-practice:v0:quick-recordings";
+export const RECORDING_ARTIFACT_DB_NAME =
+  "metronome-practice-v1-recording-artifacts";

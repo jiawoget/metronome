@@ -1,6 +1,9 @@
 import { type Page } from "@playwright/test";
 
-import { RECORDING_HISTORY_STORAGE_KEY } from "./storage";
+import {
+  RECORDING_ARTIFACT_DB_NAME,
+  RECORDING_HISTORY_STORAGE_KEY
+} from "./storage";
 
 export type WavArtifact = {
   dataUrl: string;
@@ -140,10 +143,12 @@ export async function decodeRecordingHistoryAudio(
   return page.evaluate(
     async ({
       id,
-      key
+      key,
+      artifactDatabaseName
     }: {
       id: string;
       key: string;
+      artifactDatabaseName: string;
     }): Promise<DecodedAudioEvidence> => {
       const rawValue = window.localStorage.getItem(key);
       const parsed = rawValue ? JSON.parse(rawValue) : { recordings: [] };
@@ -155,12 +160,48 @@ export async function decodeRecordingHistoryAudio(
       const AudioContextConstructor =
         audioWindow.AudioContext || audioWindow.webkitAudioContext;
 
-      if (!recording?.audioDataUrl || !AudioContextConstructor) {
+      if (!recording || !AudioContextConstructor) {
         throw new Error(`Cannot decode ${id}.`);
       }
 
-      const response = await fetch(recording.audioDataUrl);
-      const arrayBuffer = await response.arrayBuffer();
+      let arrayBuffer: ArrayBuffer | null = null;
+
+      if (recording.artifactRef?.artifactId) {
+        arrayBuffer = await new Promise<ArrayBuffer | null>((resolve, reject) => {
+          const openRequest = indexedDB.open(artifactDatabaseName);
+
+          openRequest.onerror = () => reject(openRequest.error);
+          openRequest.onsuccess = () => {
+            const database = openRequest.result;
+            const transaction = database.transaction("recordingArtifacts", "readonly");
+            const store = transaction.objectStore("recordingArtifacts");
+            const getRequest = store.get(recording.artifactRef.artifactId);
+
+            getRequest.onerror = () => reject(getRequest.error);
+            getRequest.onsuccess = () => {
+              const artifact = getRequest.result as { blob?: Blob } | undefined;
+
+              if (!artifact?.blob) {
+                resolve(null);
+                return;
+              }
+
+              artifact.blob.arrayBuffer().then(resolve, reject);
+            };
+          };
+        });
+      }
+
+      if (!arrayBuffer && recording.audioDataUrl) {
+        const response = await fetch(recording.audioDataUrl);
+
+        arrayBuffer = await response.arrayBuffer();
+      }
+
+      if (!arrayBuffer) {
+        throw new Error(`Cannot decode ${id}.`);
+      }
+
       const audioContext = new AudioContextConstructor();
       const audioBuffer = await audioContext.decodeAudioData(
         arrayBuffer.slice(0)
@@ -198,6 +239,10 @@ export async function decodeRecordingHistoryAudio(
             : null
       };
     },
-    { id: recordingId, key: storageKey }
+    {
+      id: recordingId,
+      key: storageKey,
+      artifactDatabaseName: RECORDING_ARTIFACT_DB_NAME
+    }
   );
 }

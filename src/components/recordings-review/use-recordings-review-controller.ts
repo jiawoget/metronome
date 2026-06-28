@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import {
   recordingsReviewService,
@@ -42,11 +42,19 @@ export function useRecordingsReviewController(
     return () => window.clearTimeout(timerId);
   }, []);
 
+  useEffect(() => {
+    if (!clientReady) {
+      return;
+    }
+
+    void service.migrateLegacyArtifacts().catch(() => undefined);
+  }, [clientReady, service]);
+
   const actions = useMemo(
     () => ({
       service,
       deleteRecording(recording: ReviewRecording) {
-        service.deleteRecording(recording.id);
+        return service.deleteRecording(recording.id);
       },
       toggleFavorite(recording: ReviewRecording, favorite: boolean) {
         service.setRecordingFavorite(recording.id, !favorite);
@@ -141,10 +149,16 @@ function useWaveformComparisonSources({
   errorMessage: string;
 }) {
   const [state, setState] = useState<WaveformComparisonState | null>(null);
+  const requestTokenRef = useRef(0);
+  const loadSourcesRef = useRef(loadSources);
   const result = enabled && state?.key === requestId ? state.result : null;
   const currentErrorMessage =
     enabled && state?.key === requestId ? state.errorMessage : null;
   const loading = enabled && !result && !currentErrorMessage;
+
+  useEffect(() => {
+    loadSourcesRef.current = loadSources;
+  }, [loadSources]);
 
   useEffect(() => {
     let cancelled = false;
@@ -155,9 +169,23 @@ function useWaveformComparisonSources({
       };
     }
 
-    loadSources()
+    const requestToken = requestTokenRef.current + 1;
+
+    requestTokenRef.current = requestToken;
+
+    Promise.resolve()
+      .then(() => {
+        if (!cancelled && requestTokenRef.current === requestToken) {
+          setState({
+            key: requestId,
+            result: null,
+            errorMessage: null
+          });
+        }
+      })
+      .then(() => loadSourcesRef.current())
       .then((nextResult) => {
-        if (cancelled) {
+        if (cancelled || requestTokenRef.current !== requestToken) {
           return;
         }
 
@@ -168,7 +196,7 @@ function useWaveformComparisonSources({
         });
       })
       .catch(() => {
-        if (cancelled) {
+        if (cancelled || requestTokenRef.current !== requestToken) {
           return;
         }
 
@@ -182,7 +210,7 @@ function useWaveformComparisonSources({
     return () => {
       cancelled = true;
     };
-  }, [enabled, errorMessage, loadSources, requestId]);
+  }, [enabled, errorMessage, requestId]);
 
   return {
     result,

@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
+import {
+  recordingHistoryRepository,
+  seedRecordingHistoryForTests
+} from "@/lib/recordings-review/repository";
 import {
   loadWaveformComparisonSource,
   loadWaveformComparisonSources,
@@ -200,7 +203,7 @@ describe("waveform comparison source boundary", () => {
       loadWaveformComparisonSource(
         createSheetRecording({ mimeType: "audio/x-custom" })
       ),
-      "decode-failed"
+      "unsupported-mime"
     );
 
     await expectUnavailableReason(
@@ -276,7 +279,7 @@ describe("waveform comparison source boundary", () => {
 
   it("resolves current repository ids and reports missing or deleted recordings", async () => {
     installAudioContextMock({ durationSeconds: 12 });
-    recordingHistoryRepository.saveSnapshot({
+    seedRecordingHistoryForTests({
       sessions: [],
       recordings: [
         createSheetRecording({ id: "sheet-ready" }),
@@ -318,7 +321,7 @@ describe("waveform comparison source boundary", () => {
 
   it("preserves duplicate repository ids as separate requested entries", async () => {
     installAudioContextMock({ durationSeconds: 12 });
-    recordingHistoryRepository.saveSnapshot({
+    seedRecordingHistoryForTests({
       sessions: [],
       recordings: [createSheetRecording({ id: "sheet-ready" })],
       errorMarkers: []
@@ -350,7 +353,7 @@ describe("waveform comparison source boundary", () => {
 
   it("uses current P2-01 take group membership for segment and no-segment groups", async () => {
     installAudioContextMock({ durationSeconds: 12 });
-    recordingHistoryRepository.saveSnapshot(createGroupedSnapshot());
+    seedRecordingHistoryForTests(createGroupedSnapshot());
 
     const [segmentGroup, noSegmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
 
@@ -403,7 +406,7 @@ describe("waveform comparison source boundary", () => {
 
   it("does not serve stale group recordings after local review history changes", async () => {
     installAudioContextMock({ durationSeconds: 12 });
-    recordingHistoryRepository.saveSnapshot(createGroupedSnapshot());
+    seedRecordingHistoryForTests(createGroupedSnapshot());
 
     const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
 

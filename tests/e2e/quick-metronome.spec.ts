@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { installSyntheticMicrophone } from "./fixtures/audio";
+import { decodeRecordingHistoryAudio, installSyntheticMicrophone } from "./fixtures/audio";
 import { RECORDING_HISTORY_STORAGE_KEY } from "./fixtures/storage";
 
 type MetronomeTrace = {
@@ -173,7 +173,8 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
     "2/4",
     "3/4",
     "4/4",
-    "6/8"
+    "6/8",
+    "12/8"
   ]);
   await expect(page.getByLabel("Countdown").locator("option")).toHaveText([
     "Off",
@@ -356,56 +357,18 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
     480
   );
   expect(latestRecording.artifactAnalysis.isSilent).toBe(false);
+  expect(latestRecording.artifactRef).toMatchObject({
+    kind: "indexeddb",
+    artifactId: latestRecording.id,
+    storageVersion: 1
+  });
+  expect(latestRecording.audioDataUrl ?? null).toBeNull();
 
-  const decodedEvidence = await page.evaluate(async (storageKey) => {
-    const rawValue = window.localStorage.getItem(
-      storageKey
-    );
-    const parsed = rawValue ? JSON.parse(rawValue) : null;
-    const recording = parsed.recordings[0];
-    const audioWindow = window as Window &
-      typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-    const AudioContextConstructor =
-      audioWindow.AudioContext || audioWindow.webkitAudioContext;
-
-    if (!AudioContextConstructor) {
-      throw new Error("Web Audio is not available in this browser.");
-    }
-
-    const response = await fetch(recording.audioDataUrl);
-    const arrayBuffer = await response.arrayBuffer();
-    const audioContext = new AudioContextConstructor();
-    const audioBuffer = await audioContext.decodeAudioData(
-      arrayBuffer.slice(0)
-    );
-    const samples = audioBuffer.getChannelData(0);
-    let peakAmplitude = 0;
-    let sumSquares = 0;
-    let positiveZeroCrossings = 0;
-    let previousSample = samples[0] ?? 0;
-
-    for (let index = 0; index < samples.length; index += 1) {
-      const sample = samples[index] ?? 0;
-      peakAmplitude = Math.max(peakAmplitude, Math.abs(sample));
-      sumSquares += sample * sample;
-      if (previousSample < 0 && sample >= 0) {
-        positiveZeroCrossings += 1;
-      }
-      previousSample = sample;
-    }
-
-    await audioContext.close();
-
-    return {
-      decodedDurationMs: audioBuffer.duration * 1_000,
-      peakAmplitude,
-      rmsAmplitude: Math.sqrt(sumSquares / Math.max(1, samples.length)),
-      estimatedFrequencyHz:
-        audioBuffer.duration > 0
-          ? positiveZeroCrossings / audioBuffer.duration
-          : null
-    } satisfies DecodedRecordingEvidence;
-  }, RECORDING_HISTORY_STORAGE_KEY);
+  const decodedEvidence = await decodeRecordingHistoryAudio(
+    page,
+    latestRecording.id,
+    RECORDING_HISTORY_STORAGE_KEY
+  );
 
   expect(decodedEvidence.decodedDurationMs).toBeGreaterThan(600);
   expect(decodedEvidence.rmsAmplitude).toBeGreaterThan(0.02);

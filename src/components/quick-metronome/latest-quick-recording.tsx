@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
 import { BrowserRecordingPlaybackService } from "@/lib/quick-metronome/playback-service";
-import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
+import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
+import { resolveQuickRecordingArtifactBody } from "@/lib/quick-metronome/artifact-controller";
 
 export function LatestQuickRecording({ compact = false }: { compact?: boolean }) {
   const playbackService = useMemo(() => new BrowserRecordingPlaybackService(), []);
   const storedRecording = useSyncExternalStore(
-    quickRecordingRepository.subscribe,
-    quickRecordingRepository.getLatestQuickRecording,
+    quickRecordingController.subscribe,
+    quickRecordingController.getLatestQuickRecording,
     () => null
   );
   const [playbackState, setPlaybackState] = useState<"idle" | "playing" | "error">("idle");
@@ -35,7 +36,7 @@ export function LatestQuickRecording({ compact = false }: { compact?: boolean })
         >
           <audio
             data-testid="demo-recording-audio"
-            src={latestRecording.audioDataUrl}
+            src={latestRecording.audioDataUrl ?? undefined}
             preload="metadata"
             className="hidden"
           />
@@ -76,7 +77,25 @@ export function LatestQuickRecording({ compact = false }: { compact?: boolean })
               }
 
               setPlaybackState("playing");
-              await playbackService.play(latestRecording.audioDataUrl);
+              if (isDemoRecording && latestRecording.audioDataUrl) {
+                await playbackService.play(latestRecording.audioDataUrl);
+              } else {
+                const artifactBody = await resolveQuickRecordingArtifactBody(
+                  latestRecording,
+                  { createObjectUrl: true }
+                );
+
+                try {
+                  await playbackService.play(artifactBody.objectUrl ?? "");
+                } finally {
+                  if (artifactBody.objectUrl) {
+                    window.setTimeout(
+                      () => URL.revokeObjectURL(artifactBody.objectUrl!),
+                      latestRecording.durationMs + 1_000
+                    );
+                  }
+                }
+              }
               window.setTimeout(() => setPlaybackState("idle"), latestRecording.durationMs + 150);
             } catch {
               setPlaybackState("error");

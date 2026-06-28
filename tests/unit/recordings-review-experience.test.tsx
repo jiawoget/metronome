@@ -5,7 +5,10 @@ import type { ReactNode } from "react";
 
 import type { SheetRecordingSegmentContext } from "@/domain/practice";
 import { RecordingsReviewExperience } from "@/components/recordings-review/recordings-review-experience";
-import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
+import {
+  recordingHistoryRepository,
+  seedRecordingHistoryForTests
+} from "@/lib/recordings-review/repository";
 import type {
   RecordingArtifactDetails,
   RecordingReviewSnapshot,
@@ -65,7 +68,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("renders sheet take groups, quick recordings, and ungrouped sheet recordings from the grouping read model", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
 
     render(<RecordingsReviewExperience />);
 
@@ -237,7 +240,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("filters grouped recordings by saved segment metadata and keeps empty group shells hidden", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
 
     render(<RecordingsReviewExperience />);
 
@@ -274,7 +277,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("edits tags, favorites, archive state, and combines organization filters", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
 
     render(<RecordingsReviewExperience />);
 
@@ -357,7 +360,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("exports supported visible quick and sheet recordings from the details panel", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
     exportRecordingAudioMock.mockResolvedValue({
       ok: true,
       recordingId: "sheet-bridge-new",
@@ -418,7 +421,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const user = userEvent.setup();
     const snapshot = createMixedSnapshot();
 
-    recordingHistoryRepository.saveSnapshot({
+    seedRecordingHistoryForTests({
       ...snapshot,
       recordings: [
         createQuickRecording({
@@ -466,7 +469,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("reports a recoverable export error without changing organization or comparison state", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
     loadWaveformComparisonSourcesForRecordingIdsMock.mockResolvedValue(
       createComparisonResult([createReadyComparisonSource(createSheetRecording())])
     );
@@ -513,7 +516,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("only exposes archived recording export when archive filters make the recording visible", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot({
+    seedRecordingHistoryForTests({
       ...createMixedSnapshot(),
       recordingOrganization: [
         {
@@ -563,7 +566,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("falls back to the expected visible recording after deleting or filtering the selected take", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
 
     render(<RecordingsReviewExperience />);
 
@@ -603,7 +606,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const user = userEvent.setup();
     const snapshot = createMixedSnapshot();
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForRecordingIdsMock.mockImplementation(
       async (recordingIds: string[]) =>
         createComparisonResult(
@@ -705,7 +708,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const user = userEvent.setup();
     const snapshot = createMixedSnapshot();
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForRecordingIdsMock.mockImplementation(
       async (recordingIds: string[]) =>
         createComparisonResult(
@@ -761,7 +764,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const user = userEvent.setup();
     const snapshot = createMixedSnapshot();
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForRecordingIdsMock.mockResolvedValue(
       createComparisonResult([
         createUnavailableComparisonSource({
@@ -846,7 +849,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
       ]
     };
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForRecordingIdsMock.mockImplementation(
       async (recordingIds: string[]) =>
         createComparisonResult(
@@ -901,7 +904,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const user = userEvent.setup();
     const snapshot = createMixedSnapshot();
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForRecordingIdsMock.mockImplementation(
       async (recordingIds: string[]) =>
         createComparisonResult(
@@ -978,7 +981,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("clears active-only take UI state after deleting the active recording", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
 
     render(<RecordingsReviewExperience />);
 
@@ -1022,7 +1025,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("clears best and active UI state after deleting a recording marked as both", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
 
     render(<RecordingsReviewExperience />);
 
@@ -1071,7 +1074,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("marks, changes, and clears best and active takes independently", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
 
     render(<RecordingsReviewExperience />);
 
@@ -1154,7 +1157,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("keeps persisted take selections through filters and shows stale refs as unselected", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot({
+    seedRecordingHistoryForTests({
       ...createMixedSnapshot(),
       takeSelections: [
         {
@@ -1210,7 +1213,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   });
 
   it("renders mixed summary fallbacks without evaluation claims", async () => {
-    recordingHistoryRepository.saveSnapshot({
+    seedRecordingHistoryForTests({
       sessions: [],
       recordings: [
         createSheetRecording({
@@ -1260,7 +1263,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
         throw new Error("failed write");
       });
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
 
     render(<RecordingsReviewExperience />);
 
@@ -1291,7 +1294,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
         throw new Error("failed active write");
       });
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
 
     render(<RecordingsReviewExperience />);
 
@@ -1317,7 +1320,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   });
 
   it("renders explicit waveform comparison controls only for grouped sheet takes", async () => {
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
 
     render(<RecordingsReviewExperience />);
 
@@ -1344,7 +1347,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const user = userEvent.setup();
     const snapshot = createMixedSnapshot();
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockImplementation(
       async ({
         recordingIds
@@ -1433,7 +1436,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const pendingRetry = createDeferred<WaveformComparisonSourcesResult>();
     let twoTakeRequestCount = 0;
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockImplementation(
       async ({
         recordingIds
@@ -1488,11 +1491,20 @@ describe("RecordingsReviewExperience grouped take history", () => {
     });
 
     await user.click(newCompareControl);
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByText("Select another take to compare")
+      ).toBeVisible();
+    });
+
     await user.click(newCompareControl);
 
-    expect(
-      within(segmentGroup).getByTestId("waveform-comparison-loading")
-    ).toHaveTextContent("Loading waveform comparison sources.");
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId("waveform-comparison-loading")
+      ).toHaveTextContent("Loading waveform comparison sources.");
+    });
     expect(
       within(segmentGroup).queryByTestId("waveform-comparison-results")
     ).not.toBeInTheDocument();
@@ -1529,7 +1541,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const pendingRetry = createDeferred<WaveformComparisonSourcesResult>();
     let twoTakeRequestCount = 0;
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockImplementation(
       async ({
         recordingIds
@@ -1586,9 +1598,11 @@ describe("RecordingsReviewExperience grouped take history", () => {
     await user.click(newCompareControl);
     await user.click(newCompareControl);
 
-    expect(
-      within(segmentGroup).getByTestId("waveform-comparison-loading")
-    ).toHaveTextContent("Loading waveform comparison sources.");
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId("waveform-comparison-loading")
+      ).toHaveTextContent("Loading waveform comparison sources.");
+    });
     expect(
       within(segmentGroup).queryByTestId("waveform-comparison-results")
     ).not.toBeInTheDocument();
@@ -1619,11 +1633,37 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const user = userEvent.setup();
     const snapshot = createMixedSnapshot();
     const pendingRetry = createDeferred<WaveformComparisonSourcesResult>();
+    let twoTakeRequestCount = 0;
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
-    loadWaveformComparisonSourcesForGroupMock
-      .mockRejectedValueOnce(new Error("source lookup failed"))
-      .mockImplementationOnce(() => pendingRetry.promise);
+    seedRecordingHistoryForTests(snapshot);
+    loadWaveformComparisonSourcesForGroupMock.mockImplementation(
+      async ({
+        recordingIds
+      }: {
+        recordingIds: string[];
+      }) => {
+        const sources = recordingIds.map((recordingId) =>
+          createReadyComparisonSource(
+            snapshot.recordings.find((recording) => recording.id === recordingId) ??
+              createSheetRecording({ id: recordingId })
+          )
+        );
+
+        if (recordingIds.length === 2) {
+          twoTakeRequestCount += 1;
+
+          if (twoTakeRequestCount === 1) {
+            throw new Error("source lookup failed");
+          }
+
+          if (twoTakeRequestCount === 2) {
+            return pendingRetry.promise;
+          }
+        }
+
+        return createComparisonResult(sources);
+      }
+    );
 
     render(<RecordingsReviewExperience />);
 
@@ -1633,8 +1673,12 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const oldCompareControl = within(segmentGroup).getByTestId(
       "compare-take-control-sheet-bridge-old"
     );
+    const newCompareControl = within(segmentGroup).getByTestId(
+      "compare-take-control-sheet-bridge-new"
+    );
 
     await user.click(oldCompareControl);
+    await user.click(newCompareControl);
 
     await waitFor(() => {
       expect(
@@ -1642,19 +1686,22 @@ describe("RecordingsReviewExperience grouped take history", () => {
       ).toHaveTextContent("Waveform comparison sources could not be loaded.");
     });
 
-    await user.click(oldCompareControl);
-    await user.click(oldCompareControl);
+    await user.click(newCompareControl);
+    await user.click(newCompareControl);
 
-    expect(
-      within(segmentGroup).getByTestId("waveform-comparison-loading")
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId("waveform-comparison-loading")
+      ).toBeVisible();
+    });
     expect(
       within(segmentGroup).queryByTestId("waveform-comparison-error")
     ).not.toBeInTheDocument();
 
     pendingRetry.resolve(
       createComparisonResult([
-        createReadyComparisonSource(snapshot.recordings[0])
+        createReadyComparisonSource(snapshot.recordings[0]),
+        createReadyComparisonSource(snapshot.recordings[1])
       ])
     );
 
@@ -1674,7 +1721,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const user = userEvent.setup();
     const snapshot = createMixedSnapshot();
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockResolvedValue(
       createComparisonResult([
         createReadyComparisonSource(snapshot.recordings[0]),
@@ -1770,7 +1817,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const user = userEvent.setup();
     const snapshot = createMixedSnapshot();
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockImplementation(
       async ({
         recordingIds
@@ -1829,7 +1876,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const user = userEvent.setup();
     const snapshot = createMixedSnapshot();
 
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockImplementation(
       async ({
         recordingIds
@@ -1911,7 +1958,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
   it("reports waveform comparison service failures without blocking the group", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot(createMixedSnapshot());
+    seedRecordingHistoryForTests(createMixedSnapshot());
     loadWaveformComparisonSourcesForGroupMock.mockRejectedValue(
       new Error("source lookup failed")
     );

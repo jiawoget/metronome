@@ -64,6 +64,13 @@ export type SheetRecordingMetadataInput = {
   forceNewSession?: boolean;
 };
 
+export type PreparedSheetRecordingMetadata = {
+  metadata: SheetRecordingMetadata;
+  session: PracticeSession;
+};
+
+export type PreparedSheetRecordingSessionInput = PreparedSheetRecordingMetadata;
+
 export type PracticeRecordingLinkInput = {
   sessionId: string | null | undefined;
   recordingId: string | null | undefined;
@@ -78,6 +85,8 @@ export type PracticeSessionService = {
   updateSheetSessionDuration: (sessionId: string) => Promise<PracticeSession | null>;
   endPracticeSession: (sessionId: string) => Promise<PracticeSession | null>;
   linkRecordingToSession: (input: PracticeRecordingLinkInput) => Promise<PracticeSession | null>;
+  prepareSheetRecordingMetadata: (input: SheetRecordingMetadataInput) => Promise<PreparedSheetRecordingMetadata | null>;
+  commitPreparedSheetRecordingSession: (input: PreparedSheetRecordingSessionInput) => Promise<void>;
   createSheetRecordingMetadata: (input: SheetRecordingMetadataInput) => Promise<SheetRecordingMetadata | null>;
   listSessions: () => Promise<PracticeSession[]>;
   getTodaySummary: () => Promise<TodayPracticeSummary>;

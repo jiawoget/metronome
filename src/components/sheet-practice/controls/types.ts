@@ -14,6 +14,8 @@ type SheetPracticeSessionService = Pick<
   | "updateSheetSessionDuration"
   | "endPracticeSession"
   | "createSheetRecordingMetadata"
+  | "prepareSheetRecordingMetadata"
+  | "commitPreparedSheetRecordingSession"
   | "getRecentSession"
   | "getRecentSheetSession"
   | "listRecordingMetadata"

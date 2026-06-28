@@ -3,10 +3,12 @@ import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { browserAudioDownloadAdapter } from "@/lib/recordings-review/browser-audio-download-adapter";
 import {
-  getDataUrlMimeType,
-  getKnownExportAudioMimeInfo,
-  hasMatchingKnownExportAudioMime
+  getKnownExportAudioMimeInfo
 } from "@/lib/recordings-review/audio-mime";
+import {
+  RecordingArtifactError,
+  resolveRecordingArtifactBody
+} from "@/lib/recordings-review/artifact-service";
 
 export type RecordingAudioExportRequest = {
   recordingId: string;
@@ -42,6 +44,10 @@ export type RecordingAudioExportRepository = {
   getRecording(recordingId: string): ReviewRecording | null;
 };
 
+export type RecordingAudioArtifactResolver = {
+  resolveRecordingArtifactBody(recording: ReviewRecording): Promise<{ blob: Blob; mimeType: string; sizeBytes: number }>;
+};
+
 export type RecordingAudioExportEligibility =
   | { available: true; extension: string; mimeType: string; message: null }
   | {
@@ -57,10 +63,12 @@ const MAX_FILENAME_BASE_LENGTH = 140;
 
 export function createRecordingAudioExportService({
   repository,
-  downloadAdapter
+  downloadAdapter,
+  artifactResolver = { resolveRecordingArtifactBody }
 }: {
   repository: RecordingAudioExportRepository;
   downloadAdapter: RecordingAudioDownloadAdapter;
+  artifactResolver?: RecordingAudioArtifactResolver;
 }) {
   return {
     async exportRecordingAudio(
@@ -87,10 +95,33 @@ export function createRecordingAudioExportService({
         });
       }
 
-      const blob = dataUrlToBlob({
-        dataUrl: recording.audioDataUrl ?? "",
-        mimeType: eligibility.mimeType
-      });
+      let blob: Blob;
+
+      try {
+        const artifactBody = await artifactResolver.resolveRecordingArtifactBody(recording);
+
+        blob = artifactBody.blob;
+      } catch (error) {
+        return unavailableResult({
+          recordingId: recording.id,
+          reason:
+            error instanceof RecordingArtifactError &&
+            error.reason === "unsupported-mime" &&
+            !error.message.toLowerCase().includes("mime does not match")
+              ? "unsupported-mime"
+              : error instanceof RecordingArtifactError &&
+                  (error.reason === "legacy-artifact-malformed" ||
+                    error.reason === "decode-failed" ||
+                    error.reason === "empty-audio" ||
+                    error.reason === "unsupported-mime")
+                ? "invalid-artifact"
+              : "missing-artifact",
+          message:
+            error instanceof Error
+              ? error.message
+              : "This recording has no local audio artifact to export."
+        });
+      }
 
       if (!blob || blob.size <= 0) {
         return unavailableResult({
@@ -129,9 +160,9 @@ export const recordingAudioExportService = createRecordingAudioExportService({
 });
 
 export function getRecordingAudioExportEligibility(
-  recording: Pick<ReviewRecording, "audioDataUrl" | "mimeType">
+  recording: Pick<ReviewRecording, "artifactRef" | "audioDataUrl" | "mimeType">
 ): RecordingAudioExportEligibility {
-  if (!recording.audioDataUrl?.trim()) {
+  if (!recording.artifactRef && !recording.audioDataUrl?.trim()) {
     return {
       available: false,
       reason: "missing-artifact",
@@ -214,71 +245,6 @@ export function getAudioExportMimeInfo(mimeType: string) {
         extension: mimeInfo.extension
       }
     : null;
-}
-
-function dataUrlToBlob({
-  dataUrl,
-  mimeType
-}: {
-  dataUrl: string;
-  mimeType: string;
-}) {
-  const match = /^data:([^,]*),([\s\S]*)$/.exec(dataUrl.trim());
-
-  if (!match) {
-    return null;
-  }
-
-  const metadata = match[1] ?? "";
-  const isBase64 = metadata
-    .split(";")
-    .some((part) => part.trim().toLowerCase() === "base64");
-  const payload = match[2] ?? "";
-  const dataUrlMimeType = getDataUrlMimeType(metadata);
-
-  if (
-    !hasMatchingKnownExportAudioMime({
-      expectedMimeType: mimeType,
-      actualMimeType: dataUrlMimeType
-    })
-  ) {
-    return null;
-  }
-
-  try {
-    const bytes = isBase64
-      ? base64ToBytes(payload)
-      : textToBytes(decodeURIComponent(payload));
-
-    return new Blob([bytes], { type: mimeType });
-  } catch {
-    return null;
-  }
-}
-
-function base64ToBytes(value: string) {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return bytes;
-}
-
-function textToBytes(value: string) {
-  if (typeof TextEncoder !== "undefined") {
-    return new TextEncoder().encode(value);
-  }
-
-  const bytes = new Uint8Array(value.length);
-
-  for (let index = 0; index < value.length; index += 1) {
-    bytes[index] = value.charCodeAt(index);
-  }
-
-  return bytes;
 }
 
 function getSheetFilenameParts(recording: ReviewRecording) {
