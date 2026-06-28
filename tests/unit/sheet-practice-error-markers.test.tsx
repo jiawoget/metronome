@@ -6,7 +6,8 @@ import type { RecordingPlaybackControls } from "@/components/recordings-review/r
 import { ErrorMarkerPanel } from "@/components/sheet-practice/markers/error-marker-panel";
 import {
   RECORDINGS_STORAGE_KEY,
-  recordingHistoryRepository
+  recordingHistoryRepository,
+  seedRecordingHistoryForTests
 } from "@/lib/recordings-review/repository";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 
@@ -28,7 +29,7 @@ const recording: ReviewRecording = {
 };
 
 function seedMarker() {
-  recordingHistoryRepository.saveSnapshot({
+  seedRecordingHistoryForTests({
     sessions: [{ id: "session-1" }],
     recordings: [recording],
     errorMarkers: [
@@ -102,7 +103,7 @@ describe("ErrorMarkerPanel", () => {
   it("trims marker notes before saving visible marker text", async () => {
     const user = userEvent.setup();
 
-    recordingHistoryRepository.saveSnapshot({
+    seedRecordingHistoryForTests({
       sessions: [{ id: "session-1" }],
       recordings: [recording],
       errorMarkers: []

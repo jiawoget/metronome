@@ -4,8 +4,7 @@ import {
   getTodayPracticeSummary,
   isBrowserLocalDay,
   validateSheetRecordingMetadata,
-  type PracticeSession,
-  type SheetRecordingMetadata
+  type PracticeSession
 } from "@/domain/practice";
 import type {
   PracticeRecordingMetadataRepository,
@@ -13,6 +12,7 @@ import type {
   PracticeSessionRepository,
   PracticeSessionService,
   PracticeSessionSheetGateway,
+  PreparedSheetRecordingMetadata,
   QuickPracticeActivityInput,
   SheetPracticeActivityInput,
   SheetRecordingMetadataInput
@@ -180,10 +180,63 @@ export function createPracticeSessionService({
       updatedAt: timestamp
     };
 
-    await saveSession(nextSession);
-    await sheetGateway.updateLastPracticedAt(session.sheetId, timestamp);
-
     return nextSession;
+  }
+
+  async function prepareSheetRecordingMetadata(
+    input: SheetRecordingMetadataInput
+  ): Promise<PreparedSheetRecordingMetadata | null> {
+    const session = await getRecordingSession(input);
+
+    if (!session || !session.sheetId) {
+      return null;
+    }
+
+    const sheet = await sheetGateway.getSheetContext(session.sheetId);
+
+    if (!sheet) {
+      return null;
+    }
+
+    const timestamp = session.updatedAt;
+    const metadata = validateSheetRecordingMetadata({
+      id: createId("recording"),
+      type: "sheet",
+      sessionId: session.id,
+      sheetId: session.sheetId,
+      sheetName: sheet.name,
+      createdAt: timestamp,
+      durationMs: Math.max(0, Math.round(input.durationMs ?? 0)),
+      bpm: session.bpm ?? sheet.bpm,
+      timeSignature: session.timeSignature ?? sheet.timeSignature,
+      segmentContext: input.segmentContext ?? null
+    });
+
+    return {
+      metadata,
+      session: {
+        ...session,
+        recordingCount: session.recordingCount + 1,
+        latestRecordingId: metadata.id
+      }
+    };
+  }
+
+  async function commitPreparedSheetRecordingSession({
+    metadata,
+    session
+  }: PreparedSheetRecordingMetadata) {
+    if (
+      session.sourceType !== "sheet" ||
+      !session.sheetId ||
+      metadata.sessionId !== session.id ||
+      metadata.sheetId !== session.sheetId
+    ) {
+      throw new Error("Prepared sheet recording metadata does not match its session.");
+    }
+
+    await saveSession(session);
+    await sheetGateway.updateLastPracticedAt(metadata.sheetId, metadata.createdAt);
   }
 
   async function linkRecordingToSession(input: PracticeRecordingLinkInput) {
@@ -278,46 +331,23 @@ export function createPracticeSessionService({
     },
 
     linkRecordingToSession,
+    prepareSheetRecordingMetadata,
+    commitPreparedSheetRecordingSession,
 
     async createSheetRecordingMetadata(input: SheetRecordingMetadataInput) {
-      const session = await getRecordingSession(input);
+      const prepared = await prepareSheetRecordingMetadata(input);
 
-      if (!session || !session.sheetId) {
+      if (!prepared) {
         return null;
       }
 
-      const sheet = await sheetGateway.getSheetContext(session.sheetId);
+      await recordingRepository.saveRecordingMetadata(
+        prepared.metadata,
+        prepared.session
+      );
+      await commitPreparedSheetRecordingSession(prepared);
 
-      if (!sheet) {
-        return null;
-      }
-
-      const timestamp = now().toISOString();
-      const recording: SheetRecordingMetadata = {
-        id: createId("recording"),
-        type: "sheet",
-        sessionId: session.id,
-        sheetId: session.sheetId,
-        sheetName: sheet.name,
-        createdAt: timestamp,
-        durationMs: Math.max(0, Math.round(input.durationMs ?? 0)),
-        bpm: session.bpm ?? sheet.bpm,
-        timeSignature: session.timeSignature ?? sheet.timeSignature,
-        segmentContext: input.segmentContext ?? null
-      };
-      const nextSession = {
-        ...session,
-        durationMs: calculateActiveDuration(session),
-        recordingCount: session.recordingCount + 1,
-        latestRecordingId: recording.id,
-        updatedAt: timestamp
-      };
-
-      await recordingRepository.saveRecordingMetadata(validateSheetRecordingMetadata(recording), nextSession);
-      await saveSession(nextSession);
-      await sheetGateway.updateLastPracticedAt(session.sheetId, timestamp);
-
-      return recording;
+      return prepared.metadata;
     },
 
     listSessions() {

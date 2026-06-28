@@ -4,22 +4,32 @@ export function getSheetPracticeHref(sheetId: string) {
 
 export function getSheetPracticeQueryHref({
   sheetId,
-  recordingId
+  recordingId,
+  segmentId
 }: {
   sheetId?: string | null;
   recordingId?: string | null;
+  segmentId?: string | null;
 }) {
   const params = new URLSearchParams();
 
-  if (recordingId) {
-    params.set("recordingId", recordingId);
-  }
-
-  if (sheetId) {
-    params.set("sheetId", sheetId);
-  }
+  setOptionalQueryParam(params, "recordingId", recordingId);
+  setOptionalQueryParam(params, "sheetId", sheetId);
+  setOptionalQueryParam(params, "segmentId", segmentId);
 
   const query = params.toString();
 
   return query ? `/sheet-practice?${query}` : "/sheet-practice";
+}
+
+function setOptionalQueryParam(
+  params: URLSearchParams,
+  key: string,
+  value?: string | null
+) {
+  const normalized = value?.trim();
+
+  if (normalized) {
+    params.set(key, normalized);
+  }
 }

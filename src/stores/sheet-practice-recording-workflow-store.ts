@@ -9,6 +9,7 @@ export type SheetPracticeRerecordStatus = "unavailable" | "ready" | "invalid" | 
 export type SheetPracticeRerecordUnavailableReason =
   | "no-source-recording"
   | "no-segment-context"
+  | "source-not-sheet"
   | "sheet-mismatch"
   | "selection-changed"
   | "source-recording-missing"
@@ -137,6 +138,7 @@ function createErrorRerecordState(error: string): SheetPracticeRerecordState {
 function isInvalidationReason(reason: SheetPracticeRerecordUnavailableReason) {
   return (
     reason === "selection-changed" ||
+    reason === "source-not-sheet" ||
     reason === "sheet-mismatch" ||
     reason === "source-recording-missing" ||
     reason === "source-segment-missing" ||
@@ -175,7 +177,11 @@ function getRerecordStateFromSavedRecording(
     return createUnavailableRerecordState("no-source-recording");
   }
 
-  if (recording.type !== "sheet" || recording.sheetId !== sheetId) {
+  if (recording.type !== "sheet") {
+    return createInvalidRerecordState("source-not-sheet");
+  }
+
+  if (recording.sheetId !== sheetId) {
     return createInvalidRerecordState("sheet-mismatch");
   }
 

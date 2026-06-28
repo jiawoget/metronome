@@ -22,7 +22,12 @@ type SavedRecordingEvidence = {
   durationMs: number;
   sizeBytes: number;
   mimeType: string;
-  audioDataUrl: string;
+  artifactRef?: {
+    kind: "indexeddb";
+    artifactId: string;
+    storageVersion: 1;
+  } | null;
+  audioDataUrl?: string | null;
   trustedPeaks: number[];
   artifactAnalysis: {
     decodedDurationMs: number;
@@ -257,7 +262,12 @@ test("sheet practice records real synthetic audio, replays latest take, persists
     sheetId
   });
   expect(originalRecording.sessionId).toBeTruthy();
-  expect(originalRecording.audioDataUrl).toMatch(/^data:audio\//);
+  expect(originalRecording.artifactRef).toMatchObject({
+    kind: "indexeddb",
+    artifactId: originalRecording.id,
+    storageVersion: 1
+  });
+  expect(originalRecording.audioDataUrl ?? null).toBeNull();
   expect(originalRecording.sizeBytes).toBeGreaterThan(0);
   expect(originalRecording.trustedPeaks.length).toBeGreaterThan(12);
   expect(
@@ -393,7 +403,12 @@ test("sheet practice records real synthetic audio, replays latest take, persists
   expect(originalAfterPracticeAgain).toEqual(originalSnapshot);
   expect(continuedRecording?.sessionId).toBeTruthy();
   expect(continuedRecording?.sessionId).not.toBe(originalRecording.sessionId);
-  expect(continuedRecording?.audioDataUrl).toMatch(/^data:audio\//);
+  expect(continuedRecording?.artifactRef).toMatchObject({
+    kind: "indexeddb",
+    artifactId: continuedRecording?.id,
+    storageVersion: 1
+  });
+  expect(continuedRecording?.audioDataUrl ?? null).toBeNull();
 
   const decodedContinued = await decodeRecordingHistoryAudio(
     page,

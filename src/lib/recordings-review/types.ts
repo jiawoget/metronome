@@ -3,6 +3,12 @@ import type { SheetRecordingSegmentContext } from "@/domain/practice";
 
 export type RecordingReviewType = "quick" | "sheet";
 
+export type RecordingArtifactRef = {
+  kind: "indexeddb";
+  artifactId: string;
+  storageVersion: 1;
+};
+
 export type RecordingErrorMarker = {
   id: string;
   recordingId: string;
@@ -22,6 +28,7 @@ export type ReviewRecording = {
   durationMs: number;
   sizeBytes: number;
   mimeType: string;
+  artifactRef?: RecordingArtifactRef | null;
   audioDataUrl?: string | null;
   artifactAnalysis?: RecordingArtifactAnalysis | null;
   trustedPeaks?: number[];
@@ -34,6 +41,66 @@ export type RecordingReviewSnapshot = {
   sessions: unknown[];
   recordings: ReviewRecording[];
   errorMarkers: RecordingErrorMarker[];
+  takeSelections?: RecordingTakeSelectionMetadata[];
+  recordingOrganization?: RecordingOrganizationMetadata[];
+  [futureKey: string]: unknown;
+};
+
+export type RecordingTakeSelectionMetadata = {
+  groupId: string;
+  sheetId: string;
+  segmentId: string | null;
+  bestRecordingId: string | null;
+  activeRecordingId: string | null;
+  updatedAt: string;
+};
+
+export type RecordingTakeGroupKind = "sheet-segment" | "sheet-no-segment";
+
+export type RecordingTakeGroup = {
+  groupId: string;
+  kind: RecordingTakeGroupKind;
+  sheetId: string;
+  sheetName: string | null;
+  segmentId: string | null;
+  segmentName: string | null;
+  recordings: ReviewRecording[];
+  takeCount: number;
+  latestRecording: ReviewRecording;
+  latestRecordedAt: string;
+};
+
+export type ReviewRecordingTakeGrouping = {
+  takeGroups: RecordingTakeGroup[];
+  quickRecordings: ReviewRecording[];
+  ungroupedRecordings: ReviewRecording[];
+};
+
+export type ResolvedRecordingTakeSelection = {
+  groupId: string;
+  sheetId: string;
+  segmentId: string | null;
+  bestRecordingId: string | null;
+  activeRecordingId: string | null;
+  updatedAt: string | null;
+  bestRecording: ReviewRecording | null;
+  activeRecording: ReviewRecording | null;
+};
+
+export type RecordingOrganizationMetadata = {
+  recordingId: string;
+  tags: string[];
+  favorite: boolean;
+  archived: boolean;
+  updatedAt: string;
+};
+
+export type ResolvedRecordingOrganization = {
+  recordingId: string;
+  tags: string[];
+  favorite: boolean;
+  archived: boolean;
+  updatedAt: string | null;
 };
 
 export type RecordingArtifactDetails = {

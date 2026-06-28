@@ -1,10 +1,22 @@
-import { expect, test, type Page } from "@playwright/test";
+import fs from "node:fs/promises";
+
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   createWavDataUrl,
   decodeRecordingHistoryAudio,
   installSyntheticMicrophone
 } from "./fixtures/audio";
-import { readRecordingHistory, seedRecordingHistory } from "./fixtures/storage";
+import { importTestSheet } from "./fixtures/sheets";
+import {
+  clearDatabases,
+  clearRecordingHistory,
+  MEASURE_GRID_DB_NAME,
+  PRACTICE_SEGMENT_DB_NAME,
+  PRACTICE_SESSION_DB_NAME,
+  readRecordingHistory,
+  seedRecordingHistory,
+  SHEET_LIBRARY_DB_NAME
+} from "./fixtures/storage";
 
 type WaveformEvidence = {
   source: string | null;
@@ -15,6 +27,104 @@ type WaveformEvidence = {
   nonZeroBarCount: number;
   barHeights: number[];
 };
+
+type SegmentContextFixture = {
+  segmentId?: string;
+  segmentName?: string;
+};
+
+function createSegmentContext({
+  segmentId = "segment-bridge",
+  segmentName = "Bridge"
+}: SegmentContextFixture = {}) {
+  return {
+    segmentId,
+    segmentName,
+    range: {
+      startMeasure: 5,
+      endMeasure: 12
+    },
+    targetBpm: 96,
+    measureGridVersion:
+      "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
+    measureGridSnapshot: {
+      bpm: 96,
+      timeSignature: "4/4",
+      pickupBeats: 0,
+      measureOneOffsetMs: 1_000
+    },
+    measureRangeMs: {
+      startMs: 11_000,
+      endMs: 31_000
+    }
+  };
+}
+
+async function saveMeasureGridThroughUi(page: Page) {
+  await page.getByRole("spinbutton", { name: "Grid BPM" }).fill("96");
+  await page.getByLabel("Grid time signature").selectOption("4/4");
+  await page.getByRole("spinbutton", { name: "Pickup beats" }).fill("0");
+  await page.getByRole("spinbutton", { name: "Measure 1 offset" }).fill("1000");
+  await page.getByRole("button", { name: "Save grid" }).click();
+  await expect(page.getByTestId("measure-grid-status")).toContainText("Calibrated");
+}
+
+async function createPracticeSegmentThroughUi(page: Page, name: string) {
+  await page.getByRole("button", { name: "New segment" }).click();
+  await page.getByLabel("Segment name").fill(name);
+  await page.getByLabel("Start measure").fill("5");
+  await page.getByLabel("End measure").fill("12");
+  await page.getByLabel("Target BPM").fill("96");
+  await page.getByLabel("Segment notes").fill("Return target.");
+  await page.getByRole("button", { name: "Save segment" }).click();
+  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");
+}
+
+async function readPracticeSegments(page: Page, sheetId: string) {
+  return page.evaluate(
+    ({ databaseName, targetSheetId }) =>
+      new Promise<
+        {
+          id: string;
+          sheetId: string;
+          name: string;
+        }[]
+      >((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction(["segments"], "readonly");
+          const store = transaction.objectStore("segments");
+          const index = store.index("sheetId");
+          const getAllRequest = index.getAll(targetSheetId);
+
+          getAllRequest.onerror = () => reject(getAllRequest.error);
+          getAllRequest.onsuccess = () => {
+            resolve(
+              (getAllRequest.result as { segment?: unknown }[])
+                .map((record) => record.segment)
+                .filter(
+                  (
+                    segment
+                  ): segment is { id: string; sheetId: string; name: string } =>
+                    Boolean(
+                      segment &&
+                        typeof segment === "object" &&
+                        "id" in segment &&
+                        "sheetId" in segment &&
+                        "name" in segment
+                    )
+                )
+            );
+            database.close();
+          };
+        };
+      }),
+    { databaseName: PRACTICE_SEGMENT_DB_NAME, targetSheetId: sheetId }
+  );
+}
 
 async function expectVisibleDerivedWaveform({
   page,
@@ -32,6 +142,7 @@ async function expectVisibleDerivedWaveform({
   const waveform = page.getByTestId(testId);
 
   await expect(waveform, `${label}: waveform container visible`).toBeVisible();
+  await waveform.scrollIntoViewIfNeeded();
   await expect(waveform, `${label}: waveform source`).toHaveAttribute(
     "data-waveform-source",
     source
@@ -114,6 +225,1692 @@ function expectStableWaveform(
     before.barHeights
   );
 }
+
+async function expectNoHorizontalOverflow(page: Page, label: string) {
+  const overflowEvidence = await page.evaluate(() => ({
+    viewportWidth: window.innerWidth,
+    documentScrollWidth: document.documentElement.scrollWidth,
+    bodyScrollWidth: document.body.scrollWidth
+  }));
+
+  expect(
+    overflowEvidence.documentScrollWidth,
+    `${label}: document has no horizontal overflow`
+  ).toBeLessThanOrEqual(overflowEvidence.viewportWidth + 1);
+  expect(
+    overflowEvidence.bodyScrollWidth,
+    `${label}: body has no horizontal overflow`
+  ).toBeLessThanOrEqual(overflowEvidence.viewportWidth + 1);
+}
+
+async function expectReadableSummaryChips(summary: Locator, label: string) {
+  const chips = summary.locator("span");
+
+  await expect(chips, `${label}: summary chip count`).toHaveCount(7);
+
+  const chipEvidence = await chips.evaluateAll((elements) =>
+    elements.map((element) => {
+      const style = window.getComputedStyle(element);
+      const bounds = element.getBoundingClientRect();
+
+      return {
+        text: element.textContent?.trim() ?? "",
+        width: bounds.width,
+        height: bounds.height,
+        left: bounds.left,
+        right: bounds.right,
+        viewportWidth: window.innerWidth,
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        textOverflow: style.textOverflow,
+        whiteSpace: style.whiteSpace,
+        overflowX: style.overflowX
+      };
+    })
+  );
+
+  for (const chip of chipEvidence) {
+    expect(chip.text, `${label}: chip has text`).not.toBe("");
+    expect(chip.width, `${label}: ${chip.text} has width`).toBeGreaterThan(0);
+    expect(chip.height, `${label}: ${chip.text} has height`).toBeGreaterThan(0);
+    expect(chip.left, `${label}: ${chip.text} stays inside left edge`).toBeGreaterThanOrEqual(
+      -1
+    );
+    expect(chip.right, `${label}: ${chip.text} stays inside right edge`).toBeLessThanOrEqual(
+      chip.viewportWidth + 1
+    );
+    expect(chip.scrollWidth, `${label}: ${chip.text} is not clipped horizontally`).toBeLessThanOrEqual(
+      chip.clientWidth + 1
+    );
+    expect(chip.textOverflow, `${label}: ${chip.text} does not use ellipsis`).not.toBe(
+      "ellipsis"
+    );
+    expect(chip.whiteSpace, `${label}: ${chip.text} can wrap`).not.toBe(
+      "nowrap"
+    );
+    expect(chip.overflowX, `${label}: ${chip.text} is not hidden on x`).not.toBe(
+      "hidden"
+    );
+  }
+}
+
+test("recordings review renders grouped take history, filters it, deletes a take, and survives reload", async ({
+  page
+}) => {
+  await page.goto("/recordings");
+  await page.evaluate(() => window.localStorage.clear());
+
+  const artifact = await createWavDataUrl(page, 440, 0.8);
+  const sheetArtifact = await createWavDataUrl(page, 330, 0.9);
+
+  await seedRecordingHistory(page, {
+    sessions: [
+      { id: "session-quick-grouped", sourceType: "quick" },
+      { id: "session-sheet-grouped", sourceType: "sheet" }
+    ],
+    recordings: [
+      {
+        id: "sheet-alpha-bridge-old",
+        type: "sheet",
+        origin: "user",
+        name: "Bridge take 1",
+        sessionId: "session-sheet-grouped",
+        sheetId: "sheet-alpha",
+        sheetName: "Alpha Etude",
+        createdAt: "2026-06-21T09:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.5, 0.8, 0.3],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-bridge",
+          segmentName: "Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-alpha-bridge-new",
+        type: "sheet",
+        origin: "user",
+        name: "Bridge take 2",
+        sessionId: "session-sheet-grouped",
+        sheetId: "sheet-alpha",
+        sheetName: "Alpha Etude",
+        createdAt: "2026-06-21T13:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.5, 0.8, 0.3],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-bridge",
+          segmentName: "Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-alpha-whole-legacy",
+        type: "sheet",
+        origin: "user",
+        name: "Whole sheet legacy",
+        sessionId: "session-sheet-grouped",
+        sheetId: "sheet-alpha",
+        sheetName: "Alpha Etude",
+        createdAt: "2026-06-21T10:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.6, 0.2],
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-alpha-whole-null",
+        type: "sheet",
+        origin: "user",
+        name: "Whole sheet current",
+        sessionId: "session-sheet-grouped",
+        sheetId: "sheet-alpha",
+        sheetName: "Alpha Etude",
+        createdAt: "2026-06-21T11:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.6, 0.2],
+        segmentContext: null,
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-beta-bridge",
+        type: "sheet",
+        origin: "user",
+        name: "Beta bridge take",
+        sessionId: "session-sheet-grouped",
+        sheetId: "sheet-beta",
+        sheetName: "Beta Study",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.2, 0.5, 0.7, 0.2],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-bridge",
+          segmentName: "Bridge"
+        }),
+        settings: {
+          bpm: 102,
+          timeSignature: "3/4"
+        }
+      },
+      {
+        id: "quick-grouped",
+        type: "quick",
+        origin: "user",
+        name: "Grouped quick take",
+        sessionId: "session-quick-grouped",
+        sheetId: null,
+        createdAt: "2026-06-21T14:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        settings: {
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-missing-link",
+        type: "sheet",
+        origin: "user",
+        name: "Missing sheet link take",
+        sessionId: "session-sheet-grouped",
+        sheetId: null,
+        sheetName: null,
+        createdAt: "2026-06-21T08:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.6, 0.2],
+        segmentContext: null,
+        settings: {
+          bpm: 88,
+          timeSignature: "4/4"
+        }
+      }
+    ],
+    errorMarkers: [
+      {
+        id: "marker-alpha-bridge-old",
+        recordingId: "sheet-alpha-bridge-old",
+        timestampMs: 300,
+        note: "Old bridge marker"
+      },
+      {
+        id: "marker-alpha-bridge-new",
+        recordingId: "sheet-alpha-bridge-new",
+        timestampMs: 500,
+        note: "New bridge marker"
+      },
+      {
+        id: "marker-beta-bridge",
+        recordingId: "sheet-beta-bridge",
+        timestampMs: 400,
+        note: "Beta marker"
+      }
+    ]
+  });
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Take History" })).toBeVisible();
+
+  const alphaBridgeGroup = page.getByTestId(
+    "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
+  );
+  await expect(alphaBridgeGroup).toContainText("Segment take history");
+  await expect(alphaBridgeGroup).toContainText("Alpha Etude");
+  await expect(alphaBridgeGroup).toContainText("Bridge");
+  await expect(alphaBridgeGroup).toContainText("2 takes");
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    "Takes: 2 takes"
+  );
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    /Latest: .*Bridge take 2/
+  );
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    /Latest duration: 0:0[1-9]/
+  );
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    "BPM: 96 BPM"
+  );
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    "Time signature: 4/4"
+  );
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    "Markers: 2 markers"
+  );
+  await expect(
+    alphaBridgeGroup.getByTestId("recording-row-sheet-alpha-bridge-new")
+  ).toBeVisible();
+  await expect(
+    alphaBridgeGroup.getByRole("link", {
+      name: "Return to practice for Bridge on Alpha Etude"
+    })
+  ).toHaveAttribute(
+    "href",
+    "/sheet-practice?recordingId=sheet-alpha-bridge-new&sheetId=sheet-alpha&segmentId=segment-bridge"
+  );
+  await expect(alphaBridgeGroup).toContainText("Best: none");
+  await expect(alphaBridgeGroup).toContainText("Active: none");
+  await expect(
+    alphaBridgeGroup.getByTestId("best-take-control-sheet-alpha-bridge-old")
+  ).toHaveAttribute("aria-pressed", "false");
+  await expect(
+    alphaBridgeGroup.getByTestId("active-take-control-sheet-alpha-bridge-new")
+  ).toHaveAttribute("aria-pressed", "false");
+
+  const alphaWholeGroup = page.getByTestId(
+    "take-group-sheet:sheet-alpha:segment:none"
+  );
+  await expect(alphaWholeGroup).toContainText("Whole sheet / no segment");
+  await expect(alphaWholeGroup).toContainText("2 takes");
+  await expect(alphaWholeGroup.getByTestId("take-history-summary")).toContainText(
+    "Markers: No markers"
+  );
+  await expect(
+    alphaWholeGroup.getByRole("link", {
+      name: "Return to sheet practice for Alpha Etude"
+    })
+  ).toHaveAttribute(
+    "href",
+    "/sheet-practice?recordingId=sheet-alpha-whole-null&sheetId=sheet-alpha"
+  );
+  await expect(
+    page.getByTestId("take-group-sheet:sheet-beta:segment:id:segment-bridge")
+  ).toContainText("Beta Study");
+  await expect(page.getByTestId("quick-recordings-section")).toContainText(
+    "Grouped quick take"
+  );
+  await expect(
+    page.getByTestId("quick-recordings-section").getByTestId("take-history-summary")
+  ).toHaveCount(0);
+  await expect(page.getByTestId("best-take-control-quick-grouped")).toHaveCount(
+    0
+  );
+  await expect(
+    page.getByTestId("active-take-control-quick-grouped")
+  ).toHaveCount(0);
+  await expect(page.getByTestId("ungrouped-recordings-section")).toContainText(
+    "Missing sheet link take"
+  );
+  await expect(
+    page
+      .getByTestId("ungrouped-recordings-section")
+      .getByTestId("take-history-summary")
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId("best-take-control-sheet-missing-link")
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId("active-take-control-sheet-missing-link")
+  ).toHaveCount(0);
+
+  await page.getByTestId("recording-row-sheet-alpha-bridge-old").click();
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "sheet-alpha-bridge-old"
+  );
+  await expect(
+    page.getByRole("link", {
+      name: "Practice again for Bridge on Alpha Etude"
+    })
+  ).toHaveAttribute(
+    "href",
+    "/sheet-practice?recordingId=sheet-alpha-bridge-old&sheetId=sheet-alpha&segmentId=segment-bridge"
+  );
+
+  await page.getByTestId("recording-row-quick-grouped").click();
+  await expect(
+    page.getByRole("link", {
+      name: "Practice again in Quick Metronome for Grouped quick take"
+    })
+  ).toHaveAttribute("href", "/quick-metronome?recordingId=quick-grouped");
+
+  await page
+    .getByRole("button", { name: "Mark Bridge take 1 as best take" })
+    .click();
+  await expect(
+    alphaBridgeGroup.getByTestId("best-take-control-sheet-alpha-bridge-old")
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
+  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
+    /Latest: .*Bridge take 2/
+  );
+  await expect(alphaBridgeGroup).toContainText("Active: none");
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "quick-grouped"
+  );
+
+  await page
+    .getByRole("button", { name: "Mark Bridge take 2 as active take" })
+    .click();
+  await expect(
+    alphaBridgeGroup.getByTestId("active-take-control-sheet-alpha-bridge-new")
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+
+  await page
+    .getByRole("button", { name: "Mark Bridge take 2 as best take" })
+    .click();
+  await expect(
+    alphaBridgeGroup.getByTestId("best-take-control-sheet-alpha-bridge-new")
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    alphaBridgeGroup.getByTestId("active-take-control-sheet-alpha-bridge-new")
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 2");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+
+  await page
+    .getByRole("button", { name: "Clear best take for Bridge take 2" })
+    .click();
+  await expect(alphaBridgeGroup).toContainText("Best: none");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+
+  await page
+    .getByRole("button", { name: "Clear active take for Bridge take 2" })
+    .click();
+  await expect(alphaBridgeGroup).toContainText("Best: none");
+  await expect(alphaBridgeGroup).toContainText("Active: none");
+
+  await page
+    .getByRole("button", { name: "Mark Bridge take 1 as best take" })
+    .click();
+  await page
+    .getByRole("button", { name: "Mark Bridge take 2 as active take" })
+    .click();
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+
+  await page.reload();
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Bridge");
+  await expect(alphaBridgeGroup).toBeVisible();
+  await expect(alphaWholeGroup).toBeHidden();
+  await expect(page.getByTestId("quick-recordings-section")).toBeHidden();
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("");
+  await page.getByLabel("Type filter").selectOption("quick");
+  await expect(page.getByTestId("quick-recordings-section")).toBeVisible();
+  await expect(page.getByTestId("best-take-control-quick-grouped")).toHaveCount(
+    0
+  );
+  await expect(alphaBridgeGroup).toBeHidden();
+
+  await page.getByLabel("Type filter").selectOption("sheet");
+  await expect(alphaBridgeGroup).toBeVisible();
+  await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+  await expect(page.getByTestId("quick-recordings-section")).toBeHidden();
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("nomatch");
+  await expect(page.getByTestId("recordings-filter-empty-state")).toContainText(
+    "No recordings match"
+  );
+  await expect(alphaBridgeGroup).toBeHidden();
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("");
+  await page.getByTestId("recording-row-sheet-alpha-bridge-old").click();
+  await page.getByRole("button", { name: "Delete Recording" }).click();
+  await page.getByRole("button", { name: "Confirm Delete" }).click();
+  await expect(page.getByTestId("recording-row-sheet-alpha-bridge-old")).toBeHidden();
+  await expect(alphaBridgeGroup).toContainText("1 take");
+  await expect(alphaBridgeGroup).toContainText("Best: none");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+  await expect(alphaBridgeGroup).toContainText("Markers: 1 marker");
+
+  await page.reload();
+  await expect(page.getByTestId("recording-row-sheet-alpha-bridge-old")).toBeHidden();
+  await expect(alphaBridgeGroup).toContainText("1 take");
+  await expect(alphaBridgeGroup).toContainText("Best: none");
+  await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
+  await expect(alphaBridgeGroup).toContainText("Markers: 1 marker");
+  const groupedPageText = (await page.locator("body").innerText()).toLowerCase();
+
+  expect(groupedPageText).not.toMatch(
+    /score|accuracy|correct|best performance|cleanest|most accurate|recommended|improved|mistakes|timing quality/
+  );
+
+  for (const viewport of [
+    { width: 1280, height: 900, label: "desktop" },
+    { width: 1024, height: 768, label: "tablet" },
+    { width: 390, height: 844, label: "mobile" }
+  ]) {
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height
+    });
+    await expect(alphaBridgeGroup).toBeVisible();
+    await expect(
+      page.getByTestId("recording-row-sheet-alpha-bridge-new")
+    ).toBeVisible();
+    await expectNoHorizontalOverflow(page, viewport.label);
+  }
+});
+
+test("recordings review organizes recordings with tags favorites and archive recovery", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.goto("/recordings");
+  await page.evaluate(() => window.localStorage.clear());
+
+  const quickArtifact = await createWavDataUrl(page, 440, 0.8);
+  const sheetArtifact = await createWavDataUrl(page, 330, 0.9);
+
+  await seedRecordingHistory(page, {
+    sessions: [
+      { id: "session-org-quick", sourceType: "quick" },
+      { id: "session-org-sheet", sourceType: "sheet" }
+    ],
+    recordings: [
+      {
+        id: "org-sheet-old",
+        type: "sheet",
+        origin: "user",
+        name: "Archive one take",
+        sessionId: "session-org-sheet",
+        sheetId: "sheet-org",
+        sheetName: "Organization Etude",
+        createdAt: "2026-06-21T09:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-org",
+          segmentName: "Organize bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "org-sheet-new",
+        type: "sheet",
+        origin: "user",
+        name: "Tagged favorite take",
+        sessionId: "session-org-sheet",
+        sheetId: "sheet-org",
+        sheetName: "Organization Etude",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-org",
+          segmentName: "Organize bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "org-quick",
+        type: "quick",
+        origin: "user",
+        name: "Quick favorite take",
+        sessionId: "session-org-quick",
+        sheetId: null,
+        createdAt: "2026-06-21T13:00:00.000Z",
+        durationMs: quickArtifact.durationMs,
+        sizeBytes: quickArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: quickArtifact.dataUrl,
+        trustedPeaks: [0.2, 0.8, 0.4],
+        settings: {
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "org-legacy",
+        type: "sheet",
+        origin: "user",
+        name: "Legacy missing link",
+        sessionId: "session-org-sheet",
+        sheetId: null,
+        sheetName: null,
+        createdAt: "2026-06-21T08:00:00.000Z",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: null,
+        settings: {
+          bpm: 88,
+          timeSignature: "4/4"
+        }
+      }
+    ],
+    errorMarkers: []
+  });
+
+  await page.reload();
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "org-sheet-new"
+  );
+
+  await page.getByLabel("Add recording tag").fill("Warmup");
+  await page.getByRole("button", { name: "Add Tag" }).click();
+  await page.getByTestId("details-favorite-control-org-sheet-new").click();
+  await expect(page.getByTestId("recording-details")).toContainText("Warmup");
+  await expect(
+    page.getByTestId("details-favorite-control-org-sheet-new")
+  ).toHaveAttribute("aria-pressed", "true");
+
+  await page.reload();
+  await expect(page.getByTestId("recording-details")).toContainText("Warmup");
+  await expect(
+    page.getByTestId("favorite-recording-control-org-sheet-new")
+  ).toHaveAttribute("aria-pressed", "true");
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("Warmup");
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
+  await expect(page.getByTestId("quick-recordings-section")).toBeHidden();
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("");
+  await page.getByLabel("Tag filter").selectOption("Warmup");
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
+
+  await page.getByLabel("Tag filter").selectOption("all");
+  await page
+    .getByRole("button", { name: "Mark Quick favorite take as favorite" })
+    .click();
+  await page.getByRole("button", { name: "Show favorites only" }).click();
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+  await expect(page.getByTestId("recording-row-org-quick")).toBeVisible();
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
+
+  await page.getByTestId("details-archive-control-org-sheet-new").click();
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeHidden();
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "org-quick"
+  );
+
+  let persisted = await readRecordingHistory(page);
+  expect(persisted.recordings.map((recording: { id: string }) => recording.id)).toContain(
+    "org-sheet-new"
+  );
+  expect(persisted.recordingOrganization).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        recordingId: "org-sheet-new",
+        tags: ["Warmup"],
+        favorite: true,
+        archived: true
+      })
+    ])
+  );
+
+  await page.getByLabel("Archive filter").selectOption("archived");
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "trusted-peaks",
+    peakCount: 4,
+    label: "archived recording remains reviewable"
+  });
+  await page.getByTestId("details-archive-control-org-sheet-new").click();
+  await page.getByLabel("Archive filter").selectOption("active");
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+
+  await page.getByRole("button", { name: "Show favorites only" }).click();
+  await page.getByTestId("recording-row-org-sheet-old").click();
+  await page.getByTestId("details-archive-control-org-sheet-old").click();
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
+  await expect(
+    page.getByTestId("take-group-sheet:sheet-org:segment:id:segment-org")
+  ).toContainText("1 take");
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeVisible();
+
+  await page.getByLabel("Archive filter").selectOption("archived");
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeVisible();
+  await expect(page.getByTestId("recording-row-org-sheet-new")).toBeHidden();
+  await page.getByRole("button", { name: "Delete Recording" }).click();
+  await page.getByRole("button", { name: "Confirm Delete" }).click();
+  await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
+
+  persisted = await readRecordingHistory(page);
+  expect(persisted.recordings.map((recording: { id: string }) => recording.id)).not.toContain(
+    "org-sheet-old"
+  );
+  expect(
+    persisted.recordingOrganization?.some(
+      (organization: { recordingId: string }) =>
+        organization.recordingId === "org-sheet-old"
+    )
+  ).not.toBe(true);
+
+  const pageText = (await page.locator("body").innerText()).toLowerCase();
+  expect(pageText).not.toMatch(/archive .*delete|delete .*archive|archive .*remove/);
+
+  for (const viewport of [
+    { width: 1024, height: 768, label: "tablet organization" },
+    { width: 390, height: 844, label: "mobile organization" }
+  ]) {
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height
+    });
+    await expect(page.getByLabel("Archive filter")).toBeVisible();
+    await expect(page.getByLabel("Tag filter")).toBeVisible();
+    await expectNoHorizontalOverflow(page, viewport.label);
+  }
+});
+
+test("recordings review exports one visible audio artifact and respects archived visibility", async ({
+  page
+}, testInfo) => {
+  await page.goto("/recordings");
+  await clearRecordingHistory(page);
+
+  const quickArtifact = await createWavDataUrl(page, 440, 0.8);
+  const sheetArtifact = await createWavDataUrl(page, 330, 0.8);
+
+  await seedRecordingHistory(page, {
+    sessions: [
+      { id: "session-export-quick", sourceType: "quick" },
+      { id: "session-export-sheet", sourceType: "sheet" }
+    ],
+    recordings: [
+      {
+        id: "quick-export",
+        type: "quick",
+        origin: "user",
+        name: "Export quick",
+        sessionId: "session-export-quick",
+        sheetId: null,
+        createdAt: "2026-06-21T10:00:00",
+        durationMs: quickArtifact.durationMs,
+        sizeBytes: quickArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: quickArtifact.dataUrl,
+        settings: {
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "sheet-export",
+        type: "sheet",
+        origin: "user",
+        name: "Export sheet",
+        sessionId: "session-export-sheet",
+        sheetId: "sheet-export-alpha",
+        sheetName: "Export Etude",
+        createdAt: "2026-06-21T11:00:00",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        segmentContext: createSegmentContext({
+          segmentId: "segment-export",
+          segmentName: "Export Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "missing-export",
+        type: "quick",
+        origin: "user",
+        name: "Missing export artifact",
+        sessionId: "session-export-quick",
+        sheetId: null,
+        createdAt: "2026-06-21T09:00:00",
+        durationMs: 800,
+        sizeBytes: 0,
+        mimeType: "audio/wav",
+        audioDataUrl: null,
+        settings: {
+          bpm: 100,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "archived-export",
+        type: "sheet",
+        origin: "user",
+        name: "Archived export",
+        sessionId: "session-export-sheet",
+        sheetId: "sheet-export-alpha",
+        sheetName: "Export Etude",
+        createdAt: "2026-06-21T12:00:00",
+        durationMs: sheetArtifact.durationMs,
+        sizeBytes: sheetArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: sheetArtifact.dataUrl,
+        segmentContext: createSegmentContext({
+          segmentId: "segment-export",
+          segmentName: "Export Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      }
+    ],
+    errorMarkers: [],
+    recordingOrganization: [
+      {
+        recordingId: "archived-export",
+        tags: [],
+        favorite: false,
+        archived: true,
+        updatedAt: "2026-06-21T12:30:00.000Z"
+      }
+    ]
+  });
+
+  await page.reload();
+  await expect(page.getByTestId("recordings-list")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Export all/i })).toHaveCount(0);
+  await expect(page.getByTestId("recording-row-archived-export")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Export audio for Archived export" })
+  ).toHaveCount(0);
+
+  await page.getByTestId("recording-row-quick-export").click();
+  const quickDownloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export audio for Export quick" })
+    .click();
+  const quickDownload = await quickDownloadPromise;
+
+  expect(quickDownload.suggestedFilename()).toBe(
+    "metronome-quick-export-quick-20260621-100000-quick-export.wav"
+  );
+  const quickDownloadPath = testInfo.outputPath("quick-export.wav");
+  await quickDownload.saveAs(quickDownloadPath);
+  await expect.poll(async () => (await fs.stat(quickDownloadPath)).size).toBeGreaterThan(0);
+  await expect(page.getByTestId("recording-audio-export-status")).toContainText(
+    "Audio export started."
+  );
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "quick-export"
+  );
+
+  await page.getByTestId("recording-row-missing-export").click();
+  await expect(
+    page.getByRole("button", {
+      name: "Export audio for Missing export artifact"
+    })
+  ).toBeDisabled();
+  await expect(page.getByTestId("recording-audio-export-unavailable")).toContainText(
+    "This recording has no local audio artifact to export."
+  );
+
+  await page.getByLabel("Archive filter").selectOption("archived");
+  await expect(page.getByTestId("recording-row-archived-export")).toBeVisible();
+
+  const archivedDownloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export audio for Archived export" })
+    .click();
+  const archivedDownload = await archivedDownloadPromise;
+
+  expect(archivedDownload.suggestedFilename()).toBe(
+    "metronome-sheet-export-etude-export-bridge-20260621-120000-archived-export.wav"
+  );
+  const archivedDownloadPath = testInfo.outputPath("archived-export.wav");
+  await archivedDownload.saveAs(archivedDownloadPath);
+  await expect.poll(async () => (await fs.stat(archivedDownloadPath)).size).toBeGreaterThan(0);
+  await expect(page.getByTestId("recording-details")).toHaveAttribute(
+    "data-recording-id",
+    "archived-export"
+  );
+});
+
+test("recordings review compares selected sheet takes with waveform evidence", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.goto("/recordings");
+  await page.evaluate(() => window.localStorage.clear());
+
+  const decodedArtifact = await createWavDataUrl(page, 440, 0.9);
+  const trustedArtifact = await createWavDataUrl(page, 330, 1);
+
+  await seedRecordingHistory(page, {
+    sessions: [
+      { id: "session-waveform-sheet", sourceType: "sheet" },
+      { id: "session-waveform-quick", sourceType: "quick" }
+    ],
+    recordings: [
+      {
+        id: "wave-decoded",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison decoded",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T09:00:00.000Z",
+        durationMs: decodedArtifact.durationMs,
+        sizeBytes: decodedArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: decodedArtifact.dataUrl,
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "wave-trusted",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison trusted",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T10:00:00.000Z",
+        durationMs: trustedArtifact.durationMs,
+        sizeBytes: trustedArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: trustedArtifact.dataUrl,
+        trustedPeaks: [0.15, 0.55, 0.95, 0.35],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "wave-missing",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison missing artifact",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T11:00:00.000Z",
+        durationMs: 1_000,
+        sizeBytes: 0,
+        mimeType: "audio/wav",
+        audioDataUrl: null,
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "wave-unsupported",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison unsupported artifact",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: trustedArtifact.durationMs,
+        sizeBytes: trustedArtifact.sizeBytes,
+        mimeType: "application/pdf",
+        audioDataUrl: trustedArtifact.dataUrl,
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "wave-invalid-peaks",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison invalid peaks",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T13:00:00.000Z",
+        durationMs: trustedArtifact.durationMs,
+        sizeBytes: trustedArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: trustedArtifact.dataUrl,
+        trustedPeaks: [0, 0],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "wave-quick",
+        type: "quick",
+        origin: "user",
+        name: "Comparison quick take",
+        sessionId: "session-waveform-quick",
+        sheetId: null,
+        createdAt: "2026-06-21T14:00:00.000Z",
+        durationMs: decodedArtifact.durationMs,
+        sizeBytes: decodedArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: decodedArtifact.dataUrl,
+        settings: {
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "wave-archived",
+        type: "sheet",
+        origin: "user",
+        name: "Comparison archived take",
+        sessionId: "session-waveform-sheet",
+        sheetId: "sheet-wave",
+        sheetName: "Waveform Study",
+        createdAt: "2026-06-21T15:00:00.000Z",
+        durationMs: trustedArtifact.durationMs,
+        sizeBytes: trustedArtifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: trustedArtifact.dataUrl,
+        trustedPeaks: [0.2, 0.65, 0.9, 0.25],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-wave",
+          segmentName: "Wave bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      }
+    ],
+    errorMarkers: [
+      {
+        id: "marker-wave-quick",
+        recordingId: "wave-quick",
+        timestampMs: 250,
+        note: "Manual quick note"
+      }
+    ],
+    recordingOrganization: [
+      {
+        recordingId: "wave-trusted",
+        tags: ["review"],
+        favorite: true,
+        archived: false,
+        updatedAt: "2026-06-22T09:00:00.000Z"
+      },
+      {
+        recordingId: "wave-archived",
+        tags: ["review"],
+        favorite: false,
+        archived: true,
+        updatedAt: "2026-06-22T09:30:00.000Z"
+      }
+    ]
+  });
+
+  await page.reload();
+
+  const group = page.getByTestId(
+    "take-group-sheet:sheet-wave:segment:id:segment-wave"
+  );
+  await expect(group).toBeVisible();
+  await expect(group.getByTestId("take-history-summary")).toContainText(
+    /Latest: .*Comparison invalid peaks/
+  );
+  await expect(
+    page
+      .getByTestId("quick-recordings-section")
+      .getByTestId("compare-take-control-wave-quick")
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId("compare-recording-control-wave-archived")
+  ).toHaveCount(0);
+
+  const recordingComparison = page.getByTestId("recording-comparison");
+  await expect(recordingComparison).toContainText("Select recordings to compare");
+
+  await page
+    .getByRole("checkbox", {
+      name: "Select Comparison decoded for recording comparison"
+    })
+    .check();
+  await page
+    .getByRole("checkbox", {
+      name: "Select Comparison quick take for recording comparison"
+    })
+    .check();
+
+  await expect(recordingComparison).toContainText("2 selected recordings");
+  await expect(
+    recordingComparison.getByTestId("recording-comparison-metadata-wave-decoded")
+  ).toContainText("Sheet recording");
+  await expect(
+    recordingComparison.getByTestId("recording-comparison-metadata-wave-quick")
+  ).toContainText("Quick recording");
+  await expect(
+    recordingComparison.getByTestId("recording-comparison-metadata-wave-quick")
+  ).toContainText("1 manual marker");
+  await expect(
+    recordingComparison.getByTestId("waveform-comparison-row-wave-quick")
+  ).toContainText("Only saved sheet takes can be used for waveform comparison.");
+  await expect(
+    recordingComparison.getByTestId("comparison-waveform-wave-quick")
+  ).toHaveCount(0);
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "decoded-audio",
+    peakCount: 48,
+    label: "review-wide decoded comparison source",
+    testId: "comparison-waveform-wave-decoded"
+  });
+
+  await page.getByLabel("Type filter").selectOption("quick");
+  await expect(recordingComparison).toContainText(
+    "Select another recording to compare"
+  );
+  await expect(
+    recordingComparison.getByTestId("waveform-comparison-row-wave-decoded")
+  ).toHaveCount(0);
+  await page.getByLabel("Type filter").selectOption("all");
+  await page.getByLabel("Archive filter").selectOption("archived");
+  await page
+    .getByRole("checkbox", {
+      name: "Select Comparison archived take for recording comparison"
+    })
+    .check();
+  await expect(
+    recordingComparison.getByTestId("recording-comparison-metadata-wave-archived")
+  ).toContainText("Archived");
+  await expect(recordingComparison).toContainText(
+    "Select another recording to compare"
+  );
+  await expect(
+    recordingComparison.getByTestId("comparison-waveform-wave-archived")
+  ).toHaveCount(0);
+  await expect(
+    recordingComparison.getByTestId("recording-comparison-waveform-results")
+  ).toHaveCount(0);
+  await page.getByLabel("Archive filter").selectOption("active");
+  await expect(recordingComparison).toContainText("Select recordings to compare");
+
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison decoded for waveform comparison"
+    })
+    .check();
+  await expect(group).toContainText("Select another take to compare");
+
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison trusted for waveform comparison"
+    })
+    .check();
+
+  await expect(group.getByTestId("waveform-comparison-results")).toBeVisible();
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "decoded-audio",
+    peakCount: 48,
+    label: "comparison decoded source",
+    testId: "comparison-waveform-wave-decoded"
+  });
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "trusted-peaks",
+    peakCount: 4,
+    label: "comparison trusted source",
+    testId: "comparison-waveform-wave-trusted"
+  });
+  await expect(group).toContainText("Decoded audio");
+  await expect(group).toContainText("Trusted peaks");
+
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await group.scrollIntoViewIfNeeded();
+  await expectNoHorizontalOverflow(page, "tablet waveform comparison");
+  const tabletComparisonLayout = await group
+    .getByTestId("waveform-comparison-results")
+    .evaluate((element) => {
+      const panelBounds = element.getBoundingClientRect();
+      const rowBounds = Array.from(element.children).map((child) =>
+        child.getBoundingClientRect()
+      );
+
+      return {
+        panelWidth: panelBounds.width,
+        overflowingRows: rowBounds.filter(
+          (bounds) =>
+            bounds.left < panelBounds.left - 1 ||
+            bounds.right > panelBounds.right + 1
+        ).length
+      };
+    });
+
+  expect(
+    tabletComparisonLayout.panelWidth,
+    "tablet waveform comparison keeps layout width"
+  ).toBeGreaterThan(280);
+  expect(
+    tabletComparisonLayout.overflowingRows,
+    "tablet waveform comparison rows stay inside the panel"
+  ).toBe(0);
+  await page.setViewportSize({ width: 1280, height: 820 });
+
+  await page
+    .getByRole("button", { name: "Mark Comparison decoded as best take" })
+    .click();
+  await page
+    .getByRole("button", { name: "Mark Comparison trusted as active take" })
+    .click();
+  await expect(group).toContainText("Best: Comparison decoded");
+  await expect(group).toContainText("Active: Comparison trusted");
+  await expect(
+    group.getByRole("checkbox", {
+      name: "Select Comparison decoded for waveform comparison"
+    })
+  ).toBeChecked();
+  await expect(
+    group.getByRole("checkbox", {
+      name: "Select Comparison trusted for waveform comparison"
+    })
+  ).toBeChecked();
+
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison missing artifact for waveform comparison"
+    })
+    .check();
+  await expect(group).toContainText(
+    "This recording has no accessible local audio artifact."
+  );
+  await expect(group.getByTestId("comparison-waveform-wave-missing")).toHaveCount(
+    0
+  );
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison missing artifact for waveform comparison"
+    })
+    .uncheck();
+
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison unsupported artifact for waveform comparison"
+    })
+    .check();
+  await group
+    .getByRole("checkbox", {
+      name: "Select Comparison invalid peaks for waveform comparison"
+    })
+    .check();
+  await expect(group).toContainText(
+    "This recording artifact is not a supported audio type."
+  );
+  await expect(group).toContainText(
+    "This recording has invalid waveform peak data."
+  );
+  await expect(group.getByTestId("waveform-comparison-limit")).toContainText(
+    "Up to 4 takes can be compared at once."
+  );
+  await expect(
+    group.getByRole("checkbox", {
+      name: "Select Comparison missing artifact for waveform comparison"
+    })
+  ).toBeDisabled();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await group.scrollIntoViewIfNeeded();
+  await expectVisibleDerivedWaveform({
+    page,
+    source: "trusted-peaks",
+    peakCount: 4,
+    label: "mobile comparison trusted source",
+    testId: "comparison-waveform-wave-trusted"
+  });
+  await expectNoHorizontalOverflow(page, "mobile waveform comparison");
+
+  const prohibitedText = (await page.locator("body").innerText()).toLowerCase();
+  expect(prohibitedText).not.toMatch(
+    /score|accuracy|correct|recommended|improved|cleanest|most accurate|mistakes|timing quality/
+  );
+
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.getByTestId("recording-row-wave-decoded").click();
+  await page.getByRole("button", { name: "Delete Recording" }).click();
+  await page.getByRole("button", { name: "Confirm Delete" }).click();
+  await expect(
+    group.getByTestId("waveform-comparison-row-wave-decoded")
+  ).toHaveCount(0);
+  await expect(
+    group.getByTestId("waveform-comparison-row-wave-trusted")
+  ).toBeVisible();
+
+  await page.reload();
+  const restoredGroup = page.getByTestId(
+    "take-group-sheet:sheet-wave:segment:id:segment-wave"
+  );
+  await expect(restoredGroup).toContainText("Select takes to compare");
+  await expect(
+    restoredGroup.getByTestId("waveform-comparison-results")
+  ).toHaveCount(0);
+  await expect(
+    restoredGroup.getByRole("checkbox", {
+      name: "Select Comparison trusted for waveform comparison"
+    })
+  ).not.toBeChecked();
+});
+
+test("recordings review returns to sheet practice with segment validation and stale fallback", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.goto("/sheet-library");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [
+    SHEET_LIBRARY_DB_NAME,
+    PRACTICE_SESSION_DB_NAME,
+    MEASURE_GRID_DB_NAME,
+    PRACTICE_SEGMENT_DB_NAME
+  ]);
+  await page.reload();
+
+  const { sheetId } = await importTestSheet(page, {
+    name: "Return Segment Sheet",
+    bpm: "96",
+    timeSignature: "4/4"
+  });
+
+  await page.goto(`/sheet-practice/${sheetId}`);
+  await saveMeasureGridThroughUi(page);
+  await createPracticeSegmentThroughUi(page, "Bridge");
+
+  const segments = await readPracticeSegments(page, sheetId);
+  const bridgeSegment = segments.find((segment) => segment.name === "Bridge");
+
+  expect(bridgeSegment).toBeTruthy();
+
+  const artifact = await createWavDataUrl(page, 330, 0.8);
+  const segmentId = bridgeSegment?.id ?? "";
+
+  await seedRecordingHistory(page, {
+    sessions: [{ id: "session-return-sheet", sourceType: "sheet", sheetId }],
+    recordings: [
+      {
+        id: "return-segment-old",
+        type: "sheet",
+        origin: "user",
+        name: "Bridge return 1",
+        sessionId: "session-return-sheet",
+        sheetId,
+        sheetName: "Return Segment Sheet",
+        createdAt: "2026-06-21T09:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        trustedPeaks: [0.1, 0.5, 0.8, 0.3],
+        segmentContext: createSegmentContext({
+          segmentId,
+          segmentName: "Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "return-segment-new",
+        type: "sheet",
+        origin: "user",
+        name: "Bridge return 2",
+        sessionId: "session-return-sheet",
+        sheetId,
+        sheetName: "Return Segment Sheet",
+        createdAt: "2026-06-21T10:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        trustedPeaks: [0.1, 0.5, 0.8, 0.3],
+        segmentContext: createSegmentContext({
+          segmentId,
+          segmentName: "Bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "return-whole",
+        type: "sheet",
+        origin: "user",
+        name: "Whole sheet return",
+        sessionId: "session-return-sheet",
+        sheetId,
+        sheetName: "Return Segment Sheet",
+        createdAt: "2026-06-21T11:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: null,
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "return-stale",
+        type: "sheet",
+        origin: "user",
+        name: "Deleted segment return",
+        sessionId: "session-return-sheet",
+        sheetId,
+        sheetName: "Return Segment Sheet",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-deleted",
+          segmentName: "Deleted bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "return-missing-sheet",
+        type: "sheet",
+        origin: "user",
+        name: "Missing sheet return",
+        sessionId: "session-return-sheet",
+        sheetId: "sheet-deleted",
+        sheetName: "Deleted Return Sheet",
+        createdAt: "2026-06-21T08:30:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        trustedPeaks: [0.1, 0.4, 0.7, 0.2],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-deleted-sheet",
+          segmentName: "Deleted sheet segment"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "4/4"
+        }
+      },
+      {
+        id: "return-quick",
+        type: "quick",
+        origin: "user",
+        name: "Quick return",
+        sessionId: "session-return-quick",
+        sheetId: null,
+        createdAt: "2026-06-21T13:00:00.000Z",
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        mimeType: "audio/wav",
+        audioDataUrl: artifact.dataUrl,
+        settings: {
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      }
+    ],
+    errorMarkers: []
+  });
+
+  await page.goto("/recordings");
+
+  const segmentGroup = page.getByTestId(
+    `take-group-sheet:${sheetId}:segment:id:${segmentId}`
+  );
+  await expect(segmentGroup).toBeVisible();
+  await expect(
+    segmentGroup.getByRole("link", {
+      name: "Return to practice for Bridge on Return Segment Sheet"
+    })
+  ).toHaveAttribute(
+    "href",
+    `/sheet-practice?recordingId=return-segment-new&sheetId=${sheetId}&segmentId=${segmentId}`
+  );
+
+  await segmentGroup
+    .getByRole("link", {
+      name: "Return to practice for Bridge on Return Segment Sheet"
+    })
+    .click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/sheet-practice");
+  await expect.poll(() => new URL(page.url()).searchParams.get("sheetId")).toBe(sheetId);
+  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBe(segmentId);
+  await expect(page.getByTestId(`practice-segment-row-${segmentId}`)).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  );
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
+    "Active segment"
+  );
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
+    "Bridge"
+  );
+
+  await page.reload();
+  await expect(page.getByTestId(`practice-segment-row-${segmentId}`)).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  );
+
+  await page.goto("/recordings");
+  await page.getByTestId("recording-row-return-segment-old").click();
+  await expect(
+    page.getByRole("link", {
+      name: "Practice again for Bridge on Return Segment Sheet"
+    })
+  ).toHaveAttribute(
+    "href",
+    `/sheet-practice?recordingId=return-segment-old&sheetId=${sheetId}&segmentId=${segmentId}`
+  );
+
+  await page.goto("/recordings");
+  const wholeGroup = page.getByTestId(`take-group-sheet:${sheetId}:segment:none`);
+  await wholeGroup
+    .getByRole("link", {
+      name: "Return to sheet practice for Return Segment Sheet"
+    })
+    .click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBeNull();
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
+    "Choose a segment"
+  );
+  await expect(page.getByTestId("practice-segment-return-status")).toHaveCount(0);
+
+  await page.goto("/recordings");
+  await page.getByTestId("recording-row-return-stale").click();
+  await page
+    .getByRole("link", {
+      name: "Practice again for Deleted bridge on Return Segment Sheet"
+    })
+    .click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBe(
+    "segment-deleted"
+  );
+  await expect(page.getByTestId("practice-segment-return-status")).toContainText(
+    "Saved segment is no longer available. Sheet practice is ready without a selected segment."
+  );
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
+    "Choose a segment"
+  );
+
+  await page.goto("/recordings");
+  await page.getByTestId("recording-row-return-missing-sheet").click();
+  await page
+    .getByRole("link", {
+      name: "Practice again for Deleted sheet segment on Deleted Return Sheet"
+    })
+    .click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/sheet-practice");
+  await expect.poll(() => new URL(page.url()).searchParams.get("sheetId")).toBe(
+    "sheet-deleted"
+  );
+  await expect(
+    page.getByRole("heading", { name: "Sheet not found" })
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "This sheet is not in the local Sheet Library. Return to Sheet Library and choose an imported sheet."
+    )
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Return to Sheet Library" })
+  ).toBeVisible();
+
+  await page.goto("/recordings");
+  await page.getByTestId("recording-row-return-quick").click();
+  await page
+    .getByRole("link", {
+      name: "Practice again in Quick Metronome for Quick return"
+    })
+    .click();
+  await expect(page).toHaveURL(/\/quick-metronome\?recordingId=return-quick/);
+});
+
+test("recordings review keeps summary chips readable at a narrow viewport", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/recordings");
+  await page.evaluate(() => window.localStorage.clear());
+
+  await seedRecordingHistory(page, {
+    sessions: [{ id: "session-summary-readability", sourceType: "sheet" }],
+    recordings: [
+      {
+        id: "summary-readable-old",
+        type: "sheet",
+        origin: "user",
+        name: "Readability older take",
+        sessionId: "session-summary-readability",
+        sheetId: "sheet-readability",
+        sheetName: "Narrow Summary Study",
+        createdAt: "2026-06-21T09:00:00.000Z",
+        durationMs: 11_000,
+        sizeBytes: 128,
+        mimeType: "audio/wav",
+        audioDataUrl: "data:audio/wav;base64,UklGRg==",
+        segmentContext: createSegmentContext({
+          segmentId: "segment-readability",
+          segmentName: "Narrow bridge"
+        }),
+        settings: {
+          bpm: 88,
+          timeSignature: "3/4"
+        }
+      },
+      {
+        id: "summary-readable-latest",
+        type: "sheet",
+        origin: "user",
+        name: "Readability newest take",
+        sessionId: "session-summary-readability",
+        sheetId: "sheet-readability",
+        sheetName: "Narrow Summary Study",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: 12_000,
+        sizeBytes: 128,
+        mimeType: "audio/wav",
+        audioDataUrl: "data:audio/wav;base64,UklGRg==",
+        segmentContext: createSegmentContext({
+          segmentId: "segment-readability",
+          segmentName: "Narrow bridge"
+        }),
+        settings: {
+          bpm: 96,
+          timeSignature: "   "
+        }
+      }
+    ],
+    errorMarkers: []
+  });
+
+  await page.reload();
+
+  const group = page.getByTestId(
+    "take-group-sheet:sheet-readability:segment:id:segment-readability"
+  );
+  const summary = group.getByTestId("take-history-summary");
+
+  await expect(group).toBeVisible();
+  await expect(summary).toContainText("Takes: 2 takes");
+  await expect(summary).toContainText(/Latest: .*Readability newest take/);
+  await expect(summary).toContainText("Best: none");
+  await expect(summary).toContainText("Latest duration: 0:12");
+  await expect(summary).toContainText("BPM: Mixed BPM, latest 96");
+  await expect(summary).toContainText(
+    "Time signature: Time signature unavailable"
+  );
+  await expect(summary).toContainText("Markers: No markers");
+
+  await expectReadableSummaryChips(summary, "mobile take summary");
+  await expectNoHorizontalOverflow(page, "mobile take summary");
+});
 
 test("recordings review lists, filters, plays, continues, deletes, and handles bad audio", async ({
   page
@@ -489,7 +2286,11 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     "quick-alpha playback interaction"
   );
 
-  await page.getByRole("link", { name: "Practice Again" }).click();
+  await page
+    .getByRole("link", {
+      name: "Practice again in Quick Metronome for Alpha quick take"
+    })
+    .click();
   await expect(page).toHaveURL(/\/quick-metronome\?recordingId=quick-alpha/);
   await page.getByRole("button", { name: "Start recording" }).click();
   await expect(page.getByText("Recording without metronome.")).toBeVisible();
@@ -616,7 +2417,11 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
     sheetWaveformAfterPlayback,
     "sheet-beta playback interaction"
   );
-  await page.getByRole("link", { name: "Practice Again" }).click();
+  await page
+    .getByRole("link", {
+      name: "Practice again for whole-sheet practice on Moonlight Etude"
+    })
+    .click();
   await expect(page).toHaveURL(
     /\/sheet-practice\?recordingId=sheet-beta&sheetId=sheet-42/
   );
@@ -637,10 +2442,10 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   await page.getByTestId("recording-row-quick-alpha").click();
   await page.getByRole("button", { name: "Delete Recording" }).click();
   await page.getByRole("button", { name: "Confirm Delete" }).click();
-  await expect(page.getByText("Alpha quick take")).toBeHidden();
+  await expect(page.getByTestId("recording-row-quick-alpha")).toBeHidden();
 
   await page.reload();
-  await expect(page.getByText("Alpha quick take")).toBeHidden();
+  await expect(page.getByTestId("recording-row-quick-alpha")).toBeHidden();
   const afterDeleteSnapshot = await readRecordingHistory(page);
   const deletedEvidence = {
     hasDeletedRecording: afterDeleteSnapshot.recordings.some(

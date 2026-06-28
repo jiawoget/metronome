@@ -22,6 +22,11 @@ type PersistedSheetRecording = {
   createdAt: string;
   durationMs: number;
   mimeType: string;
+  artifactRef?: {
+    kind: "indexeddb";
+    artifactId: string;
+    storageVersion: 1;
+  } | null;
   audioDataUrl?: string | null;
   sizeBytes: number;
   trustedPeaks?: number[];
@@ -172,7 +177,12 @@ async function expectValidArtifactEvidence(
   expect(recording.createdAt).toBeTruthy();
   expect(recording.durationMs).toBeGreaterThan(500);
   expect(recording.mimeType).toMatch(/^audio\//);
-  expect(recording.audioDataUrl).toMatch(/^data:audio\//);
+  expect(recording.artifactRef).toMatchObject({
+    kind: "indexeddb",
+    artifactId: recording.id,
+    storageVersion: 1
+  });
+  expect(recording.audioDataUrl ?? null).toBeNull();
   expect(recording.sizeBytes).toBeGreaterThan(0);
   expect(recording.trustedPeaks?.length ?? 0).toBeGreaterThan(12);
   expect(recording.trustedPeaks?.every((peak) => Number.isFinite(peak))).toBe(
@@ -201,7 +211,8 @@ function expectReloadedRecordingToMatchSnapshot(
     createdAt: snapshot.createdAt,
     durationMs: snapshot.durationMs,
     mimeType: snapshot.mimeType,
-    audioDataUrl: snapshot.audioDataUrl,
+    artifactRef: snapshot.artifactRef,
+    audioDataUrl: snapshot.audioDataUrl ?? null,
     sizeBytes: snapshot.sizeBytes,
     trustedPeaks: snapshot.trustedPeaks,
     segmentContext: snapshot.segmentContext
@@ -240,7 +251,12 @@ test("sheet recording persists selected segment context and keeps it after sourc
   const segmentRecording = sheetRecordings[0];
   const savedContext = segmentRecording.segmentContext;
 
-  expect(segmentRecording.audioDataUrl).toMatch(/^data:audio\//);
+  expect(segmentRecording.artifactRef).toMatchObject({
+    kind: "indexeddb",
+    artifactId: segmentRecording.id,
+    storageVersion: 1
+  });
+  expect(segmentRecording.audioDataUrl ?? null).toBeNull();
   expect(segmentRecording.sizeBytes).toBeGreaterThan(0);
   expect(segmentRecording.trustedPeaks?.length ?? 0).toBeGreaterThan(12);
   expect(savedContext).toMatchObject({
@@ -370,9 +386,9 @@ test("Record again creates a second recording with the same selected segment con
     firstSnapshot.segmentContext?.segmentId
   );
 
-  if (secondRecording?.audioDataUrl !== firstSnapshot.audioDataUrl) {
-    expect(secondRecording?.audioDataUrl).not.toBe(firstSnapshot.audioDataUrl);
-  }
+  expect(secondRecording?.artifactRef?.artifactId).not.toBe(
+    firstSnapshot.artifactRef?.artifactId
+  );
 
   await page.reload();
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();

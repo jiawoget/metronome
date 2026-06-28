@@ -160,16 +160,19 @@ function createDeferred<T>() {
 
 async function renderPanel({
   sheetId = "sheet-alpha",
+  initialSegmentId = null,
   practiceSegmentService = createPracticeSegmentService(),
   measureGridService = createMeasureGridService()
 }: {
   sheetId?: string;
+  initialSegmentId?: string | null;
   practiceSegmentService?: PracticeSegmentService;
   measureGridService?: MeasureGridService;
 } = {}) {
   render(
     <PracticeSegmentSelectorPanel
       sheetId={sheetId}
+      initialSegmentId={initialSegmentId}
       practiceSegmentService={practiceSegmentService}
       measureGridService={measureGridService}
     />
@@ -849,6 +852,181 @@ describe("PracticeSegmentSelectorPanel", () => {
     expect(screen.getByText("Choose a segment")).toBeVisible();
     expect(screen.queryByText("Active segment")).not.toBeInTheDocument();
     expect(useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId).toBeNull();
+  });
+
+  it("selects an initial return segment after validating the loaded segment list", async () => {
+    const primarySegment = createSegment();
+    const practiceSegmentService = createPracticeSegmentService({
+      segments: [primarySegment]
+    });
+
+    await renderPanel({
+      initialSegmentId: "segment-alpha",
+      practiceSegmentService
+    });
+
+    expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent(
+      "Active segment"
+    );
+    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent(
+      "Measures 5 to 12"
+    );
+    expect(screen.queryByTestId("practice-segment-return-status")).not.toBeInTheDocument();
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: "segment-alpha"
+    });
+  });
+
+  it("falls back to no-segment practice when the initial return segment is missing", async () => {
+    await renderPanel({
+      initialSegmentId: "segment-missing",
+      practiceSegmentService: createPracticeSegmentService({
+        segments: [createSegment()]
+      })
+    });
+
+    expect(screen.getByTestId("practice-segment-return-status")).toHaveTextContent(
+      "Saved segment is no longer available. Sheet practice is ready without a selected segment."
+    );
+    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent(
+      "Choose a segment"
+    );
+    expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: null,
+      rerecord: {
+        status: "invalid",
+        unavailableReason: "source-segment-missing"
+      }
+    });
+  });
+
+  it("falls back when the initial return segment belongs to a different sheet", async () => {
+    const wrongSheetSegment = createSegment({
+      sheetId: "sheet-bravo"
+    });
+    const practiceSegmentService: PracticeSegmentService = {
+      listSegments: vi.fn(async () => [wrongSheetSegment]),
+      getSegment: vi.fn(async () => wrongSheetSegment),
+      saveSegment: vi.fn(async (segment) => segment),
+      deleteSegment: vi.fn(async () => undefined)
+    };
+
+    await renderPanel({
+      initialSegmentId: "segment-alpha",
+      practiceSegmentService
+    });
+
+    expect(screen.getByTestId("practice-segment-return-status")).toHaveTextContent(
+      "Saved segment is no longer available"
+    );
+    expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: null,
+      rerecord: {
+        status: "invalid",
+        unavailableReason: "sheet-mismatch"
+      }
+    });
+  });
+
+  it("leaves no segment selected when no initial return segment is provided", async () => {
+    await renderPanel({
+      practiceSegmentService: createPracticeSegmentService({
+        segments: [createSegment()]
+      })
+    });
+
+    expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent(
+      "Choose a segment"
+    );
+    expect(screen.queryByTestId("practice-segment-return-status")).not.toBeInTheDocument();
+    expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
+      sheetId: "sheet-alpha",
+      activeSegmentId: null
+    });
+  });
+
+  it("keeps manual segment selection after applying the initial return segment once", async () => {
+    const user = userEvent.setup();
+    const primarySegment = createSegment();
+    const secondarySegment = createSegment({
+      id: "segment-beta",
+      name: "Manual target",
+      range: {
+        startMeasure: 13,
+        endMeasure: 16
+      }
+    });
+    const practiceSegmentService = createPracticeSegmentService({
+      segments: [primarySegment, secondarySegment]
+    });
+    const { rerender } = render(
+      <PracticeSegmentSelectorPanel
+        sheetId="sheet-alpha"
+        initialSegmentId="segment-alpha"
+        practiceSegmentService={practiceSegmentService}
+        measureGridService={createMeasureGridService()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+    });
+
+    await user.click(screen.getByTestId("practice-segment-row-segment-beta"));
+
+    expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    expect(screen.getByTestId("practice-segment-row-segment-beta")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId).toBe(
+      "segment-beta"
+    );
+
+    rerender(
+      <PracticeSegmentSelectorPanel
+        sheetId="sheet-alpha"
+        initialSegmentId="segment-alpha"
+        practiceSegmentService={practiceSegmentService}
+        measureGridService={createMeasureGridService()}
+        measureGridRevision={1}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("practice-segment-row-segment-beta")).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+    });
+    expect(useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId).toBe(
+      "segment-beta"
+    );
   });
 
   it("clears active selection when switching away from a sheet and does not restore it on switch back", async () => {

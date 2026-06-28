@@ -14,6 +14,8 @@ type SheetPracticeSessionService = Pick<
   | "updateSheetSessionDuration"
   | "endPracticeSession"
   | "createSheetRecordingMetadata"
+  | "prepareSheetRecordingMetadata"
+  | "commitPreparedSheetRecordingSession"
   | "getRecentSession"
   | "getRecentSheetSession"
   | "listRecordingMetadata"
@@ -23,6 +25,7 @@ type SheetPracticeSessionService = Pick<
 export type SheetPracticeRecordingService = Pick<
   SheetRecordingService,
   | "isRecording"
+  | "getRecording"
   | "startCapture"
   | "stopAndSave"
   | "discardCapture"
@@ -36,6 +39,7 @@ export type SheetPracticeControlsProps = {
   defaultBpm: number | null;
   defaultTimeSignature: string | null;
   sourceRecordingId?: string | null;
+  returnSegmentId?: string | null;
   createMetronomeService?: () => SheetPracticeMetronomeService;
   createSheetRecordingService?: () => SheetPracticeRecordingService;
   sessionService?: SheetPracticeSessionService;

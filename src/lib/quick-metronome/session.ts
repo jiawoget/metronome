@@ -21,9 +21,10 @@ export function createQuickRecording({
   createdAt?: Date;
 }) {
   const durationMs = artifact.analysis?.decodedDurationMs ?? artifact.durationMs;
+  const recordingId = createId("recording");
 
   return {
-    id: createId("recording"),
+    id: recordingId,
     type: "quick",
     origin: "user",
     sessionId: session.id,
@@ -32,7 +33,12 @@ export function createQuickRecording({
     durationMs: Math.max(0, Math.round(durationMs)),
     sizeBytes: artifact.sizeBytes,
     mimeType: artifact.mimeType,
-    audioDataUrl: artifact.dataUrl,
+    artifactRef: {
+      kind: "indexeddb",
+      artifactId: recordingId,
+      storageVersion: 1
+    },
+    audioDataUrl: null,
     artifactAnalysis: artifact.analysis,
     settings
   } satisfies QuickRecording;

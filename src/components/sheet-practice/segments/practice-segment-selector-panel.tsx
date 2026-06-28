@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 
 export type PracticeSegmentSelectorPanelProps = {
   sheetId: string;
+  initialSegmentId?: string | null;
   practiceSegmentService?: PracticeSegmentService;
   measureGridService?: MeasureGridService;
   measureGridRevision?: number;
@@ -238,8 +239,15 @@ function getUnknownErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message.trim().length > 0 ? error.message : fallback;
 }
 
+function normalizeOptionalSegmentId(value: string | null | undefined) {
+  const normalized = value?.trim();
+
+  return normalized ? normalized : null;
+}
+
 export function PracticeSegmentSelectorPanel({
   sheetId,
+  initialSegmentId = null,
   practiceSegmentService = browserPracticeSegmentService,
   measureGridService = browserMeasureGridService,
   measureGridRevision = 0
@@ -255,6 +263,11 @@ export function PracticeSegmentSelectorPanel({
     (state) => state.invalidateRerecordSource
   );
   const currentSheetIdRef = useRef(sheetId);
+  const appliedInitialSegmentKeyRef = useRef<string | null>(null);
+  const normalizedInitialSegmentId = useMemo(
+    () => normalizeOptionalSegmentId(initialSegmentId),
+    [initialSegmentId]
+  );
   const [loadResult, setLoadResult] = useState<SegmentSelectorLoadResult>({
     sheetId: null,
     segments: EMPTY_SEGMENTS,
@@ -269,6 +282,7 @@ export function PracticeSegmentSelectorPanel({
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [mutationState, setMutationState] = useState<"idle" | "saving" | "deleting">("idle");
   const [mutationErrorMessage, setMutationErrorMessage] = useState<string | null>(null);
+  const [returnSegmentMessage, setReturnSegmentMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -284,6 +298,7 @@ export function PracticeSegmentSelectorPanel({
       setConfirmingDeleteId(null);
       setMutationState("idle");
       setMutationErrorMessage(null);
+      setReturnSegmentMessage(null);
     });
 
     return () => {
@@ -303,6 +318,44 @@ export function PracticeSegmentSelectorPanel({
       }
 
       const nextSegments = segmentResult.status === "fulfilled" ? segmentResult.value : EMPTY_SEGMENTS;
+      const initialSegmentKey = normalizedInitialSegmentId
+        ? `${sheetId}:${normalizedInitialSegmentId}`
+        : null;
+      let initialSegmentSelection: SelectedSegmentKey | null | undefined;
+
+      if (
+        segmentResult.status === "fulfilled" &&
+        initialSegmentKey &&
+        appliedInitialSegmentKeyRef.current !== initialSegmentKey
+      ) {
+        const targetSegment = nextSegments.find(
+          (segment) => segment.id === normalizedInitialSegmentId
+        );
+
+        appliedInitialSegmentKeyRef.current = initialSegmentKey;
+
+        if (targetSegment?.sheetId === sheetId) {
+          setActiveRecordingSegment(sheetId, targetSegment.id);
+          setReturnSegmentMessage(null);
+          initialSegmentSelection = {
+            sheetId,
+            segmentId: targetSegment.id
+          };
+        } else {
+          setActiveRecordingSegment(sheetId, null);
+          invalidateRerecordSource(
+            sheetId,
+            targetSegment ? "sheet-mismatch" : "source-segment-missing"
+          );
+          setReturnSegmentMessage(
+            "Saved segment is no longer available. Sheet practice is ready without a selected segment."
+          );
+          initialSegmentSelection = null;
+        }
+      } else if (!initialSegmentKey) {
+        appliedInitialSegmentKeyRef.current = null;
+        setReturnSegmentMessage(null);
+      }
 
       setLoadResult({
         sheetId,
@@ -325,6 +378,10 @@ export function PracticeSegmentSelectorPanel({
       });
 
       setSelectedSegmentKey((currentSelection) => {
+        if (initialSegmentSelection !== undefined) {
+          return initialSegmentSelection;
+        }
+
         if (currentSelection?.sheetId !== sheetId) {
           return null;
         }
@@ -335,6 +392,11 @@ export function PracticeSegmentSelectorPanel({
 
         setActiveRecordingSegment(sheetId, null);
         invalidateRerecordSource(sheetId, "source-segment-missing");
+        if (currentSelection.segmentId === normalizedInitialSegmentId) {
+          setReturnSegmentMessage(
+            "Saved segment is no longer available. Sheet practice is ready without a selected segment."
+          );
+        }
 
         return null;
       });
@@ -347,6 +409,7 @@ export function PracticeSegmentSelectorPanel({
     invalidateRerecordSource,
     measureGridRevision,
     measureGridService,
+    normalizedInitialSegmentId,
     practiceSegmentService,
     setActiveRecordingSegment,
     sheetId
@@ -513,6 +576,7 @@ export function PracticeSegmentSelectorPanel({
           sheetId: targetSheetId,
           segmentId: savedSegment.id
         });
+        setReturnSegmentMessage(null);
         setActiveRecordingSegment(targetSheetId, savedSegment.id);
       } else if (!nextSegments.some((segment) => segment.id === savedSegment.id)) {
         setSelectedSegmentKey((currentSelection) => {
@@ -635,6 +699,16 @@ export function PracticeSegmentSelectorPanel({
       {mutationErrorMessage ? (
         <p role="alert" data-testid="practice-segment-mutation-error" className="text-destructive mt-3 text-sm font-medium">
           {mutationErrorMessage}
+        </p>
+      ) : null}
+
+      {returnSegmentMessage ? (
+        <p
+          role="status"
+          data-testid="practice-segment-return-status"
+          className="text-muted-foreground mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium"
+        >
+          {returnSegmentMessage}
         </p>
       ) : null}
 
@@ -822,6 +896,7 @@ export function PracticeSegmentSelectorPanel({
                     data-testid={`practice-segment-row-${segment.id}`}
                     onClick={() => {
                       setSelectedSegmentKey({ sheetId, segmentId: segment.id });
+                      setReturnSegmentMessage(null);
                       setActiveRecordingSegment(sheetId, segment.id);
                     }}
                     className="focus-visible:ring-ring min-w-0 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none"

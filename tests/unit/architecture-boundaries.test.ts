@@ -81,4 +81,107 @@ describe("source architecture boundaries", () => {
     expect(storesReadme).toContain("ephemeral client UI/workflow");
     expect(storesReadme).toContain("must not become a persistence layer");
   });
+
+  it("keeps Recordings Review UI behind the review service boundary", () => {
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src/components/recordings-review"), [
+        ".ts",
+        ".tsx"
+      ])
+    );
+    const violations = matchingFiles(files, [
+      /@\/lib\/recordings-review\/repository/,
+      /\brecordingHistoryRepository\b/,
+      /\brecordingAudioExportService\b/,
+      /\bRecordingWaveformPlaybackAdapter\b/,
+      /\bloadRecordingArtifactDetails\b/,
+      /\brecordingArtifactRepository\b/,
+      /from\s+["']dexie["']/
+    ]);
+
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps Quick Metronome UI behind artifact controller boundaries", () => {
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src/components/quick-metronome"), [
+        ".ts",
+        ".tsx"
+      ])
+    );
+    const violations = matchingFiles(files, [
+      /@\/lib\/recordings-review\/artifact-service/,
+      /@\/infrastructure\/db\/recording-artifact-repository/,
+      /@\/lib\/recordings-review\/repository/,
+      /@\/lib\/quick-metronome\/persistence/,
+      /@\/infrastructure\/storage\/storage-contracts/,
+      /\bquickRecordingRepository\b/,
+      /\brecordingArtifactRepository\b/,
+      /\brecordingHistoryRepository\b/,
+      /\bmigrateLegacyRecordingArtifacts\b/,
+      /\bsaveCapturedRecordingArtifact\b/,
+      /\bdeleteRecordingArtifactById\b/,
+      /\bresolveRecordingArtifactBody\b/,
+      /from\s+["']dexie["']/
+    ]);
+
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps Sheet Practice UI away from recordings-review repositories", () => {
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src/components/sheet-practice"), [
+        ".ts",
+        ".tsx"
+      ])
+    );
+    const violations = matchingFiles(files, [
+      /@\/lib\/recordings-review\/repository/,
+      /\brecordingHistoryRepository\b/
+    ]);
+
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps app and server layers away from browser recording storage", () => {
+    const appFiles = readSources(
+      listSourceFiles(join(repoRoot, "src/app"), [".ts", ".tsx"])
+    );
+    const violations = matchingFiles(appFiles, [
+      /@\/infrastructure\/db\/recording-artifact-repository/,
+      /\brecordingArtifactRepository\b/,
+      /\bmigrateLegacyRecordingArtifacts\b/,
+      /from\s+["']dexie["']/,
+      /@\/lib\/recordings-review\/repository/,
+      /\brecordingHistoryRepository\b/
+    ]);
+
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps the PDF worker local instead of loading it from a CDN", () => {
+    const pdfRenderer = readFileSync(
+      "src/components/sheet-practice/viewer/pdf-sheet-renderer.tsx",
+      "utf8"
+    );
+    const pdfImportAdapter = readFileSync(
+      "src/infrastructure/files/sheet-import-adapter.ts",
+      "utf8"
+    );
+    const pdfViewerAdapter = readFileSync(
+      "src/infrastructure/sheet-viewer/browser-sheet-viewer-adapter.ts",
+      "utf8"
+    );
+
+    expect(pdfRenderer).not.toMatch(/https?:\/\//);
+    expect(pdfRenderer).not.toContain("unpkg.com");
+    expect(pdfRenderer).toContain("pdfjs-dist/build/pdf.worker.min.mjs");
+    for (const source of [pdfRenderer, pdfImportAdapter, pdfViewerAdapter]) {
+      expect(source).not.toContain("pdfjs-dist/legacy");
+    }
+    expect(pdfImportAdapter).toContain('import("pdfjs-dist")');
+    expect(pdfViewerAdapter).toContain('import("pdfjs-dist")');
+    expect(pdfImportAdapter).toContain("pdfjs-dist/build/pdf.worker.min.mjs");
+    expect(pdfViewerAdapter).toContain("pdfjs-dist/build/pdf.worker.min.mjs");
+  });
 });

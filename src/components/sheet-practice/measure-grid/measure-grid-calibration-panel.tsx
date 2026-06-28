@@ -9,7 +9,10 @@ import {
   type MeasureGrid
 } from "@/domain/practice";
 import { browserMeasureGridService } from "@/infrastructure/db/browser-measure-grid-service";
-import { TIME_SIGNATURES } from "@/lib/quick-metronome/control";
+import {
+  TIME_SIGNATURES,
+  isQuickMetronomeTimeSignature
+} from "@/lib/quick-metronome/control";
 import type {
   MetronomeSettings,
   TimeSignature
@@ -48,7 +51,7 @@ export type MeasureGridCalibrationPanelProps = {
 function isSupportedTimeSignature(
   value: string | null
 ): value is TimeSignature {
-  return value !== null && TIME_SIGNATURES.includes(value as TimeSignature);
+  return isQuickMetronomeTimeSignature(value);
 }
 
 function isValidIntegerString(value: string) {

@@ -1,4 +1,8 @@
-import { TIME_SIGNATURES, clampBpm, parseTimeSignature } from "@/lib/quick-metronome/control";
+import {
+  clampBpm,
+  isQuickMetronomeTimeSignature,
+  parseTimeSignature
+} from "@/lib/quick-metronome/control";
 import {
   DEFAULT_METRONOME_SETTINGS,
   type MetronomeSettings,
@@ -16,7 +20,7 @@ export type SheetPracticeControlInitialState = {
 };
 
 function isSupportedTimeSignature(value: string | null): value is TimeSignature {
-  return value !== null && TIME_SIGNATURES.includes(value as TimeSignature);
+  return isQuickMetronomeTimeSignature(value);
 }
 
 export function createSheetPracticeMetronomeSettings(

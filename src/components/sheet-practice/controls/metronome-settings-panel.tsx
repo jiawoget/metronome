@@ -2,9 +2,9 @@ import { Activity, ChevronDown, ChevronUp, Circle } from "lucide-react";
 
 import {
   ACCENT_MODES,
-  COUNTDOWN_OPTIONS,
   SUBDIVISIONS,
   TIME_SIGNATURES,
+  getCountdownOptions,
   getTickIntervalMs,
   parseAccentMode,
   parseCountdownBeats,
@@ -64,6 +64,20 @@ export function MetronomeSettingsPanel({
   stepBpmInput,
   updateSettings
 }: MetronomeSettingsPanelProps) {
+  function handleTimeSignatureChange(value: string) {
+    const nextTimeSignature = parseTimeSignature(value);
+
+    updateSettings({
+      timeSignature: nextTimeSignature
+    });
+  }
+
+  function handleCountdownChange(value: string) {
+    updateSettings({
+      countdownBeats: parseCountdownBeats(value)
+    });
+  }
+
   return (
     <div
       className={cn(
@@ -144,9 +158,7 @@ export function MetronomeSettingsPanel({
           label="Time signature"
           value={settings.timeSignature}
           disabled={arePreRunSettingsLocked}
-          onChange={(value) =>
-            updateSettings({ timeSignature: parseTimeSignature(value) })
-          }
+          onChange={handleTimeSignatureChange}
           options={TIME_SIGNATURES.map((timeSignature) => ({
             value: timeSignature,
             label: timeSignature
@@ -168,12 +180,10 @@ export function MetronomeSettingsPanel({
           label="Countdown"
           value={String(settings.countdownBeats)}
           disabled={arePreRunSettingsLocked}
-          onChange={(value) =>
-            updateSettings({ countdownBeats: parseCountdownBeats(value) })
-          }
-          options={COUNTDOWN_OPTIONS.map((beats) => ({
-            value: String(beats),
-            label: beats === 0 ? "Off" : `${beats} beats`
+          onChange={handleCountdownChange}
+          options={getCountdownOptions().map((option) => ({
+            value: String(option.beats),
+            label: option.label
           }))}
         />
       </div>

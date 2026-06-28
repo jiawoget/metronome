@@ -428,51 +428,51 @@
                                          },
                                          {
                                              "pack":  "pack-2-segment-take-review",
-                                             "status":  "not_started",
+                                             "status":  "verified",
                                              "slices":  [
                                                             {
                                                                 "slice":  "P2-01 take-grouping-domain",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P2-02 take-grouping-review-ui",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P2-03 best-active-take-metadata",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P2-04 best-active-take-ui",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P2-05 take-history-summary",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P2-06 take-history-return-to-practice",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P2-07 waveform-comparison-source-boundary",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P2-08 waveform-comparison-ui",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P2-09 recordings-tags-favorites-archive",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P2-10 recordings-recording-comparison",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P2-11 recordings-audio-export",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             }
                                                         ]
                                          },

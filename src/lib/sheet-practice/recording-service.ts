@@ -1,5 +1,12 @@
-import type { SheetRecordingMetadata } from "@/domain/practice";
-import { hasUsablePeaks, loadRecordingArtifactDetails } from "@/lib/recordings-review/artifact-service";
+import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
+import {
+  assertRecordingArtifactCleanup,
+  cleanupCommittedRecordingArtifacts,
+  createRecordingArtifactRef,
+  hasUsablePeaks,
+  loadRecordingArtifactDetails,
+  saveCapturedRecordingArtifact
+} from "@/lib/recordings-review/artifact-service";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
 import type { MetronomeSettings, RecordingArtifact } from "@/lib/quick-metronome/types";
@@ -42,7 +49,8 @@ export function createSheetReviewRecording({
     durationMs,
     sizeBytes: artifact.sizeBytes,
     mimeType: artifact.mimeType,
-    audioDataUrl: artifact.dataUrl,
+    artifactRef: createRecordingArtifactRef(metadata.id),
+    audioDataUrl: null,
     artifactAnalysis: artifact.analysis,
     trustedPeaks,
     segmentContext: metadata.segmentContext,
@@ -93,17 +101,36 @@ function createDraftSheetReviewRecording({
   };
 }
 
-function saveSheetReviewRecording(recording: ReviewRecording) {
-  const snapshot = recordingHistoryRepository.getSnapshot();
-
-  recordingHistoryRepository.saveSnapshot({
-    sessions: snapshot.sessions,
-    recordings: [
-      recording,
-      ...snapshot.recordings.filter((item) => item.id !== recording.id)
-    ],
-    errorMarkers: snapshot.errorMarkers
+function saveSheetReviewRecordingWithSession({
+  recording,
+  session
+}: {
+  recording: ReviewRecording;
+  session: PracticeSession;
+}) {
+  recordingHistoryRepository.saveSheetRecordingMetadataWithSession({
+    recording,
+    session
   });
+}
+
+async function rollbackSheetReviewRecordingMetadata(recording: {
+  id: string;
+  sessionId: string;
+  createdAt: string;
+  previousSession: PracticeSession | null;
+}) {
+  const result = recordingHistoryRepository.rollbackSheetRecordingMetadata({
+    recordingId: recording.id,
+    sessionId: recording.sessionId,
+    createdAt: recording.createdAt,
+    previousSession: recording.previousSession
+  });
+  const cleanupResult = await cleanupCommittedRecordingArtifacts(
+    [...result.artifactCleanupRecordingIds, recording.id]
+  );
+
+  assertRecordingArtifactCleanup(cleanupResult);
 }
 
 export class BrowserSheetRecordingService implements SheetRecordingService {
@@ -111,6 +138,10 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
 
   get isRecording() {
     return this.captureService.isRecording;
+  }
+
+  getRecording(recordingId: string) {
+    return recordingHistoryRepository.getRecording(recordingId);
   }
 
   getLatestSheetRecording(sheetId: string) {
@@ -139,7 +170,7 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
   async stopAndSave(input: SaveSheetRecordingInput): Promise<SaveSheetRecordingResult> {
     const artifact = await this.captureService.stop();
     let metadata: SheetRecordingMetadata | null = null;
-    const previousHistorySnapshot = recordingHistoryRepository.getSnapshot();
+    let artifactSaved = false;
     const previousSession = await input.sessionService.getRecentSheetSession(input.sheetId);
 
     if (artifact.sizeBytes <= 0) {
@@ -164,7 +195,7 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
     }
 
     try {
-      metadata = await input.sessionService.createSheetRecordingMetadata({
+      const prepared = await input.sessionService.prepareSheetRecordingMetadata({
         sheetId: input.sheetId,
         sessionId: input.sessionId,
         durationMs: roundDuration(decodedDetails.decodedDurationMs),
@@ -174,15 +205,24 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         forceNewSession: input.forceNewSession
       });
 
-      if (!metadata) {
+      if (!prepared) {
         throw new Error("No valid sheet context. Recording was not saved.");
       }
+
+      metadata = prepared.metadata;
 
       const decodedRecording = createSheetReviewRecording({
         metadata,
         artifact,
         settings: input.settings
       });
+      await saveCapturedRecordingArtifact({
+        recordingId: decodedRecording.id,
+        recordingType: "sheet",
+        artifact,
+        createdAt: decodedRecording.createdAt
+      });
+      artifactSaved = true;
       const recording = {
         ...decodedRecording,
         durationMs: roundDuration(decodedDetails.decodedDurationMs),
@@ -203,7 +243,11 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         source: "trusted-peaks"
       };
 
-      saveSheetReviewRecording(recording);
+      saveSheetReviewRecordingWithSession({
+        recording,
+        session: prepared.session
+      });
+      await input.sessionService.commitPreparedSheetRecordingSession(prepared);
 
       return {
         metadata,
@@ -215,19 +259,32 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         const rollbackErrors: unknown[] = [];
 
         try {
-          recordingHistoryRepository.saveSnapshot(previousHistorySnapshot);
+          if (artifactSaved) {
+            await rollbackSheetReviewRecordingMetadata({
+              ...metadata,
+              previousSession
+            });
+          } else {
+            const cleanupResult = await cleanupCommittedRecordingArtifacts([
+              metadata.id
+            ]);
+
+            assertRecordingArtifactCleanup(cleanupResult);
+          }
         } catch (rollbackError) {
           rollbackErrors.push(rollbackError);
         }
 
-        try {
-          if (previousSession) {
-            await input.sessionService.restorePracticeSessionSnapshot(previousSession);
-          } else {
-            await input.sessionService.deletePracticeSessionSnapshot(metadata.sessionId);
+        if (artifactSaved) {
+          try {
+            if (previousSession) {
+              await input.sessionService.restorePracticeSessionSnapshot(previousSession);
+            } else {
+              await input.sessionService.deletePracticeSessionSnapshot(metadata.sessionId);
+            }
+          } catch (rollbackError) {
+            rollbackErrors.push(rollbackError);
           }
-        } catch (rollbackError) {
-          rollbackErrors.push(rollbackError);
         }
 
         if (rollbackErrors.length > 0) {

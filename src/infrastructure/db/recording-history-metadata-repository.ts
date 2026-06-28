@@ -5,17 +5,14 @@ import {
   type PracticeSession,
   type SheetRecordingMetadata
 } from "@/domain/practice";
+import { parsePracticeTimeSignature } from "@/domain/practice/validation";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
+import {
+  assertRecordingArtifactCleanup,
+  cleanupCommittedRecordingArtifacts
+} from "@/lib/recordings-review/artifact-service";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
-import { parseTimeSignature } from "@/lib/quick-metronome/control";
-import type { TimeSignature } from "@/lib/quick-metronome/types";
 import type { PracticeRecordingMetadataRepository } from "@/services/practice-session";
-
-function parseOptionalTimeSignature(value: string): TimeSignature | null {
-  const parsed = parseTimeSignature(value);
-
-  return parsed === value ? parsed : null;
-}
 
 function toSheetRecordingMetadata(
   recording: ReviewRecording
@@ -29,7 +26,7 @@ function toSheetRecordingMetadata(
     createdAt: recording.createdAt,
     durationMs: recording.durationMs,
     bpm: recording.settings.bpm,
-    timeSignature: parseOptionalTimeSignature(recording.settings.timeSignature),
+    timeSignature: parsePracticeTimeSignature(recording.settings.timeSignature),
     segmentContext: recording.segmentContext ?? null
   });
 
@@ -87,10 +84,6 @@ function toReviewRecording(
   };
 }
 
-function isObjectWithId(value: unknown): value is { id?: string } {
-  return !!value && typeof value === "object";
-}
-
 async function listRecordingMetadata() {
   return recordingHistoryRepository
     .getSnapshot()
@@ -111,49 +104,21 @@ export const recordingHistoryMetadataRepository: PracticeRecordingMetadataReposi
     },
 
     async saveRecordingMetadata(recording, session) {
-      const snapshot = recordingHistoryRepository.getSnapshot();
       const reviewRecording = toReviewRecording(recording, session);
 
-      recordingHistoryRepository.saveSnapshot({
-        sessions: [
-          validatePracticeSession(session),
-          ...snapshot.sessions.filter(
-            (item) => !isObjectWithId(item) || item.id !== session.id
-          )
-        ],
-        recordings: [
-          reviewRecording,
-          ...snapshot.recordings.filter(
-            (item) => item.id !== reviewRecording.id
-          )
-        ],
-        errorMarkers: snapshot.errorMarkers
+      recordingHistoryRepository.saveSheetRecordingMetadataWithSession({
+        recording: reviewRecording,
+        session: validatePracticeSession(session)
       });
     },
 
     async clear() {
-      const snapshot = recordingHistoryRepository.getSnapshot();
-      const sheetRecordingIds = new Set(
-        snapshot.recordings
-          .filter((recording) => recording.type === "sheet")
-          .map((recording) => recording.id)
+      const result = recordingHistoryRepository.clearSheetRecordings();
+      const cleanupResult = await cleanupCommittedRecordingArtifacts(
+        result.artifactCleanupRecordingIds
       );
 
-      recordingHistoryRepository.saveSnapshot({
-        sessions: snapshot.sessions.filter((item) => {
-          if (!item || typeof item !== "object") {
-            return true;
-          }
-
-          return (item as { sourceType?: string }).sourceType !== "sheet";
-        }),
-        recordings: snapshot.recordings.filter(
-          (recording) => recording.type !== "sheet"
-        ),
-        errorMarkers: snapshot.errorMarkers.filter(
-          (marker) => !sheetRecordingIds.has(marker.recordingId)
-        )
-      });
+      assertRecordingArtifactCleanup(cleanupResult);
     },
 
     subscribe(listener) {

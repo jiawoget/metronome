@@ -4,6 +4,7 @@ import {
   calculateTapTempo,
   clampBpm,
   commitBpmDraft,
+  getCountdownOptions,
   getTickIntervalMs,
   isAccentTick,
   parseAccentMode,
@@ -32,13 +33,25 @@ describe("quick metronome controls", () => {
 
   it("validates time signature, subdivision, accent, and countdown selections", () => {
     expect(parseTimeSignature("3/4")).toBe("3/4");
+    expect(parseTimeSignature("12/8")).toBe("12/8");
     expect(parseTimeSignature("5/4")).toBe(DEFAULT_METRONOME_SETTINGS.timeSignature);
     expect(parseSubdivision("triplet")).toBe("triplet");
     expect(parseSubdivision("quintuplet")).toBe(DEFAULT_METRONOME_SETTINGS.subdivision);
     expect(parseAccentMode("every-beat")).toBe("every-beat");
     expect(parseAccentMode("random")).toBe(DEFAULT_METRONOME_SETTINGS.accent);
     expect(parseCountdownBeats("8")).toBe(8);
+    expect(parseCountdownBeats("16")).toBe(16);
     expect(parseCountdownBeats("3")).toBe(0);
+    expect(parseCountdownBeats("12")).toBe(0);
+  });
+
+  it("keeps countdown choices as fixed beat counts", () => {
+    expect(getCountdownOptions()).toEqual([
+      { beats: 0, label: "Off" },
+      { beats: 4, label: "4 beats" },
+      { beats: 8, label: "8 beats" },
+      { beats: 16, label: "16 beats" }
+    ]);
   });
 
   it("calculates deterministic tap tempo from recent tap intervals", () => {
@@ -52,6 +65,7 @@ describe("quick metronome controls", () => {
     expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "4/4", subdivision: "quarter" }))).toBe(500);
     expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "4/4", subdivision: "eighth" }))).toBe(250);
     expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "6/8", subdivision: "quarter" }))).toBe(250);
+    expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "12/8", subdivision: "quarter" }))).toBe(250);
 
     expect(
       isAccentTick(0, {
@@ -84,6 +98,13 @@ describe("quick metronome controls", () => {
     expect(
       isAccentTick(6, {
         timeSignature: "6/8",
+        subdivision: "quarter",
+        accent: "downbeat"
+      })
+    ).toBe(true);
+    expect(
+      isAccentTick(12, {
+        timeSignature: "12/8",
         subdivision: "quarter",
         accent: "downbeat"
       })
