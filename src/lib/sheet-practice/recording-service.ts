@@ -3,10 +3,12 @@ import {
   assertRecordingArtifactCleanup,
   cleanupCommittedRecordingArtifacts,
   createRecordingArtifactRef,
-  hasUsablePeaks,
-  loadRecordingArtifactDetails,
   saveCapturedRecordingArtifact
-} from "@/lib/recordings-review/artifact-service";
+} from "@/lib/recordings-review/artifact-storage";
+import {
+  hasUsablePeaks,
+  loadRecordingArtifactDetails
+} from "@/lib/recordings-review/artifact-details";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
 import type { MetronomeSettings, RecordingArtifact } from "@/lib/quick-metronome/types";

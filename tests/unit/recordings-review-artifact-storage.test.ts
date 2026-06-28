@@ -6,9 +6,9 @@ import {
 } from "@/lib/recordings-review/repository";
 import {
   createRecordingArtifactRef,
-  migrateLegacyRecordingArtifacts,
   resolveRecordingArtifactBody
-} from "@/lib/recordings-review/artifact-service";
+} from "@/lib/recordings-review/artifact-storage";
+import { migrateLegacyRecordingArtifacts } from "@/lib/recordings-review/artifact-migration";
 import {
   recordingArtifactRepository,
   type LocalRecordingArtifact,

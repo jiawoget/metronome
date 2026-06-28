@@ -631,15 +631,8 @@ export const recordingHistoryRepository = {
     return sortErrorMarkers(readSnapshot().errorMarkers.filter((marker) => marker.recordingId === recordingId));
   },
 
-  getArtifact(recordingId: string) {
-    return this.getRecording(recordingId)?.audioDataUrl ?? null;
-  },
-
   saveQuickRecordingMetadata:
     recordingHistoryOperations.saveQuickRecordingMetadata,
-
-  saveSheetReviewRecordingMetadata:
-    recordingHistoryOperations.saveSheetReviewRecordingMetadata,
 
   saveSheetRecordingMetadataWithSession:
     recordingHistoryOperations.saveSheetRecordingMetadataWithSession,

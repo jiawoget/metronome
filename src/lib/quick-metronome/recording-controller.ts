@@ -4,8 +4,10 @@ import { createQuickRecording } from "@/lib/quick-metronome/session";
 import {
   assertRecordingArtifactCleanup,
   cleanupCommittedRecordingArtifacts,
+  resolveRecordingArtifactBody as resolveReviewRecordingArtifactBody,
   saveCapturedRecordingArtifact
-} from "@/lib/recordings-review/artifact-service";
+} from "@/lib/recordings-review/artifact-storage";
+import { migrateLegacyRecordingArtifacts } from "@/lib/recordings-review/artifact-migration";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type {
   MetronomeSettings,
@@ -67,6 +69,15 @@ function deleteQuickRecordingMetadataByIdentity(recording: QuickRecording) {
 export const quickRecordingController = {
   subscribe: recordingHistoryRepository.subscribe,
   getLatestQuickRecording,
+  migrateRecordingArtifacts() {
+    return migrateLegacyRecordingArtifacts();
+  },
+  resolveRecordingArtifactBody(
+    recording: QuickRecording,
+    options: { createObjectUrl?: boolean } = {}
+  ) {
+    return resolveReviewRecordingArtifactBody(recording, options);
+  },
   async clear() {
     const result = recordingHistoryRepository.clearQuickRecordings();
     const cleanupResult = await cleanupCommittedRecordingArtifacts(

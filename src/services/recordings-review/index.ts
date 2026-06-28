@@ -6,9 +6,9 @@ import {
 } from "@/lib/recordings-review/audio-export";
 import {
   assertRecordingArtifactCleanup,
-  cleanupCommittedRecordingArtifacts,
-  migrateLegacyRecordingArtifacts
-} from "@/lib/recordings-review/artifact-service";
+  cleanupCommittedRecordingArtifacts
+} from "@/lib/recordings-review/artifact-storage";
+import { migrateLegacyRecordingArtifacts } from "@/lib/recordings-review/artifact-migration";
 import {
   recordingArtifactRepository,
   type RecordingArtifactRepository

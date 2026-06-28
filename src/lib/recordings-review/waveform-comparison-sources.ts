@@ -1,7 +1,7 @@
 import {
   hasUsablePeaks,
   loadRecordingArtifactDetails
-} from "@/lib/recordings-review/artifact-service";
+} from "@/lib/recordings-review/artifact-details";
 import { isPotentiallyDecodableAudioMime } from "@/lib/recordings-review/audio-mime";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type {

@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
 import { BrowserRecordingPlaybackService } from "@/lib/quick-metronome/playback-service";
 import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
-import { resolveQuickRecordingArtifactBody } from "@/lib/quick-metronome/artifact-controller";
 
 export function LatestQuickRecording({ compact = false }: { compact?: boolean }) {
   const playbackService = useMemo(() => new BrowserRecordingPlaybackService(), []);
@@ -80,7 +79,7 @@ export function LatestQuickRecording({ compact = false }: { compact?: boolean })
               if (isDemoRecording && latestRecording.audioDataUrl) {
                 await playbackService.play(latestRecording.audioDataUrl);
               } else {
-                const artifactBody = await resolveQuickRecordingArtifactBody(
+                const artifactBody = await quickRecordingController.resolveRecordingArtifactBody(
                   latestRecording,
                   { createObjectUrl: true }
                 );

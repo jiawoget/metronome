@@ -5,10 +5,8 @@ import { browserAudioDownloadAdapter } from "@/lib/recordings-review/browser-aud
 import {
   getKnownExportAudioMimeInfo
 } from "@/lib/recordings-review/audio-mime";
-import {
-  RecordingArtifactError,
-  resolveRecordingArtifactBody
-} from "@/lib/recordings-review/artifact-service";
+import { RecordingArtifactError } from "@/lib/recordings-review/artifact-model";
+import { resolveRecordingArtifactBody } from "@/lib/recordings-review/artifact-storage";
 
 export type RecordingAudioExportRequest = {
   recordingId: string;
