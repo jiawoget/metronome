@@ -181,6 +181,14 @@ export function assertRecordingArtifactCleanup(
   }
 }
 
+export async function cleanupCommittedRecordingArtifactsOrThrow(
+  recordingIds: string[]
+) {
+  const cleanupResult = await cleanupCommittedRecordingArtifacts(recordingIds);
+
+  assertRecordingArtifactCleanup(cleanupResult);
+}
+
 export async function resolveRecordingArtifactBody(
   recording: ReviewRecording,
   {

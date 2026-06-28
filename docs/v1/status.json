@@ -877,7 +877,7 @@
                                                             },
                                                             {
                                                                 "slice":  "C2-06 save-rollback-leaf-helpers",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "C2-07 test-fixture-slimming",
