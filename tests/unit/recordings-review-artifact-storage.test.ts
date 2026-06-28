@@ -13,7 +13,7 @@ import {
 } from "@/infrastructure/db/recording-artifact-repository";
 import type { RecordingReviewSnapshot, ReviewRecording } from "@/lib/recordings-review/types";
 import { createRecordingsReviewService } from "@/services/recordings-review";
-import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
+import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
 import { recordingHistoryMetadataRepository } from "@/infrastructure/db/recording-history-metadata-repository";
 
 function createRecording(overrides: Partial<ReviewRecording> = {}): ReviewRecording {
@@ -217,6 +217,87 @@ describe("recording artifact storage", () => {
     expect(window.localStorage.getItem(RECORDINGS_STORAGE_KEY)).toBe(rawSnapshot);
   });
 
+  it("cleans legacy audioDataUrl when a valid artifactRef body already exists even if legacy bytes are malformed", async () => {
+    const repository = createMemoryArtifactRepository();
+    const snapshot: RecordingReviewSnapshot = {
+      sessions: [],
+      recordings: [
+        createRecording({
+          id: "already-restored",
+          artifactRef: createRecordingArtifactRef("already-restored"),
+          audioDataUrl: "not-a-data-url"
+        })
+      ],
+      errorMarkers: [],
+      futureTopLevelField: { keep: true }
+    };
+
+    await repository.saveArtifact({
+      artifactId: "already-restored",
+      recordingId: "already-restored",
+      recordingType: "quick",
+      mimeType: "audio/webm",
+      sizeBytes: 8,
+      blob: new Blob(["restored"], { type: "audio/webm" }),
+      createdAt: "2026-06-22T06:00:00.000Z",
+      updatedAt: "2026-06-22T06:00:00.000Z"
+    });
+    window.localStorage.setItem(RECORDINGS_STORAGE_KEY, JSON.stringify(snapshot));
+
+    const result = await migrateLegacyRecordingArtifacts(repository);
+    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+
+    expect(result).toMatchObject({
+      migrated: 1,
+      failed: 0
+    });
+    expect(persisted.futureTopLevelField).toEqual({ keep: true });
+    expect(persisted.recordings[0]).toMatchObject({
+      id: "already-restored",
+      artifactRef: createRecordingArtifactRef("already-restored")
+    });
+    expect(persisted.recordings[0]).not.toHaveProperty("audioDataUrl");
+    await expect(repository.artifacts.get("already-restored")?.blob.text()).resolves.toBe(
+      "restored"
+    );
+  });
+
+  it("preserves legacy bytes when artifactRef row is owned but body-invalid and legacy data is malformed", async () => {
+    const repository = createMemoryArtifactRepository();
+    const rawSnapshot = JSON.stringify({
+      sessions: [],
+      recordings: [
+        createRecording({
+          id: "corrupt-artifact",
+          artifactRef: createRecordingArtifactRef("corrupt-artifact"),
+          audioDataUrl: "not-a-data-url"
+        })
+      ],
+      errorMarkers: [],
+      futureTopLevelField: { keep: true }
+    });
+
+    repository.artifacts.set("corrupt-artifact", {
+      artifactId: "corrupt-artifact",
+      recordingId: "corrupt-artifact",
+      recordingType: "quick",
+      mimeType: "audio/webm",
+      sizeBytes: 0,
+      blob: new Blob([], { type: "audio/webm" }),
+      createdAt: "2026-06-22T06:00:00.000Z",
+      updatedAt: "2026-06-22T06:00:00.000Z"
+    });
+    window.localStorage.setItem(RECORDINGS_STORAGE_KEY, rawSnapshot);
+
+    const result = await migrateLegacyRecordingArtifacts(repository);
+
+    expect(result).toMatchObject({
+      migrated: 0,
+      failed: 1
+    });
+    expect(window.localStorage.getItem(RECORDINGS_STORAGE_KEY)).toBe(rawSnapshot);
+  });
+
   it("retries migration from fresh raw bytes when the same recording changes concurrently", async () => {
     let saveCount = 0;
     const oldSnapshot: RecordingReviewSnapshot = {
@@ -327,7 +408,7 @@ describe("recording artifact storage", () => {
     );
   });
 
-  it("does not remove metadata when single-record artifact cleanup rejects", async () => {
+  it("removes metadata even when post-commit single-record artifact cleanup rejects", async () => {
     const repository = createMemoryArtifactRepository({ failDeletes: true });
     const recording = createRecording({
       id: "delete-target",
@@ -358,13 +439,14 @@ describe("recording artifact storage", () => {
       artifactRepository: repository
     });
 
-    await expect(service.deleteRecording("delete-target")).rejects.toThrow(
-      "IndexedDB delete failed"
-    );
+    await expect(service.deleteRecording("delete-target")).resolves.toBeUndefined();
     expect(
       JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}")
         .recordings
-    ).toHaveLength(1);
+    ).toHaveLength(0);
+    await expect(repository.artifacts.get("delete-target")?.blob.text()).resolves.toBe(
+      "audio"
+    );
   });
 
   it("deletes by owned recording id instead of corrupted artifactRef pointers", async () => {
@@ -415,8 +497,8 @@ describe("recording artifact storage", () => {
     );
   });
 
-  it("aborts single delete when the same recording id changes before metadata commit", async () => {
-    let getCount = 0;
+  it("skips post-commit single delete artifact cleanup when the same recording id changes before artifact delete", async () => {
+    let listCount = 0;
     const oldRecording = createRecording({
       id: "same-id",
       name: "Old row",
@@ -430,10 +512,10 @@ describe("recording artifact storage", () => {
       artifactRef: createRecordingArtifactRef("same-id")
     });
     const repository = createMemoryArtifactRepository({
-      onGet(artifactId) {
-        getCount += 1;
+      onList(recordingIds) {
+        listCount += 1;
 
-        if (artifactId === "same-id" && getCount === 1) {
+        if (recordingIds.includes("same-id") && listCount === 1) {
           window.localStorage.setItem(
             RECORDINGS_STORAGE_KEY,
             JSON.stringify({
@@ -469,9 +551,7 @@ describe("recording artifact storage", () => {
       artifactRepository: repository
     });
 
-    await expect(service.deleteRecording("same-id")).rejects.toThrow(
-      "Recording history changed"
-    );
+    await expect(service.deleteRecording("same-id")).resolves.toBeUndefined();
 
     const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
 
@@ -518,14 +598,14 @@ describe("recording artifact storage", () => {
       })
     );
 
-    await quickRecordingRepository.clear();
+    await quickRecordingController.clear();
 
     expect(await recordingArtifactRepository.getArtifact("retained-sheet")).toMatchObject({
       recordingId: "retained-sheet"
     });
   });
 
-  it("aborts quick clear when recording history changes before metadata commit", async () => {
+  it("skips post-commit quick clear artifact cleanup when recording history changes before artifact delete", async () => {
     const oldQuick = createRecording({
       id: "same-quick",
       name: "Old quick",
@@ -584,9 +664,7 @@ describe("recording artifact storage", () => {
       })
     );
 
-    await expect(quickRecordingRepository.clear()).rejects.toThrow(
-      "Recording history changed"
-    );
+    await expect(quickRecordingController.clear()).resolves.toBeUndefined();
 
     const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
 
@@ -642,7 +720,7 @@ describe("recording artifact storage", () => {
     });
   });
 
-  it("aborts sheet clear when recording history changes before metadata commit", async () => {
+  it("skips post-commit sheet clear artifact cleanup when recording history changes before artifact delete", async () => {
     const oldSheet = createRecording({
       id: "same-sheet",
       type: "sheet",
@@ -705,9 +783,7 @@ describe("recording artifact storage", () => {
       })
     );
 
-    await expect(recordingHistoryMetadataRepository.clear()).rejects.toThrow(
-      "Recording history changed"
-    );
+    await expect(recordingHistoryMetadataRepository.clear()).resolves.toBeUndefined();
 
     const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
 

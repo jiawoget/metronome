@@ -7,9 +7,7 @@ import {
 } from "@/domain/practice";
 import { parsePracticeTimeSignature } from "@/domain/practice/validation";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
-import { deleteOwnedRecordingArtifacts } from "@/lib/recordings-review/artifact-service";
-import { removeRecordingOrganizations } from "@/lib/recordings-review/recording-organization-metadata";
-import { removeRecordingReferencesFromTakeSelections } from "@/lib/recordings-review/take-selection-metadata";
+import { cleanupCommittedRecordingArtifacts } from "@/lib/recordings-review/artifact-service";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import type { PracticeRecordingMetadataRepository } from "@/services/practice-session";
 
@@ -83,10 +81,6 @@ function toReviewRecording(
   };
 }
 
-function isObjectWithId(value: unknown): value is { id?: string } {
-  return !!value && typeof value === "object";
-}
-
 async function listRecordingMetadata() {
   return recordingHistoryRepository
     .getSnapshot()
@@ -109,79 +103,18 @@ export const recordingHistoryMetadataRepository: PracticeRecordingMetadataReposi
     async saveRecordingMetadata(recording, session) {
       const reviewRecording = toReviewRecording(recording, session);
 
-      recordingHistoryRepository.mutateSnapshot((snapshot) => ({
-        ...snapshot,
-        sessions: [
-          validatePracticeSession(session),
-          ...snapshot.sessions.filter(
-            (item) => !isObjectWithId(item) || item.id !== session.id
-          )
-        ],
-        recordings: [
-          reviewRecording,
-          ...snapshot.recordings.filter(
-            (item) => item.id !== reviewRecording.id
-          )
-        ],
-      }));
+      recordingHistoryRepository.saveSheetRecordingMetadataWithSession({
+        recording: reviewRecording,
+        session: validatePracticeSession(session)
+      });
     },
 
     async clear() {
-      const writeSession = recordingHistoryRepository.beginSnapshotWrite();
-      const snapshot = writeSession.snapshot;
-      const sheetRecordingIds = new Set(
-        snapshot.recordings
-          .filter((recording) => recording.type === "sheet")
-          .map((recording) => recording.id)
+      const result = recordingHistoryRepository.clearSheetRecordings();
+
+      await cleanupCommittedRecordingArtifacts(
+        result.artifactCleanupRecordingIds
       );
-      const sheetSessionIds = new Set(
-        snapshot.recordings
-          .filter((recording) => sheetRecordingIds.has(recording.id))
-          .map((recording) => recording.sessionId)
-      );
-      await deleteOwnedRecordingArtifacts([...sheetRecordingIds], undefined, {
-        assertCurrent: () =>
-          recordingHistoryRepository.assertSnapshotWriteIsCurrent(writeSession)
-      });
-
-      recordingHistoryRepository.commitSnapshotWrite(writeSession, (currentSnapshot) => ({
-        ...currentSnapshot,
-        sessions: snapshot.sessions.filter((item) => {
-          if (!item || typeof item !== "object") {
-            return true;
-          }
-
-          const session = item as { id?: unknown; sourceType?: string };
-          const retainedRecordingUsesSession = snapshot.recordings.some(
-            (recording) =>
-              !sheetRecordingIds.has(recording.id) &&
-              typeof session.id === "string" &&
-              recording.sessionId === session.id
-          );
-
-          return !(
-            session.sourceType === "sheet" &&
-            typeof session.id === "string" &&
-            sheetSessionIds.has(session.id) &&
-            !retainedRecordingUsesSession
-          );
-        }),
-        recordings: snapshot.recordings.filter(
-          (recording) => !sheetRecordingIds.has(recording.id)
-        ),
-        errorMarkers: snapshot.errorMarkers.filter(
-          (marker) => !sheetRecordingIds.has(marker.recordingId)
-        ),
-        takeSelections: removeRecordingReferencesFromTakeSelections({
-          takeSelections: snapshot.takeSelections ?? [],
-          recordingIds: sheetRecordingIds,
-          updatedAt: new Date().toISOString()
-        }),
-        recordingOrganization: removeRecordingOrganizations({
-          organizations: snapshot.recordingOrganization ?? [],
-          recordingIds: sheetRecordingIds
-        })
-      }));
     },
 
     subscribe(listener) {

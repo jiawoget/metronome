@@ -1,11 +1,11 @@
-import type { SheetRecordingMetadata } from "@/domain/practice";
+import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
 import {
+  cleanupCommittedRecordingArtifacts,
   createRecordingArtifactRef,
   hasUsablePeaks,
   loadRecordingArtifactDetails,
   saveCapturedRecordingArtifact
 } from "@/lib/recordings-review/artifact-service";
-import { recordingArtifactRepository } from "@/infrastructure/db/recording-artifact-repository";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
 import type { MetronomeSettings, RecordingArtifact } from "@/lib/quick-metronome/types";
@@ -101,13 +101,23 @@ function createDraftSheetReviewRecording({
 }
 
 function saveSheetReviewRecording(recording: ReviewRecording) {
-  recordingHistoryRepository.mutateSnapshot((snapshot) => ({
-    ...snapshot,
-    recordings: [
-      recording,
-      ...snapshot.recordings.filter((item) => item.id !== recording.id)
-    ]
-  }));
+  recordingHistoryRepository.saveSheetReviewRecordingMetadata(recording);
+}
+
+async function rollbackSheetReviewRecordingMetadata(recording: {
+  id: string;
+  sessionId: string;
+  createdAt: string;
+  previousSession: PracticeSession | null;
+}) {
+  const result = recordingHistoryRepository.rollbackSheetRecordingMetadata({
+    recordingId: recording.id,
+    sessionId: recording.sessionId,
+    createdAt: recording.createdAt,
+    previousSession: recording.previousSession
+  });
+
+  await cleanupCommittedRecordingArtifacts(result.artifactCleanupRecordingIds);
 }
 
 export class BrowserSheetRecordingService implements SheetRecordingService {
@@ -147,8 +157,6 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
   async stopAndSave(input: SaveSheetRecordingInput): Promise<SaveSheetRecordingResult> {
     const artifact = await this.captureService.stop();
     let metadata: SheetRecordingMetadata | null = null;
-    let savedArtifactRecordingId: string | null = null;
-    const previousHistorySnapshot = recordingHistoryRepository.getSnapshot();
     const previousSession = await input.sessionService.getRecentSheetSession(input.sheetId);
 
     if (artifact.sizeBytes <= 0) {
@@ -198,7 +206,6 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         artifact,
         createdAt: decodedRecording.createdAt
       });
-      savedArtifactRecordingId = decodedRecording.id;
       const recording = {
         ...decodedRecording,
         durationMs: roundDuration(decodedDetails.decodedDurationMs),
@@ -231,7 +238,10 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         const rollbackErrors: unknown[] = [];
 
         try {
-          recordingHistoryRepository.saveSnapshot(previousHistorySnapshot);
+          await rollbackSheetReviewRecordingMetadata({
+            ...metadata,
+            previousSession
+          });
         } catch (rollbackError) {
           rollbackErrors.push(rollbackError);
         }
@@ -244,12 +254,6 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
           }
         } catch (rollbackError) {
           rollbackErrors.push(rollbackError);
-        }
-
-        if (savedArtifactRecordingId) {
-          await recordingArtifactRepository
-            .deleteArtifact(savedArtifactRecordingId)
-            .catch(() => undefined);
         }
 
         if (rollbackErrors.length > 0) {

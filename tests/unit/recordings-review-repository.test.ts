@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   RECORDINGS_STORAGE_KEY,
-  recordingHistoryRepository
+  recordingHistoryRepository,
+  seedRecordingHistoryForTests
 } from "@/lib/recordings-review/repository";
 import { recordingHistoryMetadataRepository } from "@/infrastructure/db/recording-history-metadata-repository";
 import type { RecordingReviewSnapshot, ReviewRecording } from "@/lib/recordings-review/types";
@@ -53,7 +54,7 @@ describe("recording history repository", () => {
   });
 
   it("deletes recording metadata, artifact access, and linked error markers together", () => {
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
     recordingHistoryRepository.deleteRecording("recording-1");
 
     const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
@@ -65,7 +66,7 @@ describe("recording history repository", () => {
   });
 
   it("creates sorted recording-scoped markers and persists deletion", () => {
-    recordingHistoryRepository.saveSnapshot({
+    seedRecordingHistoryForTests({
       ...snapshot,
       errorMarkers: []
     });
@@ -110,7 +111,7 @@ describe("recording history repository", () => {
   });
 
   it("rejects marker timestamps outside the recording duration", () => {
-    recordingHistoryRepository.saveSnapshot(snapshot);
+    seedRecordingHistoryForTests(snapshot);
 
     expect(() =>
       recordingHistoryRepository.createErrorMarker({
@@ -164,7 +165,7 @@ describe("recording history repository", () => {
       ]
     } as RecordingReviewSnapshot;
 
-    recordingHistoryRepository.saveSnapshot(invalidSnapshot);
+    seedRecordingHistoryForTests(invalidSnapshot);
 
     expect(recordingHistoryRepository.getSnapshot().errorMarkers).toEqual([
       {
@@ -235,7 +236,7 @@ describe("recording history repository", () => {
     ]);
     expect(recordingHistoryRepository.getErrorMarkers("recording-1")).toEqual(loadedSnapshot.errorMarkers);
 
-    recordingHistoryRepository.saveSnapshot(loadedSnapshot);
+    seedRecordingHistoryForTests(loadedSnapshot);
 
     const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
 
@@ -243,7 +244,7 @@ describe("recording history repository", () => {
   });
 
   it("stores and resolves separate best and active take metadata without changing latest-take ordering", () => {
-    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+    seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
     const [segmentGroup, noSegmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
 
@@ -287,7 +288,7 @@ describe("recording history repository", () => {
   });
 
   it("clears best and active independently and removes empty metadata records", () => {
-    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+    seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
     const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
 
@@ -321,7 +322,7 @@ describe("recording history repository", () => {
   });
 
   it("rejects take selections for recordings outside the target group and preserves stored state", () => {
-    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+    seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
     const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
 
@@ -336,7 +337,7 @@ describe("recording history repository", () => {
   });
 
   it("rejects stale group writes for deleted recordings and does not persist orphaned refs", () => {
-    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+    seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
     const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
 
@@ -447,7 +448,7 @@ describe("recording history repository", () => {
   });
 
   it("clears deleted recording refs from take selections while preserving unrelated groups", () => {
-    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+    seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
     const [segmentGroup, noSegmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
 
@@ -492,7 +493,7 @@ describe("recording history repository", () => {
   });
 
   it("leaves take selections unchanged when deleting an unselected recording", () => {
-    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+    seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
     const [segmentGroup, noSegmentGroup] =
       recordingHistoryRepository.getTakeGroups().takeGroups;
@@ -518,7 +519,7 @@ describe("recording history repository", () => {
   });
 
   it("stores recording-level tags, favorites, and archive metadata separately from take selections", () => {
-    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+    seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
     const quickRecording = recordingHistoryRepository.getRecording(
       "quick-review-recording"
@@ -581,7 +582,7 @@ describe("recording history repository", () => {
   });
 
   it("rejects invalid tag writes atomically and omits empty organization metadata", () => {
-    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+    seedRecordingHistoryForTests(createTakeSelectionSnapshot());
     recordingHistoryRepository.setRecordingTags("quick-review-recording", [
       "Warmup"
     ]);
@@ -691,7 +692,7 @@ describe("recording history repository", () => {
   });
 
   it("removes recording organization metadata when deleting recordings", () => {
-    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+    seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
     recordingHistoryRepository.setRecordingTags("quick-review-recording", [
       "Warmup"
@@ -775,7 +776,7 @@ describe("recording history repository", () => {
   });
 
   it("preserves review metadata across sheet snapshot writes and clears sheet organization with sheet metadata cleanup", async () => {
-    recordingHistoryRepository.saveSnapshot(createTakeSelectionSnapshot());
+    seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
     const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
 
@@ -837,7 +838,7 @@ describe("recording history repository", () => {
     const segmentContext = createSegmentContext();
     const sheetRecording = createReviewSheetRecording({ segmentContext });
 
-    recordingHistoryRepository.saveSnapshot({
+    seedRecordingHistoryForTests({
       sessions: [],
       recordings: [sheetRecording],
       errorMarkers: []
@@ -847,7 +848,7 @@ describe("recording history repository", () => {
 
     expect(loaded?.segmentContext).toEqual(segmentContext);
 
-    recordingHistoryRepository.saveSnapshot(recordingHistoryRepository.getSnapshot());
+    seedRecordingHistoryForTests(recordingHistoryRepository.getSnapshot());
 
     const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
 
@@ -894,7 +895,7 @@ describe("recording history repository", () => {
       recording
     ]);
 
-    recordingHistoryRepository.saveSnapshot({
+    seedRecordingHistoryForTests({
       sessions: [],
       recordings: [
         createReviewSheetRecording({

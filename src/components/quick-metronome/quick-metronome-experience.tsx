@@ -11,14 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PracticeSession } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
-import {
-  deleteQuickRecordingArtifact,
-  migrateQuickRecordingArtifacts,
-  saveQuickRecordingArtifact
-} from "@/lib/quick-metronome/artifact-controller";
+import { migrateQuickRecordingArtifacts } from "@/lib/quick-metronome/artifact-controller";
 import { calculateTapTempo } from "@/lib/quick-metronome/control";
 import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
-import { createQuickRecording } from "@/lib/quick-metronome/session";
 import { DEFAULT_METRONOME_SETTINGS } from "@/lib/quick-metronome/types";
 import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
@@ -171,47 +166,18 @@ export function QuickMetronomeExperience() {
   async function stopRecording() {
     setErrorMessage(null);
     setRecordingState("saving");
-    let savedArtifactRecordingId: string | null = null;
 
     try {
       const artifact = await recordingService.stop();
+      const result = await quickRecordingController.saveCapturedQuickRecording({
+        artifact,
+        session: currentSession,
+        settings,
+        isPlaying,
+        sessionService: browserPracticeSessionService
+      });
 
-      if (artifact.sizeBytes <= 0) {
-        throw new Error("Recording artifact was empty.");
-      }
-
-      if (artifact.analysis?.isSilent) {
-        throw new Error("Recording artifact did not contain audible input.");
-      }
-
-      const session = currentSession;
-
-      if (!session) {
-        throw new Error("Recording requires an active practice session.");
-      }
-
-      const recording = createQuickRecording({ artifact, session, settings });
-      await saveQuickRecordingArtifact({ recording, artifact });
-      savedArtifactRecordingId = recording.id;
-      const savedRecording =
-        quickRecordingController.saveQuickRecording(recording);
-      const nextSession =
-        await browserPracticeSessionService.linkRecordingToSession({
-          sessionId: session.id,
-          recordingId: savedRecording.id
-        });
-
-      if (!nextSession) {
-        throw new Error("Recording requires an active practice session.");
-      }
-
-      setCurrentSession(
-        isPlaying
-          ? nextSession
-          : await browserPracticeSessionService.endPracticeSession(
-              nextSession.id
-            )
-      );
+      setCurrentSession(result.session);
       setRecordingState("idle");
       setRecordingVersion((version) => version + 1);
       setMessage(
@@ -221,10 +187,6 @@ export function QuickMetronomeExperience() {
       );
     } catch (error) {
       setRecordingState("idle");
-      if (savedArtifactRecordingId) {
-        await deleteQuickRecordingArtifact(savedArtifactRecordingId)
-          .catch(() => undefined);
-      }
       setErrorMessage(
         error instanceof Error ? error.message : "Recording could not be saved."
       );

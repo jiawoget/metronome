@@ -301,6 +301,22 @@ function toLocalArtifact({
   };
 }
 
+function isValidOwnedArtifactBody(
+  artifact: LocalRecordingArtifact | null,
+  recording: ReviewRecording
+) {
+  return (
+    !!artifact &&
+    artifact.artifactId === recording.id &&
+    artifact.recordingId === recording.id &&
+    artifact.blob instanceof Blob &&
+    artifact.blob.size > 0 &&
+    Number.isFinite(artifact.sizeBytes) &&
+    artifact.sizeBytes > 0 &&
+    isPotentiallyDecodableAudioMime(artifact.mimeType)
+  );
+}
+
 export async function saveCapturedRecordingArtifact(
   input: {
     recordingId: string;
@@ -339,65 +355,49 @@ export async function saveCapturedRecordingArtifact(
   }
 }
 
-export async function deleteRecordingArtifactById(
-  recordingId: string,
+export async function cleanupCommittedRecordingArtifacts(
+  recordingIds: readonly string[],
   repository: RecordingArtifactRepository = recordingArtifactRepository
 ) {
-  await repository.deleteArtifact(recordingId);
-}
-
-export async function deleteOwnedRecordingArtifact(
-  recordingId: string,
-  repository: RecordingArtifactRepository = recordingArtifactRepository,
-  { assertCurrent }: { assertCurrent?: () => void } = {}
-) {
-  const normalizedRecordingId = recordingId.trim();
-
-  if (!normalizedRecordingId) {
-    return;
-  }
-
-  assertCurrent?.();
-  const artifact = await repository.getArtifact(normalizedRecordingId);
-
-  if (
-    artifact &&
-    artifact.recordingId === normalizedRecordingId &&
-    artifact.artifactId === normalizedRecordingId
-  ) {
-    assertCurrent?.();
-    await repository.deleteArtifact(normalizedRecordingId);
-  }
-}
-
-export async function deleteOwnedRecordingArtifacts(
-  recordingIds: readonly string[],
-  repository: RecordingArtifactRepository = recordingArtifactRepository,
-  { assertCurrent }: { assertCurrent?: () => void } = {}
-) {
-  const targetRecordingIds = new Set(
-    recordingIds.map((recordingId) => recordingId.trim()).filter(Boolean)
+  const candidateRecordingIds = recordingIds
+    .map((recordingId) => recordingId.trim())
+    .filter(Boolean);
+  const retainedRecordingIds = new Set(
+    recordingHistoryRepository
+      .getSnapshot()
+      .recordings.map((recording) => recording.id)
+  );
+  const cleanupRecordingIds = [...new Set(candidateRecordingIds)].filter(
+    (recordingId) => !retainedRecordingIds.has(recordingId)
   );
 
-  if (targetRecordingIds.size === 0) {
-    return;
+  if (cleanupRecordingIds.length === 0) {
+    return { recordingIds: [], error: null };
   }
 
-  assertCurrent?.();
-  const artifacts = await repository.listArtifactsForRecordings([
-    ...targetRecordingIds
-  ]);
-  const ownedArtifactIds = artifacts
-    .filter(
-      (artifact) =>
-        targetRecordingIds.has(artifact.recordingId) &&
-        artifact.artifactId === artifact.recordingId
-    )
-    .map((artifact) => artifact.artifactId);
+  try {
+    const artifacts = await repository.listArtifactsForRecordings(cleanupRecordingIds);
+    const retainedRecordingIdsAfterList = new Set(
+      recordingHistoryRepository
+        .getSnapshot()
+        .recordings.map((recording) => recording.id)
+    );
+    const ownedArtifactIds = artifacts
+      .filter(
+        (artifact) =>
+          cleanupRecordingIds.includes(artifact.recordingId) &&
+          artifact.artifactId === artifact.recordingId &&
+          !retainedRecordingIdsAfterList.has(artifact.recordingId)
+      )
+      .map((artifact) => artifact.artifactId);
 
-  if (ownedArtifactIds.length > 0) {
-    assertCurrent?.();
-    await repository.deleteArtifacts(ownedArtifactIds);
+    if (ownedArtifactIds.length > 0) {
+      await repository.deleteArtifacts(ownedArtifactIds);
+    }
+
+    return { recordingIds: cleanupRecordingIds, error: null };
+  } catch (error) {
+    return { recordingIds: cleanupRecordingIds, error };
   }
 }
 
@@ -584,18 +584,31 @@ export async function migrateLegacyRecordingArtifacts(
   const maxAttempts = 3;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const writeSession = recordingHistoryRepository.beginSnapshotWrite();
+    const writeSession =
+      recordingHistoryRepository.beginLegacyArtifactMigrationWrite();
     const entries: RecordingArtifactMigrationResult["entries"] = [];
     const migratedIds = new Set<string>();
 
     for (const recording of writeSession.snapshot.recordings) {
-      if (isValidArtifactRef(recording.artifactRef) && !recording.audioDataUrl?.trim()) {
-        entries.push({
-          recordingId: recording.id,
-          status: "skipped",
-          reason: "already-migrated"
-        });
-        continue;
+      if (isValidArtifactRef(recording.artifactRef)) {
+        try {
+          const existingArtifact = await repository.getArtifact(recording.id);
+
+          if (isValidOwnedArtifactBody(existingArtifact, recording)) {
+            if (recording.audioDataUrl?.trim()) {
+              migratedIds.add(recording.id);
+            } else {
+              entries.push({
+                recordingId: recording.id,
+                status: "skipped",
+                reason: "already-migrated"
+              });
+            }
+            continue;
+          }
+        } catch {
+          // Fall through to legacy restoration if bytes are still available.
+        }
       }
 
       if (!recording.audioDataUrl?.trim()) {
@@ -652,23 +665,26 @@ export async function migrateLegacyRecordingArtifacts(
 
     if (migratedIds.size > 0) {
       try {
-        recordingHistoryRepository.commitSnapshotWrite(writeSession, (snapshot) => ({
-          ...snapshot,
-          recordings: snapshot.recordings.map((recording) => {
-            if (!migratedIds.has(recording.id) || !recording.audioDataUrl?.trim()) {
-              return recording;
-            }
+        recordingHistoryRepository.commitLegacyArtifactMigrationWrite(
+          writeSession,
+          (snapshot) => ({
+            ...snapshot,
+            recordings: snapshot.recordings.map((recording) => {
+              if (!migratedIds.has(recording.id) || !recording.audioDataUrl?.trim()) {
+                return recording;
+              }
 
-            const metadata = { ...recording };
+              const metadata = { ...recording };
 
-            delete metadata.audioDataUrl;
+              delete metadata.audioDataUrl;
 
-            return {
-              ...metadata,
-              artifactRef: createRecordingArtifactRef(recording.id)
-            };
+              return {
+                ...metadata,
+                artifactRef: createRecordingArtifactRef(recording.id)
+              };
+            })
           })
-        }));
+        );
 
         for (const recordingId of migratedIds) {
           entries.push({

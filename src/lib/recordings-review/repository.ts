@@ -55,6 +55,11 @@ export type RecordingHistoryWriteSession = {
   snapshot: RecordingReviewSnapshot;
 };
 
+export type RecordingHistoryArtifactCleanupResult = {
+  snapshot: RecordingReviewSnapshot;
+  artifactCleanupRecordingIds: string[];
+};
+
 export class RecordingHistoryConcurrentWriteError extends Error {
   constructor() {
     super("Recording history changed before the metadata write could commit.");
@@ -325,7 +330,7 @@ function mutateSnapshotWithStaleWriteProtection(
   throw new RecordingHistoryConcurrentWriteError();
 }
 
-function beginSnapshotWrite(): RecordingHistoryWriteSession {
+function beginLegacyArtifactMigrationWrite(): RecordingHistoryWriteSession {
   const storage = getStorage();
   const originalRawSnapshot = storage?.getItem(RECORDINGS_STORAGE_KEY) ?? null;
   const rawBase = parseRawSnapshotObject(originalRawSnapshot);
@@ -337,7 +342,7 @@ function beginSnapshotWrite(): RecordingHistoryWriteSession {
   };
 }
 
-function commitSnapshotWrite(
+function commitLegacyArtifactMigrationWrite(
   session: RecordingHistoryWriteSession,
   mutate: (snapshot: RecordingReviewSnapshot) => RecordingReviewSnapshot
 ) {
@@ -383,16 +388,101 @@ function deleteRecordingFromSnapshot(
   });
 }
 
-function assertSnapshotWriteIsCurrent(session: RecordingHistoryWriteSession) {
-  const storage = getStorage();
-
-  if (!storage) {
-    return;
+function deleteRecordingsFromSnapshot(
+  snapshot: RecordingReviewSnapshot,
+  recordingIds: ReadonlySet<string>
+) {
+  if (recordingIds.size === 0) {
+    return snapshot;
   }
 
-  if (storage.getItem(RECORDINGS_STORAGE_KEY) !== session.originalRawSnapshot) {
-    throw new RecordingHistoryConcurrentWriteError();
-  }
+  return buildSnapshot({
+    ...snapshot,
+    recordings: snapshot.recordings.filter(
+      (recording) => !recordingIds.has(recording.id)
+    ),
+    errorMarkers: snapshot.errorMarkers.filter(
+      (marker) => !recordingIds.has(marker.recordingId)
+    ),
+    takeSelections: removeRecordingReferencesFromTakeSelections({
+      takeSelections: getNormalizedTakeSelections(snapshot),
+      recordingIds,
+      updatedAt: new Date().toISOString()
+    }),
+    recordingOrganization: removeRecordingOrganizations({
+      organizations: getNormalizedRecordingOrganizations(snapshot),
+      recordingIds
+    })
+  });
+}
+
+function getArtifactCleanupRecordingIds({
+  removedRecordingIds,
+  snapshot
+}: {
+  removedRecordingIds: readonly string[];
+  snapshot: RecordingReviewSnapshot;
+}) {
+  const retainedRecordingIds = new Set(
+    snapshot.recordings.map((recording) => recording.id)
+  );
+
+  return [...new Set(removedRecordingIds)].filter(
+    (recordingId) => !retainedRecordingIds.has(recordingId)
+  );
+}
+
+function omitPersistedAudioBody(recording: ReviewRecording): ReviewRecording {
+  return {
+    ...recording,
+    audioDataUrl: null
+  };
+}
+
+function isSessionWithId(value: unknown): value is { id: string; sourceType?: unknown } {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    typeof (value as { id?: unknown }).id === "string"
+  );
+}
+
+function removeUnreferencedSessions({
+  sessions,
+  removedRecordings,
+  retainedRecordings,
+  sourceType,
+  removeAnyUnreferencedSourceSession = false
+}: {
+  sessions: unknown[];
+  removedRecordings: ReviewRecording[];
+  retainedRecordings: ReviewRecording[];
+  sourceType: "quick" | "sheet";
+  removeAnyUnreferencedSourceSession?: boolean;
+}) {
+  const removedSessionIds = new Set(
+    removedRecordings.map((recording) => recording.sessionId)
+  );
+
+  return sessions.filter((session) => {
+    if (!isSessionWithId(session)) {
+      return true;
+    }
+
+    const isSourceSession = session.sourceType === sourceType;
+    const wasTargetSession =
+      isSourceSession &&
+      (removeAnyUnreferencedSourceSession || removedSessionIds.has(session.id));
+    const retainedRecordingUsesSession = retainedRecordings.some(
+      (recording) => recording.sessionId === session.id
+    );
+
+    if (!wasTargetSession || retainedRecordingUsesSession) {
+      return true;
+    }
+
+    return session.sourceType !== sourceType;
+  });
 }
 
 function writeSnapshot(snapshot: RecordingReviewSnapshot) {
@@ -629,6 +719,255 @@ function updateRecordingOrganization({
   return writeSnapshot(nextSnapshot);
 }
 
+function saveQuickRecordingMetadata(recording: ReviewRecording) {
+  if (recording.type !== "quick") {
+    throw new Error("Quick recording metadata must have type quick.");
+  }
+
+  const recordingToSave = omitPersistedAudioBody(recording);
+
+  return mutateSnapshotWithStaleWriteProtection((snapshot) => {
+    if (snapshot.recordings.some((item) => item.id === recordingToSave.id)) {
+      throw new Error("Recording id collision prevented artifact metadata save.");
+    }
+
+    return buildSnapshot({
+      ...snapshot,
+      recordings: [
+        recordingToSave,
+        ...snapshot.recordings.filter((item) => item.id !== recordingToSave.id)
+      ]
+    });
+  });
+}
+
+function saveSheetReviewRecordingMetadata(recording: ReviewRecording) {
+  if (recording.type !== "sheet") {
+    throw new Error("Sheet recording metadata must have type sheet.");
+  }
+
+  const recordingToSave = omitPersistedAudioBody(recording);
+
+  return mutateSnapshotWithStaleWriteProtection((snapshot) =>
+    buildSnapshot({
+      ...snapshot,
+      recordings: [
+        recordingToSave,
+        ...snapshot.recordings.filter((item) => item.id !== recordingToSave.id)
+      ]
+    })
+  );
+}
+
+function saveSheetRecordingMetadataWithSession({
+  recording,
+  session
+}: {
+  recording: ReviewRecording;
+  session: unknown;
+}) {
+  if (recording.type !== "sheet") {
+    throw new Error("Sheet recording metadata must have type sheet.");
+  }
+
+  const recordingToSave = omitPersistedAudioBody(recording);
+  const sessionId = isSessionWithId(session) ? session.id : null;
+
+  return mutateSnapshotWithStaleWriteProtection((snapshot) =>
+    buildSnapshot({
+      ...snapshot,
+      sessions: [
+        session,
+        ...snapshot.sessions.filter(
+          (item) => !sessionId || !isSessionWithId(item) || item.id !== sessionId
+        )
+      ],
+      recordings: [
+        recordingToSave,
+        ...snapshot.recordings.filter(
+          (item) => item.id !== recordingToSave.id
+        )
+      ]
+    })
+  );
+}
+
+function deleteQuickRecordingMetadataByIdentity({
+  recordingId,
+  sessionId,
+  createdAt
+}: {
+  recordingId: string;
+  sessionId: string;
+  createdAt: string;
+}): RecordingHistoryArtifactCleanupResult {
+  let removedRecordingIds: string[] = [];
+  const snapshot = mutateSnapshotWithStaleWriteProtection((currentSnapshot) => {
+    const target = currentSnapshot.recordings.find(
+      (item) =>
+        item.id === recordingId &&
+        item.type === "quick" &&
+        item.sessionId === sessionId &&
+        item.createdAt === createdAt
+    );
+
+    if (!target) {
+      removedRecordingIds = [];
+      return currentSnapshot;
+    }
+
+    removedRecordingIds = [target.id];
+
+    return deleteRecordingsFromSnapshot(currentSnapshot, new Set(removedRecordingIds));
+  });
+
+  return {
+    snapshot,
+    artifactCleanupRecordingIds: getArtifactCleanupRecordingIds({
+      removedRecordingIds,
+      snapshot
+    })
+  };
+}
+
+function rollbackSheetRecordingMetadata({
+  recordingId,
+  sessionId,
+  createdAt,
+  previousSession
+}: {
+  recordingId: string;
+  sessionId: string;
+  createdAt: string;
+  previousSession: unknown | null;
+}): RecordingHistoryArtifactCleanupResult {
+  let removedRecordingIds: string[] = [];
+  const snapshot = mutateSnapshotWithStaleWriteProtection((currentSnapshot) => {
+    const target = currentSnapshot.recordings.find(
+      (item) =>
+        item.id === recordingId &&
+        item.type === "sheet" &&
+        item.sessionId === sessionId &&
+        item.createdAt === createdAt
+    );
+
+    if (!target) {
+      removedRecordingIds = [];
+      return currentSnapshot;
+    }
+
+    removedRecordingIds = [target.id];
+    const retainedRecordings = currentSnapshot.recordings.filter(
+      (item) => !removedRecordingIds.includes(item.id)
+    );
+    const retainedSessionIsReferenced = retainedRecordings.some(
+      (item) => item.sessionId === sessionId
+    );
+    const sessions = previousSession
+      ? [
+          previousSession,
+          ...currentSnapshot.sessions.filter(
+            (session) => !isSessionWithId(session) || session.id !== sessionId
+          )
+        ]
+      : currentSnapshot.sessions.filter((session) => {
+          if (!isSessionWithId(session)) {
+            return true;
+          }
+
+          return !(
+            session.id === sessionId &&
+            session.sourceType === "sheet" &&
+            !retainedSessionIsReferenced
+          );
+        });
+
+    return buildSnapshot({
+      ...deleteRecordingsFromSnapshot(currentSnapshot, new Set(removedRecordingIds)),
+      sessions
+    });
+  });
+
+  return {
+    snapshot,
+    artifactCleanupRecordingIds: getArtifactCleanupRecordingIds({
+      removedRecordingIds,
+      snapshot
+    })
+  };
+}
+
+function deleteRecordingMetadata(recordingId: string): RecordingHistoryArtifactCleanupResult {
+  let removedRecordingIds: string[] = [];
+  const snapshot = mutateSnapshotWithStaleWriteProtection((currentSnapshot) => {
+    const target = currentSnapshot.recordings.find(
+      (recording) => recording.id === recordingId
+    );
+
+    if (!target) {
+      removedRecordingIds = [];
+      return currentSnapshot;
+    }
+
+    removedRecordingIds = [target.id];
+
+    return deleteRecordingFromSnapshot(currentSnapshot, target.id);
+  });
+
+  return {
+    snapshot,
+    artifactCleanupRecordingIds: getArtifactCleanupRecordingIds({
+      removedRecordingIds,
+      snapshot
+    })
+  };
+}
+
+function clearRecordingsByType(
+  recordingType: "quick" | "sheet"
+): RecordingHistoryArtifactCleanupResult {
+  let removedRecordings: ReviewRecording[] = [];
+  const snapshot = mutateSnapshotWithStaleWriteProtection((currentSnapshot) => {
+    removedRecordings = currentSnapshot.recordings.filter(
+      (recording) => recording.type === recordingType
+    );
+
+    if (removedRecordings.length === 0) {
+      return currentSnapshot;
+    }
+
+    const removedRecordingIds = new Set(
+      removedRecordings.map((recording) => recording.id)
+    );
+    const retainedRecordings = currentSnapshot.recordings.filter(
+      (recording) => !removedRecordingIds.has(recording.id)
+    );
+
+    return buildSnapshot({
+      ...deleteRecordingsFromSnapshot(currentSnapshot, removedRecordingIds),
+      sessions: removeUnreferencedSessions({
+        sessions: currentSnapshot.sessions,
+        removedRecordings,
+        retainedRecordings,
+        sourceType: recordingType,
+        removeAnyUnreferencedSourceSession: recordingType === "quick"
+      })
+    });
+  });
+
+  return {
+    snapshot,
+    artifactCleanupRecordingIds: getArtifactCleanupRecordingIds({
+      removedRecordingIds: removedRecordings.map((recording) => recording.id),
+      snapshot
+    })
+  };
+}
+
+export function seedRecordingHistoryForTests(snapshot: RecordingReviewSnapshot) {
+  return writeSnapshot(snapshot);
+}
+
 export const recordingHistoryRepository = {
   getSnapshot() {
     return readSnapshot();
@@ -694,31 +1033,27 @@ export const recordingHistoryRepository = {
     return this.getRecording(recordingId)?.audioDataUrl ?? null;
   },
 
-  saveSnapshot(snapshot: RecordingReviewSnapshot) {
-    return writeSnapshot(snapshot);
+  saveQuickRecordingMetadata,
+
+  saveSheetReviewRecordingMetadata,
+
+  saveSheetRecordingMetadataWithSession,
+
+  deleteQuickRecordingMetadataByIdentity,
+
+  rollbackSheetRecordingMetadata,
+
+  clearQuickRecordings() {
+    return clearRecordingsByType("quick");
   },
 
-  mutateSnapshot(
-    mutate: (snapshot: RecordingReviewSnapshot) => RecordingReviewSnapshot,
-    options?: { maxAttempts?: number }
-  ) {
-    return mutateSnapshotWithStaleWriteProtection((snapshot) => mutate(snapshot), options);
+  clearSheetRecordings() {
+    return clearRecordingsByType("sheet");
   },
 
-  beginSnapshotWrite,
+  beginLegacyArtifactMigrationWrite,
 
-  assertSnapshotWriteIsCurrent,
-
-  commitSnapshotWrite,
-
-  deleteRecordingFromWriteSession(
-    session: RecordingHistoryWriteSession,
-    recordingId: string
-  ) {
-    return commitSnapshotWrite(session, (snapshot) =>
-      deleteRecordingFromSnapshot(snapshot, recordingId)
-    );
-  },
+  commitLegacyArtifactMigrationWrite,
 
   setBestTake(group: RecordingTakeGroup, recordingId: string | null) {
     const snapshot = readSnapshot();
@@ -939,9 +1274,7 @@ export const recordingHistoryRepository = {
   },
 
   deleteRecording(recordingId: string) {
-    return mutateSnapshotWithStaleWriteProtection((snapshot) =>
-      deleteRecordingFromSnapshot(snapshot, recordingId)
-    );
+    return deleteRecordingMetadata(recordingId);
   },
 
   clear() {

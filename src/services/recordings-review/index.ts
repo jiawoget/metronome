@@ -5,7 +5,7 @@ import {
   type RecordingAudioExportResult
 } from "@/lib/recordings-review/audio-export";
 import {
-  deleteOwnedRecordingArtifact,
+  cleanupCommittedRecordingArtifacts,
   migrateLegacyRecordingArtifacts
 } from "@/lib/recordings-review/artifact-service";
 import {
@@ -74,19 +74,12 @@ export function createRecordingsReviewService({
     return historyRepository.resolveTakeSelection(group);
   },
   async deleteRecording(recordingId) {
-    const writeSession = historyRepository.beginSnapshotWrite();
-    const recording =
-      writeSession.snapshot.recordings.find((item) => item.id === recordingId) ??
-      null;
+    const result = historyRepository.deleteRecording(recordingId);
 
-    if (recording?.artifactRef?.kind === "indexeddb") {
-      await deleteOwnedRecordingArtifact(recording.id, artifactRepository, {
-        assertCurrent: () =>
-          historyRepository.assertSnapshotWriteIsCurrent(writeSession)
-      });
-    }
-
-    historyRepository.deleteRecordingFromWriteSession(writeSession, recordingId);
+    await cleanupCommittedRecordingArtifacts(
+      result.artifactCleanupRecordingIds,
+      artifactRepository
+    );
   },
   setRecordingFavorite(recordingId, favorite) {
     historyRepository.setRecordingFavorite(recordingId, favorite);

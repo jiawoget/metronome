@@ -1,14 +1,74 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { createElement } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RECORDING_HISTORY_STORAGE_KEY } from "@/infrastructure/storage/storage-contracts";
+import {
+  validatePracticeSession,
+  type PracticeSession
+} from "@/domain/practice";
+import { QuickMetronomeExperience } from "@/components/quick-metronome/quick-metronome-experience";
+import { recordingArtifactRepository } from "@/infrastructure/db/recording-artifact-repository";
 import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
-import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
+import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
 import { createQuickRecording } from "@/lib/quick-metronome/session";
 import { DEFAULT_METRONOME_SETTINGS, type QuickRecording, type RecordingArtifact } from "@/lib/quick-metronome/types";
+import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
+import {
+  createPracticeSessionService,
+  type PracticeRecordingMetadataRepository,
+  type PracticeSessionRepository
+} from "@/services/practice-session";
+
+const quickExperienceMocks = vi.hoisted(() => ({
+  metronomeService: {
+    onTick: vi.fn(() => () => undefined),
+    update: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn()
+  },
+  practiceSessionService: {
+    ensureQuickSession: vi.fn(),
+    linkRecordingToSession: vi.fn(),
+    endPracticeSession: vi.fn(),
+    restorePracticeSessionSnapshot: vi.fn(),
+    deletePracticeSessionSnapshot: vi.fn(),
+    updatePracticeSessionDuration: vi.fn()
+  },
+  recordingService: {
+    start: vi.fn(),
+    stop: vi.fn()
+  }
+}));
+
+vi.mock("@/services/metronome/browser", () => ({
+  createBrowserMetronomeService: () => quickExperienceMocks.metronomeService
+}));
+
+vi.mock("@/services/recording/browser", () => ({
+  createBrowserRecordingCaptureService: () => quickExperienceMocks.recordingService
+}));
+
+vi.mock("@/infrastructure/db/browser-practice-session-service", () => ({
+  browserPracticeSessionService: quickExperienceMocks.practiceSessionService
+}));
+
+function saveQuickRecordingForTest(recording: QuickRecording) {
+  recordingHistoryRepository.saveQuickRecordingMetadata(recording);
+
+  return {
+    ...recording,
+    audioDataUrl: null
+  };
+}
 
 describe("quick metronome recording metadata", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    cleanup();
+    vi.clearAllMocks();
     window.localStorage.clear();
+    await recordingArtifactRepository.clear().catch(() => undefined);
   });
 
   it("creates quick recording metadata linked to a session and not to a sheet", () => {
@@ -54,7 +114,7 @@ describe("quick metronome recording metadata", () => {
   });
 
   it("rejects a reused recording id instead of repointing artifact metadata", async () => {
-    await quickRecordingRepository.clear();
+    await quickRecordingController.clear();
     const session = { id: "session-canonical-quick" };
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
@@ -72,10 +132,10 @@ describe("quick metronome recording metadata", () => {
       }
     };
     const recording = createQuickRecording({ artifact, session, settings: DEFAULT_METRONOME_SETTINGS });
-    const firstSave = quickRecordingRepository.saveQuickRecording(recording);
+    const firstSave = saveQuickRecordingForTest(recording);
 
     expect(() =>
-      quickRecordingRepository.saveQuickRecording({
+      saveQuickRecordingForTest({
         ...recording,
         artifactAnalysis: {
           ...recording.artifactAnalysis!,
@@ -85,7 +145,7 @@ describe("quick metronome recording metadata", () => {
       })
     ).toThrow("Recording id collision");
 
-    const snapshot = quickRecordingRepository.getSnapshot();
+    const snapshot = recordingHistoryRepository.getSnapshot();
 
     expect(firstSave.id).toBe(recording.id);
     expect(snapshot.recordings).toHaveLength(1);
@@ -96,7 +156,7 @@ describe("quick metronome recording metadata", () => {
   });
 
   it("preserves review organization and take selection metadata when saving a new quick recording", async () => {
-    await quickRecordingRepository.clear();
+    await quickRecordingController.clear();
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
       dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
@@ -156,7 +216,7 @@ describe("quick metronome recording metadata", () => {
       })
     );
 
-    quickRecordingRepository.saveQuickRecording(newRecording);
+    saveQuickRecordingForTest(newRecording);
 
     const persisted = JSON.parse(window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}");
 
@@ -167,6 +227,260 @@ describe("quick metronome recording metadata", () => {
       newRecording.id,
       existingRecording.id
     ]);
+  });
+
+  it("rolls back quick metadata written before a session link failure without restoring stale snapshots", async () => {
+    await quickRecordingController.clear();
+    const artifact: RecordingArtifact = {
+      blob: new Blob(["synthetic audio"]),
+      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
+      durationMs: 1_245.4,
+      mimeType: "audio/webm",
+      sizeBytes: 15,
+      analysis: null
+    };
+    const recording = createQuickRecording({
+      artifact,
+      session: { id: "session-new-quick" },
+      settings: DEFAULT_METRONOME_SETTINGS,
+      createdAt: new Date("2026-06-21T08:02:00Z")
+    });
+
+    saveQuickRecordingForTest(recording);
+    window.localStorage.setItem(
+      RECORDING_HISTORY_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [],
+        recordings: [
+          ...recordingHistoryRepository
+            .getSnapshot()
+            .recordings.filter((item) => item.id !== recording.id),
+          recordingHistoryRepository.getSnapshot().recordings.find(
+            (item) => item.id === recording.id
+          ),
+          createStoredQuickRecording({
+            id: "concurrent-quick",
+            sessionId: "session-concurrent"
+          })
+        ].filter(Boolean),
+        errorMarkers: [],
+        futureSnapshotField: { preserve: true }
+      })
+    );
+
+    recordingHistoryRepository.deleteQuickRecordingMetadataByIdentity({
+      recordingId: recording.id,
+      sessionId: recording.sessionId,
+      createdAt: recording.createdAt
+    });
+
+    const persisted = JSON.parse(window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}");
+
+    expect(persisted.recordings.map((item: { id: string }) => item.id)).toEqual([
+      "concurrent-quick"
+    ]);
+    expect(persisted.futureSnapshotField).toEqual({ preserve: true });
+  });
+
+  it("restores practice-session metadata when failure happens after quick session link", async () => {
+    await quickRecordingController.clear();
+    const sessions = new Map<string, PracticeSession>();
+    const repository: PracticeSessionRepository = {
+      async listSessions() {
+        return [...sessions.values()];
+      },
+      async getSession(sessionId) {
+        return sessions.get(sessionId) ?? null;
+      },
+      async getRecentSession() {
+        return [...sessions.values()][0] ?? null;
+      },
+      async getRecentSheetSession() {
+        return null;
+      },
+      async saveSession(session) {
+        sessions.set(session.id, validatePracticeSession(session));
+      },
+      async deleteSession(sessionId) {
+        sessions.delete(sessionId);
+      },
+      async clear() {
+        sessions.clear();
+      }
+    };
+    const recordingRepository: PracticeRecordingMetadataRepository = {
+      async listRecordingMetadata() {
+        return [];
+      },
+      async listRecordingMetadataForSession() {
+        return [];
+      },
+      async saveRecordingMetadata() {
+        return undefined;
+      },
+      async clear() {
+        return undefined;
+      }
+    };
+    const sessionService = createPracticeSessionService({
+      repository,
+      recordingRepository,
+      sheetGateway: {
+        async getSheetContext() {
+          return null;
+        },
+        async updateLastPracticedAt() {
+          return undefined;
+        }
+      },
+      now: () => new Date("2026-06-21T08:03:00.000Z"),
+      createId: () => "session-quick"
+    });
+    const previousSession = await sessionService.ensureQuickSession({
+      trigger: "recording",
+      bpm: 96,
+      timeSignature: "4/4"
+    });
+    const artifact: RecordingArtifact = {
+      blob: new Blob(["synthetic audio"]),
+      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
+      durationMs: 1_245.4,
+      mimeType: "audio/webm",
+      sizeBytes: 15,
+      analysis: null
+    };
+    await expect(
+      quickRecordingController.saveCapturedQuickRecording({
+        artifact,
+        session: previousSession,
+        settings: DEFAULT_METRONOME_SETTINGS,
+        isPlaying: false,
+        sessionService: {
+          linkRecordingToSession: sessionService.linkRecordingToSession,
+          endPracticeSession: async () => {
+            throw new Error("end failed");
+          },
+          restorePracticeSessionSnapshot:
+            sessionService.restorePracticeSessionSnapshot,
+          deletePracticeSessionSnapshot:
+            sessionService.deletePracticeSessionSnapshot
+        }
+      })
+    ).rejects.toThrow("end failed");
+
+    expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
+    await expect(sessionService.getRecentSession()).resolves.toMatchObject({
+      id: previousSession.id,
+      recordingCount: 0,
+      latestRecordingId: null
+    });
+  });
+
+  it("rolls back recording metadata, artifact, and linked session through the UI stop flow when ending the session fails", async () => {
+    const user = userEvent.setup();
+    const previousSession: PracticeSession = {
+      id: "session-ui-quick",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T08:00:00.000Z",
+      endedAt: null,
+      durationMs: 0,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T08:00:00.000Z"
+    };
+    const artifact: RecordingArtifact = {
+      blob: new Blob(["synthetic audio"], { type: "audio/webm" }),
+      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
+      durationMs: 1_245.4,
+      mimeType: "audio/webm",
+      sizeBytes: 15,
+      analysis: {
+        decodedDurationMs: 1_230,
+        sampleRate: 48_000,
+        peakAmplitude: 0.2,
+        rmsAmplitude: 0.12,
+        estimatedFrequencyHz: 440,
+        isSilent: false
+      }
+    };
+    let storedSession = previousSession;
+    let linkedRecordingId: string | null = null;
+
+    quickExperienceMocks.recordingService.start.mockResolvedValue(undefined);
+    quickExperienceMocks.recordingService.stop.mockResolvedValue(artifact);
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(
+      previousSession
+    );
+    quickExperienceMocks.practiceSessionService.linkRecordingToSession.mockImplementation(
+      async ({ recordingId }: { recordingId?: string | null }) => {
+        if (!recordingId) {
+          return null;
+        }
+
+        linkedRecordingId = recordingId;
+        storedSession = {
+          ...previousSession,
+          recordingCount: 1,
+          latestRecordingId: recordingId,
+          updatedAt: "2026-06-21T08:01:00.000Z"
+        };
+
+        return storedSession;
+      }
+    );
+    quickExperienceMocks.practiceSessionService.endPracticeSession.mockRejectedValue(
+      new Error("end failed")
+    );
+    quickExperienceMocks.practiceSessionService.restorePracticeSessionSnapshot.mockImplementation(
+      async (session: PracticeSession) => {
+        storedSession = session;
+
+        return session;
+      }
+    );
+    quickExperienceMocks.practiceSessionService.deletePracticeSessionSnapshot.mockResolvedValue(
+      undefined
+    );
+
+    render(createElement(QuickMetronomeExperience));
+
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    await waitFor(() => {
+      expect(quickExperienceMocks.recordingService.start).toHaveBeenCalledOnce();
+    });
+
+    const stopRecordingButton = screen.getByRole("button", {
+      name: "Stop recording"
+    });
+
+    await waitFor(() => {
+      expect(stopRecordingButton).toBeEnabled();
+    });
+    await user.click(stopRecordingButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("end failed");
+    });
+
+    expect(linkedRecordingId).toMatch(/^recording_/);
+    expect(quickExperienceMocks.practiceSessionService.linkRecordingToSession).toHaveBeenCalledWith({
+      sessionId: previousSession.id,
+      recordingId: linkedRecordingId
+    });
+    expect(quickExperienceMocks.practiceSessionService.endPracticeSession).toHaveBeenCalledWith(
+      previousSession.id
+    );
+    expect(
+      quickExperienceMocks.practiceSessionService.restorePracticeSessionSnapshot
+    ).toHaveBeenCalledWith(previousSession);
+    expect(storedSession).toEqual(previousSession);
+    expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
+    await expect(
+      recordingArtifactRepository.getArtifact(linkedRecordingId!)
+    ).resolves.toBeNull();
   });
 
   it("clears only quick recordings and explicitly quick unreferenced sessions", async () => {
@@ -225,7 +539,7 @@ describe("quick metronome recording metadata", () => {
       })
     );
 
-    await quickRecordingRepository.clear();
+    await quickRecordingController.clear();
 
     const persisted = JSON.parse(window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}");
 
