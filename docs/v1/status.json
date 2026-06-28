@@ -853,7 +853,7 @@
                                          {
                                              "pack":  "pack-c-codebase-slimming",
                                              "scope":  "Maintenance/codebase slimming workstream for reducing unnecessary compatibility, facade, duplicate IO, stale API, and test fixture bloat while preserving verified Pack 1 and Pack 2 behavior. This pack is not product feature scope and must run one small PR at a time with plan review before coding.",
-                                             "status":  "verified",
+                                             "status":  "in_progress",
                                              "slices":  [
                                                             {
                                                                 "slice":  "C2-01 safe-wrapper-api-cleanup",
@@ -882,6 +882,14 @@
                                                             {
                                                                 "slice":  "C2-07 test-fixture-slimming",
                                                                 "status":  "verified"
+                                                            },
+                                                            {
+                                                                "slice":  "C2-08 large-unit-fixture-follow-up",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "C2-09 e2e-fixture-and-spec-slimming",
+                                                                "status":  "not_started"
                                                             }
                                                         ]
                                          }

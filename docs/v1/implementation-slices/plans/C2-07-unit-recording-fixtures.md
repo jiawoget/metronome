@@ -14,6 +14,11 @@
 - This plan intentionally covers the first, narrow C2-07 PR: unit recording
   factories only. E2E fixture slimming is left for a follow-up PR after this
   one is reviewed and merged.
+- `verified` here means this narrow first fixture PR was merged and checked. It
+  does not mean the whole Phase 7 test-slimming work is complete.
+- Remaining Phase 7 work is tracked separately:
+  - `C2-08 large-unit-fixture-follow-up`
+  - `C2-09 e2e-fixture-and-spec-slimming`
 
 ## Problem
 
