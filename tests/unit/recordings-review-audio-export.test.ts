@@ -9,8 +9,25 @@ import {
 } from "@/lib/recordings-review/audio-export";
 import { isPotentiallyDecodableAudioMime } from "@/lib/recordings-review/audio-mime";
 import { RecordingArtifactError } from "@/lib/recordings-review/artifact-model";
-import { createRecordingArtifactRef } from "@/lib/recordings-review/artifact-storage";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
+import {
+  makeQuickReviewRecording,
+  makeSheetReviewRecording,
+  type MakeQuickReviewRecordingOverrides,
+  type MakeSheetReviewRecordingOverrides
+} from "./factories/recordings-review";
+
+const audioExportQuickDefaults: MakeQuickReviewRecordingOverrides = {
+  createdAt: "2026-06-21T09:00:00",
+  mimeType: "audio/webm",
+  audioDataUrl: "data:audio/webm;base64,AQID"
+};
+
+const audioExportSheetDefaults: MakeSheetReviewRecordingOverrides = {
+  createdAt: "2026-06-21T12:00:00",
+  mimeType: "audio/webm",
+  audioDataUrl: "data:audio/webm;base64,AQID"
+};
 
 describe("recordings review audio export", () => {
   it("exports a supported quick recording artifact through the injected adapter once", async () => {
@@ -369,61 +386,14 @@ function createArtifactResolver() {
   };
 }
 
-function createQuickRecording(
-  overrides: Partial<ReviewRecording> = {}
-): ReviewRecording {
-  const recording: ReviewRecording = {
-    id: "quick-recording",
-    type: "quick",
-    name: "Quick take",
-    sessionId: "session-quick",
-    sheetId: null,
-    createdAt: "2026-06-21T09:00:00",
-    durationMs: 10_000,
-    sizeBytes: 128,
-    mimeType: "audio/webm",
-    audioDataUrl: "data:audio/webm;base64,AQID",
-    settings: {
-      bpm: 120,
-      timeSignature: "4/4"
-    },
-    ...overrides
-  };
-
-  return Object.prototype.hasOwnProperty.call(overrides, "artifactRef")
-    ? recording
-    : {
-        ...recording,
-        artifactRef: createRecordingArtifactRef(recording.id)
-      };
+function createQuickRecording(overrides: MakeQuickReviewRecordingOverrides = {}) {
+  return makeQuickReviewRecording(overrides, {
+    defaults: audioExportQuickDefaults
+  });
 }
 
-function createSheetRecording(
-  overrides: Partial<ReviewRecording> = {}
-): ReviewRecording {
-  const recording: ReviewRecording = {
-    id: "sheet-recording",
-    type: "sheet",
-    name: "Sheet take",
-    sessionId: "session-sheet",
-    sheetId: "sheet-alpha",
-    sheetName: "Alpha Etude",
-    createdAt: "2026-06-21T12:00:00",
-    durationMs: 12_000,
-    sizeBytes: 256,
-    mimeType: "audio/webm",
-    audioDataUrl: "data:audio/webm;base64,AQID",
-    settings: {
-      bpm: 96,
-      timeSignature: "4/4"
-    },
-    ...overrides
-  };
-
-  return Object.prototype.hasOwnProperty.call(overrides, "artifactRef")
-    ? recording
-    : {
-        ...recording,
-        artifactRef: createRecordingArtifactRef(recording.id)
-      };
+function createSheetRecording(overrides: MakeSheetReviewRecordingOverrides = {}) {
+  return makeSheetReviewRecording(overrides, {
+    defaults: audioExportSheetDefaults
+  });
 }

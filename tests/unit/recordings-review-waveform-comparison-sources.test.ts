@@ -8,7 +8,6 @@ import {
   recordingArtifactRepository,
   type LocalRecordingArtifact
 } from "@/infrastructure/db/recording-artifact-repository";
-import { createRecordingArtifactRef } from "@/lib/recordings-review/artifact-storage";
 import {
   loadWaveformComparisonSource,
   loadWaveformComparisonSources,
@@ -19,7 +18,17 @@ import type {
   RecordingReviewSnapshot,
   ReviewRecording
 } from "@/lib/recordings-review/types";
-import type { SheetRecordingSegmentContext } from "@/domain/practice";
+import {
+  makeQuickReviewRecording as createQuickRecording,
+  makeSheetRecordingSegmentContext as createSegmentContext,
+  makeSheetReviewRecording,
+  type MakeSheetReviewRecordingOverrides
+} from "./factories/recordings-review";
+
+const waveformSheetDefaults: MakeSheetReviewRecordingOverrides = {
+  mimeType: "audio/wav",
+  audioDataUrl: "data:audio/wav;base64,UklGRg=="
+};
 
 let artifactBodies: Map<string, LocalRecordingArtifact>;
 
@@ -551,89 +560,10 @@ function createGroupedSnapshot(): RecordingReviewSnapshot {
   };
 }
 
-function createSegmentContext(
-  overrides: Partial<SheetRecordingSegmentContext> = {}
-): SheetRecordingSegmentContext {
-  return {
-    segmentId: "segment-alpha",
-    segmentName: "Bridge",
-    range: {
-      startMeasure: 5,
-      endMeasure: 12
-    },
-    targetBpm: 96,
-    measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
-    measureGridSnapshot: {
-      bpm: 96,
-      timeSignature: "4/4",
-      pickupBeats: 0,
-      measureOneOffsetMs: 1_000
-    },
-    measureRangeMs: {
-      startMs: 11_000,
-      endMs: 31_000
-    },
-    ...overrides
-  };
-}
-
-function createSheetRecording(
-  overrides: Partial<Omit<ReviewRecording, "segmentContext">> & {
-    segmentContext?: unknown;
-  } = {}
-): ReviewRecording {
-  const recording = {
-    id: "sheet-recording",
-    type: "sheet",
-    name: "Sheet take",
-    sessionId: "session-sheet",
-    sheetId: "sheet-alpha",
-    sheetName: "Alpha Etude",
-    createdAt: "2026-06-21T12:00:00.000Z",
-    durationMs: 12_000,
-    sizeBytes: 256,
-    mimeType: "audio/wav",
-    audioDataUrl: "data:audio/wav;base64,UklGRg==",
-    settings: {
-      bpm: 96,
-      timeSignature: "4/4"
-    },
-    ...overrides
-  } as ReviewRecording;
-
-  return Object.prototype.hasOwnProperty.call(overrides, "artifactRef")
-    ? recording
-    : {
-        ...recording,
-        artifactRef: createRecordingArtifactRef(recording.id)
-      };
-}
-
-function createQuickRecording(overrides: Partial<ReviewRecording> = {}): ReviewRecording {
-  const recording: ReviewRecording = {
-    id: "quick-recording",
-    type: "quick",
-    name: "Quick take",
-    sessionId: "session-quick",
-    sheetId: null,
-    createdAt: "2026-06-21T09:00:00.000Z",
-    durationMs: 10_000,
-    sizeBytes: 128,
-    mimeType: "audio/wav",
-    audioDataUrl: "data:audio/wav;base64,UklGRg==",
-    settings: {
-      bpm: 120,
-      timeSignature: "4/4"
-    },
-    ...overrides
-  };
-
-  return Object.prototype.hasOwnProperty.call(overrides, "artifactRef")
-    ? recording
-    : {
-        ...recording,
-        artifactRef: createRecordingArtifactRef(recording.id)
-      };
+function createSheetRecording(overrides: MakeSheetReviewRecordingOverrides = {}) {
+  return makeSheetReviewRecording(overrides, {
+    defaults: waveformSheetDefaults
+  });
 }
 
 async function saveArtifactsForRecordings(recordings: ReviewRecording[]) {
