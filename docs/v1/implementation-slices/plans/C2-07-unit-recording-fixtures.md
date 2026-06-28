@@ -4,7 +4,7 @@
 
 - Workstream: `pack-c-codebase-slimming`
 - Slice: `C2-07 test-fixture-slimming`
-- Current lifecycle state: `ready_for_pr_review`
+- Current lifecycle state: `verified`
 - Parent plan: `docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md`
 - Baseline branch: `main`
 - Baseline commit: `2fce4124c791bcf47ab46d09641c6885330eb2c4`
