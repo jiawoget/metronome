@@ -200,7 +200,7 @@ describe("waveform comparison source boundary", () => {
       loadWaveformComparisonSource(
         createSheetRecording({ mimeType: "audio/x-custom" })
       ),
-      "decode-failed"
+      "unsupported-mime"
     );
 
     await expectUnavailableReason(

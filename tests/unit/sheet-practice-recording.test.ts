@@ -161,7 +161,12 @@ describe("sheet practice recording service", () => {
       durationMs: 800,
       sizeBytes: 128,
       mimeType: "audio/webm",
-      audioDataUrl: "data:audio/webm;base64,UklGRg==",
+      artifactRef: {
+        kind: "indexeddb",
+        artifactId: "recording-sheet-1",
+        storageVersion: 1
+      },
+      audioDataUrl: null,
       trustedPeaks: [0.25, 1],
       segmentContext,
       settings: {
@@ -215,7 +220,12 @@ describe("sheet practice recording service", () => {
       sessionId: "session-new",
       sheetId: "sheet-alpha",
       durationMs: 800,
-      audioDataUrl: "data:audio/webm;base64,UklGRg=="
+      artifactRef: {
+        kind: "indexeddb",
+        artifactId: "recording-sheet-1",
+        storageVersion: 1
+      },
+      audioDataUrl: null
     });
     expect(persisted?.trustedPeaks?.length).toBeGreaterThan(0);
   });
@@ -322,6 +332,48 @@ describe("sheet practice recording service", () => {
     ]);
   });
 
+  it("preserves concurrent recording history writes during final sheet save", async () => {
+    const concurrentRecording = createSheetReviewRecording({
+      metadata: {
+        ...metadata,
+        id: "recording-sheet-concurrent",
+        sessionId: "session-concurrent",
+        createdAt: "2026-06-22T05:57:00.000Z"
+      },
+      artifact: createArtifact(),
+      settings
+    });
+    const capture = createCaptureService();
+    const sessionService = {
+      createSheetRecordingMetadata: vi.fn(async () => {
+        recordingHistoryRepository.saveSnapshot({
+          sessions: [{ ...previousSession, id: "session-concurrent" }],
+          recordings: [concurrentRecording],
+          errorMarkers: []
+        });
+
+        return metadata;
+      }),
+      getRecentSheetSession: vi.fn(async () => previousSession),
+      deletePracticeSessionSnapshot: vi.fn(async () => undefined),
+      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
+    };
+    const service = new BrowserSheetRecordingService(capture.service);
+
+    await service.stopAndSave({
+      sheetId: "sheet-alpha",
+      sessionId: "session-new",
+      settings,
+      forceNewSession: false,
+      sessionService
+    });
+
+    expect(recordingHistoryRepository.getSnapshot().recordings.map((recording) => recording.id)).toEqual([
+      "recording-sheet-1",
+      "recording-sheet-concurrent"
+    ]);
+  });
+
   it("rejects silent captures before creating sheet metadata", async () => {
     const capture = createCaptureService(
       createArtifact({
@@ -420,16 +472,17 @@ describe("sheet practice recording service", () => {
         return session;
       })
     };
-    const saveSnapshotSpy = vi
-      .spyOn(recordingHistoryRepository, "saveSnapshot")
-      .mockImplementation((snapshot) => {
+    const originalMutateSnapshot = recordingHistoryRepository.mutateSnapshot;
+    const mutateSnapshotSpy = vi
+      .spyOn(recordingHistoryRepository, "mutateSnapshot")
+      .mockImplementation((mutate, options) => {
         saveCallCount += 1;
 
         if (saveCallCount === 1) {
           throw new Error("localStorage setItem failed");
         }
 
-        originalSaveSnapshot(snapshot);
+        return originalMutateSnapshot(mutate, options);
       });
     const service = new BrowserSheetRecordingService(capture.service);
 
@@ -449,7 +502,7 @@ describe("sheet practice recording service", () => {
     expect(recordingHistoryRepository.getRecording(metadata.id)).toBeNull();
     expect(recordingHistoryRepository.getSnapshot().sessions).toEqual([previousSession]);
     expect(storedSession).toEqual(previousSession);
-    saveSnapshotSpy.mockRestore();
+    mutateSnapshotSpy.mockRestore();
   });
 
   it("deletes a newly created session snapshot when final history save fails", async () => {
@@ -487,16 +540,17 @@ describe("sheet practice recording service", () => {
       }),
       restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
     };
-    const saveSnapshotSpy = vi
-      .spyOn(recordingHistoryRepository, "saveSnapshot")
-      .mockImplementation((snapshot) => {
+    const originalMutateSnapshot = recordingHistoryRepository.mutateSnapshot;
+    const mutateSnapshotSpy = vi
+      .spyOn(recordingHistoryRepository, "mutateSnapshot")
+      .mockImplementation((mutate, options) => {
         saveCallCount += 1;
 
         if (saveCallCount === 1) {
           throw new Error("repository save failed");
         }
 
-        originalSaveSnapshot(snapshot);
+        return originalMutateSnapshot(mutate, options);
       });
     const service = new BrowserSheetRecordingService(capture.service);
 
@@ -518,6 +572,6 @@ describe("sheet practice recording service", () => {
       errorMarkers: []
     });
     expect(storedSession).toBeNull();
-    saveSnapshotSpy.mockRestore();
+    mutateSnapshotSpy.mockRestore();
   });
 });

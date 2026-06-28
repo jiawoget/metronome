@@ -43,13 +43,18 @@ describe("quick metronome recording metadata", () => {
     expect(recording.createdAt).toBe("2026-06-21T08:01:00.000Z");
     expect(recording.durationMs).toBe(1_230);
     expect(recording.sizeBytes).toBe(15);
-    expect(recording.audioDataUrl).toContain("data:audio/webm");
+    expect(recording.artifactRef).toEqual({
+      kind: "indexeddb",
+      artifactId: recording.id,
+      storageVersion: 1
+    });
+    expect(recording.audioDataUrl).toBeNull();
     expect(recording.artifactAnalysis?.estimatedFrequencyHz).toBe(440);
     expect(recording.artifactAnalysis?.isSilent).toBe(false);
   });
 
-  it("does not overwrite an existing recording when saving a continued take with a reused id", () => {
-    quickRecordingRepository.clear();
+  it("rejects a reused recording id instead of repointing artifact metadata", async () => {
+    await quickRecordingRepository.clear();
     const session = { id: "session-canonical-quick" };
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
@@ -68,29 +73,30 @@ describe("quick metronome recording metadata", () => {
     };
     const recording = createQuickRecording({ artifact, session, settings: DEFAULT_METRONOME_SETTINGS });
     const firstSave = quickRecordingRepository.saveQuickRecording(recording);
-    const continuedSave = quickRecordingRepository.saveQuickRecording({
-      ...recording,
-      audioDataUrl: "data:audio/webm;base64,bmV3LXRha2U=",
-      artifactAnalysis: {
-        ...recording.artifactAnalysis!,
-        decodedDurationMs: 900
-      },
-      durationMs: 900
-    });
+
+    expect(() =>
+      quickRecordingRepository.saveQuickRecording({
+        ...recording,
+        artifactAnalysis: {
+          ...recording.artifactAnalysis!,
+          decodedDurationMs: 900
+        },
+        durationMs: 900
+      })
+    ).toThrow("Recording id collision");
+
     const snapshot = quickRecordingRepository.getSnapshot();
 
     expect(firstSave.id).toBe(recording.id);
-    expect(continuedSave.id).not.toBe(recording.id);
-    expect(snapshot.recordings).toHaveLength(2);
+    expect(snapshot.recordings).toHaveLength(1);
     expect(snapshot.sessions).toEqual([]);
-    expect(snapshot.recordings.find((item) => item.id === recording.id)?.audioDataUrl).toBe(
-      recording.audioDataUrl
+    expect(snapshot.recordings.find((item) => item.id === recording.id)?.artifactRef).toEqual(
+      recording.artifactRef
     );
-    expect(snapshot.recordings.find((item) => item.id === continuedSave.id)?.durationMs).toBe(900);
   });
 
-  it("preserves review organization and take selection metadata when saving a new quick recording", () => {
-    quickRecordingRepository.clear();
+  it("preserves review organization and take selection metadata when saving a new quick recording", async () => {
+    await quickRecordingRepository.clear();
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
       dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
@@ -163,7 +169,7 @@ describe("quick metronome recording metadata", () => {
     ]);
   });
 
-  it("clears only quick recordings and explicitly quick unreferenced sessions", () => {
+  it("clears only quick recordings and explicitly quick unreferenced sessions", async () => {
     const quickRecording = createStoredQuickRecording({
       id: "quick-recording",
       sessionId: "quick-session"
@@ -219,7 +225,7 @@ describe("quick metronome recording metadata", () => {
       })
     );
 
-    quickRecordingRepository.clear();
+    await quickRecordingRepository.clear();
 
     const persisted = JSON.parse(window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}");
 
@@ -238,7 +244,7 @@ describe("quick metronome recording metadata", () => {
 
   it("provides a clearly marked playable demo recording without claiming it is a user take", () => {
     const demoRecording = getDemoQuickRecording();
-    const base64Payload = demoRecording.audioDataUrl.replace(/^data:audio\/wav;base64,/, "");
+    const base64Payload = demoRecording.audioDataUrl!.replace(/^data:audio\/wav;base64,/, "");
     const wavBytes = Buffer.from(base64Payload, "base64");
 
     expect(demoRecording.type).toBe("quick");

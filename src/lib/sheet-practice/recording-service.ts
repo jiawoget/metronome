@@ -1,5 +1,11 @@
 import type { SheetRecordingMetadata } from "@/domain/practice";
-import { hasUsablePeaks, loadRecordingArtifactDetails } from "@/lib/recordings-review/artifact-service";
+import {
+  createRecordingArtifactRef,
+  hasUsablePeaks,
+  loadRecordingArtifactDetails,
+  saveCapturedRecordingArtifact
+} from "@/lib/recordings-review/artifact-service";
+import { recordingArtifactRepository } from "@/infrastructure/db/recording-artifact-repository";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
 import type { MetronomeSettings, RecordingArtifact } from "@/lib/quick-metronome/types";
@@ -42,7 +48,8 @@ export function createSheetReviewRecording({
     durationMs,
     sizeBytes: artifact.sizeBytes,
     mimeType: artifact.mimeType,
-    audioDataUrl: artifact.dataUrl,
+    artifactRef: createRecordingArtifactRef(metadata.id),
+    audioDataUrl: null,
     artifactAnalysis: artifact.analysis,
     trustedPeaks,
     segmentContext: metadata.segmentContext,
@@ -94,18 +101,13 @@ function createDraftSheetReviewRecording({
 }
 
 function saveSheetReviewRecording(recording: ReviewRecording) {
-  const snapshot = recordingHistoryRepository.getSnapshot();
-
-  recordingHistoryRepository.saveSnapshot({
-    sessions: snapshot.sessions,
+  recordingHistoryRepository.mutateSnapshot((snapshot) => ({
+    ...snapshot,
     recordings: [
       recording,
       ...snapshot.recordings.filter((item) => item.id !== recording.id)
-    ],
-    errorMarkers: snapshot.errorMarkers,
-    takeSelections: snapshot.takeSelections,
-    recordingOrganization: snapshot.recordingOrganization
-  });
+    ]
+  }));
 }
 
 export class BrowserSheetRecordingService implements SheetRecordingService {
@@ -145,6 +147,7 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
   async stopAndSave(input: SaveSheetRecordingInput): Promise<SaveSheetRecordingResult> {
     const artifact = await this.captureService.stop();
     let metadata: SheetRecordingMetadata | null = null;
+    let savedArtifactRecordingId: string | null = null;
     const previousHistorySnapshot = recordingHistoryRepository.getSnapshot();
     const previousSession = await input.sessionService.getRecentSheetSession(input.sheetId);
 
@@ -189,6 +192,13 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         artifact,
         settings: input.settings
       });
+      await saveCapturedRecordingArtifact({
+        recordingId: decodedRecording.id,
+        recordingType: "sheet",
+        artifact,
+        createdAt: decodedRecording.createdAt
+      });
+      savedArtifactRecordingId = decodedRecording.id;
       const recording = {
         ...decodedRecording,
         durationMs: roundDuration(decodedDetails.decodedDurationMs),
@@ -234,6 +244,12 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
           }
         } catch (rollbackError) {
           rollbackErrors.push(rollbackError);
+        }
+
+        if (savedArtifactRecordingId) {
+          await recordingArtifactRepository
+            .deleteArtifact(savedArtifactRecordingId)
+            .catch(() => undefined);
         }
 
         if (rollbackErrors.length > 0) {

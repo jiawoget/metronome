@@ -7,6 +7,7 @@ import {
 } from "@/domain/practice";
 import { parsePracticeTimeSignature } from "@/domain/practice/validation";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
+import { deleteOwnedRecordingArtifacts } from "@/lib/recordings-review/artifact-service";
 import { removeRecordingOrganizations } from "@/lib/recordings-review/recording-organization-metadata";
 import { removeRecordingReferencesFromTakeSelections } from "@/lib/recordings-review/take-selection-metadata";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
@@ -106,10 +107,10 @@ export const recordingHistoryMetadataRepository: PracticeRecordingMetadataReposi
     },
 
     async saveRecordingMetadata(recording, session) {
-      const snapshot = recordingHistoryRepository.getSnapshot();
       const reviewRecording = toReviewRecording(recording, session);
 
-      recordingHistoryRepository.saveSnapshot({
+      recordingHistoryRepository.mutateSnapshot((snapshot) => ({
+        ...snapshot,
         sessions: [
           validatePracticeSession(session),
           ...snapshot.sessions.filter(
@@ -122,44 +123,65 @@ export const recordingHistoryMetadataRepository: PracticeRecordingMetadataReposi
             (item) => item.id !== reviewRecording.id
           )
         ],
-        errorMarkers: snapshot.errorMarkers,
-        takeSelections: snapshot.takeSelections,
-        recordingOrganization: snapshot.recordingOrganization
-      });
+      }));
     },
 
     async clear() {
-      const snapshot = recordingHistoryRepository.getSnapshot();
+      const writeSession = recordingHistoryRepository.beginSnapshotWrite();
+      const snapshot = writeSession.snapshot;
       const sheetRecordingIds = new Set(
         snapshot.recordings
           .filter((recording) => recording.type === "sheet")
           .map((recording) => recording.id)
       );
+      const sheetSessionIds = new Set(
+        snapshot.recordings
+          .filter((recording) => sheetRecordingIds.has(recording.id))
+          .map((recording) => recording.sessionId)
+      );
+      await deleteOwnedRecordingArtifacts([...sheetRecordingIds], undefined, {
+        assertCurrent: () =>
+          recordingHistoryRepository.assertSnapshotWriteIsCurrent(writeSession)
+      });
 
-      recordingHistoryRepository.saveSnapshot({
+      recordingHistoryRepository.commitSnapshotWrite(writeSession, (currentSnapshot) => ({
+        ...currentSnapshot,
         sessions: snapshot.sessions.filter((item) => {
           if (!item || typeof item !== "object") {
             return true;
           }
 
-          return (item as { sourceType?: string }).sourceType !== "sheet";
+          const session = item as { id?: unknown; sourceType?: string };
+          const retainedRecordingUsesSession = snapshot.recordings.some(
+            (recording) =>
+              !sheetRecordingIds.has(recording.id) &&
+              typeof session.id === "string" &&
+              recording.sessionId === session.id
+          );
+
+          return !(
+            session.sourceType === "sheet" &&
+            typeof session.id === "string" &&
+            sheetSessionIds.has(session.id) &&
+            !retainedRecordingUsesSession
+          );
         }),
         recordings: snapshot.recordings.filter(
-          (recording) => recording.type !== "sheet"
+          (recording) => !sheetRecordingIds.has(recording.id)
         ),
         errorMarkers: snapshot.errorMarkers.filter(
           (marker) => !sheetRecordingIds.has(marker.recordingId)
         ),
         takeSelections: removeRecordingReferencesFromTakeSelections({
-          takeSelections: recordingHistoryRepository.getTakeSelections(),
+          takeSelections: snapshot.takeSelections ?? [],
           recordingIds: sheetRecordingIds,
           updatedAt: new Date().toISOString()
         }),
         recordingOrganization: removeRecordingOrganizations({
-          organizations: recordingHistoryRepository.getRecordingOrganizations(),
+          organizations: snapshot.recordingOrganization ?? [],
           recordingIds: sheetRecordingIds
         })
-      });
+      }));
     },
 
     subscribe(listener) {

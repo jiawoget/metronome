@@ -4,6 +4,14 @@ import {
   type RecordingAudioExportRequest,
   type RecordingAudioExportResult
 } from "@/lib/recordings-review/audio-export";
+import {
+  deleteOwnedRecordingArtifact,
+  migrateLegacyRecordingArtifacts
+} from "@/lib/recordings-review/artifact-service";
+import {
+  recordingArtifactRepository,
+  type RecordingArtifactRepository
+} from "@/infrastructure/db/recording-artifact-repository";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type {
   RecordingTakeGroup,
@@ -26,7 +34,7 @@ export type RecordingsReviewService = {
   resolveTakeSelection: (
     group: RecordingTakeGroup
   ) => ResolvedRecordingTakeSelection;
-  deleteRecording: (recordingId: string) => void;
+  deleteRecording: (recordingId: string) => Promise<void>;
   setRecordingFavorite: (recordingId: string, favorite: boolean) => void;
   setRecordingArchived: (recordingId: string, archived: boolean) => void;
   addRecordingTag: (recordingId: string, tag: string) => void;
@@ -44,42 +52,71 @@ export type RecordingsReviewService = {
   exportRecordingAudio: (
     request: RecordingAudioExportRequest
   ) => Promise<RecordingAudioExportResult>;
+  migrateLegacyArtifacts: () => Promise<void>;
 };
 
-export const recordingsReviewService: RecordingsReviewService = {
-  subscribe: recordingHistoryRepository.subscribe,
-  getSnapshot: recordingHistoryRepository.getSnapshot,
+type RecordingHistoryRepository = typeof recordingHistoryRepository;
+
+export function createRecordingsReviewService({
+  historyRepository = recordingHistoryRepository,
+  artifactRepository = recordingArtifactRepository
+}: {
+  historyRepository?: RecordingHistoryRepository;
+  artifactRepository?: RecordingArtifactRepository;
+} = {}): RecordingsReviewService {
+  return {
+  subscribe: historyRepository.subscribe,
+  getSnapshot: historyRepository.getSnapshot,
   resolveRecordingOrganization(recording) {
-    return recordingHistoryRepository.resolveRecordingOrganization(recording);
+    return historyRepository.resolveRecordingOrganization(recording);
   },
   resolveTakeSelection(group) {
-    return recordingHistoryRepository.resolveTakeSelection(group);
+    return historyRepository.resolveTakeSelection(group);
   },
-  deleteRecording(recordingId) {
-    recordingHistoryRepository.deleteRecording(recordingId);
+  async deleteRecording(recordingId) {
+    const writeSession = historyRepository.beginSnapshotWrite();
+    const recording =
+      writeSession.snapshot.recordings.find((item) => item.id === recordingId) ??
+      null;
+
+    if (recording?.artifactRef?.kind === "indexeddb") {
+      await deleteOwnedRecordingArtifact(recording.id, artifactRepository, {
+        assertCurrent: () =>
+          historyRepository.assertSnapshotWriteIsCurrent(writeSession)
+      });
+    }
+
+    historyRepository.deleteRecordingFromWriteSession(writeSession, recordingId);
   },
   setRecordingFavorite(recordingId, favorite) {
-    recordingHistoryRepository.setRecordingFavorite(recordingId, favorite);
+    historyRepository.setRecordingFavorite(recordingId, favorite);
   },
   setRecordingArchived(recordingId, archived) {
-    recordingHistoryRepository.setRecordingArchived(recordingId, archived);
+    historyRepository.setRecordingArchived(recordingId, archived);
   },
   addRecordingTag(recordingId, tag) {
-    recordingHistoryRepository.addRecordingTag(recordingId, tag);
+    historyRepository.addRecordingTag(recordingId, tag);
   },
   removeRecordingTag(recordingId, tag) {
-    recordingHistoryRepository.removeRecordingTag(recordingId, tag);
+    historyRepository.removeRecordingTag(recordingId, tag);
   },
   setBestTake(group, recordingId) {
-    recordingHistoryRepository.setBestTake(group, recordingId);
+    historyRepository.setBestTake(group, recordingId);
   },
   setActiveTake(group, recordingId) {
-    recordingHistoryRepository.setActiveTake(group, recordingId);
+    historyRepository.setActiveTake(group, recordingId);
   },
   loadWaveformComparisonSourcesForRecordingIds,
   loadWaveformComparisonSourcesForGroup,
   getRecordingAudioExportEligibility,
   exportRecordingAudio(request) {
     return recordingAudioExportService.exportRecordingAudio(request);
+  },
+  async migrateLegacyArtifacts() {
+    await migrateLegacyRecordingArtifacts(artifactRepository);
   }
 };
+}
+
+export const recordingsReviewService: RecordingsReviewService =
+  createRecordingsReviewService();

@@ -2,6 +2,7 @@ import type {
   RecordingArtifact as ServiceRecordingArtifact,
   RecordingArtifactAnalysis as ServiceRecordingArtifactAnalysis
 } from "@/services/recording";
+import type { RecordingArtifactRef } from "@/lib/recordings-review/types";
 
 export const MIN_BPM = 30;
 export const MAX_BPM = 240;
@@ -29,7 +30,8 @@ export type QuickRecording = {
   durationMs: number;
   sizeBytes: number;
   mimeType: string;
-  audioDataUrl: string;
+  artifactRef?: RecordingArtifactRef | null;
+  audioDataUrl?: string | null;
   artifactAnalysis: RecordingArtifactAnalysis | null;
   settings: MetronomeSettings;
 };

@@ -215,8 +215,8 @@ export function RecordingsReviewExperience() {
       )
     : null;
 
-  function deleteSelectedRecording(recording: ReviewRecording) {
-    deleteRecording(recording);
+  async function deleteSelectedRecording(recording: ReviewRecording) {
+    await deleteRecording(recording);
     setSelectedRecordingId(null);
     setConfirmingDeleteId(null);
     recordingComparisonSelection.removeRecordingId(recording.id);
@@ -430,9 +430,9 @@ export function RecordingsReviewExperience() {
                 confirmingDelete={confirmingDeleteId === selectedRecording.id}
                 onAskDelete={() => setConfirmingDeleteId(selectedRecording.id)}
                 onCancelDelete={() => setConfirmingDeleteId(null)}
-                onConfirmDelete={() =>
-                  deleteSelectedRecording(selectedRecording)
-                }
+                onConfirmDelete={() => {
+                  void deleteSelectedRecording(selectedRecording);
+                }}
               />
             ) : (
               <p className="text-muted-foreground text-sm leading-6">

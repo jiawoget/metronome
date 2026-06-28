@@ -3,6 +3,12 @@ import type { SheetRecordingSegmentContext } from "@/domain/practice";
 
 export type RecordingReviewType = "quick" | "sheet";
 
+export type RecordingArtifactRef = {
+  kind: "indexeddb";
+  artifactId: string;
+  storageVersion: 1;
+};
+
 export type RecordingErrorMarker = {
   id: string;
   recordingId: string;
@@ -22,6 +28,7 @@ export type ReviewRecording = {
   durationMs: number;
   sizeBytes: number;
   mimeType: string;
+  artifactRef?: RecordingArtifactRef | null;
   audioDataUrl?: string | null;
   artifactAnalysis?: RecordingArtifactAnalysis | null;
   trustedPeaks?: number[];
@@ -36,6 +43,7 @@ export type RecordingReviewSnapshot = {
   errorMarkers: RecordingErrorMarker[];
   takeSelections?: RecordingTakeSelectionMetadata[];
   recordingOrganization?: RecordingOrganizationMetadata[];
+  [futureKey: string]: unknown;
 };
 
 export type RecordingTakeSelectionMetadata = {

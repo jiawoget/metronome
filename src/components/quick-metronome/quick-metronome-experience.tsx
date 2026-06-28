@@ -11,8 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PracticeSession } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
+import {
+  deleteQuickRecordingArtifact,
+  migrateQuickRecordingArtifacts,
+  saveQuickRecordingArtifact
+} from "@/lib/quick-metronome/artifact-controller";
 import { calculateTapTempo } from "@/lib/quick-metronome/control";
-import { quickRecordingRepository } from "@/lib/quick-metronome/persistence";
+import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
 import { createQuickRecording } from "@/lib/quick-metronome/session";
 import { DEFAULT_METRONOME_SETTINGS } from "@/lib/quick-metronome/types";
 import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
@@ -54,6 +59,10 @@ export function QuickMetronomeExperience() {
       unsubscribe();
     };
   }, [metronomeService]);
+
+  useEffect(() => {
+    void migrateQuickRecordingArtifacts().catch(() => undefined);
+  }, []);
 
   const isRecording = recordingState === "recording";
 
@@ -162,6 +171,7 @@ export function QuickMetronomeExperience() {
   async function stopRecording() {
     setErrorMessage(null);
     setRecordingState("saving");
+    let savedArtifactRecordingId: string | null = null;
 
     try {
       const artifact = await recordingService.stop();
@@ -181,8 +191,10 @@ export function QuickMetronomeExperience() {
       }
 
       const recording = createQuickRecording({ artifact, session, settings });
+      await saveQuickRecordingArtifact({ recording, artifact });
+      savedArtifactRecordingId = recording.id;
       const savedRecording =
-        quickRecordingRepository.saveQuickRecording(recording);
+        quickRecordingController.saveQuickRecording(recording);
       const nextSession =
         await browserPracticeSessionService.linkRecordingToSession({
           sessionId: session.id,
@@ -209,6 +221,10 @@ export function QuickMetronomeExperience() {
       );
     } catch (error) {
       setRecordingState("idle");
+      if (savedArtifactRecordingId) {
+        await deleteQuickRecordingArtifact(savedArtifactRecordingId)
+          .catch(() => undefined);
+      }
       setErrorMessage(
         error instanceof Error ? error.message : "Recording could not be saved."
       );

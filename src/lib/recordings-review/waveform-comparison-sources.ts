@@ -67,7 +67,7 @@ type WaveformComparisonContext = {
 const UNAVAILABLE_MESSAGES: Record<WaveformComparisonUnavailableReason, string> = {
   "not-sheet-take": "Only saved sheet takes can be used for waveform comparison.",
   "missing-recording": "This recording is no longer available in local review history.",
-  "missing-artifact": "This recording has no accessible local audio artifact.",
+  "missing-artifact": "This recording has no accessible local audio artifact. This recording has no accessible audio artifact in local storage.",
   "unsupported-mime": "This recording artifact is not a supported audio type.",
   "decode-failed": "This recording artifact could not be decoded locally.",
   "empty-audio": "This recording artifact decoded as empty audio.",
@@ -95,7 +95,7 @@ export function getWaveformComparisonEligibility(
     });
   }
 
-  if (!normalizeRequiredString(recording.audioDataUrl)) {
+  if (!recording.artifactRef && !normalizeRequiredString(recording.audioDataUrl)) {
     return createUnavailableSource({
       recordingId: recording.id,
       recording,
@@ -308,6 +308,22 @@ function normalizeRequiredString(value: unknown) {
 function mapArtifactErrorToUnavailableReason(
   error: unknown
 ): WaveformComparisonUnavailableReason {
+  if (error instanceof Error && "reason" in error) {
+    const reason = (error as { reason?: string }).reason;
+
+    if (reason === "missing-artifact-ref" || reason === "missing-artifact-body") {
+      return "missing-artifact";
+    }
+
+    if (reason === "unsupported-mime") {
+      return "unsupported-mime";
+    }
+
+    if (reason === "empty-audio") {
+      return "empty-audio";
+    }
+  }
+
   const message =
     error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
 

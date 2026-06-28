@@ -94,7 +94,51 @@ describe("source architecture boundaries", () => {
       /\brecordingHistoryRepository\b/,
       /\brecordingAudioExportService\b/,
       /\bRecordingWaveformPlaybackAdapter\b/,
-      /\bloadRecordingArtifactDetails\b/
+      /\bloadRecordingArtifactDetails\b/,
+      /\brecordingArtifactRepository\b/,
+      /from\s+["']dexie["']/
+    ]);
+
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps Quick Metronome UI behind artifact controller boundaries", () => {
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src/components/quick-metronome"), [
+        ".ts",
+        ".tsx"
+      ])
+    );
+    const violations = matchingFiles(files, [
+      /@\/lib\/recordings-review\/artifact-service/,
+      /@\/infrastructure\/db\/recording-artifact-repository/,
+      /@\/lib\/recordings-review\/repository/,
+      /@\/lib\/quick-metronome\/persistence/,
+      /@\/infrastructure\/storage\/storage-contracts/,
+      /\bquickRecordingRepository\b/,
+      /\brecordingArtifactRepository\b/,
+      /\brecordingHistoryRepository\b/,
+      /\bmigrateLegacyRecordingArtifacts\b/,
+      /\bsaveCapturedRecordingArtifact\b/,
+      /\bdeleteRecordingArtifactById\b/,
+      /\bresolveRecordingArtifactBody\b/,
+      /from\s+["']dexie["']/
+    ]);
+
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps app and server layers away from browser recording storage", () => {
+    const appFiles = readSources(
+      listSourceFiles(join(repoRoot, "src/app"), [".ts", ".tsx"])
+    );
+    const violations = matchingFiles(appFiles, [
+      /@\/infrastructure\/db\/recording-artifact-repository/,
+      /\brecordingArtifactRepository\b/,
+      /\bmigrateLegacyRecordingArtifacts\b/,
+      /from\s+["']dexie["']/,
+      /@\/lib\/recordings-review\/repository/,
+      /\brecordingHistoryRepository\b/
     ]);
 
     expect(violations).toEqual([]);

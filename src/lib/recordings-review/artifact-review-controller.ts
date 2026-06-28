@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   loadRecordingArtifactDetails,
-  RecordingArtifactError
+  RecordingArtifactError,
+  resolveRecordingArtifactBody
 } from "@/lib/recordings-review/artifact-service";
 import type {
   RecordingArtifactDetails,
@@ -59,6 +60,7 @@ export function useRecordingArtifactReviewController({
   );
   const [isPlaybackReady, setIsPlaybackReady] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
+  const [artifactBlob, setArtifactBlob] = useState<Blob | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,16 +70,21 @@ export function useRecordingArtifactReviewController({
     Promise.resolve()
       .then(() => {
         if (!cancelled) {
+          setArtifactBlob(null);
           setState({ status: "loading", details: null, message: null });
           setPlaybackState("idle");
           setIsPlaybackReady(false);
           setCurrentTimeMs(0);
         }
 
-        return loadRecordingArtifactDetails(recording);
+        return Promise.all([
+          loadRecordingArtifactDetails(recording),
+          resolveRecordingArtifactBody(recording)
+        ]);
       })
-      .then((details) => {
+      .then(([details, artifactBody]) => {
         if (!cancelled) {
+          setArtifactBlob(artifactBody.blob);
           setState({ status: "ready", details, message: null });
         }
       })
@@ -101,14 +108,14 @@ export function useRecordingArtifactReviewController({
   }, [adapter, recording]);
 
   useEffect(() => {
-    if (state.status !== "ready" || !waveformElement || !recording.audioDataUrl) {
+    if (state.status !== "ready" || !waveformElement || !artifactBlob) {
       return;
     }
 
     let cancelled = false;
 
     adapter
-      .load(waveformElement, recording)
+      .load(waveformElement, recording, artifactBlob)
       .then(() => {
         if (!cancelled) {
           setIsPlaybackReady(true);
@@ -129,7 +136,7 @@ export function useRecordingArtifactReviewController({
       cancelled = true;
       setIsPlaybackReady(false);
     };
-  }, [adapter, recording, state.status, waveformElement]);
+  }, [adapter, artifactBlob, recording, state.status, waveformElement]);
 
   useEffect(() => {
     const handleTimeUpdate = (event: Event) => {

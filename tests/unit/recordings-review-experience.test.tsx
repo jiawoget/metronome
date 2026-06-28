@@ -1488,11 +1488,20 @@ describe("RecordingsReviewExperience grouped take history", () => {
     });
 
     await user.click(newCompareControl);
+
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByText("Select another take to compare")
+      ).toBeVisible();
+    });
+
     await user.click(newCompareControl);
 
-    expect(
-      within(segmentGroup).getByTestId("waveform-comparison-loading")
-    ).toHaveTextContent("Loading waveform comparison sources.");
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId("waveform-comparison-loading")
+      ).toHaveTextContent("Loading waveform comparison sources.");
+    });
     expect(
       within(segmentGroup).queryByTestId("waveform-comparison-results")
     ).not.toBeInTheDocument();
@@ -1586,9 +1595,11 @@ describe("RecordingsReviewExperience grouped take history", () => {
     await user.click(newCompareControl);
     await user.click(newCompareControl);
 
-    expect(
-      within(segmentGroup).getByTestId("waveform-comparison-loading")
-    ).toHaveTextContent("Loading waveform comparison sources.");
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId("waveform-comparison-loading")
+      ).toHaveTextContent("Loading waveform comparison sources.");
+    });
     expect(
       within(segmentGroup).queryByTestId("waveform-comparison-results")
     ).not.toBeInTheDocument();
@@ -1619,11 +1630,37 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const user = userEvent.setup();
     const snapshot = createMixedSnapshot();
     const pendingRetry = createDeferred<WaveformComparisonSourcesResult>();
+    let twoTakeRequestCount = 0;
 
     recordingHistoryRepository.saveSnapshot(snapshot);
-    loadWaveformComparisonSourcesForGroupMock
-      .mockRejectedValueOnce(new Error("source lookup failed"))
-      .mockImplementationOnce(() => pendingRetry.promise);
+    loadWaveformComparisonSourcesForGroupMock.mockImplementation(
+      async ({
+        recordingIds
+      }: {
+        recordingIds: string[];
+      }) => {
+        const sources = recordingIds.map((recordingId) =>
+          createReadyComparisonSource(
+            snapshot.recordings.find((recording) => recording.id === recordingId) ??
+              createSheetRecording({ id: recordingId })
+          )
+        );
+
+        if (recordingIds.length === 2) {
+          twoTakeRequestCount += 1;
+
+          if (twoTakeRequestCount === 1) {
+            throw new Error("source lookup failed");
+          }
+
+          if (twoTakeRequestCount === 2) {
+            return pendingRetry.promise;
+          }
+        }
+
+        return createComparisonResult(sources);
+      }
+    );
 
     render(<RecordingsReviewExperience />);
 
@@ -1633,8 +1670,12 @@ describe("RecordingsReviewExperience grouped take history", () => {
     const oldCompareControl = within(segmentGroup).getByTestId(
       "compare-take-control-sheet-bridge-old"
     );
+    const newCompareControl = within(segmentGroup).getByTestId(
+      "compare-take-control-sheet-bridge-new"
+    );
 
     await user.click(oldCompareControl);
+    await user.click(newCompareControl);
 
     await waitFor(() => {
       expect(
@@ -1642,19 +1683,22 @@ describe("RecordingsReviewExperience grouped take history", () => {
       ).toHaveTextContent("Waveform comparison sources could not be loaded.");
     });
 
-    await user.click(oldCompareControl);
-    await user.click(oldCompareControl);
+    await user.click(newCompareControl);
+    await user.click(newCompareControl);
 
-    expect(
-      within(segmentGroup).getByTestId("waveform-comparison-loading")
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(
+        within(segmentGroup).getByTestId("waveform-comparison-loading")
+      ).toBeVisible();
+    });
     expect(
       within(segmentGroup).queryByTestId("waveform-comparison-error")
     ).not.toBeInTheDocument();
 
     pendingRetry.resolve(
       createComparisonResult([
-        createReadyComparisonSource(snapshot.recordings[0])
+        createReadyComparisonSource(snapshot.recordings[0]),
+        createReadyComparisonSource(snapshot.recordings[1])
       ])
     );
 

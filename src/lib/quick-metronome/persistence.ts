@@ -4,6 +4,8 @@ import type {
   SharedRecordingHistoryEntry
 } from "@/lib/quick-metronome/types";
 import { RECORDING_HISTORY_STORAGE_KEY } from "@/infrastructure/storage/storage-contracts";
+import { deleteOwnedRecordingArtifacts } from "@/lib/recordings-review/artifact-service";
+import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 
 const STORE_EVENT = "quick-metronome-recordings-change";
 
@@ -15,7 +17,6 @@ const emptySnapshot: QuickMetronomeStoreSnapshot = {
 let cachedRawValue: string | null = null;
 let cachedSnapshot: QuickMetronomeStoreSnapshot = emptySnapshot;
 
-type RawSnapshotObject = Record<string, unknown>;
 
 function getStorage() {
   if (typeof window === "undefined") {
@@ -66,61 +67,20 @@ function readSnapshot(): QuickMetronomeStoreSnapshot {
   }
 }
 
-function readRawSnapshotObject(): RawSnapshotObject {
-  const storage = getStorage();
-
-  if (!storage) {
-    return {};
-  }
-
-  const rawValue = storage.getItem(RECORDING_HISTORY_STORAGE_KEY);
-
-  if (!rawValue) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(rawValue);
-
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as RawSnapshotObject)
-      : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeSnapshot(snapshot: QuickMetronomeStoreSnapshot, rawBase: RawSnapshotObject = {}) {
-  const storage = getStorage();
-
-  if (!storage) {
-    return;
-  }
-
-  const nextSnapshot = {
-    ...rawBase,
-    sessions: snapshot.sessions,
-    recordings: snapshot.recordings,
-    errorMarkers: snapshot.errorMarkers,
-    ...(snapshot.takeSelections ? { takeSelections: snapshot.takeSelections } : {}),
-    ...(snapshot.recordingOrganization
-      ? { recordingOrganization: snapshot.recordingOrganization }
-      : {})
+function omitPersistedAudioBody(recording: QuickRecording): QuickRecording {
+  return {
+    ...recording,
+    audioDataUrl: null
   };
-  const serializedSnapshot = JSON.stringify(nextSnapshot);
-
-  storage.setItem(RECORDING_HISTORY_STORAGE_KEY, serializedSnapshot);
-  cachedRawValue = serializedSnapshot;
-  cachedSnapshot = snapshot;
-  window.dispatchEvent(new Event(STORE_EVENT));
 }
 
-function createRecordingId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `recording_${crypto.randomUUID()}`;
-  }
+function syncCacheFromStorage() {
+  cachedRawValue = null;
+  cachedSnapshot = readSnapshot();
 
-  return `recording_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(STORE_EVENT));
+  }
 }
 
 function isQuickRecording(
@@ -141,68 +101,81 @@ export const quickRecordingRepository = {
   },
 
   saveQuickRecording(recording: QuickRecording) {
-    const rawBase = readRawSnapshotObject();
-    const snapshot = readSnapshot();
-    const recordingToSave = snapshot.recordings.some((item) => item.id === recording.id)
-      ? { ...recording, id: createRecordingId() }
-      : recording;
-    const recordings = [
-      recordingToSave,
-      ...snapshot.recordings.filter((item) => item.id !== recordingToSave.id)
-    ];
+    const recordingToSave = omitPersistedAudioBody(recording);
 
-    writeSnapshot({
-      sessions: snapshot.sessions,
-      recordings,
-      errorMarkers: snapshot.errorMarkers,
-      ...(snapshot.takeSelections ? { takeSelections: snapshot.takeSelections } : {}),
-      ...(snapshot.recordingOrganization
-        ? { recordingOrganization: snapshot.recordingOrganization }
-        : {})
-    }, rawBase);
+    const nextSnapshot = recordingHistoryRepository.mutateSnapshot((snapshot) => {
+      if (snapshot.recordings.some((item) => item.id === recordingToSave.id)) {
+        throw new Error("Recording id collision prevented artifact metadata save.");
+      }
+
+      const recordings = [
+        recordingToSave,
+        ...snapshot.recordings.filter((item) => item.id !== recordingToSave.id)
+      ];
+
+      return {
+        ...snapshot,
+        recordings
+      };
+    });
+
+    cachedSnapshot = {
+      sessions: nextSnapshot.sessions,
+      recordings: nextSnapshot.recordings,
+      errorMarkers: nextSnapshot.errorMarkers,
+      takeSelections: nextSnapshot.takeSelections,
+      recordingOrganization: nextSnapshot.recordingOrganization
+    };
+    cachedRawValue = getStorage()?.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? null;
 
     return recordingToSave;
   },
 
-  clear() {
-    const rawBase = readRawSnapshotObject();
-    const snapshot = readSnapshot();
+  async clear() {
+    const writeSession = recordingHistoryRepository.beginSnapshotWrite();
+    const snapshot = writeSession.snapshot;
     const removedQuickRecordingIds = new Set(
       snapshot.recordings
         .filter(isQuickRecording)
         .map((recording) => recording.id)
     );
-    const retainedRecordings = snapshot.recordings.filter(
-      (recording) => recording.type !== "quick"
-    );
-    const retainedSessionIds = new Set(
-      retainedRecordings.map((recording) => recording.sessionId)
-    );
-    const retainedSessions = snapshot.sessions.filter((session) => {
-      if (!session || typeof session !== "object") {
-        return true;
-      }
-
-      const maybeSession = session as { id?: unknown; sourceType?: unknown };
-
-      return !(
-        maybeSession.sourceType === "quick" &&
-        typeof maybeSession.id === "string" &&
-        !retainedSessionIds.has(maybeSession.id)
-      );
+    await deleteOwnedRecordingArtifacts([...removedQuickRecordingIds], undefined, {
+      assertCurrent: () =>
+        recordingHistoryRepository.assertSnapshotWriteIsCurrent(writeSession)
     });
 
-    writeSnapshot({
-      sessions: retainedSessions,
-      recordings: retainedRecordings,
-      errorMarkers: snapshot.errorMarkers.filter(
-        (marker) => !removedQuickRecordingIds.has(String((marker as { recordingId?: unknown }).recordingId ?? ""))
-      ),
-      ...(snapshot.takeSelections ? { takeSelections: snapshot.takeSelections } : {}),
-      ...(snapshot.recordingOrganization
-        ? { recordingOrganization: snapshot.recordingOrganization }
-        : {})
-    }, rawBase);
+    recordingHistoryRepository.commitSnapshotWrite(writeSession, (currentSnapshot) => {
+      const retainedRecordings = snapshot.recordings.filter(
+        (recording) => !removedQuickRecordingIds.has(recording.id)
+      );
+      const retainedSessionIds = new Set(
+        retainedRecordings.map((recording) => recording.sessionId)
+      );
+      const retainedSessions = snapshot.sessions.filter((session) => {
+        if (!session || typeof session !== "object") {
+          return true;
+        }
+
+        const maybeSession = session as { id?: unknown; sourceType?: unknown };
+
+        return !(
+          maybeSession.sourceType === "quick" &&
+          typeof maybeSession.id === "string" &&
+          !retainedSessionIds.has(maybeSession.id)
+        );
+      });
+
+      return {
+        ...currentSnapshot,
+        sessions: retainedSessions,
+        recordings: retainedRecordings,
+        errorMarkers: snapshot.errorMarkers.filter(
+          (marker) => !removedQuickRecordingIds.has(String((marker as { recordingId?: unknown }).recordingId ?? ""))
+        )
+      };
+    });
+
+    syncCacheFromStorage();
   },
 
   subscribe(listener: () => void) {

@@ -10,17 +10,16 @@ export class RecordingWaveformPlaybackAdapter {
   private unsubscribeTimeUpdate: (() => void) | null = null;
   private unsubscribeInteraction: (() => void) | null = null;
 
-  async load(container: HTMLElement, recording: ReviewRecording) {
+  async load(container: HTMLElement, recording: ReviewRecording, blob: Blob) {
     this.destroy();
 
-    if (!recording.audioDataUrl) {
+    if (!blob || blob.size <= 0) {
       throw new Error("This recording has no accessible audio artifact.");
     }
 
     this.recordingId = recording.id;
     this.waveSurfer = WaveSurfer.create({
       container,
-      url: recording.audioDataUrl,
       height: 96,
       barWidth: 2,
       barGap: 2,
@@ -60,6 +59,7 @@ export class RecordingWaveformPlaybackAdapter {
       waveSurfer.once("error", () =>
         reject(new Error("Waveform playback could not load this artifact."))
       );
+      void waveSurfer.loadBlob(blob);
     });
   }
 

@@ -4,6 +4,7 @@ import { mapPermissionState, type BrowserStorageEstimate } from "@/domain/settin
 import { sheetLibraryRepository } from "@/infrastructure/files/sheet-library-repository";
 import { practiceSessionRepository } from "@/infrastructure/db/practice-session-repository";
 import { referenceRepository } from "@/infrastructure/reference/reference-repository";
+import { recordingArtifactRepository } from "@/infrastructure/db/recording-artifact-repository";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import {
   browserSettingsRepository,
@@ -53,14 +54,20 @@ export const browserStorageSummaryService = createStorageSummaryService({
 
 export const browserLocalDataCleanupService: LocalDataCleanupService = {
   async clearAllLocalData() {
-    await Promise.all([
+    const cleanupResults = await Promise.allSettled([
       sheetLibraryRepository.clear(),
       referenceRepository.clear(),
-      practiceSessionRepository.clear()
+      practiceSessionRepository.clear(),
+      recordingArtifactRepository.clear()
     ]);
+
     recordingHistoryRepository.clear();
     await browserSettingsRepository.clearSettings();
     await browserSettingsService.resetToDefaults();
+
+    if (cleanupResults.some((result) => result.status === "rejected")) {
+      throw new Error("Local data cleanup completed with partial storage cleanup failures.");
+    }
   }
 };
 

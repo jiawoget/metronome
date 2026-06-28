@@ -47,6 +47,21 @@ const emptySnapshot: RecordingReviewSnapshot = {
 let cachedRawValue: string | null = null;
 let cachedSnapshot: RecordingReviewSnapshot = emptySnapshot;
 
+type RawSnapshotObject = Record<string, unknown>;
+
+export type RecordingHistoryWriteSession = {
+  originalRawSnapshot: string | null;
+  rawBase: RawSnapshotObject;
+  snapshot: RecordingReviewSnapshot;
+};
+
+export class RecordingHistoryConcurrentWriteError extends Error {
+  constructor() {
+    super("Recording history changed before the metadata write could commit.");
+    this.name = "RecordingHistoryConcurrentWriteError";
+  }
+}
+
 function getStorage() {
   if (typeof window === "undefined") {
     return null;
@@ -171,6 +186,7 @@ function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | Record
   );
 
   return buildSnapshot({
+    ...(value && typeof value === "object" ? value : {}),
     sessions: Array.isArray(value.sessions) ? value.sessions : [],
     recordings,
     errorMarkers: normalizeErrorMarkersForRecordings({
@@ -211,21 +227,176 @@ function readSnapshot(): RecordingReviewSnapshot {
   return cachedSnapshot;
 }
 
-function writeSnapshot(snapshot: RecordingReviewSnapshot) {
-  const storage = getStorage();
+function parseRawSnapshotObject(rawValue: string | null): RawSnapshotObject {
+  if (!rawValue) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as RawSnapshotObject)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function serializeSnapshotForWrite({
+  snapshot,
+  rawBase
+}: {
+  snapshot: RecordingReviewSnapshot;
+  rawBase: RawSnapshotObject;
+}) {
   const normalizedSnapshot = normalizeSnapshotValue(snapshot);
+  const nextRaw: RawSnapshotObject = {
+    ...rawBase,
+    sessions: normalizedSnapshot.sessions,
+    recordings: normalizedSnapshot.recordings,
+    errorMarkers: normalizedSnapshot.errorMarkers
+  };
+
+  if (normalizedSnapshot.takeSelections && normalizedSnapshot.takeSelections.length > 0) {
+    nextRaw.takeSelections = normalizedSnapshot.takeSelections;
+  } else {
+    delete nextRaw.takeSelections;
+  }
+
+  if (
+    normalizedSnapshot.recordingOrganization &&
+    normalizedSnapshot.recordingOrganization.length > 0
+  ) {
+    nextRaw.recordingOrganization = normalizedSnapshot.recordingOrganization;
+  } else {
+    delete nextRaw.recordingOrganization;
+  }
+
+  return {
+    normalizedSnapshot: normalizeSnapshotValue(nextRaw),
+    serializedSnapshot: JSON.stringify(nextRaw)
+  };
+}
+
+function publishSnapshotWrite({
+  serializedSnapshot,
+  normalizedSnapshot
+}: {
+  serializedSnapshot: string;
+  normalizedSnapshot: RecordingReviewSnapshot;
+}) {
+  cachedRawValue = serializedSnapshot;
+  cachedSnapshot = normalizedSnapshot;
+  window.dispatchEvent(new Event(STORE_EVENT));
+  window.dispatchEvent(new Event(QUICK_STORE_EVENT));
+}
+
+function mutateSnapshotWithStaleWriteProtection(
+  mutate: (snapshot: RecordingReviewSnapshot, rawBase: RawSnapshotObject) => RecordingReviewSnapshot,
+  { maxAttempts = 3 }: { maxAttempts?: number } = {}
+) {
+  const storage = getStorage();
+
+  if (!storage) {
+    return normalizeSnapshotValue(mutate(emptySnapshot, {}));
+  }
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const originalRawSnapshot = storage.getItem(RECORDINGS_STORAGE_KEY);
+    const rawBase = parseRawSnapshotObject(originalRawSnapshot);
+    const baseSnapshot = normalizeSnapshotValue(rawBase);
+    const nextSnapshot = mutate(baseSnapshot, rawBase);
+    const { normalizedSnapshot, serializedSnapshot } = serializeSnapshotForWrite({
+      snapshot: nextSnapshot,
+      rawBase
+    });
+
+    if (storage.getItem(RECORDINGS_STORAGE_KEY) !== originalRawSnapshot) {
+      continue;
+    }
+
+    storage.setItem(RECORDINGS_STORAGE_KEY, serializedSnapshot);
+    publishSnapshotWrite({ serializedSnapshot, normalizedSnapshot });
+
+    return normalizedSnapshot;
+  }
+
+  throw new RecordingHistoryConcurrentWriteError();
+}
+
+function beginSnapshotWrite(): RecordingHistoryWriteSession {
+  const storage = getStorage();
+  const originalRawSnapshot = storage?.getItem(RECORDINGS_STORAGE_KEY) ?? null;
+  const rawBase = parseRawSnapshotObject(originalRawSnapshot);
+
+  return {
+    originalRawSnapshot,
+    rawBase,
+    snapshot: storage ? normalizeSnapshotValue(rawBase) : emptySnapshot
+  };
+}
+
+function commitSnapshotWrite(
+  session: RecordingHistoryWriteSession,
+  mutate: (snapshot: RecordingReviewSnapshot) => RecordingReviewSnapshot
+) {
+  const storage = getStorage();
+  const nextSnapshot = mutate(session.snapshot);
+
+  if (!storage) {
+    return normalizeSnapshotValue(nextSnapshot);
+  }
+
+  if (storage.getItem(RECORDINGS_STORAGE_KEY) !== session.originalRawSnapshot) {
+    throw new RecordingHistoryConcurrentWriteError();
+  }
+
+  const { normalizedSnapshot, serializedSnapshot } = serializeSnapshotForWrite({
+    snapshot: nextSnapshot,
+    rawBase: session.rawBase
+  });
+
+  storage.setItem(RECORDINGS_STORAGE_KEY, serializedSnapshot);
+  publishSnapshotWrite({ serializedSnapshot, normalizedSnapshot });
+
+  return normalizedSnapshot;
+}
+
+function deleteRecordingFromSnapshot(
+  snapshot: RecordingReviewSnapshot,
+  recordingId: string
+) {
+  return buildSnapshot({
+    ...snapshot,
+    recordings: snapshot.recordings.filter((recording) => recording.id !== recordingId),
+    errorMarkers: snapshot.errorMarkers.filter((marker) => marker.recordingId !== recordingId),
+    takeSelections: removeRecordingReferencesFromTakeSelections({
+      takeSelections: getNormalizedTakeSelections(snapshot),
+      recordingIds: [recordingId],
+      updatedAt: new Date().toISOString()
+    }),
+    recordingOrganization: removeRecordingOrganizations({
+      organizations: getNormalizedRecordingOrganizations(snapshot),
+      recordingIds: [recordingId]
+    })
+  });
+}
+
+function assertSnapshotWriteIsCurrent(session: RecordingHistoryWriteSession) {
+  const storage = getStorage();
 
   if (!storage) {
     return;
   }
 
-  const serializedSnapshot = JSON.stringify(normalizedSnapshot);
+  if (storage.getItem(RECORDINGS_STORAGE_KEY) !== session.originalRawSnapshot) {
+    throw new RecordingHistoryConcurrentWriteError();
+  }
+}
 
-  storage.setItem(RECORDINGS_STORAGE_KEY, serializedSnapshot);
-  cachedRawValue = serializedSnapshot;
-  cachedSnapshot = normalizedSnapshot;
-  window.dispatchEvent(new Event(STORE_EVENT));
-  window.dispatchEvent(new Event(QUICK_STORE_EVENT));
+function writeSnapshot(snapshot: RecordingReviewSnapshot) {
+  return mutateSnapshotWithStaleWriteProtection(() => snapshot);
 }
 
 function buildSnapshot({
@@ -233,12 +404,14 @@ function buildSnapshot({
   recordings,
   errorMarkers,
   takeSelections,
-  recordingOrganization
+  recordingOrganization,
+  ...futureFields
 }: RecordingReviewSnapshot & {
   takeSelections?: RecordingTakeSelectionMetadata[];
   recordingOrganization?: RecordingOrganizationMetadata[];
 }): RecordingReviewSnapshot {
   const snapshot: RecordingReviewSnapshot = {
+    ...futureFields,
     sessions,
     recordings,
     errorMarkers
@@ -378,39 +551,43 @@ function getPersistedRecordingIdForGroup({
 }
 
 function updateTakeSelection({
-  snapshot,
   groupId,
-  group,
   bestRecordingId,
   activeRecordingId
 }: {
-  snapshot: RecordingReviewSnapshot;
   groupId: string;
-  group: RecordingTakeGroup;
   bestRecordingId: string | null;
   activeRecordingId: string | null;
 }) {
-  const takeSelections = getNormalizedTakeSelections(snapshot);
-  const nextSelection =
-    !bestRecordingId && !activeRecordingId
-      ? null
-      : createTakeSelectionMetadata({
-          group,
-          bestRecordingId,
-          activeRecordingId,
-          updatedAt: new Date().toISOString()
-        });
-  const nextTakeSelections = nextSelection
-    ? [...takeSelections.filter((selection) => selection.groupId !== groupId), nextSelection]
-    : takeSelections.filter((selection) => selection.groupId !== groupId);
-  const nextSnapshot = buildSnapshot({
-    ...snapshot,
-    takeSelections: nextTakeSelections
+  return mutateSnapshotWithStaleWriteProtection((snapshot) => {
+    const currentGroup = getCurrentTakeGroup({
+      snapshot,
+      groupId
+    });
+    const group = requireCurrentTakeGroup(currentGroup, groupId);
+    const takeSelections = getNormalizedTakeSelections(snapshot);
+    const nextSelection =
+      !bestRecordingId && !activeRecordingId
+        ? null
+        : createTakeSelectionMetadata({
+            group,
+            bestRecordingId: bestRecordingId
+              ? assertRecordingBelongsToGroup({ group, recordingId: bestRecordingId })
+              : null,
+            activeRecordingId: activeRecordingId
+              ? assertRecordingBelongsToGroup({ group, recordingId: activeRecordingId })
+              : null,
+            updatedAt: new Date().toISOString()
+          });
+    const nextTakeSelections = nextSelection
+      ? [...takeSelections.filter((selection) => selection.groupId !== groupId), nextSelection]
+      : takeSelections.filter((selection) => selection.groupId !== groupId);
+
+    return buildSnapshot({
+      ...snapshot,
+      takeSelections: nextTakeSelections
+    });
   });
-
-  writeSnapshot(nextSnapshot);
-
-  return nextSnapshot;
 }
 
 function updateRecordingOrganization({
@@ -449,9 +626,7 @@ function updateRecordingOrganization({
     recordingOrganization: nextRecordingOrganization
   });
 
-  writeSnapshot(nextSnapshot);
-
-  return nextSnapshot;
+  return writeSnapshot(nextSnapshot);
 }
 
 export const recordingHistoryRepository = {
@@ -520,7 +695,29 @@ export const recordingHistoryRepository = {
   },
 
   saveSnapshot(snapshot: RecordingReviewSnapshot) {
-    writeSnapshot(snapshot);
+    return writeSnapshot(snapshot);
+  },
+
+  mutateSnapshot(
+    mutate: (snapshot: RecordingReviewSnapshot) => RecordingReviewSnapshot,
+    options?: { maxAttempts?: number }
+  ) {
+    return mutateSnapshotWithStaleWriteProtection((snapshot) => mutate(snapshot), options);
+  },
+
+  beginSnapshotWrite,
+
+  assertSnapshotWriteIsCurrent,
+
+  commitSnapshotWrite,
+
+  deleteRecordingFromWriteSession(
+    session: RecordingHistoryWriteSession,
+    recordingId: string
+  ) {
+    return commitSnapshotWrite(session, (snapshot) =>
+      deleteRecordingFromSnapshot(snapshot, recordingId)
+    );
   },
 
   setBestTake(group: RecordingTakeGroup, recordingId: string | null) {
@@ -546,9 +743,7 @@ export const recordingHistoryRepository = {
     });
 
     return updateTakeSelection({
-      snapshot,
       groupId: group.groupId,
-      group: currentGroup ?? group,
       bestRecordingId: nextBestRecordingId,
       activeRecordingId: nextActiveRecordingId
     });
@@ -577,9 +772,7 @@ export const recordingHistoryRepository = {
     });
 
     return updateTakeSelection({
-      snapshot,
       groupId: group.groupId,
-      group: currentGroup ?? group,
       bestRecordingId: nextBestRecordingId,
       activeRecordingId: nextActiveRecordingId
     });
@@ -594,9 +787,7 @@ export const recordingHistoryRepository = {
       )
     });
 
-    writeSnapshot(nextSnapshot);
-
-    return nextSnapshot;
+    return writeSnapshot(nextSnapshot);
   },
 
   setRecordingTags(recordingId: string, tags: string[]) {
@@ -707,9 +898,7 @@ export const recordingHistoryRepository = {
       )
     });
 
-    writeSnapshot(nextSnapshot);
-
-    return nextSnapshot;
+    return writeSnapshot(nextSnapshot);
   },
 
   createErrorMarker(input: Omit<CreateErrorMarkerInput, "durationMs"> & { durationMs?: number }) {
@@ -746,35 +935,34 @@ export const recordingHistoryRepository = {
       errorMarkers: snapshot.errorMarkers.filter((marker) => marker.id !== markerId)
     };
 
-    writeSnapshot(nextSnapshot);
-
-    return nextSnapshot;
+    return writeSnapshot(nextSnapshot);
   },
 
   deleteRecording(recordingId: string) {
-    const snapshot = readSnapshot();
-    const nextSnapshot = buildSnapshot({
-      sessions: snapshot.sessions,
-      recordings: snapshot.recordings.filter((recording) => recording.id !== recordingId),
-      errorMarkers: snapshot.errorMarkers.filter((marker) => marker.recordingId !== recordingId),
-      takeSelections: removeRecordingReferencesFromTakeSelections({
-        takeSelections: getNormalizedTakeSelections(snapshot),
-        recordingIds: [recordingId],
-        updatedAt: new Date().toISOString()
-      }),
-      recordingOrganization: removeRecordingOrganizations({
-        organizations: getNormalizedRecordingOrganizations(snapshot),
-        recordingIds: [recordingId]
-      })
-    });
-
-    writeSnapshot(nextSnapshot);
-
-    return nextSnapshot;
+    return mutateSnapshotWithStaleWriteProtection((snapshot) =>
+      deleteRecordingFromSnapshot(snapshot, recordingId)
+    );
   },
 
   clear() {
-    writeSnapshot(emptySnapshot);
+    const storage = getStorage();
+
+    if (!storage) {
+      return;
+    }
+
+    const originalRawSnapshot = storage.getItem(RECORDINGS_STORAGE_KEY);
+    const serializedSnapshot = JSON.stringify(emptySnapshot);
+
+    if (storage.getItem(RECORDINGS_STORAGE_KEY) !== originalRawSnapshot) {
+      throw new RecordingHistoryConcurrentWriteError();
+    }
+
+    storage.setItem(RECORDINGS_STORAGE_KEY, serializedSnapshot);
+    publishSnapshotWrite({
+      serializedSnapshot,
+      normalizedSnapshot: emptySnapshot
+    });
   },
 
   subscribe(listener: () => void) {
