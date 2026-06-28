@@ -10,7 +10,7 @@ import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import {
   assertRecordingArtifactCleanup,
   cleanupCommittedRecordingArtifacts
-} from "@/lib/recordings-review/artifact-service";
+} from "@/lib/recordings-review/artifact-storage";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import type { PracticeRecordingMetadataRepository } from "@/services/practice-session";
 

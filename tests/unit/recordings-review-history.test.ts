@@ -4,7 +4,7 @@ import {
   derivePeaksFromSamples,
   getDurationWarning,
   loadRecordingArtifactDetails
-} from "@/lib/recordings-review/artifact-service";
+} from "@/lib/recordings-review/artifact-details";
 import { formatDuration, formatTimestamp } from "@/lib/recordings-review/format";
 import {
   filterRecordings,

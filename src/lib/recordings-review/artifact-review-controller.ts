@@ -2,11 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  loadRecordingArtifactDetails,
-  RecordingArtifactError,
-  resolveRecordingArtifactBody
-} from "@/lib/recordings-review/artifact-service";
+import { loadRecordingArtifactDetails } from "@/lib/recordings-review/artifact-details";
+import { RecordingArtifactError } from "@/lib/recordings-review/artifact-model";
+import { resolveRecordingArtifactBody } from "@/lib/recordings-review/artifact-storage";
 import type {
   RecordingArtifactDetails,
   ReviewRecording

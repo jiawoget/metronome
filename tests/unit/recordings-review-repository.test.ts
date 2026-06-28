@@ -50,10 +50,10 @@ describe("recording history repository", () => {
 
     expect(recordingHistoryRepository.getSnapshot().recordings).toHaveLength(1);
     expect(recordingHistoryRepository.getErrorMarkers("recording-1")).toHaveLength(1);
-    expect(recordingHistoryRepository.getArtifact("recording-1")).toMatch(/^data:audio\/wav/);
+    expect(recordingHistoryRepository.getRecording("recording-1")?.audioDataUrl).toMatch(/^data:audio\/wav/);
   });
 
-  it("deletes recording metadata, artifact access, and linked error markers together", () => {
+  it("deletes recording metadata and linked error markers together", () => {
     seedRecordingHistoryForTests(snapshot);
     recordingHistoryRepository.deleteRecording("recording-1");
 
@@ -62,7 +62,6 @@ describe("recording history repository", () => {
     expect(persisted.recordings).toEqual([]);
     expect(persisted.errorMarkers).toEqual([]);
     expect(recordingHistoryRepository.getRecording("recording-1")).toBeNull();
-    expect(recordingHistoryRepository.getArtifact("recording-1")).toBeNull();
   });
 
   it("creates sorted recording-scoped markers and persists deletion", () => {
@@ -737,7 +736,7 @@ describe("recording history repository", () => {
         timeSignature: "4/4"
       }
     });
-    expect(recordingHistoryRepository.getArtifact("sheet-metadata-1")).toBeNull();
+    expect(reviewRecording?.audioDataUrl).toBeNull();
     await expect(recordingHistoryMetadataRepository.listRecordingMetadataForSession("session-sheet-1")).resolves.toEqual([
       {
         id: "sheet-metadata-1",

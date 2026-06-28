@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PracticeSession } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
-import { migrateQuickRecordingArtifacts } from "@/lib/quick-metronome/artifact-controller";
 import { calculateTapTempo } from "@/lib/quick-metronome/control";
 import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
 import { DEFAULT_METRONOME_SETTINGS } from "@/lib/quick-metronome/types";
@@ -56,7 +55,7 @@ export function QuickMetronomeExperience() {
   }, [metronomeService]);
 
   useEffect(() => {
-    void migrateQuickRecordingArtifacts().catch(() => undefined);
+    void quickRecordingController.migrateRecordingArtifacts().catch(() => undefined);
   }, []);
 
   const isRecording = recordingState === "recording";

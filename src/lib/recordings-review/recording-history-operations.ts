@@ -48,24 +48,6 @@ export function createRecordingHistoryOperations({
     });
   }
 
-  function saveSheetReviewRecordingMetadata(recording: ReviewRecording) {
-    if (recording.type !== "sheet") {
-      throw new Error("Sheet recording metadata must have type sheet.");
-    }
-
-    const recordingToSave = omitPersistedAudioBody(recording);
-
-    return mutateSnapshot((snapshot) =>
-      buildRecordingReviewSnapshot({
-        ...snapshot,
-        recordings: [
-          recordingToSave,
-          ...snapshot.recordings.filter((item) => item.id !== recordingToSave.id)
-        ]
-      })
-    );
-  }
-
   function saveSheetRecordingMetadataWithSession({
     recording,
     session
@@ -273,7 +255,6 @@ export function createRecordingHistoryOperations({
 
   return {
     saveQuickRecordingMetadata,
-    saveSheetReviewRecordingMetadata,
     saveSheetRecordingMetadataWithSession,
     deleteQuickRecordingMetadataByIdentity,
     rollbackSheetRecordingMetadata,
