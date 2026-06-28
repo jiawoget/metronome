@@ -57,15 +57,22 @@ export const browserLocalDataCleanupService: LocalDataCleanupService = {
     const cleanupResults = await Promise.allSettled([
       sheetLibraryRepository.clear(),
       referenceRepository.clear(),
-      practiceSessionRepository.clear(),
-      recordingArtifactRepository.clear()
+      practiceSessionRepository.clear()
     ]);
 
     recordingHistoryRepository.clear();
+    const recordingArtifactCleanup = await Promise.allSettled([
+      recordingArtifactRepository.clear()
+    ]);
+
     await browserSettingsRepository.clearSettings();
     await browserSettingsService.resetToDefaults();
 
-    if (cleanupResults.some((result) => result.status === "rejected")) {
+    if (
+      [...cleanupResults, ...recordingArtifactCleanup].some(
+        (result) => result.status === "rejected"
+      )
+    ) {
       throw new Error("Local data cleanup completed with partial storage cleanup failures.");
     }
   }
