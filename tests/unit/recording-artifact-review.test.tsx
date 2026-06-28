@@ -1,11 +1,56 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RecordingArtifactReview } from "@/components/recordings-review/recording-artifact-review";
 import type { RecordingArtifactReviewController } from "@/lib/recordings-review/artifact-review-controller";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 
+const artifactReviewMocks = vi.hoisted(() => {
+  const adapterLoad = vi.fn(async () => undefined);
+  const resolveRecordingArtifactBody = vi.fn();
+  const RecordingWaveformPlaybackAdapter = vi.fn(
+    function RecordingWaveformPlaybackAdapter() {
+      return {
+        load: adapterLoad,
+        destroy: vi.fn(),
+        play: vi.fn(async () => undefined),
+        pause: vi.fn(),
+        seekToMs: vi.fn((targetTimeMs: number) => ({
+          targetTimeMs,
+          currentTimeMs: targetTimeMs
+        })),
+        getCurrentTimeMs: vi.fn(() => 0)
+      };
+    }
+  );
+
+  return {
+    adapterLoad,
+    resolveRecordingArtifactBody,
+    RecordingWaveformPlaybackAdapter
+  };
+});
+
+vi.mock("@/lib/recordings-review/artifact-storage", () => ({
+  resolveRecordingArtifactBody: artifactReviewMocks.resolveRecordingArtifactBody
+}));
+
+vi.mock("@/lib/recordings-review/wavesurfer-adapter", () => ({
+  RecordingWaveformPlaybackAdapter:
+    artifactReviewMocks.RecordingWaveformPlaybackAdapter
+}));
+
 describe("RecordingArtifactReview", () => {
+  beforeEach(() => {
+    artifactReviewMocks.adapterLoad.mockClear();
+    artifactReviewMocks.resolveRecordingArtifactBody.mockReset();
+    artifactReviewMocks.RecordingWaveformPlaybackAdapter.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("uses an injected controller and seeks once for a pointer action", () => {
     const controller = createReadyController();
     const seekToRatio = controller.controls.seekToRatio;
@@ -82,12 +127,71 @@ describe("RecordingArtifactReview", () => {
 
     expect(play).not.toHaveBeenCalled();
   });
+
+  it("resolves one artifact body for default controller details and playback", async () => {
+    installAudioContextMock({ durationSeconds: 1 });
+
+    const artifactBlob = new Blob(["audio"], { type: "audio/webm" });
+    const recording = createRecording({
+      artifactRef: createRecordingArtifactRef("recording-alpha"),
+      audioDataUrl: null,
+      trustedPeaks: [0.2, 0.8]
+    });
+
+    artifactReviewMocks.resolveRecordingArtifactBody.mockResolvedValue({
+      artifactId: "recording-alpha",
+      recordingId: "recording-alpha",
+      mimeType: "audio/webm",
+      sizeBytes: artifactBlob.size,
+      blob: artifactBlob
+    });
+
+    const { rerender } = renderDefaultReview(recording);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("artifact-source")).toHaveAttribute(
+        "data-recording-id",
+        "recording-alpha"
+      );
+    });
+
+    expect(screen.getByTestId("artifact-peaks")).toHaveAttribute(
+      "data-waveform-source",
+      "trusted-peaks"
+    );
+    expect(artifactReviewMocks.resolveRecordingArtifactBody).toHaveBeenCalledTimes(1);
+    expect(artifactReviewMocks.resolveRecordingArtifactBody).toHaveBeenCalledWith(
+      recording
+    );
+    expect(artifactReviewMocks.adapterLoad).toHaveBeenCalledWith(
+      expect.any(HTMLDivElement),
+      recording,
+      artifactBlob
+    );
+
+    rerender(createDefaultReviewElement(recording));
+
+    await waitFor(() => {
+      expect(artifactReviewMocks.resolveRecordingArtifactBody).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 function renderReview(controller: RecordingArtifactReviewController) {
-  return render(
+  return render(createDefaultReviewElement(createRecording(), controller));
+}
+
+function renderDefaultReview(recording: ReviewRecording) {
+  return render(createDefaultReviewElement(recording));
+}
+
+function createDefaultReviewElement(
+  recording: ReviewRecording,
+  controller?: RecordingArtifactReviewController
+) {
+  return (
     <RecordingArtifactReview
-      recording={createRecording()}
+      recording={recording}
       adapterClassName="h-10"
       adapterTestId="artifact-waveform"
       derivedWaveformClassName="grid"
@@ -175,4 +279,40 @@ function createRecording(overrides: Partial<ReviewRecording> = {}): ReviewRecord
     },
     ...overrides
   };
+}
+
+function createRecordingArtifactRef(recordingId: string) {
+  return {
+    kind: "indexeddb" as const,
+    artifactId: recordingId,
+    storageVersion: 1 as const
+  };
+}
+
+function installAudioContextMock({
+  durationSeconds = 1,
+  samples = new Float32Array([0, 0.25, -0.5, 1])
+}: {
+  durationSeconds?: number;
+  samples?: Float32Array;
+} = {}) {
+  class MockAudioContext {
+    async decodeAudioData() {
+      return {
+        duration: durationSeconds,
+        sampleRate: 8_000,
+        getChannelData: () => samples
+      };
+    }
+
+    close() {
+      return Promise.resolve();
+    }
+  }
+
+  vi.stubGlobal("AudioContext", MockAudioContext);
+  Object.defineProperty(window, "AudioContext", {
+    configurable: true,
+    value: MockAudioContext
+  });
 }

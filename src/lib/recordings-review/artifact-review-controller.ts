@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { loadRecordingArtifactDetails } from "@/lib/recordings-review/artifact-details";
+import { loadRecordingArtifactDetailsFromBody } from "@/lib/recordings-review/artifact-details";
 import { RecordingArtifactError } from "@/lib/recordings-review/artifact-model";
 import { resolveRecordingArtifactBody } from "@/lib/recordings-review/artifact-storage";
 import type {
@@ -75,12 +75,18 @@ export function useRecordingArtifactReviewController({
           setCurrentTimeMs(0);
         }
 
-        return Promise.all([
-          loadRecordingArtifactDetails(recording),
-          resolveRecordingArtifactBody(recording)
-        ]);
+        return resolveRecordingArtifactBody(recording);
       })
-      .then(([details, artifactBody]) => {
+      .then(async (artifactBody) => ({
+        artifactBody,
+        details: await loadRecordingArtifactDetailsFromBody({
+          recordingId: recording.id,
+          blob: artifactBody.blob,
+          metadataDurationMs: recording.durationMs,
+          trustedPeaks: recording.trustedPeaks
+        })
+      }))
+      .then(({ artifactBody, details }) => {
         if (!cancelled) {
           setArtifactBlob(artifactBody.blob);
           setState({ status: "ready", details, message: null });
