@@ -861,7 +861,7 @@
                                                             },
                                                             {
                                                                 "slice":  "C2-02 metadata-session-type-split",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "C2-03 sheet-recording-direct-body-decode",
