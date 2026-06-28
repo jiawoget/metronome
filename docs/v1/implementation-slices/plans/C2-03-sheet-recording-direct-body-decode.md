@@ -4,13 +4,14 @@
 
 - Workstream: `pack-c-codebase-slimming`
 - Slice: `C2-03 sheet-recording-direct-body-decode`
-- Current lifecycle state: `review_in_progress`
+- Current lifecycle state: `verified`
 - Parent plan: `docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md`
 - Baseline branch: `main`
 - Baseline commit: `6f7ae8280076822014c4a8f00901cf485e8eeb4f`
 - Previous slice: `C2-02 metadata-session-type-split` is `verified` and merged.
 - Plan review: `PASS_WITH_CHANGES`, then `PASS` after the requested helper API
   and test-scope clarifications.
+- PR review: `PASS`; no blocking findings.
 
 ## Decision
 
