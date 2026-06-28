@@ -873,7 +873,7 @@
                                                             },
                                                             {
                                                                 "slice":  "C2-05 artifact-review-single-resolve",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "C2-06 save-rollback-leaf-helpers",
