@@ -865,7 +865,7 @@
                                                             },
                                                             {
                                                                 "slice":  "C2-03 sheet-recording-direct-body-decode",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "C2-04 legacy-audio-data-url-deletion",
