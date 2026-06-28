@@ -96,11 +96,18 @@ async function decodeAudioBlob(blob: Blob) {
   }
 }
 
-export async function loadRecordingArtifactDetails(
-  recording: ReviewRecording
-): Promise<RecordingArtifactDetails> {
-  const artifactBody = await resolveRecordingArtifactBody(recording);
-  const audioBuffer = await decodeAudioBlob(artifactBody.blob);
+export async function loadRecordingArtifactDetailsFromBody({
+  recordingId,
+  blob,
+  metadataDurationMs,
+  trustedPeaks
+}: {
+  recordingId: string;
+  blob: Blob;
+  metadataDurationMs: number;
+  trustedPeaks?: number[];
+}): Promise<RecordingArtifactDetails> {
+  const audioBuffer = await decodeAudioBlob(blob);
   const decodedPeaks = derivePeaksFromSamples(audioBuffer.getChannelData(0));
 
   if (decodedPeaks.length === 0 || Math.max(...decodedPeaks) <= 0) {
@@ -111,7 +118,6 @@ export async function loadRecordingArtifactDetails(
   }
 
   const decodedDurationMs = audioBuffer.duration * 1_000;
-  const trustedPeaks = recording.trustedPeaks;
   const useTrustedPeaks = !!trustedPeaks && trustedPeaks.length > 0;
 
   if (useTrustedPeaks && !trustedPeaks.every((peak) => Number.isFinite(peak))) {
@@ -132,16 +138,29 @@ export async function loadRecordingArtifactDetails(
 
   const durationWarning = getDurationWarning({
     decodedDurationMs,
-    metadataDurationMs: recording.durationMs
+    metadataDurationMs
   });
 
   return {
-    recordingId: recording.id,
+    recordingId,
     decodedDurationMs,
-    metadataDurationMs: recording.durationMs,
-    durationDifferenceMs: Math.abs(decodedDurationMs - recording.durationMs),
+    metadataDurationMs,
+    durationDifferenceMs: Math.abs(decodedDurationMs - metadataDurationMs),
     durationWarning,
     peaks: useTrustedPeaks ? normalizedTrustedPeaks : decodedPeaks,
     source: useTrustedPeaks ? "trusted-peaks" : "decoded-audio"
   };
+}
+
+export async function loadRecordingArtifactDetails(
+  recording: ReviewRecording
+): Promise<RecordingArtifactDetails> {
+  const artifactBody = await resolveRecordingArtifactBody(recording);
+
+  return loadRecordingArtifactDetailsFromBody({
+    recordingId: recording.id,
+    blob: artifactBody.blob,
+    metadataDurationMs: recording.durationMs,
+    trustedPeaks: recording.trustedPeaks
+  });
 }

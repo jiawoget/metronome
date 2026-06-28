@@ -272,6 +272,36 @@ describe("sheet practice recording service", () => {
     ).resolves.toBeNull();
   });
 
+  it("decodes sheet captures from the Blob without relying on artifact dataUrl", async () => {
+    const capture = createCaptureService(
+      createArtifact({
+        dataUrl: "not-a-data-url"
+      })
+    );
+    const sessionService = createPreparedSessionService();
+    const service = new BrowserSheetRecordingService(capture.service);
+
+    const result = await service.stopAndSave({
+      sheetId: "sheet-alpha",
+      sessionId: "session-new",
+      settings,
+      forceNewSession: false,
+      sessionService
+    });
+    const persisted = recordingHistoryRepository.getRecording("recording-sheet-1");
+
+    expect(result.artifactDetails.recordingId).toBe("recording-sheet-1");
+    expect(result.artifactDetails.peaks.some((peak) => peak > 0)).toBe(true);
+    expect(persisted).toMatchObject({
+      artifactRef: {
+        kind: "indexeddb",
+        artifactId: "recording-sheet-1",
+        storageVersion: 1
+      },
+      audioDataUrl: null
+    });
+  });
+
   it("preserves segment context returned by the session service on final artifact save", async () => {
     const segmentContext = createSegmentContext({ targetBpm: null });
     const metadataWithSegment = {

@@ -7,7 +7,7 @@ import {
 } from "@/lib/recordings-review/artifact-storage";
 import {
   hasUsablePeaks,
-  loadRecordingArtifactDetails
+  loadRecordingArtifactDetailsFromBody
 } from "@/lib/recordings-review/artifact-details";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
@@ -59,43 +59,6 @@ export function createSheetReviewRecording({
     settings: {
       bpm: metadata.bpm ?? settings.bpm,
       timeSignature: metadata.timeSignature ?? settings.timeSignature,
-      subdivision: settings.subdivision,
-      accent: settings.accent,
-      countdownBeats: settings.countdownBeats
-    }
-  };
-}
-
-function createDraftSheetReviewRecording({
-  artifact,
-  sheetId,
-  sessionId,
-  settings
-}: {
-  artifact: RecordingArtifact;
-  sheetId: string;
-  sessionId: string | null;
-  settings: MetronomeSettings;
-}): ReviewRecording {
-  const durationMs = roundDuration(artifact.analysis?.decodedDurationMs ?? artifact.durationMs);
-
-  return {
-    id: "sheet-recording-draft",
-    type: "sheet",
-    origin: "user",
-    name: "Sheet practice take",
-    sessionId: sessionId ?? "pending-sheet-session",
-    sheetId,
-    sheetName: null,
-    createdAt: new Date(0).toISOString(),
-    durationMs,
-    sizeBytes: artifact.sizeBytes,
-    mimeType: artifact.mimeType,
-    audioDataUrl: artifact.dataUrl,
-    artifactAnalysis: artifact.analysis,
-    settings: {
-      bpm: settings.bpm,
-      timeSignature: settings.timeSignature,
       subdivision: settings.subdivision,
       accent: settings.accent,
       countdownBeats: settings.countdownBeats
@@ -183,14 +146,11 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
       throw new Error("Recording artifact did not contain audible input.");
     }
 
-    const decodedDetails = await loadRecordingArtifactDetails(
-      createDraftSheetReviewRecording({
-        artifact,
-        sheetId: input.sheetId,
-        sessionId: input.sessionId,
-        settings: input.settings
-      })
-    );
+    const decodedDetails = await loadRecordingArtifactDetailsFromBody({
+      recordingId: "pending-sheet-recording",
+      blob: artifact.blob,
+      metadataDurationMs: roundDuration(artifact.analysis?.decodedDurationMs ?? artifact.durationMs)
+    });
 
     if (!hasUsablePeaks(decodedDetails.peaks)) {
       throw new Error("Recording waveform could not be derived from the saved audio.");
@@ -238,6 +198,7 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
       };
       const artifactDetails: RecordingArtifactDetails = {
         ...decodedDetails,
+        recordingId: recording.id,
         metadataDurationMs: recording.durationMs,
         durationDifferenceMs: Math.abs(decodedDetails.decodedDurationMs - recording.durationMs),
         durationWarning: null,
