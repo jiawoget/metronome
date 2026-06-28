@@ -10,7 +10,6 @@ export type RecordingArtifactBody = {
 export type RecordingArtifactUnavailableReason =
   | "missing-artifact-ref"
   | "missing-artifact-body"
-  | "legacy-artifact-malformed"
   | "unsupported-mime"
   | "decode-failed"
   | "empty-audio"

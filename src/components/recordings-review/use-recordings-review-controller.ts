@@ -42,14 +42,6 @@ export function useRecordingsReviewController(
     return () => window.clearTimeout(timerId);
   }, []);
 
-  useEffect(() => {
-    if (!clientReady) {
-      return;
-    }
-
-    void service.migrateLegacyArtifacts().catch(() => undefined);
-  }, [clientReady, service]);
-
   const actions = useMemo(
     () => ({
       service,

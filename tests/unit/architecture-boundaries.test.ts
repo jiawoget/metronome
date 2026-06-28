@@ -91,7 +91,6 @@ describe("source architecture boundaries", () => {
     );
     const violations = matchingFiles(files, [
       /@\/lib\/recordings-review\/artifact-details/,
-      /@\/lib\/recordings-review\/artifact-migration/,
       /@\/lib\/recordings-review\/artifact-storage/,
       /@\/lib\/recordings-review\/repository/,
       /\brecordingHistoryRepository\b/,
@@ -112,7 +111,6 @@ describe("source architecture boundaries", () => {
       ])
     );
     const violations = matchingFiles(files, [
-      /@\/lib\/recordings-review\/artifact-migration/,
       /@\/lib\/recordings-review\/artifact-storage/,
       /@\/infrastructure\/db\/recording-artifact-repository/,
       /@\/lib\/recordings-review\/repository/,
@@ -121,7 +119,6 @@ describe("source architecture boundaries", () => {
       /\bquickRecordingRepository\b/,
       /\brecordingArtifactRepository\b/,
       /\brecordingHistoryRepository\b/,
-      /\bmigrateLegacyRecordingArtifacts\b/,
       /\bsaveCapturedRecordingArtifact\b/,
       /\bdeleteRecordingArtifactById\b/,
       /from\s+["']dexie["']/
@@ -152,7 +149,6 @@ describe("source architecture boundaries", () => {
     const violations = matchingFiles(appFiles, [
       /@\/infrastructure\/db\/recording-artifact-repository/,
       /\brecordingArtifactRepository\b/,
-      /\bmigrateLegacyRecordingArtifacts\b/,
       /from\s+["']dexie["']/,
       /@\/lib\/recordings-review\/repository/,
       /\brecordingHistoryRepository\b/

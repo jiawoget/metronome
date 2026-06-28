@@ -55,12 +55,6 @@ let cachedSnapshot: RecordingReviewSnapshot = emptySnapshot;
 
 type RawSnapshotObject = Record<string, unknown>;
 
-export type RecordingHistoryWriteSession = {
-  originalRawSnapshot: string | null;
-  rawBase: RawSnapshotObject;
-  snapshot: RecordingReviewSnapshot;
-};
-
 export class RecordingHistoryConcurrentWriteError extends Error {
   constructor() {
     super("Recording history changed before the metadata write could commit.");
@@ -358,44 +352,6 @@ function mutateSnapshotWithStaleWriteProtection(
   throw new RecordingHistoryConcurrentWriteError();
 }
 
-function beginLegacyArtifactMigrationWrite(): RecordingHistoryWriteSession {
-  const storage = getStorage();
-  const originalRawSnapshot = storage?.getItem(RECORDINGS_STORAGE_KEY) ?? null;
-  const rawBase = parseRawSnapshotObject(originalRawSnapshot);
-
-  return {
-    originalRawSnapshot,
-    rawBase,
-    snapshot: storage ? normalizeSnapshotValue(rawBase) : emptySnapshot
-  };
-}
-
-function commitLegacyArtifactMigrationWrite(
-  session: RecordingHistoryWriteSession,
-  mutate: (snapshot: RecordingReviewSnapshot) => RecordingReviewSnapshot
-) {
-  const storage = getStorage();
-  const nextSnapshot = mutate(session.snapshot);
-
-  if (!storage) {
-    return normalizeSnapshotValue(nextSnapshot);
-  }
-
-  if (storage.getItem(RECORDINGS_STORAGE_KEY) !== session.originalRawSnapshot) {
-    throw new RecordingHistoryConcurrentWriteError();
-  }
-
-  const { normalizedSnapshot, serializedSnapshot } = serializeSnapshotForWrite({
-    snapshot: nextSnapshot,
-    rawBase: session.rawBase
-  });
-
-  storage.setItem(RECORDINGS_STORAGE_KEY, serializedSnapshot);
-  publishSnapshotWrite({ serializedSnapshot, normalizedSnapshot });
-
-  return normalizedSnapshot;
-}
-
 function writeSnapshot(snapshot: RecordingReviewSnapshot) {
   return mutateSnapshotWithStaleWriteProtection(() => snapshot);
 }
@@ -678,10 +634,6 @@ export const recordingHistoryRepository = {
   clearQuickRecordings: recordingHistoryOperations.clearQuickRecordings,
 
   clearSheetRecordings: recordingHistoryOperations.clearSheetRecordings,
-
-  beginLegacyArtifactMigrationWrite,
-
-  commitLegacyArtifactMigrationWrite,
 
   setBestTake(group: RecordingTakeGroup, recordingId: string | null) {
     const snapshot = readSnapshot();

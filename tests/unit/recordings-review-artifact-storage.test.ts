@@ -8,13 +8,12 @@ import {
   createRecordingArtifactRef,
   resolveRecordingArtifactBody
 } from "@/lib/recordings-review/artifact-storage";
-import { migrateLegacyRecordingArtifacts } from "@/lib/recordings-review/artifact-migration";
 import {
   recordingArtifactRepository,
   type LocalRecordingArtifact,
   type RecordingArtifactRepository
 } from "@/infrastructure/db/recording-artifact-repository";
-import type { RecordingReviewSnapshot, ReviewRecording } from "@/lib/recordings-review/types";
+import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { createRecordingsReviewService } from "@/services/recordings-review";
 import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
 import { recordingHistoryMetadataRepository } from "@/infrastructure/db/recording-history-metadata-repository";
@@ -150,214 +149,6 @@ describe("recording artifact storage", () => {
     ).rejects.toThrow("must match");
   });
 
-  it("migrates safe legacy rows, leaves bad rows intact, and preserves unknown fields", async () => {
-    const repository = createMemoryArtifactRepository();
-    const snapshot: RecordingReviewSnapshot = {
-      sessions: [{ id: "session-1", sourceType: "quick" }],
-      recordings: [
-        createRecording({
-          id: "safe-recording",
-          futurePerRecordField: { keep: true }
-        } as Partial<ReviewRecording>),
-        createRecording({
-          id: "bad-recording",
-          audioDataUrl: "not-a-data-url"
-        })
-      ],
-      errorMarkers: [],
-      futureTopLevelField: { keep: true }
-    };
-
-    window.localStorage.setItem(RECORDINGS_STORAGE_KEY, JSON.stringify(snapshot));
-
-    const result = await migrateLegacyRecordingArtifacts(repository);
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
-
-    expect(result).toMatchObject({
-      migrated: 1,
-      failed: 1
-    });
-    expect(repository.artifacts.get("safe-recording")).toMatchObject({
-      artifactId: "safe-recording",
-      recordingId: "safe-recording",
-      legacyMigratedFrom: "audioDataUrl"
-    });
-    expect(persisted.futureTopLevelField).toEqual({ keep: true });
-    expect(persisted.recordings.find((recording: { id: string }) => recording.id === "safe-recording")).toMatchObject({
-      id: "safe-recording",
-      artifactRef: {
-        kind: "indexeddb",
-        artifactId: "safe-recording",
-        storageVersion: 1
-      },
-      futurePerRecordField: { keep: true }
-    });
-    expect(
-      persisted.recordings.find((recording: { id: string }) => recording.id === "safe-recording")
-    ).not.toHaveProperty("audioDataUrl");
-    expect(persisted.recordings.find((recording: { id: string }) => recording.id === "bad-recording").audioDataUrl).toBe(
-      "not-a-data-url"
-    );
-  });
-
-  it("preserves exact raw localStorage bytes when artifact storage is unavailable", async () => {
-    const repository = createMemoryArtifactRepository({ failSaves: true });
-    const rawSnapshot = JSON.stringify({
-      sessions: [],
-      recordings: [createRecording()],
-      errorMarkers: [],
-      futureTopLevelField: { keep: true }
-    });
-
-    window.localStorage.setItem(RECORDINGS_STORAGE_KEY, rawSnapshot);
-
-    const result = await migrateLegacyRecordingArtifacts(repository);
-
-    expect(result).toMatchObject({
-      migrated: 0,
-      failed: 1
-    });
-    expect(window.localStorage.getItem(RECORDINGS_STORAGE_KEY)).toBe(rawSnapshot);
-  });
-
-  it("cleans legacy audioDataUrl when a valid artifactRef body already exists even if legacy bytes are malformed", async () => {
-    const repository = createMemoryArtifactRepository();
-    const snapshot: RecordingReviewSnapshot = {
-      sessions: [],
-      recordings: [
-        createRecording({
-          id: "already-restored",
-          artifactRef: createRecordingArtifactRef("already-restored"),
-          audioDataUrl: "not-a-data-url"
-        })
-      ],
-      errorMarkers: [],
-      futureTopLevelField: { keep: true }
-    };
-
-    await repository.saveArtifact({
-      artifactId: "already-restored",
-      recordingId: "already-restored",
-      recordingType: "quick",
-      mimeType: "audio/webm",
-      sizeBytes: 8,
-      blob: new Blob(["restored"], { type: "audio/webm" }),
-      createdAt: "2026-06-22T06:00:00.000Z",
-      updatedAt: "2026-06-22T06:00:00.000Z"
-    });
-    window.localStorage.setItem(RECORDINGS_STORAGE_KEY, JSON.stringify(snapshot));
-
-    const result = await migrateLegacyRecordingArtifacts(repository);
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
-
-    expect(result).toMatchObject({
-      migrated: 1,
-      failed: 0
-    });
-    expect(persisted.futureTopLevelField).toEqual({ keep: true });
-    expect(persisted.recordings[0]).toMatchObject({
-      id: "already-restored",
-      artifactRef: createRecordingArtifactRef("already-restored")
-    });
-    expect(persisted.recordings[0]).not.toHaveProperty("audioDataUrl");
-    await expect(repository.artifacts.get("already-restored")?.blob.text()).resolves.toBe(
-      "restored"
-    );
-  });
-
-  it("preserves legacy bytes when artifactRef row is owned but body-invalid and legacy data is malformed", async () => {
-    const repository = createMemoryArtifactRepository();
-    const rawSnapshot = JSON.stringify({
-      sessions: [],
-      recordings: [
-        createRecording({
-          id: "corrupt-artifact",
-          artifactRef: createRecordingArtifactRef("corrupt-artifact"),
-          audioDataUrl: "not-a-data-url"
-        })
-      ],
-      errorMarkers: [],
-      futureTopLevelField: { keep: true }
-    });
-
-    repository.artifacts.set("corrupt-artifact", {
-      artifactId: "corrupt-artifact",
-      recordingId: "corrupt-artifact",
-      recordingType: "quick",
-      mimeType: "audio/webm",
-      sizeBytes: 0,
-      blob: new Blob([], { type: "audio/webm" }),
-      createdAt: "2026-06-22T06:00:00.000Z",
-      updatedAt: "2026-06-22T06:00:00.000Z"
-    });
-    window.localStorage.setItem(RECORDINGS_STORAGE_KEY, rawSnapshot);
-
-    const result = await migrateLegacyRecordingArtifacts(repository);
-
-    expect(result).toMatchObject({
-      migrated: 0,
-      failed: 1
-    });
-    expect(window.localStorage.getItem(RECORDINGS_STORAGE_KEY)).toBe(rawSnapshot);
-  });
-
-  it("retries migration from fresh raw bytes when the same recording changes concurrently", async () => {
-    let saveCount = 0;
-    const oldSnapshot: RecordingReviewSnapshot = {
-      sessions: [],
-      recordings: [
-        createRecording({
-          id: "same-recording",
-          audioDataUrl: "data:audio/webm;base64,b2xkLWJ5dGVz"
-        })
-      ],
-      errorMarkers: []
-    };
-    const newSnapshot: RecordingReviewSnapshot = {
-      sessions: [],
-      recordings: [
-        createRecording({
-          id: "same-recording",
-          name: "Concurrent replacement",
-          audioDataUrl: "data:audio/webm;base64,bmV3LWJ5dGVz"
-        })
-      ],
-      errorMarkers: []
-    };
-    const repository = createMemoryArtifactRepository({
-      onSave() {
-        saveCount += 1;
-
-        if (saveCount === 1) {
-          window.localStorage.setItem(
-            RECORDINGS_STORAGE_KEY,
-            JSON.stringify(newSnapshot)
-          );
-        }
-      }
-    });
-
-    window.localStorage.setItem(RECORDINGS_STORAGE_KEY, JSON.stringify(oldSnapshot));
-
-    const result = await migrateLegacyRecordingArtifacts(repository);
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
-    const savedArtifact = repository.artifacts.get("same-recording");
-
-    expect(result).toMatchObject({
-      migrated: 1,
-      failed: 0,
-      orphaned: 0
-    });
-    expect(saveCount).toBe(2);
-    expect(persisted.recordings[0]).toMatchObject({
-      id: "same-recording",
-      name: "Concurrent replacement",
-      artifactRef: createRecordingArtifactRef("same-recording")
-    });
-    expect(persisted.recordings[0]).not.toHaveProperty("audioDataUrl");
-    await expect(savedArtifact?.blob.text()).resolves.toBe("new-bytes");
-  });
-
   it("resolves artifact-ref bodies without reading audio bodies from metadata", async () => {
     const repository = createMemoryArtifactRepository();
     const recording = createRecording({
@@ -391,40 +182,30 @@ describe("recording artifact storage", () => {
     await expect(body.blob.text()).resolves.toBe("audio");
   });
 
-  it("falls back to legacy audioDataUrl without saving an artifact by default", async () => {
+  it("does not fall back to legacy audioDataUrl when an artifactRef body is missing", async () => {
     const repository = createMemoryArtifactRepository();
     const recording = createRecording({
       artifactRef: createRecordingArtifactRef("recording-1"),
       audioDataUrl: "data:audio/webm;base64,cmVjb3ZlcmVk"
     });
 
-    const body = await resolveRecordingArtifactBody(recording, { repository });
-
-    expect(body).toMatchObject({
-      artifactId: "recording-1",
-      recordingId: "recording-1",
-      mimeType: "audio/webm"
-    });
-    await expect(body.blob.text()).resolves.toBe("recovered");
+    await expect(
+      resolveRecordingArtifactBody(recording, { repository })
+    ).rejects.toMatchObject({ reason: "missing-artifact-body" });
     expect(repository.artifacts.has("recording-1")).toBe(false);
   });
 
-  it("requires explicit opt-in before legacy fallback saves an artifact", async () => {
+  it("requires artifactRef even when legacy audioDataUrl bytes are present", async () => {
     const repository = createMemoryArtifactRepository();
     const recording = createRecording({
-      artifactRef: createRecordingArtifactRef("recording-1"),
+      artifactRef: null,
       audioDataUrl: "data:audio/webm;base64,cmVjb3ZlcmVk"
     });
 
-    const body = await resolveRecordingArtifactBody(recording, {
-      repository,
-      persistLegacyFallback: true
-    });
-
-    await expect(body.blob.text()).resolves.toBe("recovered");
-    await expect(repository.artifacts.get("recording-1")?.blob.text()).resolves.toBe(
-      "recovered"
-    );
+    await expect(
+      resolveRecordingArtifactBody(recording, { repository })
+    ).rejects.toMatchObject({ reason: "missing-artifact-ref" });
+    expect(repository.artifacts.has("recording-1")).toBe(false);
   });
 
   it("reports post-commit single-record artifact cleanup failure after metadata removal", async () => {

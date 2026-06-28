@@ -108,8 +108,7 @@ export function createRecordingAudioExportService({
             !error.message.toLowerCase().includes("mime does not match")
               ? "unsupported-mime"
               : error instanceof RecordingArtifactError &&
-                  (error.reason === "legacy-artifact-malformed" ||
-                    error.reason === "decode-failed" ||
+                  (error.reason === "decode-failed" ||
                     error.reason === "empty-audio" ||
                     error.reason === "unsupported-mime")
                 ? "invalid-artifact"
@@ -158,9 +157,9 @@ export const recordingAudioExportService = createRecordingAudioExportService({
 });
 
 export function getRecordingAudioExportEligibility(
-  recording: Pick<ReviewRecording, "artifactRef" | "audioDataUrl" | "mimeType">
+  recording: Pick<ReviewRecording, "artifactRef" | "mimeType">
 ): RecordingAudioExportEligibility {
-  if (!recording.artifactRef && !recording.audioDataUrl?.trim()) {
+  if (!recording.artifactRef) {
     return {
       available: false,
       reason: "missing-artifact",

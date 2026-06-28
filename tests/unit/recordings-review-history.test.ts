@@ -3,8 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   derivePeaksFromSamples,
   getDurationWarning,
-  loadRecordingArtifactDetails
+  loadRecordingArtifactDetails,
+  loadRecordingArtifactDetailsFromBody
 } from "@/lib/recordings-review/artifact-details";
+import { createRecordingArtifactRef } from "@/lib/recordings-review/artifact-storage";
 import { formatDuration, formatTimestamp } from "@/lib/recordings-review/format";
 import {
   filterRecordings,
@@ -500,7 +502,7 @@ describe("recordings review artifact helpers", () => {
   it("accepts trusted peaks only after the sheet artifact decodes", async () => {
     installAudioContextMock({ durationSeconds: 125 });
 
-    const details = await loadRecordingArtifactDetails(sheetRecording);
+    const details = await loadTestArtifactDetails(sheetRecording);
 
     expect(details.recordingId).toBe("sheet-1");
     expect(details.source).toBe("trusted-peaks");
@@ -513,21 +515,21 @@ describe("recordings review artifact helpers", () => {
     installAudioContextMock({ durationSeconds: 125 });
 
     await expect(
-      loadRecordingArtifactDetails({
+      loadTestArtifactDetails({
         ...sheetRecording,
         trustedPeaks: [0, 0]
       })
     ).rejects.toThrow("invalid waveform peak data");
 
     await expect(
-      loadRecordingArtifactDetails({
+      loadTestArtifactDetails({
         ...sheetRecording,
         trustedPeaks: [Number.NaN, 0.5]
       })
     ).rejects.toThrow("invalid waveform peak data");
 
     await expect(
-      loadRecordingArtifactDetails({
+      loadTestArtifactDetails({
         ...sheetRecording,
         trustedPeaks: [Number.POSITIVE_INFINITY, 0.5]
       })
@@ -540,12 +542,12 @@ describe("recordings review artifact helpers", () => {
       samples: new Float32Array([0, 0.5, -1, 0.25])
     });
 
-    const missingDetails = await loadRecordingArtifactDetails({
+    const missingDetails = await loadTestArtifactDetails({
       ...sheetRecording,
       durationMs: 1_000,
       trustedPeaks: undefined
     });
-    const emptyDetails = await loadRecordingArtifactDetails({
+    const emptyDetails = await loadTestArtifactDetails({
       ...sheetRecording,
       durationMs: 1_000,
       trustedPeaks: []
@@ -563,21 +565,33 @@ describe("recordings review artifact helpers", () => {
     await expect(
       loadRecordingArtifactDetails({
         ...sheetRecording,
+        artifactRef: null,
         audioDataUrl: null
       })
     ).rejects.toThrow("no accessible audio artifact");
   });
 
+  it("does not fall back to legacy audioDataUrl when an artifact body is missing", async () => {
+    await expect(
+      loadRecordingArtifactDetails({
+        ...sheetRecording,
+        artifactRef: createRecordingArtifactRef(sheetRecording.id),
+        audioDataUrl: "data:audio/wav;base64,UklGRg=="
+      })
+    ).rejects.toThrow("local audio artifact is missing");
+  });
+
   it("rejects trusted peaks when the audio cannot be decoded", async () => {
     installAudioContextMock({ reject: true });
 
-    await expect(loadRecordingArtifactDetails(sheetRecording)).rejects.toThrow("cannot be decoded");
+    await expect(loadTestArtifactDetails(sheetRecording)).rejects.toThrow("cannot be decoded");
   });
 
   it("rejects missing audio without trusted peaks", async () => {
     await expect(
       loadRecordingArtifactDetails({
         ...quickRecording,
+        artifactRef: null,
         audioDataUrl: null,
         trustedPeaks: undefined
       })
@@ -587,7 +601,7 @@ describe("recordings review artifact helpers", () => {
   it("surfaces duration mismatch beyond tolerance", async () => {
     installAudioContextMock({ durationSeconds: 2 });
 
-    const details = await loadRecordingArtifactDetails({
+    const details = await loadTestArtifactDetails({
       ...quickRecording,
       durationMs: 1_000,
       trustedPeaks: undefined
@@ -604,3 +618,12 @@ describe("recordings review artifact helpers", () => {
     );
   });
 });
+
+function loadTestArtifactDetails(recording: ReviewRecording) {
+  return loadRecordingArtifactDetailsFromBody({
+    recordingId: recording.id,
+    blob: new Blob(["audio"], { type: recording.mimeType }),
+    metadataDurationMs: recording.durationMs,
+    trustedPeaks: recording.trustedPeaks
+  });
+}

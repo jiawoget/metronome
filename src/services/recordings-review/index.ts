@@ -8,7 +8,6 @@ import {
   assertRecordingArtifactCleanup,
   cleanupCommittedRecordingArtifacts
 } from "@/lib/recordings-review/artifact-storage";
-import { migrateLegacyRecordingArtifacts } from "@/lib/recordings-review/artifact-migration";
 import {
   recordingArtifactRepository,
   type RecordingArtifactRepository
@@ -53,7 +52,6 @@ export type RecordingsReviewService = {
   exportRecordingAudio: (
     request: RecordingAudioExportRequest
   ) => Promise<RecordingAudioExportResult>;
-  migrateLegacyArtifacts: () => Promise<void>;
 };
 
 type RecordingHistoryRepository = typeof recordingHistoryRepository;
@@ -106,9 +104,6 @@ export function createRecordingsReviewService({
   getRecordingAudioExportEligibility,
   exportRecordingAudio(request) {
     return recordingAudioExportService.exportRecordingAudio(request);
-  },
-  async migrateLegacyArtifacts() {
-    await migrateLegacyRecordingArtifacts(artifactRepository);
   }
 };
 }
