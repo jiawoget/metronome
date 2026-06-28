@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import type { SheetRecordingSegmentContext } from "@/domain/practice";
 import { createTakeHistorySummary } from "@/lib/recordings-review/take-history-summary";
 import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
 import type {
@@ -9,6 +8,11 @@ import type {
   ResolvedRecordingTakeSelection,
   ReviewRecording
 } from "@/lib/recordings-review/types";
+import {
+  makeSheetRecordingSegmentContext as createSegmentContext,
+  makeSheetReviewRecording,
+  type MakeSheetReviewRecordingOverrides
+} from "./factories/recordings-review";
 
 describe("createTakeHistorySummary", () => {
   it("uses take grouping for latest values and resolved metadata for best", () => {
@@ -226,59 +230,13 @@ function createMarker({
   };
 }
 
-function createSegmentContext(
-  overrides: Partial<SheetRecordingSegmentContext> = {}
-): SheetRecordingSegmentContext {
-  return {
-    segmentId: "segment-alpha",
-    segmentName: "Bridge",
-    range: {
-      startMeasure: 5,
-      endMeasure: 12
-    },
-    targetBpm: 96,
-    measureGridVersion:
-      "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
-    measureGridSnapshot: {
-      bpm: 96,
-      timeSignature: "4/4",
-      pickupBeats: 0,
-      measureOneOffsetMs: 1_000
-    },
-    measureRangeMs: {
-      startMs: 11_000,
-      endMs: 31_000
-    },
-    ...overrides
-  };
-}
-
 function createSheetRecording(
-  overrides: Partial<Omit<ReviewRecording, "segmentContext" | "settings">> & {
-    segmentContext?: SheetRecordingSegmentContext | null;
-    settings?: Partial<ReviewRecording["settings"]>;
-  } = {}
-): ReviewRecording {
-  const { settings, ...recordingOverrides } = overrides;
-
-  return {
-    id: "sheet-recording",
-    type: "sheet",
-    name: "Sheet take",
-    sessionId: "session-sheet",
-    sheetId: "sheet-alpha",
-    sheetName: "Alpha Etude",
-    createdAt: "2026-06-21T12:00:00.000Z",
-    durationMs: 12_000,
-    sizeBytes: 256,
-    mimeType: "audio/webm",
-    audioDataUrl: "data:audio/webm;base64,UklGRg==",
-    segmentContext: createSegmentContext(),
-    settings: {
-      bpm: 96,
-      timeSignature: "4/4",
-      ...settings
+  overrides: MakeSheetReviewRecordingOverrides = {}
+) {
+  return makeSheetReviewRecording(overrides, {
+    defaults: {
+      segmentContext: createSegmentContext()
     },
-    ...recordingOverrides
-  };
+    withArtifactRef: false
+  });
 }

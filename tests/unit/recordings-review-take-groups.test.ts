@@ -6,7 +6,14 @@ import {
   recordingHistoryRepository
 } from "@/lib/recordings-review/repository";
 import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
-import type { RecordingReviewSnapshot, ReviewRecording } from "@/lib/recordings-review/types";
+import type { RecordingReviewSnapshot } from "@/lib/recordings-review/types";
+import {
+  makeQuickReviewRecording,
+  makeSheetRecordingSegmentContext as createSegmentContext,
+  makeSheetReviewRecording,
+  type MakeQuickReviewRecordingOverrides,
+  type MakeSheetReviewRecordingOverrides
+} from "./factories/recordings-review";
 
 describe("recordings review take grouping", () => {
   beforeEach(() => {
@@ -525,73 +532,16 @@ describe("recordings review take grouping", () => {
   });
 });
 
-function createSegmentContext(
-  overrides: Partial<SheetRecordingSegmentContext> = {}
-): SheetRecordingSegmentContext {
-  return {
-    segmentId: "segment-alpha",
-    segmentName: "Bridge",
-    range: {
-      startMeasure: 5,
-      endMeasure: 12
-    },
-    targetBpm: 96,
-    measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
-    measureGridSnapshot: {
-      bpm: 96,
-      timeSignature: "4/4",
-      pickupBeats: 0,
-      measureOneOffsetMs: 1_000
-    },
-    measureRangeMs: {
-      startMs: 11_000,
-      endMs: 31_000
-    },
-    ...overrides
-  };
-}
-
-function createQuickRecording(
-  overrides: Partial<ReviewRecording> = {}
-): ReviewRecording {
-  return {
-    id: "quick-recording",
-    type: "quick",
-    name: "Quick take",
-    sessionId: "session-quick",
-    sheetId: null,
-    createdAt: "2026-06-21T09:00:00.000Z",
-    durationMs: 10_000,
-    sizeBytes: 128,
-    mimeType: "audio/wav",
-    audioDataUrl: "data:audio/wav;base64,UklGRg==",
-    settings: {
-      bpm: 120,
-      timeSignature: "4/4"
-    },
-    ...overrides
-  };
+function createQuickRecording(overrides: MakeQuickReviewRecordingOverrides = {}) {
+  return makeQuickReviewRecording(overrides, {
+    withArtifactRef: false
+  });
 }
 
 function createSheetRecording(
-  overrides: Partial<Omit<ReviewRecording, "segmentContext">> & { segmentContext?: unknown } = {}
-): ReviewRecording {
-  return {
-    id: "sheet-recording",
-    type: "sheet",
-    name: "Sheet take",
-    sessionId: "session-sheet",
-    sheetId: "sheet-alpha",
-    sheetName: "Alpha Etude",
-    createdAt: "2026-06-21T12:00:00.000Z",
-    durationMs: 12_000,
-    sizeBytes: 256,
-    mimeType: "audio/webm",
-    audioDataUrl: "data:audio/webm;base64,UklGRg==",
-    settings: {
-      bpm: 96,
-      timeSignature: "4/4"
-    },
-    ...overrides
-  } as ReviewRecording;
+  overrides: MakeSheetReviewRecordingOverrides = {}
+) {
+  return makeSheetReviewRecording(overrides, {
+    withArtifactRef: false
+  });
 }

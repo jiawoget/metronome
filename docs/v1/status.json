@@ -881,7 +881,7 @@
                                                             },
                                                             {
                                                                 "slice":  "C2-07 test-fixture-slimming",
-                                                                "status":  "not_started"
+                                                                "status":  "ready_for_pr_review"
                                                             }
                                                         ]
                                          }
