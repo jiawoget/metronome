@@ -324,10 +324,12 @@ Phase 7 is intentionally split across multiple small PRs:
     the larger `recordings-review.spec.ts` slimming work.
 - `C2-10 shared-unit-audio-artifact-fixtures`
   - Status: planning_in_progress.
-  - Follow-up for shared AudioContext mock reuse and shared in-memory artifact
-    fixture reuse across unit tests. This work is intentionally split out from
-    C2-08 because it crosses more files and can otherwise turn into a generic
-    test fixture framework.
+  - Follow-up for shared AudioContext mock reuse and narrow capture artifact
+    object fixture reuse across unit tests. Broad shared in-memory artifact
+    repository/helper extraction is explicitly re-scoped out because it would
+    hide repository ownership, corruption, missing-body, and cleanup evidence.
+  - This is intended as the final Pack C slice; after C2-10 is locally
+    verified and reviewed, Pack C may be marked verified.
 
 Do not mark Pack C verified until C2-08, C2-09, and C2-10 are either completed
 or explicitly re-scoped out in a reviewed plan.

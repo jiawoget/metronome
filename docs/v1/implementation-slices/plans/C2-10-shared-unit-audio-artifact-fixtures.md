@@ -10,11 +10,15 @@
 - Baseline commit: `5188d82771a390d65fc005ef9d273a41ccc50568`
 - Previous slice: `C2-09 e2e-fixture-and-spec-slimming` is `verified` and
   merged.
-- Plan review: pending.
+- Plan review: initial review returned `CHANGES_REQUIRED`; this revision
+  records the C2-10 re-scope and final Pack C status rule.
 
 This plan covers one narrow unit-test fixture slimming PR. It does not cover
 E2E fixture work, production code, recording storage contract changes, or a
-generic test-fixture framework.
+generic test-fixture framework. It explicitly re-scopes broad shared in-memory
+artifact repository/helper extraction out of Pack C because those helpers would
+hide behavior evidence in repository ownership, corruption, missing-body, and
+cleanup tests.
 
 ## Known Remaining Phase 7 Work
 
@@ -23,8 +27,11 @@ generic test-fixture framework.
 - `C2-09 e2e-fixture-and-spec-slimming`: `verified`.
 - `C2-10 shared-unit-audio-artifact-fixtures`: this plan;
   `planning_in_progress`.
-- `pack-c-codebase-slimming` remains `in_progress` until this slice is
-  completed or explicitly re-scoped by review.
+- Broad shared in-memory artifact repository/helper extraction is explicitly
+  re-scoped out by this reviewed plan and is not a remaining Pack C item.
+- `pack-c-codebase-slimming` remains `in_progress` during C2-10 planning and
+  implementation. After C2-10 is locally verified and review-approved, Pack C
+  should be marked `verified`.
 
 ## Problem
 
@@ -35,7 +42,8 @@ C2-09:
    the same `MockAudioContext`, `decodeAudioData`, `sampleRate`,
    `getChannelData`, `close`, `vi.stubGlobal("AudioContext", ...)`, and
    `window.AudioContext` setup shape.
-2. Session/recording unit tests repeatedly construct small audio artifact
+2. Session/recording unit tests repeatedly construct small capture audio
+   artifact
    bodies with `new Blob(["synthetic audio"])`, `dataUrl`, `durationMs`,
    `mimeType`, `sizeBytes`, and optional `analysis` fields.
 
@@ -53,8 +61,8 @@ in:
 - `tests/unit/recording-artifact-review.test.tsx`
 - `tests/unit/sheet-practice-recording.test.ts`
 
-The current main branch also has repeated `RecordingArtifact` / Blob literal
-construction in:
+The current main branch also has repeated capture `RecordingArtifact` / Blob
+literal construction in:
 
 - `tests/unit/quick-metronome-session.test.ts`
 - `tests/unit/sheet-practice-recording.test.ts`
@@ -63,8 +71,8 @@ Related but intentionally deferred:
 
 - `tests/unit/recordings-review-artifact-storage.test.ts` owns repository
   ownership and cleanup behavior. Its `LocalRecordingArtifact` literals are
-  part of the scenario evidence and should not be hidden behind a broad helper
-  in this slice.
+  part of the scenario evidence and must not be hidden behind a broad helper.
+  This is a reviewed re-scope, not unfinished C2-10 work.
 - `tests/unit/recordings-review-waveform-comparison-sources.test.ts` already
   has local `saveArtifactForRecording(...)` helpers tied to take-group
   scenarios. This PR may keep them unless a tiny helper removes duplication
@@ -126,7 +134,8 @@ Out of scope:
    - Do not change expected peak data, decoded duration, warnings, or error
      assertions.
 
-3. Add a small artifact helper only if it removes real repeated fixture shape.
+3. Add a small capture artifact helper only if it removes real repeated
+   fixture shape.
    - Candidate helper:
      - `makeRecordingArtifact(overrides?)`
    - Defaults may include:
@@ -146,15 +155,25 @@ Out of scope:
    - Do not extract `createMemoryArtifactRepository` in this PR.
    - Do not replace ownership/corruption `LocalRecordingArtifact` literals
      where their IDs and recording IDs are the evidence being tested.
+   - Treat broad in-memory artifact repository/helper extraction as re-scoped
+     out of Pack C, not deferred unfinished work.
 
-5. Run targeted baseline before implementation and targeted verification after
+5. Before implementation, confirm status source of truth.
+   - `docs/v1/status.json`:
+     - Pack C = `in_progress`
+     - C2-09 = `verified`
+     - C2-10 = `planning_in_progress`
+   - `docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md`
+     must reflect this C2-10 re-scope and final Pack C status rule.
+
+6. Run targeted baseline before implementation and targeted verification after
    implementation:
 
 ```powershell
 & .\scripts\npm-local.ps1 --% run test:unit -- recordings-review-history.test.ts recordings-review-waveform-comparison-sources.test.ts recording-artifact-review.test.tsx sheet-practice-recording.test.ts quick-metronome-session.test.ts
 ```
 
-6. Run required checks before PR:
+7. Run required checks before PR:
 
 ```powershell
 & .\scripts\npm-local.ps1 --% run typecheck
@@ -164,17 +183,22 @@ Out of scope:
 git diff --check
 ```
 
-7. In the PR description, include before/after accounting:
+8. In the PR description, include before/after accounting:
    - which duplicate AudioContext mock blocks were removed;
    - which artifact literal shapes were replaced;
    - which negative cases stayed explicit;
    - whether unit-test implementation code is net reduced after helper files.
+   - confirmation that broad in-memory artifact repository/helper extraction
+     was intentionally re-scoped out.
 
 ## Acceptance Criteria
 
 - `docs/v1/status.json` records:
-  - Pack C = `in_progress`
+  - Pack C = `verified` after C2-10 local verification and review-approved
+    re-scope are recorded
   - C2-10 = `verified` after local verification
+- C2-main records that broad shared in-memory artifact repository/helper
+  extraction is re-scoped out and is not a remaining Pack C item.
 - `installAudioContextMock` is shared from a unit-only fixture helper and
   duplicate local copies are removed from target tests.
 - Decode success and decode rejection behavior remains explicit at call sites.
