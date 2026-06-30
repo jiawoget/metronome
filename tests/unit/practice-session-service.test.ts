@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   applyPracticeTrigger,
+  parsePracticeSession,
   parseSheetRecordingMetadata,
   validatePracticeSession,
   validateSheetRecordingMetadata,
@@ -164,10 +165,108 @@ describe("practice session service", () => {
       bpm: 96,
       timeSignature: "4/4",
       recordingCount: 0,
-      latestRecordingId: null
+      latestRecordingId: null,
+      segmentContext: null
     });
     expect(await service.listRecordingMetadata()).toEqual([]);
     expect(lastPracticed.get("sheet-alpha")).toBe("2026-06-21T12:00:00.000Z");
+  });
+
+  it("normalizes legacy practice sessions without segmentContext to null", () => {
+    expect(
+      parsePracticeSession({
+        id: "legacy-quick",
+        sourceType: "quick",
+        sheetId: null,
+        startedAt: "2026-06-21T12:00:00.000Z",
+        endedAt: null,
+        durationMs: 0,
+        bpm: 120,
+        timeSignature: "4/4",
+        recordingCount: 0,
+        latestRecordingId: null,
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      })
+    ).toMatchObject({
+      id: "legacy-quick",
+      segmentContext: null
+    });
+    expect(
+      parsePracticeSession({
+        id: "legacy-sheet",
+        sourceType: "sheet",
+        sheetId: "sheet-alpha",
+        startedAt: "2026-06-21T12:00:00.000Z",
+        endedAt: null,
+        durationMs: 0,
+        bpm: 96,
+        timeSignature: "4/4",
+        recordingCount: 0,
+        latestRecordingId: null,
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      })
+    ).toMatchObject({
+      id: "legacy-sheet",
+      segmentContext: null
+    });
+  });
+
+  it("accepts valid sheet session segmentContext and rejects quick or malformed non-null context", () => {
+    const segmentContext = createSegmentContext({ targetBpm: null });
+
+    expect(
+      validatePracticeSession({
+        id: "sheet-with-segment",
+        sourceType: "sheet",
+        sheetId: "sheet-alpha",
+        startedAt: "2026-06-21T12:00:00.000Z",
+        endedAt: null,
+        durationMs: 0,
+        bpm: 96,
+        timeSignature: "4/4",
+        recordingCount: 0,
+        latestRecordingId: null,
+        updatedAt: "2026-06-21T12:00:00.000Z",
+        segmentContext
+      })
+    ).toMatchObject({
+      segmentContext
+    });
+    expect(() =>
+      validatePracticeSession({
+        id: "quick-with-segment",
+        sourceType: "quick",
+        sheetId: null,
+        startedAt: "2026-06-21T12:00:00.000Z",
+        endedAt: null,
+        durationMs: 0,
+        bpm: 120,
+        timeSignature: "4/4",
+        recordingCount: 0,
+        latestRecordingId: null,
+        updatedAt: "2026-06-21T12:00:00.000Z",
+        segmentContext
+      })
+    ).toThrow();
+    expect(
+      parsePracticeSession({
+        id: "sheet-bad-segment",
+        sourceType: "sheet",
+        sheetId: "sheet-alpha",
+        startedAt: "2026-06-21T12:00:00.000Z",
+        endedAt: null,
+        durationMs: 0,
+        bpm: 96,
+        timeSignature: "4/4",
+        recordingCount: 0,
+        latestRecordingId: null,
+        updatedAt: "2026-06-21T12:00:00.000Z",
+        segmentContext: {
+          ...createSegmentContext(),
+          segmentId: ""
+        }
+      })
+    ).toBeNull();
   });
 
   it("restores the existing sheet session, updates duration, and drives Continue Practice", async () => {
@@ -185,6 +284,52 @@ describe("practice session service", () => {
       label: "Continue Sheet Practice",
       sessionId: "session-1",
       sheetId: "sheet-alpha"
+    });
+  });
+
+  it("ignores generic sheet activity segmentContext extras and preserves committed recording context", async () => {
+    const { service, repository } = createService();
+    const segmentContext = createSegmentContext();
+
+    const attemptedGenericWrite = {
+      sheetId: "sheet-alpha",
+      trigger: "recording",
+      segmentContext
+    } as const;
+    const created = await service.ensureSheetSession(attemptedGenericWrite);
+
+    expect(created).toMatchObject({
+      id: "session-1",
+      segmentContext: null
+    });
+
+    nowMs += 1_500;
+    const prepared = await service.prepareSheetRecordingMetadata({
+      sheetId: "sheet-alpha",
+      sessionId: created?.id,
+      durationMs: 1_500,
+      segmentContext
+    });
+    await service.commitPreparedSheetRecordingSession(prepared!);
+    await expect(repository.getSession(created?.id ?? "")).resolves.toMatchObject({
+      segmentContext
+    });
+
+    nowMs += 30_000;
+    const attemptedGenericClear = {
+      sheetId: "sheet-alpha",
+      trigger: "metronome",
+      segmentContext: null
+    } as const;
+    const preserved = await service.ensureSheetSession({
+      ...attemptedGenericClear,
+      bpm: 100
+    });
+
+    expect(preserved).toMatchObject({
+      id: "session-1",
+      bpm: 100,
+      segmentContext
     });
   });
 
@@ -218,7 +363,8 @@ describe("practice session service", () => {
       bpm: 120,
       timeSignature: "3/4",
       recordingCount: 0,
-      latestRecordingId: null
+      latestRecordingId: null,
+      segmentContext: null
     });
 
     nowMs += 4_000;
@@ -343,7 +489,8 @@ describe("practice session service", () => {
       timeSignature: "4/4",
       recordingCount: 1,
       latestRecordingId: "quick-recording",
-      updatedAt: new Date(2026, 5, 21, 0, 33, 0).toISOString()
+      updatedAt: new Date(2026, 5, 21, 0, 33, 0).toISOString(),
+      segmentContext: null
     });
     await repository.saveSession({
       id: "today-sheet",
@@ -356,7 +503,8 @@ describe("practice session service", () => {
       timeSignature: "4/4",
       recordingCount: 0,
       latestRecordingId: null,
-      updatedAt: new Date(2026, 5, 21, 23, 34, 0).toISOString()
+      updatedAt: new Date(2026, 5, 21, 23, 34, 0).toISOString(),
+      segmentContext: null
     });
     await repository.saveSession({
       id: "previous-local-day",
@@ -369,7 +517,8 @@ describe("practice session service", () => {
       timeSignature: "4/4",
       recordingCount: 1,
       latestRecordingId: "previous-recording",
-      updatedAt: new Date(2026, 5, 21, 0, 1, 0).toISOString()
+      updatedAt: new Date(2026, 5, 21, 0, 1, 0).toISOString(),
+      segmentContext: null
     });
 
     await expect(service.getTodaySummary()).resolves.toEqual({
@@ -469,11 +618,19 @@ describe("practice session service", () => {
       timeSignature: "4/4",
       segmentContext: null
     });
+    expect(prepared?.session).toMatchObject({
+      id: "session-1",
+      recordingCount: 1,
+      latestRecordingId: "recording-2",
+      updatedAt: "2026-06-21T12:00:12.500Z",
+      segmentContext: null
+    });
     await expect(service.listRecordingMetadata()).resolves.toEqual([]);
     await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
       recordingCount: 0,
       latestRecordingId: null,
-      updatedAt: "2026-06-21T12:00:00.000Z"
+      updatedAt: "2026-06-21T12:00:00.000Z",
+      segmentContext: null
     });
 
     await service.commitPreparedSheetRecordingSession(prepared!);
@@ -482,7 +639,8 @@ describe("practice session service", () => {
     await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
       recordingCount: 1,
       latestRecordingId: "recording-2",
-      updatedAt: "2026-06-21T12:00:12.500Z"
+      updatedAt: "2026-06-21T12:00:12.500Z",
+      segmentContext: null
     });
   });
 
@@ -530,9 +688,90 @@ describe("practice session service", () => {
     await expect(service.listRecordingMetadata()).resolves.toEqual([recording]);
   });
 
+  it("copies validated recording segmentContext onto the prepared session and persists it on commit", async () => {
+    const { service, repository } = createService();
+    const session = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording"
+    });
+    const segmentContext = createSegmentContext({ targetBpm: null });
+
+    nowMs += 1_500;
+    const prepared = await service.prepareSheetRecordingMetadata({
+      sheetId: "sheet-alpha",
+      sessionId: session?.id,
+      durationMs: 1_500,
+      segmentContext
+    });
+
+    expect(prepared?.metadata.segmentContext).toEqual(segmentContext);
+    expect(prepared?.session.segmentContext).toEqual(segmentContext);
+    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+      recordingCount: 0,
+      latestRecordingId: null,
+      segmentContext: null
+    });
+
+    await service.commitPreparedSheetRecordingSession(prepared!);
+
+    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+      recordingCount: 1,
+      latestRecordingId: prepared?.metadata.id,
+      segmentContext
+    });
+  });
+
+  it("clears a prior sheet session segmentContext when a no-segment recording commit succeeds", async () => {
+    const { service, repository } = createService();
+    const session = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording"
+    });
+    const segmentContext = createSegmentContext();
+    const preparedWithSegment = await service.prepareSheetRecordingMetadata({
+      sheetId: "sheet-alpha",
+      sessionId: session?.id,
+      durationMs: 1_000,
+      segmentContext
+    });
+    await service.commitPreparedSheetRecordingSession(preparedWithSegment!);
+    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+      segmentContext
+    });
+
+    nowMs += 1_500;
+    const prepared = await service.prepareSheetRecordingMetadata({
+      sheetId: "sheet-alpha",
+      sessionId: session?.id,
+      durationMs: 1_500,
+      segmentContext: null
+    });
+
+    expect(prepared?.session.segmentContext).toBeNull();
+
+    await service.commitPreparedSheetRecordingSession(prepared!);
+
+    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+      recordingCount: 2,
+      latestRecordingId: prepared?.metadata.id,
+      segmentContext: null
+    });
+  });
+
   it("rejects invalid sheet recording segment context before saving metadata or session counts", async () => {
     const { service, repository } = createService();
-    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "recording" });
+    const priorContext = createSegmentContext();
+    const session = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording"
+    });
+    const priorPrepared = await service.prepareSheetRecordingMetadata({
+      sheetId: "sheet-alpha",
+      sessionId: session?.id,
+      durationMs: 500,
+      segmentContext: priorContext
+    });
+    await service.commitPreparedSheetRecordingSession(priorPrepared!);
 
     await expect(
       service.createSheetRecordingMetadata({
@@ -548,8 +787,9 @@ describe("practice session service", () => {
 
     await expect(service.listRecordingMetadata()).resolves.toEqual([]);
     await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
-      recordingCount: 0,
-      latestRecordingId: null
+      recordingCount: 1,
+      latestRecordingId: priorPrepared?.metadata.id,
+      segmentContext: priorContext
     });
     expect(
       parseSheetRecordingMetadata({
@@ -769,7 +1009,8 @@ describe("practice session service", () => {
         timeSignature: "4/4",
         recordingCount: 0,
         latestRecordingId: null,
-        updatedAt: "2026-06-21T12:00:00.000Z"
+        updatedAt: "2026-06-21T12:00:00.000Z",
+        segmentContext: null
       })
     ).toThrow();
     expect(() =>
@@ -784,7 +1025,8 @@ describe("practice session service", () => {
         timeSignature: "4/4",
         recordingCount: 0,
         latestRecordingId: null,
-        updatedAt: "2026-06-21T12:00:00.000Z"
+        updatedAt: "2026-06-21T12:00:00.000Z",
+        segmentContext: null
       })
     ).toThrow();
     expect(() =>
@@ -799,7 +1041,8 @@ describe("practice session service", () => {
         timeSignature: "4/4",
         recordingCount: 0,
         latestRecordingId: null,
-        updatedAt: "2026-02-30T12:00:00.000Z"
+        updatedAt: "2026-02-30T12:00:00.000Z",
+        segmentContext: null
       })
     ).toThrow();
     expect(() =>
@@ -814,7 +1057,8 @@ describe("practice session service", () => {
         timeSignature: "4/4",
         recordingCount: 0,
         latestRecordingId: null,
-        updatedAt: "2026-06-21T12:00:00.000Z"
+        updatedAt: "2026-06-21T12:00:00.000Z",
+        segmentContext: null
       })
     ).toThrow();
     expect(() =>
@@ -829,7 +1073,8 @@ describe("practice session service", () => {
         timeSignature: "4/4",
         recordingCount: 0,
         latestRecordingId: null,
-        updatedAt: "2026-06-21T12:00:00.000Z"
+        updatedAt: "2026-06-21T12:00:00.000Z",
+        segmentContext: null
       })
     ).toThrow();
     expect(() =>
@@ -872,7 +1117,8 @@ describe("practice session service", () => {
       timeSignature: "4/4",
       recordingCount: 0,
       latestRecordingId: null,
-      updatedAt: "2026-06-21T12:01:00.000Z"
+      updatedAt: "2026-06-21T12:01:00.000Z",
+      segmentContext: null
     });
     window.localStorage.setItem(
       RECORDINGS_STORAGE_KEY,
@@ -912,7 +1158,8 @@ describe("practice session service", () => {
       timeSignature: "4/4",
       recordingCount: 0,
       latestRecordingId: null,
-      updatedAt: "2026-06-21T12:10:00.000Z"
+      updatedAt: "2026-06-21T12:10:00.000Z",
+      segmentContext: null
     });
 
     await expect(service.getContinuePracticeTarget()).resolves.toEqual({
@@ -963,6 +1210,44 @@ describe("practice session service", () => {
     await expect(
       globalRepository.getSession("legacy-quick-session")
     ).resolves.toBeNull();
+  });
+
+  it("normalizes legacy quick sessions from recording history to segmentContext null", async () => {
+    const sheetRepository = createMemorySessionRepository();
+    const globalRepository = createGlobalPracticeSessionRepository(sheetRepository);
+
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [
+          {
+            id: "legacy-quick-session",
+            sourceType: "quick",
+            startedAt: "2026-06-21T12:05:00.000Z",
+            endedAt: "2026-06-21T12:06:00.000Z",
+            settings: {
+              bpm: 120,
+              timeSignature: "4/4"
+            }
+          }
+        ],
+        recordings: [],
+        errorMarkers: []
+      })
+    );
+
+    await expect(globalRepository.getSession("legacy-quick-session")).resolves.toMatchObject({
+      id: "legacy-quick-session",
+      sourceType: "quick",
+      segmentContext: null
+    });
+    await expect(globalRepository.listSessions()).resolves.toEqual([
+      expect.objectContaining({
+        id: "legacy-quick-session",
+        sourceType: "quick",
+        segmentContext: null
+      })
+    ]);
   });
 
   it("captures validated quick and sheet transport events through the event sink", async () => {
@@ -1165,6 +1450,40 @@ describe("practice session service", () => {
         kind: "metronome_started"
       })
     ).resolves.toBeNull();
+  });
+
+  it("does not let captureSessionEvent mutate persisted session segmentContext", async () => {
+    const { service, repository } = createService();
+    const originalContext = createSegmentContext();
+    const session = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording"
+    });
+    const prepared = await service.prepareSheetRecordingMetadata({
+      sheetId: "sheet-alpha",
+      sessionId: session?.id,
+      durationMs: 500,
+      segmentContext: originalContext
+    });
+    await service.commitPreparedSheetRecordingSession(prepared!);
+
+    await expect(
+      service.captureSessionEvent({
+        sessionId: session?.id,
+        kind: "recording_stopped",
+        recordingId: "recording-alpha",
+        segmentId: "segment-other"
+      })
+    ).resolves.toMatchObject({
+      sessionId: session?.id,
+      kind: "recording_stopped",
+      segmentId: "segment-other"
+    });
+    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+      segmentContext: originalContext,
+      recordingCount: 1,
+      latestRecordingId: prepared?.metadata.id
+    });
   });
 
   it("keeps metronome, recording, and future reference trigger states independent", () => {

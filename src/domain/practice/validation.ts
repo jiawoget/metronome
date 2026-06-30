@@ -45,49 +45,6 @@ const measureRangeMsSchema = z
     }
   });
 
-const practiceSessionSchema = z
-  .object({
-    id: z.string().trim().min(1),
-    sourceType: z.enum(["quick", "sheet"]),
-    sheetId: z.string().trim().min(1).nullable(),
-    startedAt: isoDateSchema,
-    endedAt: isoDateSchema.nullable(),
-    durationMs: z.number().finite().int().nonnegative(),
-    bpm: z.number().finite().int().min(30).max(300).nullable(),
-    timeSignature: practiceTimeSignatureSchema.nullable(),
-    recordingCount: z.number().finite().int().nonnegative(),
-    latestRecordingId: z.string().trim().min(1).nullable(),
-    updatedAt: isoDateSchema
-  })
-  .superRefine((session, context) => {
-    if (session.sourceType === "quick" && session.sheetId !== null) {
-      context.addIssue({
-        code: "custom",
-        path: ["sheetId"],
-        message: "Quick sessions must not have sheetId."
-      });
-    }
-
-    if (session.sourceType === "sheet" && !session.sheetId) {
-      context.addIssue({
-        code: "custom",
-        path: ["sheetId"],
-        message: "Sheet sessions require sheetId."
-      });
-    }
-
-    if (
-      session.endedAt &&
-      Date.parse(session.endedAt) < Date.parse(session.startedAt)
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["endedAt"],
-        message: "endedAt must be after startedAt."
-      });
-    }
-  });
-
 const sheetRecordingSegmentContextSchema = z
   .object({
     segmentId: trimmedRequiredStringSchema,
@@ -133,6 +90,58 @@ const sheetRecordingSegmentContextFieldSchema = sheetRecordingSegmentContextSche
   .nullable()
   .optional()
   .transform((value) => value ?? null);
+
+const practiceSessionSchema = z
+  .object({
+    id: z.string().trim().min(1),
+    sourceType: z.enum(["quick", "sheet"]),
+    sheetId: z.string().trim().min(1).nullable(),
+    startedAt: isoDateSchema,
+    endedAt: isoDateSchema.nullable(),
+    durationMs: z.number().finite().int().nonnegative(),
+    bpm: z.number().finite().int().min(30).max(300).nullable(),
+    timeSignature: practiceTimeSignatureSchema.nullable(),
+    recordingCount: z.number().finite().int().nonnegative(),
+    latestRecordingId: z.string().trim().min(1).nullable(),
+    updatedAt: isoDateSchema,
+    segmentContext: sheetRecordingSegmentContextFieldSchema
+  })
+  .superRefine((session, context) => {
+    if (session.sourceType === "quick" && session.sheetId !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["sheetId"],
+        message: "Quick sessions must not have sheetId."
+      });
+    }
+
+    if (session.sourceType === "quick" && session.segmentContext !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["segmentContext"],
+        message: "Quick sessions must not have segment context."
+      });
+    }
+
+    if (session.sourceType === "sheet" && !session.sheetId) {
+      context.addIssue({
+        code: "custom",
+        path: ["sheetId"],
+        message: "Sheet sessions require sheetId."
+      });
+    }
+
+    if (
+      session.endedAt &&
+      Date.parse(session.endedAt) < Date.parse(session.startedAt)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["endedAt"],
+        message: "endedAt must be after startedAt."
+      });
+    }
+  });
 
 const sheetRecordingMetadataSchema = z.object({
   id: trimmedRequiredStringSchema,

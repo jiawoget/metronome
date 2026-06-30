@@ -118,7 +118,7 @@ function createIdleSessionService() {
 }
 
 function createSheetSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
-  return {
+  const session: PracticeSession = {
     id: "session-alpha",
     sourceType: "sheet",
     sheetId: "sheet-alpha",
@@ -130,8 +130,11 @@ function createSheetSession(overrides: Partial<PracticeSession> = {}): PracticeS
     recordingCount: 0,
     latestRecordingId: null,
     updatedAt: "2026-06-21T12:00:00.000Z",
-    ...overrides
+    ...overrides,
+    segmentContext: overrides.segmentContext ?? null
   };
+
+  return session;
 }
 
 function createMeasureGridService(grid: MeasureGrid | null = null) {
