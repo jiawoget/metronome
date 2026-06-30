@@ -17,6 +17,7 @@ import {
   type PracticeSessionEventSink,
   type PracticeRecordingMetadataRepository,
   type PracticeSessionRepository,
+  type PracticeSessionSegmentGateway,
   type PracticeSessionSheetGateway
 } from "@/services/practice-session";
 
@@ -67,17 +68,30 @@ function createMemoryRecordingRepository(): PracticeRecordingMetadataRepository 
   };
 }
 
-function createSheetGateway(validSheetIds = new Set(["sheet-alpha"])) {
+function createSheetGateway(
+  validSheetIds = new Set(["sheet-alpha"]),
+  {
+    failingSheetIds = new Set<string>(),
+    sheetNames = new Map<string, string>()
+  }: {
+    failingSheetIds?: Set<string>;
+    sheetNames?: Map<string, string>;
+  } = {}
+) {
   const lastPracticed = new Map<string, string>();
   const gateway: PracticeSessionSheetGateway = {
     async getSheetContext(sheetId) {
+      if (failingSheetIds.has(sheetId)) {
+        throw new Error("sheet lookup failed");
+      }
+
       if (!validSheetIds.has(sheetId)) {
         return null;
       }
 
       return {
         id: sheetId,
-        name: "Alpha Sheet",
+        name: sheetNames.get(sheetId) ?? "Alpha Sheet",
         bpm: 96,
         timeSignature: "4/4"
       };
@@ -123,9 +137,13 @@ describe("practice session service", () => {
   });
 
   function createService({
-    eventSink
+    eventSink,
+    segmentGateway,
+    sheetGateway
   }: {
     eventSink?: PracticeSessionEventSink;
+    segmentGateway?: PracticeSessionSegmentGateway;
+    sheetGateway?: PracticeSessionSheetGateway;
   } = {}) {
     const repository = createMemorySessionRepository();
     const recordingRepository = createMemoryRecordingRepository();
@@ -135,7 +153,8 @@ describe("practice session service", () => {
     const service = createPracticeSessionService({
       repository,
       recordingRepository,
-      sheetGateway: gateway,
+      sheetGateway: sheetGateway ?? gateway,
+      segmentGateway,
       eventSink,
       now: () => new Date(nowMs),
       createId: (prefix) => `${prefix}-${++idNumber}`
@@ -1246,6 +1265,266 @@ describe("practice session service", () => {
         id: "legacy-quick-session",
         sourceType: "quick",
         segmentContext: null
+      })
+    ]);
+  });
+
+  it("builds history groups from listSessions without mutating repository rows", async () => {
+    const listSessions = vi.fn(async () => [
+      {
+        id: "quick-session",
+        sourceType: "quick" as const,
+        sheetId: null,
+        startedAt: "2026-06-21T12:00:00.000Z",
+        endedAt: null,
+        durationMs: 60_000,
+        bpm: 120,
+        timeSignature: "4/4" as const,
+        recordingCount: 1,
+        latestRecordingId: "quick-recording",
+        updatedAt: "2026-06-21T12:01:00.000Z",
+        segmentContext: null
+      }
+    ]);
+    const repository: PracticeSessionRepository = {
+      listSessions,
+      getSession: vi.fn(async () => null),
+      getRecentSession: vi.fn(async () => null),
+      getRecentSheetSession: vi.fn(async () => null),
+      saveSession: vi.fn(async () => undefined),
+      deleteSession: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const { gateway } = createSheetGateway();
+    const service = createPracticeSessionService({
+      repository,
+      recordingRepository: createMemoryRecordingRepository(),
+      sheetGateway: gateway,
+      now: () => new Date(nowMs),
+      createId: (prefix) => `${prefix}-history`
+    });
+
+    await expect(service.getSessionHistoryGroups("date")).resolves.toMatchObject([
+      {
+        id: "date:2026-06-21",
+        sessionCount: 1,
+        durationMs: 60_000
+      }
+    ]);
+    expect(repository.listSessions).toHaveBeenCalledTimes(1);
+    expect(repository.getSession).not.toHaveBeenCalled();
+    expect(repository.getRecentSession).not.toHaveBeenCalled();
+    expect(repository.getRecentSheetSession).not.toHaveBeenCalled();
+    expect(repository.saveSession).not.toHaveBeenCalled();
+    expect(repository.deleteSession).not.toHaveBeenCalled();
+    expect(repository.clear).not.toHaveBeenCalled();
+  });
+
+  it("returns grouped session history with quick, valid, missing, no-segment, and segment target states", async () => {
+    const segmentContext = createSegmentContext({
+      segmentId: "segment-alpha",
+      segmentName: "Historical Bridge"
+    });
+    const missingSegmentContext = createSegmentContext({
+      segmentId: "segment-missing",
+      segmentName: "Deleted Segment Snapshot"
+    });
+    const segmentGateway: PracticeSessionSegmentGateway = {
+      async getSegmentContext(_sheetId, segmentId) {
+        if (segmentId === "segment-alpha") {
+          return {
+            id: segmentId,
+            name: "Live Renamed Bridge"
+          };
+        }
+
+        return null;
+      }
+    };
+    const { service, repository, validSheetIds } = createService({
+      segmentGateway
+    });
+
+    validSheetIds.add("sheet-bravo");
+    await repository.saveSession({
+      id: "quick-session",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T12:00:00.000Z",
+      endedAt: null,
+      durationMs: 60_000,
+      bpm: 120,
+      timeSignature: "4/4",
+      recordingCount: 1,
+      latestRecordingId: "quick-recording",
+      updatedAt: "2026-06-21T12:01:00.000Z",
+      segmentContext: null
+    });
+    await repository.saveSession({
+      id: "sheet-no-segment",
+      sourceType: "sheet",
+      sheetId: "sheet-alpha",
+      startedAt: "2026-06-21T12:02:00.000Z",
+      endedAt: null,
+      durationMs: 30_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T12:03:00.000Z",
+      segmentContext: null
+    });
+    await repository.saveSession({
+      id: "sheet-segment",
+      sourceType: "sheet",
+      sheetId: "sheet-alpha",
+      startedAt: "2026-06-21T12:04:00.000Z",
+      endedAt: null,
+      durationMs: 90_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 2,
+      latestRecordingId: "recording-alpha",
+      updatedAt: "2026-06-21T12:05:00.000Z",
+      segmentContext
+    });
+    await repository.saveSession({
+      id: "missing-segment",
+      sourceType: "sheet",
+      sheetId: "sheet-bravo",
+      startedAt: "2026-06-21T12:06:00.000Z",
+      endedAt: null,
+      durationMs: 45_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 1,
+      latestRecordingId: "recording-bravo",
+      updatedAt: "2026-06-21T12:07:00.000Z",
+      segmentContext: missingSegmentContext
+    });
+    await repository.saveSession({
+      id: "deleted-sheet",
+      sourceType: "sheet",
+      sheetId: "sheet-deleted",
+      startedAt: "2026-06-21T12:08:00.000Z",
+      endedAt: null,
+      durationMs: 15_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T12:09:00.000Z",
+      segmentContext: null
+    });
+
+    await expect(service.getSessionHistoryGroups("sheet")).resolves.toEqual([
+      expect.objectContaining({
+        id: "sheet:id:sheet-deleted",
+        targetState: "missing-sheet"
+      }),
+      expect.objectContaining({
+        id: "sheet:id:sheet-bravo",
+        targetState: "valid"
+      }),
+      expect.objectContaining({
+        id: "sheet:id:sheet-alpha",
+        targetState: "valid",
+        sessionCount: 2,
+        recordingCount: 2,
+        durationMs: 120_000
+      }),
+      expect.objectContaining({
+        id: "sheet:quick",
+        targetState: "quick"
+      })
+    ]);
+
+    await expect(service.getSessionHistoryGroups("segment")).resolves.toEqual([
+      expect.objectContaining({
+        id: "segment:sheet:sheet-deleted:none",
+        targetState: "no-segment"
+      }),
+      expect.objectContaining({
+        id: "segment:sheet:sheet-bravo:id:segment-missing",
+        targetState: "missing-segment",
+        label: "Deleted Segment Snapshot"
+      }),
+      expect.objectContaining({
+        id: "segment:sheet:sheet-alpha:id:segment-alpha",
+        targetState: "valid",
+        label: "Historical Bridge"
+      }),
+      expect.objectContaining({
+        id: "segment:sheet:sheet-alpha:none",
+        targetState: "no-segment"
+      }),
+      expect.objectContaining({
+        id: "segment:quick",
+        targetState: "quick"
+      })
+    ]);
+  });
+
+  it("contains history target lookup failures as lookup-failed groups", async () => {
+    const failingSheetIds = new Set(["sheet-alpha"]);
+    const { gateway: failingSheetGateway } = createSheetGateway(
+      new Set(["sheet-alpha"]),
+      {
+        failingSheetIds
+      }
+    );
+    const sheetFailure = createService({
+      sheetGateway: failingSheetGateway
+    });
+
+    await sheetFailure.repository.saveSession({
+      id: "sheet-session",
+      sourceType: "sheet",
+      sheetId: "sheet-alpha",
+      startedAt: "2026-06-21T12:00:00.000Z",
+      endedAt: null,
+      durationMs: 60_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T12:01:00.000Z",
+      segmentContext: null
+    });
+
+    await expect(sheetFailure.service.getSessionHistoryGroups("sheet")).resolves.toEqual([
+      expect.objectContaining({
+        id: "sheet:id:sheet-alpha",
+        targetState: "lookup-failed"
+      })
+    ]);
+
+    const segmentFailure = createService({
+      segmentGateway: {
+        async getSegmentContext() {
+          throw new Error("segment lookup failed");
+        }
+      }
+    });
+    await segmentFailure.repository.saveSession({
+      id: "segment-session",
+      sourceType: "sheet",
+      sheetId: "sheet-alpha",
+      startedAt: "2026-06-21T12:00:00.000Z",
+      endedAt: null,
+      durationMs: 60_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T12:01:00.000Z",
+      segmentContext: createSegmentContext()
+    });
+
+    await expect(segmentFailure.service.getSessionHistoryGroups("segment")).resolves.toEqual([
+      expect.objectContaining({
+        id: "segment:sheet:sheet-alpha:id:segment-alpha",
+        targetState: "lookup-failed"
       })
     ]);
   });

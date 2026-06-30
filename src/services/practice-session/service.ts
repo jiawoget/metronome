@@ -1,12 +1,17 @@
 import {
   PRACTICE_SESSION_EVENT_SCHEMA_VERSION,
   calculatePracticeDurationMs,
+  createSessionHistorySegmentTargetKey,
   getContinuePracticeTarget,
   getTodayPracticeSummary,
+  groupPracticeSessionsByHistory,
   isBrowserLocalDay,
   validatePracticeSessionEvent,
   validateSheetRecordingMetadata,
   type PracticeSessionEvent,
+  type SessionHistoryLookupResult,
+  type SessionHistorySegmentTarget,
+  type SessionHistorySheetTarget,
   type PracticeSession
 } from "@/domain/practice";
 import type {
@@ -15,6 +20,7 @@ import type {
   PracticeRecordingMetadataRepository,
   PracticeRecordingLinkInput,
   PracticeSessionRepository,
+  PracticeSessionSegmentGateway,
   PracticeSessionService,
   PracticeSessionSheetGateway,
   PreparedSheetRecordingMetadata,
@@ -27,6 +33,7 @@ type CreatePracticeSessionServiceOptions = {
   repository: PracticeSessionRepository;
   recordingRepository: PracticeRecordingMetadataRepository;
   sheetGateway: PracticeSessionSheetGateway;
+  segmentGateway?: PracticeSessionSegmentGateway;
   eventSink?: PracticeSessionEventSink;
   now?: () => Date;
   createId?: (prefix: string) => string;
@@ -50,6 +57,7 @@ export function createPracticeSessionService({
   repository,
   recordingRepository,
   sheetGateway,
+  segmentGateway,
   eventSink = noopPracticeSessionEventSink,
   now = () => new Date(),
   createId = createDefaultId
@@ -170,6 +178,108 @@ export function createPracticeSessionService({
     } catch {
       return null;
     }
+  }
+
+  async function resolveSessionHistorySheetTargets(sessions: PracticeSession[]) {
+    const sheetTargets: Record<string, SessionHistoryLookupResult<SessionHistorySheetTarget>> = {};
+    const sheetIds = Array.from(
+      new Set(
+        sessions
+          .filter((session) => session.sourceType === "sheet")
+          .map((session) => normalizeOptionalContextId(session.sheetId))
+          .filter((sheetId): sheetId is string => sheetId !== null)
+      )
+    );
+
+    await Promise.all(
+      sheetIds.map(async (sheetId) => {
+        try {
+          const sheet = await sheetGateway.getSheetContext(sheetId);
+
+          sheetTargets[sheetId] = sheet
+            ? {
+                state: "valid",
+                value: {
+                  name: sheet.name
+                }
+              }
+            : {
+                state: "missing"
+              };
+        } catch {
+          sheetTargets[sheetId] = {
+            state: "lookup-failed"
+          };
+        }
+      })
+    );
+
+    return sheetTargets;
+  }
+
+  async function resolveSessionHistorySegmentTargets(
+    sessions: PracticeSession[],
+    sheetTargets: Record<string, SessionHistoryLookupResult<SessionHistorySheetTarget>>
+  ) {
+    const segmentTargets: Record<string, SessionHistoryLookupResult<SessionHistorySegmentTarget>> = {};
+
+    if (!segmentGateway) {
+      return segmentTargets;
+    }
+
+    const segmentKeys = new Map<string, { sheetId: string; segmentId: string }>();
+
+    for (const session of sessions) {
+      if (session.sourceType !== "sheet") {
+        continue;
+      }
+
+      const sheetId = normalizeOptionalContextId(session.sheetId);
+      const segmentId = normalizeOptionalContextId(session.segmentContext?.segmentId);
+
+      if (!sheetId || !segmentId) {
+        continue;
+      }
+
+      const sheetTarget = sheetTargets[sheetId];
+
+      if (sheetTarget?.state === "lookup-failed" || sheetTarget?.state === "missing") {
+        continue;
+      }
+
+      segmentKeys.set(createSessionHistorySegmentTargetKey(sheetId, segmentId), {
+        sheetId,
+        segmentId
+      });
+    }
+
+    await Promise.all(
+      Array.from(segmentKeys.entries()).map(async ([targetKey, target]) => {
+        try {
+          const segment = await segmentGateway.getSegmentContext(
+            target.sheetId,
+            target.segmentId
+          );
+
+          segmentTargets[targetKey] = segment
+            ? {
+                state: "valid",
+                value: {
+                  name: segment.name
+                }
+              }
+            : {
+                state: "missing"
+              };
+        } catch {
+          segmentTargets[targetKey] = {
+            state: "lookup-failed"
+          };
+        }
+      })
+    );
+
+    return segmentTargets;
   }
 
   async function updateSessionDuration(session: PracticeSession) {
@@ -476,6 +586,24 @@ export function createPracticeSessionService({
 
     listSessions() {
       return repository.listSessions();
+    },
+
+    async getSessionHistoryGroups(mode) {
+      const sessions = await repository.listSessions();
+
+      if (mode === "date") {
+        return groupPracticeSessionsByHistory(sessions, mode);
+      }
+
+      const sheets = await resolveSessionHistorySheetTargets(sessions);
+      const segments = mode === "segment"
+        ? await resolveSessionHistorySegmentTargets(sessions, sheets)
+        : {};
+
+      return groupPracticeSessionsByHistory(sessions, mode, {
+        sheets,
+        segments
+      });
     },
 
     async getTodaySummary() {

@@ -6,6 +6,8 @@ import type {
   PracticeSessionMetronomeEventKind,
   PracticeSessionRecordingEventKind,
   PracticeSessionReferenceEventKind,
+  SessionHistoryGroup,
+  SessionHistoryGroupingMode,
   SheetRecordingSegmentContext,
   PracticeTimeSignature,
   SheetRecordingMetadata,
@@ -17,6 +19,11 @@ type SheetSessionContext = {
   name: string;
   bpm: number | null;
   timeSignature: PracticeTimeSignature | null;
+};
+
+type SegmentSessionContext = {
+  id: string;
+  name: string | null;
 };
 
 export type PracticeSessionRepository = {
@@ -41,6 +48,10 @@ export type PracticeRecordingMetadataRepository = {
 export type PracticeSessionSheetGateway = {
   getSheetContext: (sheetId: string) => Promise<SheetSessionContext | null>;
   updateLastPracticedAt: (sheetId: string, practicedAt: string) => Promise<void>;
+};
+
+export type PracticeSessionSegmentGateway = {
+  getSegmentContext: (sheetId: string, segmentId: string) => Promise<SegmentSessionContext | null>;
 };
 
 export type SheetPracticeActivityInput = {
@@ -112,6 +123,7 @@ export type PracticeSessionService = {
   commitPreparedSheetRecordingSession: (input: PreparedSheetRecordingSessionInput) => Promise<void>;
   createSheetRecordingMetadata: (input: SheetRecordingMetadataInput) => Promise<SheetRecordingMetadata | null>;
   listSessions: () => Promise<PracticeSession[]>;
+  getSessionHistoryGroups: (mode: SessionHistoryGroupingMode) => Promise<SessionHistoryGroup[]>;
   getTodaySummary: () => Promise<TodayPracticeSummary>;
   getRecentSession: () => Promise<PracticeSession | null>;
   getRecentSheetSession: (sheetId: string) => Promise<PracticeSession | null>;

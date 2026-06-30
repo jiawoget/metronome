@@ -2,6 +2,7 @@ export * from "@/domain/practice/format";
 export * from "@/domain/practice/meter-timing";
 export * from "@/domain/practice/measure-grid";
 export * from "@/domain/practice/rules";
+export * from "@/domain/practice/session-history-groups";
 export * from "@/domain/practice/session-events";
 export * from "@/domain/practice/segments";
 export * from "@/domain/practice/types";
