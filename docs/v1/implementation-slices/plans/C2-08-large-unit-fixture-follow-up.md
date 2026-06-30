@@ -4,7 +4,7 @@
 
 - Workstream: `pack-c-codebase-slimming`
 - Slice: `C2-08 large-unit-fixture-follow-up`
-- Current lifecycle state: `planning_in_progress`
+- Current lifecycle state: `verified`
 - Parent plan: `docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md`
 - Baseline branch: `main`
 - Baseline commit: `688e9a8614860707d900a212a4d752261b211286`
@@ -20,7 +20,7 @@
 - `C2-07 test-fixture-slimming`: `verified`.
   - This only covers the first narrow unit recording factory PR.
 - `C2-08 large-unit-fixture-follow-up`: this plan;
-  `planning_in_progress`.
+  `verified`.
 - `C2-09 e2e-fixture-and-spec-slimming`: deferred; `not_started`.
 - `C2-10 shared-unit-audio-artifact-fixtures`: deferred; `not_started`.
 - `pack-c-codebase-slimming` must remain `in_progress` until C2-08, C2-09,
