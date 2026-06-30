@@ -10,7 +10,9 @@
 - Baseline commit: `4a7190b40b69cb1af0f5e48786bc38784f8744e6`
 - Previous slice: `C2-08 large-unit-fixture-follow-up` is `verified` and
   merged.
-- Plan review: pending web ChatGPT review.
+- Plan review: initial `PASS`, then reopened for review after targeted E2E
+  baseline exposed stale legacy `audioDataUrl` fixture assumptions; revised
+  plan review pending.
 
 This plan intentionally covers the first narrow E2E fixture slimming PR. It
 does not cover broad cross-spec E2E fixture framework work, unit AudioContext
@@ -62,6 +64,25 @@ This is real E2E fixture duplication. It makes the spec large and raises the
 chance that future behavior tests copy stale recording shapes instead of using
 one canonical E2E fixture layer.
 
+After the initial plan review, the targeted E2E baseline was run twice:
+
+```powershell
+& .\scripts\npm-local.ps1 --% run test:e2e -- recordings-review.spec.ts
+```
+
+Both the normal run and the less-restricted rerun failed before implementation.
+The failures were not browser-launch failures. The failed pages showed seeded
+recordings with legacy `audioDataUrl` but no valid `artifactRef`, while current
+recording-review playback/export/waveform code requires an IndexedDB-backed
+local recording artifact. The visible page error was:
+
+- `This recording has no accessible local audio artifact.`
+
+Therefore the original "do not introduce default artifactRef values" plan
+assumption is stale. C2-09 must include artifact-backed E2E fixture seeding as
+part of the fixture slimming work, while still keeping missing-artifact cases
+explicit.
+
 ## Scope
 
 1. Add a small E2E fixture helper module:
@@ -74,6 +95,8 @@ one canonical E2E fixture layer.
    - `createE2ERecordingSession(...)`
    - `createE2EErrorMarker(...)`
    - `createE2ERecordingOrganizationItem(...)`
+   - `createE2ERecordingArtifactRef(...)`
+   - `seedE2ERecordingArtifacts(...)`
    - optionally `createE2ERecordingHistorySnapshot(...)`
 
 3. Refactor only:
@@ -81,8 +104,11 @@ one canonical E2E fixture layer.
 
 4. Keep existing E2E storage helpers in `tests/e2e/fixtures/storage.ts`.
    - Use the existing `seedRecordingHistory(...)` helper.
-   - Do not move localStorage or IndexedDB clear/read helpers in this PR unless
-     a tiny wrapper is needed by the new fixture module.
+   - The new recording-review fixture may write to
+     `RECORDING_ARTIFACT_DB_NAME` only to seed recording audio artifacts needed
+     by the target spec.
+   - Do not move unrelated localStorage or IndexedDB clear/read helpers in this
+     PR.
 
 5. Preserve all existing behavior assertions and scenario names.
    - The PR may reduce repeated fixture literals.
@@ -100,7 +126,8 @@ one canonical E2E fixture layer.
 - No `tests/e2e/sheet-practice-integration.spec.ts` changes.
 - No shared synthetic microphone extraction in this PR.
 - No shared audio decode helper extraction in this PR.
-- No shared IndexedDB clear/read framework beyond the existing storage helper.
+- No shared IndexedDB clear/read framework beyond the artifact seeding helper
+  needed by `recordings-review.spec.ts`.
 - No splitting `recordings-review.spec.ts` into multiple spec files in this PR.
 - No moving bad-audio matrices to unit tests in this PR.
 - No assertion deletion, weakening, broadening, or movement for cosmetic
@@ -183,9 +210,21 @@ inside a generic scenario builder:
 
 ### ArtifactRef Semantics
 
-`recordings-review.spec.ts` currently seeds legacy `audioDataUrl`-based E2E
-recordings and does not seed IndexedDB artifact refs directly. Do not introduce
-default `artifactRef` values in this PR.
+Current recording-review playback/export/waveform code is artifactRef-first.
+The shared E2E recording helpers must therefore make valid audio fixtures
+artifact-backed by default when a scenario supplies an audio artifact:
+
+- `artifactRef: { kind: "indexeddb", artifactId: recording.id,
+  storageVersion: 1 }`
+- a matching IndexedDB row in `RECORDING_ARTIFACT_DB_NAME` /
+  `recordingArtifacts`
+- `artifactId === recordingId`
+- `recordingType` matches `quick` or `sheet`
+- `mimeType`, `sizeBytes`, and `blob` match the scenario artifact
+
+Missing-artifact cases must remain explicit. They should use `artifactRef: null`
+or omit `artifactRef` intentionally, with assertions still expecting the
+missing-artifact UI.
 
 ## Implementation Steps
 
@@ -196,18 +235,22 @@ default `artifactRef` values in this PR.
    - `docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md`
      keeps C2-10 as deferred remaining Phase 7 work.
 
-1. Run the targeted E2E baseline:
+1. Record the targeted E2E baseline result:
 
 ```powershell
 & .\scripts\npm-local.ps1 --% run test:e2e -- recordings-review.spec.ts
 ```
 
-If Playwright browser launch fails due to the known local Windows/sandbox
-issue, rerun once in the allowed less-restricted context before changing code.
+The current pre-implementation baseline is known to fail because legacy
+`audioDataUrl` E2E seeds are missing artifact refs/bodies. This is the fixture
+staleness C2-09 will address. Do not proceed if new baseline failures appear
+outside this known missing-artifact pattern.
 
 2. Add `tests/e2e/fixtures/recordings-review.ts`.
    - Export narrow fixture types only as needed by E2E tests.
    - Implement factory functions as plain object builders.
+   - Implement artifact seeding by converting scenario `audioDataUrl` values to
+     browser `Blob`s and writing matching records to `recordingArtifacts`.
    - Avoid classes, a fluent DSL, scenario names, or helpers that embed
      assertions.
 
@@ -216,6 +259,8 @@ issue, rerun once in the allowed less-restricted context before changing code.
      import alias from the new helper.
    - Replace repeated inline quick/sheet recording object defaults with the new
      helper calls.
+   - Seed valid audio recordings with artifact refs and matching IndexedDB
+     artifact bodies.
    - Keep scenario-specific fields readable at call sites.
    - Keep `seedRecordingHistory(...)`, assertions, user flows, and test names
      intact.
@@ -251,12 +296,15 @@ git diff --check
   - Pack C = `in_progress`
   - C2-09 = `verified` after local verification
   - C2-10 = `not_started`
+- Valid audio E2E recordings in `recordings-review.spec.ts` are backed by
+  `artifactRef` plus matching IndexedDB artifact rows.
 - `recordings-review.spec.ts` no longer owns a duplicate E2E segment-context
   factory implementation.
 - Repeated quick/sheet recording fixture defaults in
   `recordings-review.spec.ts` are delegated to a shared E2E fixture helper.
 - Bad-audio, missing-artifact, invalid-peaks, unsupported-MIME, and
-  duration-mismatch cases remain explicit and readable.
+  duration-mismatch cases remain explicit and readable. Missing-artifact cases
+  are the only cases that intentionally lack artifact refs/bodies.
 - No production, unit, cross-spec E2E, synthetic microphone, audio decode, or
   IndexedDB framework extraction is attempted.
 - No assertion blocks, user flows, or scenario names are deleted or weakened.
