@@ -7,6 +7,7 @@ import {
   installSyntheticMicrophone
 } from "./fixtures/audio";
 import {
+  clearSheetLibraryTestState,
   PRACTICE_SESSION_DB_NAME,
   RECORDING_HISTORY_STORAGE_KEY,
   SHEET_LIBRARY_DB_NAME
@@ -14,7 +15,6 @@ import {
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
-const sheetDbName = SHEET_LIBRARY_DB_NAME;
 const practiceDbName = PRACTICE_SESSION_DB_NAME;
 const recordingHistoryStorageKey = RECORDING_HISTORY_STORAGE_KEY;
 
@@ -53,27 +53,8 @@ const layoutViewports: LayoutViewport[] = [
   { name: "mobile", width: 390, height: 844, expectControlsInInitialViewport: false, minViewerHeight: 160 }
 ];
 
-async function deleteDatabase(page: Page, databaseName: string) {
-  await page.evaluate(
-    (name: string) =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(name);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => resolve();
-      }),
-    databaseName
-  );
-}
-
 async function clearState(page: Page) {
-  await page.goto("/sheet-library");
-  await page.evaluate((storageKey) => window.localStorage.removeItem(storageKey), recordingHistoryStorageKey);
-  await deleteDatabase(page, sheetDbName);
-  await deleteDatabase(page, practiceDbName);
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await clearSheetLibraryTestState(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME]);
 }
 
 async function importIntegrationSheet(page: Page) {

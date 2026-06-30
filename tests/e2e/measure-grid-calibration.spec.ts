@@ -1,19 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
 import { importTestSheet } from "./fixtures/sheets";
 import {
-  clearDatabases,
-  clearRecordingHistory,
+  clearSheetLibraryTestState,
   MEASURE_GRID_DB_NAME,
   PRACTICE_SESSION_DB_NAME,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
 async function clearState(page: Page) {
-  await page.goto("/sheet-library");
-  await clearRecordingHistory(page);
-  await clearDatabases(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME, MEASURE_GRID_DB_NAME]);
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await clearSheetLibraryTestState(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME, MEASURE_GRID_DB_NAME]);
 }
 
 async function readMeasureGrid(page: Page, sheetId: string) {

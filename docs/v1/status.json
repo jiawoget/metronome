@@ -908,7 +908,7 @@
                                                             },
                                                             {
                                                                 "slice":  "D1-02 e2e-clear-state-storage-helper-consolidation",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "D1-03 e2e-practice-snapshot-reader-helper",

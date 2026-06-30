@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 import { RECORDING_HISTORY_STORAGE_KEY } from "@/infrastructure/storage/storage-contracts";
 
@@ -31,6 +31,14 @@ export async function clearDatabases(page: Page, databaseNames: string[]) {
   for (const databaseName of databaseNames) {
     await deleteDatabase(page, databaseName);
   }
+}
+
+export async function clearSheetLibraryTestState(page: Page, databaseNames: string[]) {
+  await page.goto("/sheet-library");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, databaseNames);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
 }
 
 export async function clearRecordingHistory(page: Page) {

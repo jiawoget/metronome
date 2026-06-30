@@ -6,8 +6,7 @@ import {
 } from "./fixtures/audio";
 import { importTestSheet } from "./fixtures/sheets";
 import {
-  clearDatabases,
-  clearRecordingHistory,
+  clearSheetLibraryTestState,
   PRACTICE_SESSION_DB_NAME,
   readRecordingHistory,
   seedRecordingHistory,
@@ -49,13 +48,7 @@ type SimpleWaveformState = {
 };
 
 async function clearState(page: Page) {
-  await page.goto("/sheet-library");
-  await clearRecordingHistory(page);
-  await clearDatabases(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME]);
-  await page.reload();
-  await expect(
-    page.getByRole("heading", { name: "Sheet Library" })
-  ).toBeVisible();
+  await clearSheetLibraryTestState(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME]);
 }
 
 async function getSavedRecordings(page: Page) {
