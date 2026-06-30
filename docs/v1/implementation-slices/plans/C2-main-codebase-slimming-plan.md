@@ -285,7 +285,7 @@ If legacy data must stay:
 - Unit helpers:
   - shared recording factories
   - shared AudioContext mock
-  - shared memory artifact repository
+  - narrow capture artifact object fixture reuse
 - E2E helpers:
   - `seedRecordingArtifacts`
   - `readSheetRecordings`
