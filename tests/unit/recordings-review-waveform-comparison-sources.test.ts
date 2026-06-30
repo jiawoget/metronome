@@ -24,6 +24,7 @@ import {
   makeSheetReviewRecording,
   type MakeSheetReviewRecordingOverrides
 } from "./factories/recordings-review";
+import { installAudioContextMock } from "./fixtures/audio-context";
 
 const waveformSheetDefaults: MakeSheetReviewRecordingOverrides = {
   mimeType: "audio/wav",
@@ -471,40 +472,6 @@ describe("waveform comparison source boundary", () => {
     expect(recordingHistoryRepository.getRecording("sheet-segment-old")).toBeNull();
   });
 });
-
-function installAudioContextMock({
-  durationSeconds = 1,
-  samples = new Float32Array([0, 0.25, -0.5, 1]),
-  reject = false
-}: {
-  durationSeconds?: number;
-  samples?: Float32Array;
-  reject?: boolean;
-} = {}) {
-  class MockAudioContext {
-    async decodeAudioData() {
-      if (reject) {
-        throw new Error("decode failed");
-      }
-
-      return {
-        duration: durationSeconds,
-        sampleRate: 8_000,
-        getChannelData: () => samples
-      };
-    }
-
-    close() {
-      return Promise.resolve();
-    }
-  }
-
-  vi.stubGlobal("AudioContext", MockAudioContext);
-  Object.defineProperty(window, "AudioContext", {
-    configurable: true,
-    value: MockAudioContext
-  });
-}
 
 async function expectUnavailableReason(
   sourcePromise: Promise<unknown>,
