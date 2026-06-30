@@ -920,7 +920,7 @@
                                                             },
                                                             {
                                                                 "slice":  "D1-05 unit-recording-fixture-residual-audit",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "D1-06 deferred-no-go-validation-and-closeout",
