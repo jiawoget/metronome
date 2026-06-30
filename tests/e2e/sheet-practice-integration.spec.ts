@@ -9,14 +9,12 @@ import {
 import {
   clearSheetLibraryTestState,
   PRACTICE_SESSION_DB_NAME,
-  RECORDING_HISTORY_STORAGE_KEY,
+  readPracticeSnapshot,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
-const practiceDbName = PRACTICE_SESSION_DB_NAME;
-const recordingHistoryStorageKey = RECORDING_HISTORY_STORAGE_KEY;
 
 type MetronomeTrace = {
   bpm: number;
@@ -37,6 +35,18 @@ type SavedSheetRecording = {
     storageVersion: 1;
   } | null;
   trustedPeaks: number[];
+};
+
+type PracticeSnapshot = {
+  sessions: Array<{
+    id: string;
+    sourceType: string;
+    sheetId: string | null;
+    recordingCount: number;
+    latestRecordingId: string | null;
+  }>;
+  recordings: SavedSheetRecording[];
+  errorMarkers: Array<{ recordingId: string; timestampMs: number; note: string | null }>;
 };
 
 type LayoutViewport = {
@@ -77,56 +87,7 @@ async function importIntegrationSheet(page: Page) {
 }
 
 async function getPracticeSnapshot(page: Page) {
-  return page.evaluate(
-    ({ databaseName, storageKey }: { databaseName: string; storageKey: string }) =>
-      new Promise<{
-        sessions: Array<{
-          id: string;
-          sourceType: string;
-          sheetId: string | null;
-          recordingCount: number;
-          latestRecordingId: string | null;
-        }>;
-        recordings: SavedSheetRecording[];
-        errorMarkers: Array<{ recordingId: string; timestampMs: number; note: string | null }>;
-      }>((resolve, reject) => {
-        const readHistory = () => {
-          const rawValue = window.localStorage.getItem(storageKey);
-          const parsed = rawValue ? JSON.parse(rawValue) : { recordings: [], errorMarkers: [] };
-
-          return {
-            recordings: Array.isArray(parsed.recordings) ? parsed.recordings : [],
-            errorMarkers: Array.isArray(parsed.errorMarkers) ? parsed.errorMarkers : []
-          };
-        };
-        const openRequest = indexedDB.open(databaseName);
-
-        openRequest.onerror = () => reject(openRequest.error);
-        openRequest.onsuccess = () => {
-          const database = openRequest.result;
-          const history = readHistory();
-
-          if (!database.objectStoreNames.contains("sessions")) {
-            database.close();
-            resolve({ sessions: [], ...history });
-            return;
-          }
-
-          const transaction = database.transaction(["sessions"], "readonly");
-          const sessionsRequest = transaction.objectStore("sessions").getAll();
-
-          transaction.oncomplete = () => {
-            database.close();
-            resolve({
-              sessions: sessionsRequest.result,
-              ...history
-            });
-          };
-          transaction.onerror = () => reject(transaction.error);
-        };
-      }),
-    { databaseName: practiceDbName, storageKey: recordingHistoryStorageKey }
-  );
+  return readPracticeSnapshot<PracticeSnapshot>(page, { includeErrorMarkers: true });
 }
 
 async function expectSheetPriorityLayout(page: Page, viewport: LayoutViewport, phase: string) {

@@ -5,7 +5,7 @@ import {
   clearDatabases,
   clearRecordingHistory,
   PRACTICE_SESSION_DB_NAME,
-  RECORDING_HISTORY_STORAGE_KEY,
+  readPracticeSnapshot,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
@@ -21,6 +21,25 @@ type MetronomeTrace = {
   timeSignature: string;
 };
 
+type PracticeSnapshot = {
+  sessions: Array<{
+    id: string;
+    sourceType: string;
+    sheetId: string | null;
+    bpm: number | null;
+    timeSignature: string | null;
+    recordingCount: number;
+    latestRecordingId: string | null;
+  }>;
+  recordings: Array<{
+    id: string;
+    type: string;
+    sessionId: string;
+    sheetId: string;
+    audioDataUrl?: string | null;
+  }>;
+};
+
 function average(values: number[]) {
   return values.reduce((total, value) => total + value, 0) / values.length;
 }
@@ -30,78 +49,7 @@ function intervalsFromAudioTime(traces: MetronomeTrace[]) {
 }
 
 async function getPracticeSnapshot(page: Page) {
-  return page.evaluate(
-    ({ databaseName, storageKey }: { databaseName: string; storageKey: string }) =>
-      new Promise<{
-        sessions: Array<{
-          id: string;
-          sourceType: string;
-          sheetId: string | null;
-          bpm: number | null;
-          timeSignature: string | null;
-          recordingCount: number;
-          latestRecordingId: string | null;
-        }>;
-        recordings: Array<{
-          id: string;
-          type: string;
-          sessionId: string;
-          sheetId: string;
-          audioDataUrl?: string | null;
-        }>;
-      }>((resolve, reject) => {
-        const readRecordings = () => {
-          const rawValue = window.localStorage.getItem(storageKey);
-          const parsed = rawValue ? JSON.parse(rawValue) : { recordings: [] };
-
-          return Array.isArray(parsed.recordings) ? parsed.recordings : [];
-        };
-        const openExistingDatabase = () => {
-          const openRequest = indexedDB.open(databaseName);
-
-          openRequest.onerror = () => reject(openRequest.error);
-          openRequest.onsuccess = () => {
-            const database = openRequest.result;
-
-            if (!database.objectStoreNames.contains("sessions")) {
-              database.close();
-              resolve({ sessions: [], recordings: readRecordings() });
-              return;
-            }
-
-            const transaction = database.transaction(["sessions"], "readonly");
-            const sessionsRequest = transaction.objectStore("sessions").getAll();
-
-            transaction.oncomplete = () => {
-              database.close();
-              resolve({
-                sessions: sessionsRequest.result,
-                recordings: readRecordings()
-              });
-            };
-            transaction.onerror = () => reject(transaction.error);
-          };
-        };
-
-        if ("databases" in indexedDB) {
-          indexedDB.databases().then((databases) => {
-            if (databases.some((database) => database.name === databaseName)) {
-              openExistingDatabase();
-              return;
-            }
-
-            resolve({ sessions: [], recordings: readRecordings() });
-          }, reject);
-          return;
-        }
-
-        openExistingDatabase();
-      }),
-    {
-      databaseName: PRACTICE_SESSION_DB_NAME,
-      storageKey: RECORDING_HISTORY_STORAGE_KEY
-    }
-  );
+  return readPracticeSnapshot<PracticeSnapshot>(page);
 }
 
 async function expectNoViewerOverlap(page: Page) {

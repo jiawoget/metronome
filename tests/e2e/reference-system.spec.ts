@@ -4,7 +4,7 @@ import { importTestSheet } from "./fixtures/sheets";
 import {
   clearSheetLibraryTestState,
   PRACTICE_SESSION_DB_NAME,
-  readRecordingHistory,
+  readPracticeSnapshot,
   REFERENCE_DB_NAME,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
@@ -16,6 +16,22 @@ type ReferenceAudioSnapshot = {
   volume: number;
   duration: number;
   message: string | null;
+};
+
+type PracticeSnapshot = {
+  sessions: Array<{
+    id: string;
+    sourceType: string;
+    sheetId: string | null;
+    recordingCount: number;
+    latestRecordingId: string | null;
+  }>;
+  recordings: Array<{
+    id: string;
+    type: string;
+    sessionId: string;
+    sheetId: string | null;
+  }>;
 };
 
 function createReferenceWavBuffer() {
@@ -118,54 +134,7 @@ async function getReferenceSnapshot(
 }
 
 async function getPracticeSnapshot(page: Page) {
-  const sessions = await page.evaluate(
-    (databaseName) =>
-      new Promise<
-        Array<{
-          id: string;
-          sourceType: string;
-          sheetId: string | null;
-          recordingCount: number;
-          latestRecordingId: string | null;
-        }>
-      >((resolve, reject) => {
-        const openRequest = indexedDB.open(databaseName);
-
-        openRequest.onerror = () => reject(openRequest.error);
-        openRequest.onsuccess = () => {
-          const database = openRequest.result;
-
-          if (!database.objectStoreNames.contains("sessions")) {
-            database.close();
-            resolve([]);
-            return;
-          }
-
-          const transaction = database.transaction(["sessions"], "readonly");
-          const sessionsRequest = transaction.objectStore("sessions").getAll();
-
-          transaction.oncomplete = () => {
-            database.close();
-            resolve(sessionsRequest.result);
-          };
-          transaction.onerror = () => reject(transaction.error);
-        };
-      }),
-    PRACTICE_SESSION_DB_NAME
-  );
-  const recordingHistory = await readRecordingHistory(page);
-
-  return {
-    sessions,
-    recordings: Array.isArray(recordingHistory.recordings)
-      ? (recordingHistory.recordings as Array<{
-          id: string;
-          type: string;
-          sessionId: string;
-          sheetId: string | null;
-        }>)
-      : []
-  };
+  return readPracticeSnapshot<PracticeSnapshot>(page);
 }
 
 test("reference system saves local audio and Bilibili references through Sheet Practice", async ({

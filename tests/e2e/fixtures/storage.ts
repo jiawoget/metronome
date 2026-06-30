@@ -1,6 +1,9 @@
 import { expect, type Page } from "@playwright/test";
 
-import { RECORDING_HISTORY_STORAGE_KEY } from "@/infrastructure/storage/storage-contracts";
+import {
+  PRACTICE_SESSION_DB_NAME,
+  RECORDING_HISTORY_STORAGE_KEY
+} from "@/infrastructure/storage/storage-contracts";
 
 export {
   MEASURE_GRID_DB_NAME,
@@ -56,6 +59,80 @@ export async function readRecordingHistory(page: Page) {
       ? JSON.parse(rawValue)
       : { sessions: [], recordings: [], errorMarkers: [] };
   }, RECORDING_HISTORY_STORAGE_KEY);
+}
+
+type PracticeSnapshotOptions = {
+  includeErrorMarkers?: boolean;
+};
+
+async function readPracticeSessionRows(page: Page) {
+  return page.evaluate(
+    (databaseName) =>
+      new Promise<unknown[]>((resolve, reject) => {
+        const openExistingDatabase = () => {
+          const openRequest = indexedDB.open(databaseName);
+
+          openRequest.onerror = () => reject(openRequest.error);
+          openRequest.onsuccess = () => {
+            const database = openRequest.result;
+
+            if (!database.objectStoreNames.contains("sessions")) {
+              database.close();
+              resolve([]);
+              return;
+            }
+
+            const transaction = database.transaction(["sessions"], "readonly");
+            const sessionsRequest = transaction.objectStore("sessions").getAll();
+
+            transaction.oncomplete = () => {
+              database.close();
+              resolve(sessionsRequest.result);
+            };
+            transaction.onerror = () => reject(transaction.error);
+          };
+        };
+
+        if ("databases" in indexedDB) {
+          indexedDB.databases().then((databases) => {
+            if (databases.some((database) => database.name === databaseName)) {
+              openExistingDatabase();
+              return;
+            }
+
+            resolve([]);
+          }, reject);
+          return;
+        }
+
+        openExistingDatabase();
+      }),
+    PRACTICE_SESSION_DB_NAME
+  );
+}
+
+export async function readPracticeSnapshot<
+  TSnapshot extends { sessions: unknown[]; recordings: unknown[] }
+>(
+  page: Page,
+  options: PracticeSnapshotOptions = {}
+): Promise<TSnapshot> {
+  const sessions = await readPracticeSessionRows(page);
+  const recordingHistory = await readRecordingHistory(page);
+  const snapshot = {
+    sessions,
+    recordings: Array.isArray(recordingHistory.recordings)
+      ? recordingHistory.recordings
+      : []
+  } as { sessions: unknown[]; recordings: unknown[]; errorMarkers?: unknown[] };
+
+  if (options.includeErrorMarkers) {
+    snapshot.errorMarkers = Array.isArray(recordingHistory.errorMarkers)
+      ? recordingHistory.errorMarkers
+      : [];
+  }
+
+  return snapshot as TSnapshot;
 }
 
 export async function seedRecordingHistory(page: Page, snapshot: unknown) {
