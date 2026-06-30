@@ -323,7 +323,7 @@ Phase 7 is intentionally split across multiple small PRs:
     `readSheetRecordings`, `expectArtifactRefOnly`, `clearRecordingState`, and
     the larger `recordings-review.spec.ts` slimming work.
 - `C2-10 shared-unit-audio-artifact-fixtures`
-  - Status: not_started.
+  - Status: planning_in_progress.
   - Follow-up for shared AudioContext mock reuse and shared in-memory artifact
     fixture reuse across unit tests. This work is intentionally split out from
     C2-08 because it crosses more files and can otherwise turn into a generic
