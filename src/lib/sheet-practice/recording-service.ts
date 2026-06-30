@@ -96,6 +96,25 @@ async function rollbackSheetReviewRecordingMetadata(recording: {
   );
 }
 
+async function captureSheetRecordingStopped({
+  sessionService,
+  metadata
+}: Pick<SaveSheetRecordingInput, "sessionService"> & {
+  metadata: SheetRecordingMetadata;
+}) {
+  try {
+    await sessionService.captureSessionEvent({
+      sessionId: metadata.sessionId,
+      kind: "recording_stopped",
+      sheetId: metadata.sheetId,
+      segmentId: metadata.segmentContext?.segmentId ?? null,
+      recordingId: metadata.id
+    });
+  } catch {
+    return null;
+  }
+}
+
 export class BrowserSheetRecordingService implements SheetRecordingService {
   constructor(private readonly captureService: RecordingCaptureService = createBrowserRecordingCaptureService()) {}
 
@@ -209,6 +228,10 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         session: prepared.session
       });
       await input.sessionService.commitPreparedSheetRecordingSession(prepared);
+      await captureSheetRecordingStopped({
+        sessionService: input.sessionService,
+        metadata
+      });
 
       return {
         metadata,

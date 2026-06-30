@@ -2,6 +2,10 @@ import type {
   ContinuePracticeTarget,
   PracticeActivityTrigger,
   PracticeSession,
+  PracticeSessionEvent,
+  PracticeSessionMetronomeEventKind,
+  PracticeSessionRecordingEventKind,
+  PracticeSessionReferenceEventKind,
   SheetRecordingSegmentContext,
   PracticeTimeSignature,
   SheetRecordingMetadata,
@@ -76,9 +80,28 @@ export type PracticeRecordingLinkInput = {
   recordingId: string | null | undefined;
 };
 
+export type PracticeSessionEventCaptureKind =
+  | PracticeSessionMetronomeEventKind
+  | PracticeSessionRecordingEventKind
+  | PracticeSessionReferenceEventKind;
+
+export type PracticeSessionEventCaptureInput = {
+  sessionId: string | null | undefined;
+  kind: PracticeSessionEventCaptureKind;
+  sheetId?: string | null;
+  segmentId?: string | null;
+  recordingId?: string | null;
+  referenceId?: string | null;
+};
+
+export type PracticeSessionEventSink = {
+  captureEvent: (event: PracticeSessionEvent) => Promise<void> | void;
+};
+
 export type PracticeSessionService = {
   ensureQuickSession: (input: QuickPracticeActivityInput) => Promise<PracticeSession>;
   ensureSheetSession: (input: SheetPracticeActivityInput) => Promise<PracticeSession | null>;
+  captureSessionEvent: (input: PracticeSessionEventCaptureInput) => Promise<PracticeSessionEvent | null>;
   restorePracticeSessionSnapshot: (session: PracticeSession) => Promise<PracticeSession>;
   deletePracticeSessionSnapshot: (sessionId: string) => Promise<void>;
   updatePracticeSessionDuration: (sessionId: string) => Promise<PracticeSession | null>;

@@ -1,12 +1,17 @@
 import {
+  PRACTICE_SESSION_EVENT_SCHEMA_VERSION,
   calculatePracticeDurationMs,
   getContinuePracticeTarget,
   getTodayPracticeSummary,
   isBrowserLocalDay,
+  validatePracticeSessionEvent,
   validateSheetRecordingMetadata,
+  type PracticeSessionEvent,
   type PracticeSession
 } from "@/domain/practice";
 import type {
+  PracticeSessionEventCaptureInput,
+  PracticeSessionEventSink,
   PracticeRecordingMetadataRepository,
   PracticeRecordingLinkInput,
   PracticeSessionRepository,
@@ -22,8 +27,15 @@ type CreatePracticeSessionServiceOptions = {
   repository: PracticeSessionRepository;
   recordingRepository: PracticeRecordingMetadataRepository;
   sheetGateway: PracticeSessionSheetGateway;
+  eventSink?: PracticeSessionEventSink;
   now?: () => Date;
   createId?: (prefix: string) => string;
+};
+
+const noopPracticeSessionEventSink: PracticeSessionEventSink = {
+  captureEvent() {
+    return undefined;
+  }
 };
 
 function createDefaultId(prefix: string) {
@@ -38,6 +50,7 @@ export function createPracticeSessionService({
   repository,
   recordingRepository,
   sheetGateway,
+  eventSink = noopPracticeSessionEventSink,
   now = () => new Date(),
   createId = createDefaultId
 }: CreatePracticeSessionServiceOptions): PracticeSessionService {
@@ -51,6 +64,112 @@ export function createPracticeSessionService({
 
   function canReuseActiveSession(session: PracticeSession | null) {
     return !!session && session.endedAt === null && isBrowserLocalDay(session.startedAt, now());
+  }
+
+  function normalizeOptionalContextId(value: string | null | undefined) {
+    const trimmed = value?.trim() ?? "";
+
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  function validateEventContext(
+    input: PracticeSessionEventCaptureInput,
+    session: PracticeSession
+  ) {
+    const requestedSheetId = normalizeOptionalContextId(input.sheetId);
+    const segmentId = normalizeOptionalContextId(input.segmentId);
+    const recordingId = normalizeOptionalContextId(input.recordingId);
+    const referenceId = normalizeOptionalContextId(input.referenceId);
+    let sheetId: string | null = null;
+
+    if (session.sourceType === "sheet") {
+      if (!session.sheetId) {
+        return null;
+      }
+
+      if (requestedSheetId && requestedSheetId !== session.sheetId) {
+        return null;
+      }
+
+      sheetId = session.sheetId;
+    } else if (requestedSheetId || segmentId || input.kind.startsWith("reference_")) {
+      return null;
+    }
+
+    switch (input.kind) {
+      case "metronome_started":
+      case "metronome_stopped":
+        if (recordingId || referenceId) {
+          return null;
+        }
+        break;
+      case "recording_started":
+        if (referenceId) {
+          return null;
+        }
+        break;
+      case "recording_stopped":
+        if (!recordingId || referenceId) {
+          return null;
+        }
+        break;
+      case "reference_started":
+      case "reference_stopped":
+        if (!referenceId || recordingId || session.sourceType !== "sheet") {
+          return null;
+        }
+        break;
+      default:
+        return null;
+    }
+
+    return {
+      sheetId,
+      segmentId,
+      recordingId,
+      referenceId
+    };
+  }
+
+  async function captureSessionEvent(input: PracticeSessionEventCaptureInput) {
+    try {
+      const sessionId = normalizeOptionalContextId(input.sessionId);
+
+      if (!sessionId) {
+        return null;
+      }
+
+      const session = await repository.getSession(sessionId);
+
+      if (!session) {
+        return null;
+      }
+
+      const context = validateEventContext(input, session);
+
+      if (!context) {
+        return null;
+      }
+
+      const event = validatePracticeSessionEvent({
+        id: createId("event"),
+        sessionId: session.id,
+        occurredAt: now().toISOString(),
+        kind: input.kind,
+        ...(context.sheetId ? { sheetId: context.sheetId } : {}),
+        ...(context.segmentId ? { segmentId: context.segmentId } : {}),
+        ...(context.recordingId ? { recordingId: context.recordingId } : {}),
+        ...(context.referenceId ? { referenceId: context.referenceId } : {}),
+        payload: {},
+        schemaVersion: PRACTICE_SESSION_EVENT_SCHEMA_VERSION
+      } as PracticeSessionEvent);
+
+      await eventSink.captureEvent(event);
+
+      return event;
+    } catch {
+      return null;
+    }
   }
 
   async function updateSessionDuration(session: PracticeSession) {
@@ -275,6 +394,7 @@ export function createPracticeSessionService({
   return {
     ensureQuickSession,
     ensureSheetSession,
+    captureSessionEvent,
 
     async restorePracticeSessionSnapshot(session) {
       await saveSession(session);

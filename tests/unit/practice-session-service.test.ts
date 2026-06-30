@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   applyPracticeTrigger,
@@ -13,6 +13,7 @@ import { createGlobalPracticeSessionRepository } from "@/infrastructure/db/globa
 import { RECORDINGS_STORAGE_KEY } from "@/lib/recordings-review/repository";
 import {
   createPracticeSessionService,
+  type PracticeSessionEventSink,
   type PracticeRecordingMetadataRepository,
   type PracticeSessionRepository,
   type PracticeSessionSheetGateway
@@ -120,7 +121,11 @@ describe("practice session service", () => {
     window.localStorage.clear();
   });
 
-  function createService() {
+  function createService({
+    eventSink
+  }: {
+    eventSink?: PracticeSessionEventSink;
+  } = {}) {
     const repository = createMemorySessionRepository();
     const recordingRepository = createMemoryRecordingRepository();
     const validSheetIds = new Set(["sheet-alpha"]);
@@ -130,6 +135,7 @@ describe("practice session service", () => {
       repository,
       recordingRepository,
       sheetGateway: gateway,
+      eventSink,
       now: () => new Date(nowMs),
       createId: (prefix) => `${prefix}-${++idNumber}`
     });
@@ -956,6 +962,208 @@ describe("practice session service", () => {
     await expect(globalRepository.listSessions()).resolves.toEqual([]);
     await expect(
       globalRepository.getSession("legacy-quick-session")
+    ).resolves.toBeNull();
+  });
+
+  it("captures validated quick and sheet transport events through the event sink", async () => {
+    const captured: Parameters<PracticeSessionEventSink["captureEvent"]>[0][] = [];
+    const { service } = createService({
+      eventSink: {
+        captureEvent(event) {
+          captured.push(event);
+        }
+      }
+    });
+    const quickSession = await service.ensureQuickSession({
+      trigger: "metronome",
+      bpm: 120,
+      timeSignature: "4/4"
+    });
+
+    nowMs += 1_000;
+    const quickEvent = await service.captureSessionEvent({
+      sessionId: quickSession.id,
+      kind: "metronome_started"
+    });
+
+    expect(quickEvent).toMatchObject({
+      sessionId: quickSession.id,
+      kind: "metronome_started",
+      occurredAt: "2026-06-21T12:00:01.000Z",
+      payload: {},
+      schemaVersion: 1
+    });
+    expect(quickEvent?.id).toMatch(/^event-/);
+    expect(quickEvent).not.toHaveProperty("sheetId");
+
+    const sheetSession = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "reference"
+    });
+
+    nowMs += 1_000;
+    const referenceEvent = await service.captureSessionEvent({
+      sessionId: sheetSession?.id,
+      kind: "reference_started",
+      referenceId: " reference-alpha "
+    });
+
+    expect(referenceEvent).toMatchObject({
+      sessionId: sheetSession?.id,
+      kind: "reference_started",
+      sheetId: "sheet-alpha",
+      referenceId: "reference-alpha",
+      payload: {},
+      schemaVersion: 1
+    });
+    expect(captured).toEqual([quickEvent, referenceEvent]);
+  });
+
+  it("rejects invalid capture contexts and normalizes optional ids before validation", async () => {
+    const captured: Parameters<PracticeSessionEventSink["captureEvent"]>[0][] = [];
+    const { service } = createService({
+      eventSink: {
+        captureEvent(event) {
+          captured.push(event);
+        }
+      }
+    });
+    const quickSession = await service.ensureQuickSession({
+      trigger: "recording",
+      bpm: 96,
+      timeSignature: "4/4"
+    });
+    const sheetSession = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording"
+    });
+
+    await expect(
+      service.captureSessionEvent({ sessionId: null, kind: "metronome_started" })
+    ).resolves.toBeNull();
+    await expect(
+      service.captureSessionEvent({ sessionId: "   ", kind: "metronome_started" })
+    ).resolves.toBeNull();
+    await expect(
+      service.captureSessionEvent({ sessionId: "session-missing", kind: "metronome_started" })
+    ).resolves.toBeNull();
+    await expect(
+      service.captureSessionEvent({
+        sessionId: quickSession.id,
+        kind: "metronome_started",
+        sheetId: "sheet-alpha"
+      })
+    ).resolves.toBeNull();
+    await expect(
+      service.captureSessionEvent({
+        sessionId: quickSession.id,
+        kind: "reference_started",
+        referenceId: "reference-alpha"
+      })
+    ).resolves.toBeNull();
+    await expect(
+      service.captureSessionEvent({
+        sessionId: sheetSession?.id,
+        kind: "metronome_started",
+        sheetId: "sheet-bravo"
+      })
+    ).resolves.toBeNull();
+    await expect(
+      service.captureSessionEvent({
+        sessionId: sheetSession?.id,
+        kind: "metronome_started",
+        recordingId: "recording-alpha"
+      })
+    ).resolves.toBeNull();
+    await expect(
+      service.captureSessionEvent({
+        sessionId: sheetSession?.id,
+        kind: "recording_started",
+        referenceId: "reference-alpha"
+      })
+    ).resolves.toBeNull();
+    await expect(
+      service.captureSessionEvent({
+        sessionId: sheetSession?.id,
+        kind: "recording_stopped",
+        recordingId: "   "
+      })
+    ).resolves.toBeNull();
+    await expect(
+      service.captureSessionEvent({
+        sessionId: sheetSession?.id,
+        kind: "reference_stopped",
+        referenceId: null
+      })
+    ).resolves.toBeNull();
+    expect(captured).toEqual([]);
+
+    await expect(
+      service.captureSessionEvent({
+        sessionId: sheetSession?.id,
+        kind: "recording_stopped",
+        sheetId: " sheet-alpha ",
+        segmentId: " segment-alpha ",
+        recordingId: " recording-alpha "
+      })
+    ).resolves.toMatchObject({
+      sheetId: "sheet-alpha",
+      segmentId: "segment-alpha",
+      recordingId: "recording-alpha"
+    });
+    expect(captured).toHaveLength(1);
+  });
+
+  it("contains capture sink and lookup failures without mutating session summaries", async () => {
+    const { service, repository } = createService({
+      eventSink: {
+        captureEvent() {
+          throw new Error("event sink unavailable");
+        }
+      }
+    });
+    const session = await service.ensureQuickSession({
+      trigger: "metronome",
+      bpm: 96,
+      timeSignature: "4/4"
+    });
+    const summaryBefore = await service.getTodaySummary();
+    const sessionBefore = await repository.getSession(session.id);
+
+    nowMs += 5_000;
+
+    await expect(
+      service.captureSessionEvent({
+        sessionId: session.id,
+        kind: "metronome_started"
+      })
+    ).resolves.toBeNull();
+    await expect(service.getTodaySummary()).resolves.toEqual(summaryBefore);
+    await expect(repository.getSession(session.id)).resolves.toEqual(sessionBefore);
+
+    const failingRepository: PracticeSessionRepository = {
+      ...createMemorySessionRepository(),
+      getSession: vi.fn(async () => {
+        throw new Error("lookup failed");
+      })
+    };
+    const { gateway } = createSheetGateway();
+    const lookupFailureService = createPracticeSessionService({
+      repository: failingRepository,
+      recordingRepository: createMemoryRecordingRepository(),
+      sheetGateway: gateway,
+      eventSink: {
+        captureEvent() {
+          throw new Error("should not be reached");
+        }
+      }
+    });
+
+    await expect(
+      lookupFailureService.captureSessionEvent({
+        sessionId: "session-alpha",
+        kind: "metronome_started"
+      })
     ).resolves.toBeNull();
   });
 

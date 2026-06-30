@@ -484,13 +484,24 @@ export function SheetPracticeControls({
       if (context?.session && shouldCreatePracticeAgainSession) {
         setConsumedSourceRecordingId(sourceRecordingId);
       }
+      if (context?.session) {
+        void sessionService.captureSessionEvent({
+          sessionId: context.session.id,
+          kind: "metronome_started"
+        });
+      }
       setMessage(
         isRecordingActive
           ? "Metronome playing; recording stays active."
           : "Metronome playing."
       );
     },
-    [isRecordingActive, shouldCreatePracticeAgainSession, sourceRecordingId]
+    [
+      isRecordingActive,
+      sessionService,
+      shouldCreatePracticeAgainSession,
+      sourceRecordingId
+    ]
   );
   const handleStartFailed = useCallback(
     async (error: unknown, context: SheetMetronomeStartContext | null) => {
@@ -519,6 +530,10 @@ export function SheetPracticeControls({
   );
   const handleStopped = useCallback(async () => {
     if (session) {
+      await sessionService.captureSessionEvent({
+        sessionId: session.id,
+        kind: "metronome_stopped"
+      });
       const nextSession = await sessionService.updateSheetSessionDuration(
         session.id
       );
@@ -671,12 +686,20 @@ export function SheetPracticeControls({
         throw new Error("No valid sheet context. Recording was stopped.");
       }
 
+      const recordingSegmentId =
+        recordAgainContext?.segmentId ?? selectedRecordingSegmentId;
+
       setSession(nextSession);
       setConsumedSourceRecordingId(sourceRecordingId);
+      await sessionService.captureSessionEvent({
+        sessionId: nextSession.id,
+        kind: "recording_started",
+        segmentId: recordingSegmentId
+      });
       setRecordingState("recording");
       beginWorkflowRecording(
         sheetId,
-        recordAgainContext?.segmentId ?? selectedRecordingSegmentId
+        recordingSegmentId
       );
       setMessage(
         recordAgainContext

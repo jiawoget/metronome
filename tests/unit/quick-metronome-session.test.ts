@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +14,7 @@ import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
 import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
 import { createQuickRecording } from "@/lib/quick-metronome/session";
 import { DEFAULT_METRONOME_SETTINGS, type QuickRecording, type RecordingArtifact } from "@/lib/quick-metronome/types";
+import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import {
   createPracticeSessionService,
@@ -34,7 +35,8 @@ const quickExperienceMocks = vi.hoisted(() => ({
     endPracticeSession: vi.fn(),
     restorePracticeSessionSnapshot: vi.fn(),
     deletePracticeSessionSnapshot: vi.fn(),
-    updatePracticeSessionDuration: vi.fn()
+    updatePracticeSessionDuration: vi.fn(),
+    captureSessionEvent: vi.fn()
   },
   recordingService: {
     start: vi.fn(),
@@ -53,6 +55,21 @@ vi.mock("@/services/recording/browser", () => ({
 vi.mock("@/infrastructure/db/browser-practice-session-service", () => ({
   browserPracticeSessionService: quickExperienceMocks.practiceSessionService
 }));
+
+function expectNoCaptureKind(
+  captureSessionEvent: { mock: { calls: unknown[][] } },
+  kind: string
+) {
+  expect(
+    captureSessionEvent.mock.calls.filter(
+      ([input]) =>
+        typeof input === "object" &&
+        input !== null &&
+        "kind" in input &&
+        input.kind === kind
+    )
+  ).toEqual([]);
+}
 
 function saveQuickRecordingForTest(recording: QuickRecording) {
   recordingHistoryRepository.saveQuickRecordingMetadata(recording);
@@ -285,6 +302,7 @@ describe("quick metronome recording metadata", () => {
   it("restores practice-session metadata when failure happens after quick session link", async () => {
     await quickRecordingController.clear();
     const sessions = new Map<string, PracticeSession>();
+    const captureSessionEvent = vi.fn(async () => null);
     const repository: PracticeSessionRepository = {
       async listSessions() {
         return [...sessions.values()];
@@ -363,11 +381,13 @@ describe("quick metronome recording metadata", () => {
           restorePracticeSessionSnapshot:
             sessionService.restorePracticeSessionSnapshot,
           deletePracticeSessionSnapshot:
-            sessionService.deletePracticeSessionSnapshot
+            sessionService.deletePracticeSessionSnapshot,
+          captureSessionEvent
         }
       })
     ).rejects.toThrow("end failed");
 
+    expect(captureSessionEvent).not.toHaveBeenCalled();
     expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
     await expect(sessionService.getRecentSession()).resolves.toMatchObject({
       id: previousSession.id,
@@ -476,11 +496,262 @@ describe("quick metronome recording metadata", () => {
     expect(
       quickExperienceMocks.practiceSessionService.restorePracticeSessionSnapshot
     ).toHaveBeenCalledWith(previousSession);
+    expectNoCaptureKind(
+      quickExperienceMocks.practiceSessionService.captureSessionEvent,
+      "recording_stopped"
+    );
     expect(storedSession).toEqual(previousSession);
     expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
     await expect(
       recordingArtifactRepository.getArtifact(linkedRecordingId!)
     ).resolves.toBeNull();
+  });
+
+  it("captures quick metronome events only after successful start and stop transitions", async () => {
+    const user = userEvent.setup();
+    const session: PracticeSession = {
+      id: "session-quick",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T08:00:00.000Z",
+      endedAt: null,
+      durationMs: 0,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T08:00:00.000Z"
+    };
+
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
+    quickExperienceMocks.practiceSessionService.endPracticeSession.mockResolvedValue({
+      ...session,
+      endedAt: "2026-06-21T08:00:05.000Z",
+      durationMs: 5_000
+    });
+
+    render(createElement(QuickMetronomeExperience));
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+    await waitFor(() => {
+      expect(screen.getByText("Metronome playing.")).toBeVisible();
+    });
+    expect(quickExperienceMocks.practiceSessionService.captureSessionEvent).toHaveBeenCalledWith({
+      sessionId: "session-quick",
+      kind: "metronome_started"
+    });
+
+    await user.click(screen.getByRole("button", { name: "Stop metronome" }));
+
+    await waitFor(() => {
+      expect(quickExperienceMocks.practiceSessionService.endPracticeSession).toHaveBeenCalledWith(
+        "session-quick"
+      );
+    });
+    expect(quickExperienceMocks.practiceSessionService.captureSessionEvent).toHaveBeenCalledWith({
+      sessionId: "session-quick",
+      kind: "metronome_stopped"
+    });
+  });
+
+  it("does not capture quick metronome start when playback start fails", async () => {
+    const user = userEvent.setup();
+    const session: PracticeSession = {
+      id: "session-quick",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T08:00:00.000Z",
+      endedAt: null,
+      durationMs: 0,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T08:00:00.000Z"
+    };
+
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
+    quickExperienceMocks.metronomeService.start.mockRejectedValueOnce(
+      new Error("Tone unavailable")
+    );
+
+    render(createElement(QuickMetronomeExperience));
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("Tone unavailable");
+    });
+    expect(
+      quickExperienceMocks.practiceSessionService.captureSessionEvent
+    ).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "metronome_started" })
+    );
+  });
+
+  it("does not capture quick metronome_stopped when the stop transition fails", async () => {
+    const captureSessionEvent = vi.fn(
+      async (input: { sessionId: string; kind: string }) => {
+        void input;
+      }
+    );
+    const metronomeService = {
+      update: vi.fn(),
+      start: vi.fn(async () => undefined),
+      stop: vi.fn((): void => {
+        throw new Error("Tone stop unavailable");
+      })
+    };
+    const { result, unmount } = renderHook(() =>
+      useMetronomeTransport({
+        settings: DEFAULT_METRONOME_SETTINGS,
+        metronomeService,
+        onStopped: () =>
+          captureSessionEvent({
+            sessionId: "session-quick",
+            kind: "metronome_stopped"
+          })
+      })
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+    });
+    await act(async () => {
+      await expect(result.current.stopMetronome()).rejects.toThrow(
+        "Tone stop unavailable"
+      );
+    });
+
+    expectNoCaptureKind(captureSessionEvent, "metronome_stopped");
+    metronomeService.stop.mockImplementation((): void => undefined);
+    unmount();
+  });
+
+  it("captures recording start after microphone capture starts and a quick session exists", async () => {
+    const user = userEvent.setup();
+    const session: PracticeSession = {
+      id: "session-recording",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T08:00:00.000Z",
+      endedAt: null,
+      durationMs: 0,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T08:00:00.000Z"
+    };
+
+    quickExperienceMocks.recordingService.start.mockResolvedValue(undefined);
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
+
+    render(createElement(QuickMetronomeExperience));
+
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Recording without metronome.")).toBeVisible();
+    });
+    expect(quickExperienceMocks.practiceSessionService.captureSessionEvent).toHaveBeenCalledWith({
+      sessionId: "session-recording",
+      kind: "recording_started"
+    });
+
+    cleanup();
+    vi.clearAllMocks();
+    quickExperienceMocks.recordingService.start.mockRejectedValueOnce(
+      new Error("microphone unavailable")
+    );
+
+    render(createElement(QuickMetronomeExperience));
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Recording failed before it could start."
+      );
+    });
+    expect(
+      quickExperienceMocks.practiceSessionService.captureSessionEvent
+    ).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "recording_started" })
+    );
+  });
+
+  it("captures recording_stopped after a quick recording save and session close succeed", async () => {
+    await quickRecordingController.clear();
+    const artifact: RecordingArtifact = {
+      blob: new Blob(["synthetic audio"]),
+      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
+      durationMs: 1_245.4,
+      mimeType: "audio/webm",
+      sizeBytes: 15,
+      analysis: null
+    };
+    const session: PracticeSession = {
+      id: "session-quick-save",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T08:00:00.000Z",
+      endedAt: null,
+      durationMs: 0,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T08:00:00.000Z"
+    };
+    let savedRecordingId: string | null = null;
+    const linkRecordingToSession = vi.fn(async ({ recordingId }: { recordingId?: string | null }) => {
+      savedRecordingId = recordingId ?? null;
+
+      return {
+        ...session,
+        recordingCount: 1,
+        latestRecordingId: savedRecordingId,
+        updatedAt: "2026-06-21T08:00:02.000Z"
+      };
+    });
+    const endPracticeSession = vi.fn(async () => ({
+      ...session,
+      endedAt: "2026-06-21T08:00:03.000Z",
+      durationMs: 3_000,
+      recordingCount: 1,
+      latestRecordingId: savedRecordingId,
+      updatedAt: "2026-06-21T08:00:03.000Z"
+    }));
+    const captureSessionEvent = vi.fn(async () => null);
+
+    const result = await quickRecordingController.saveCapturedQuickRecording({
+      artifact,
+      session,
+      settings: DEFAULT_METRONOME_SETTINGS,
+      isPlaying: false,
+      sessionService: {
+        linkRecordingToSession,
+        endPracticeSession,
+        restorePracticeSessionSnapshot: vi.fn(async (value: PracticeSession) => value),
+        deletePracticeSessionSnapshot: vi.fn(async () => undefined),
+        captureSessionEvent
+      }
+    });
+
+    expect(result.recording.id).toBe(savedRecordingId);
+    expect(linkRecordingToSession).toHaveBeenCalledWith({
+      sessionId: "session-quick-save",
+      recordingId: savedRecordingId
+    });
+    expect(endPracticeSession).toHaveBeenCalledWith("session-quick-save");
+    expect(captureSessionEvent).toHaveBeenCalledWith({
+      sessionId: "session-quick-save",
+      kind: "recording_stopped",
+      recordingId: savedRecordingId
+    });
+    expect(captureSessionEvent.mock.invocationCallOrder[0]).toBeGreaterThan(
+      endPracticeSession.mock.invocationCallOrder[0]
+    );
   });
 
   it("clears only quick recordings and explicitly quick unreferenced sessions", async () => {

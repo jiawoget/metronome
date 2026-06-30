@@ -27,7 +27,10 @@ import { Button } from "@/components/ui/button";
 type ReferencePanelProps = {
   sheetId: string;
   referenceService?: ReferenceService;
-  sessionService?: Pick<PracticeSessionService, "ensureSheetSession">;
+  sessionService?: Pick<
+    PracticeSessionService,
+    "ensureSheetSession" | "captureSessionEvent"
+  >;
   createAudioPlayer?: () => BrowserLocalReferenceAudioPlayer;
   onPlaybackTimestampChange?: (timestampMs: number | null) => void;
 };
@@ -104,6 +107,11 @@ export function ReferencePanel({
     message: null
   });
   const activeLocalReferenceIdRef = useRef<string | null>(null);
+  const preparedLocalReferenceSessionIdRef = useRef<string | null>(null);
+  const playingLocalReferenceRef = useRef<{
+    referenceId: string;
+    sessionId: string;
+  } | null>(null);
   const activeLocalReferenceId =
     activeReference?.kind === "local-audio" ? activeReference.id : null;
 
@@ -215,6 +223,56 @@ export function ReferencePanel({
     const handleAudioState = (event: Event) => {
       const detail = (event as CustomEvent<PlaybackState>).detail;
       const activeLocalReferenceId = activeLocalReferenceIdRef.current;
+      const playingLocalReference = playingLocalReferenceRef.current;
+      const isPreviousPlayingReference =
+        !!detail.referenceId &&
+        detail.referenceId === playingLocalReference?.referenceId;
+      const isStopState =
+        detail.state === "paused" ||
+        detail.state === "idle" ||
+        detail.state === "error";
+
+      if (
+        detail.referenceId &&
+        detail.referenceId !== activeLocalReferenceId &&
+        !isPreviousPlayingReference
+      ) {
+        return;
+      }
+
+      if (
+        detail.state === "playing" &&
+        detail.referenceId &&
+        detail.referenceId === activeLocalReferenceId &&
+        playingLocalReference?.referenceId !== detail.referenceId
+      ) {
+        const sessionId = preparedLocalReferenceSessionIdRef.current;
+
+        if (sessionId) {
+          playingLocalReferenceRef.current = {
+            referenceId: detail.referenceId,
+            sessionId
+          };
+          void sessionService.captureSessionEvent({
+            sessionId,
+            kind: "reference_started",
+            referenceId: detail.referenceId
+          });
+        }
+      } else if (
+        isStopState &&
+        playingLocalReference &&
+        (!detail.referenceId ||
+          detail.referenceId === playingLocalReference.referenceId)
+      ) {
+        playingLocalReferenceRef.current = null;
+        preparedLocalReferenceSessionIdRef.current = null;
+        void sessionService.captureSessionEvent({
+          sessionId: playingLocalReference.sessionId,
+          kind: "reference_stopped",
+          referenceId: playingLocalReference.referenceId
+        });
+      }
 
       if (detail.referenceId && detail.referenceId !== activeLocalReferenceId) {
         return;
@@ -249,7 +307,7 @@ export function ReferencePanel({
       audioPlayer.dispose();
       onPlaybackTimestampChange?.(null);
     };
-  }, [audioPlayer, onPlaybackTimestampChange]);
+  }, [audioPlayer, onPlaybackTimestampChange, sessionService]);
 
   async function saveLocalReference() {
     setErrorMessage(null);
@@ -282,10 +340,11 @@ export function ReferencePanel({
     }
 
     setErrorMessage(null);
-    await sessionService.ensureSheetSession({
+    const session = await sessionService.ensureSheetSession({
       sheetId,
       trigger: "reference"
     });
+    preparedLocalReferenceSessionIdRef.current = session?.id ?? null;
     await audioPlayer.play();
     setMessage("Local reference playing.");
   }
