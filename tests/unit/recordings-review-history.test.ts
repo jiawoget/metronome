@@ -27,70 +27,79 @@ import {
   validateErrorMarkerInput
 } from "@/lib/recordings-review/error-markers";
 import type { RecordingErrorMarker, ReviewRecording } from "@/lib/recordings-review/types";
+import {
+  makeQuickReviewRecording,
+  makeSheetRecordingSegmentContext,
+  makeSheetReviewRecording
+} from "./factories/recordings-review";
 
-const quickRecording: ReviewRecording = {
-  id: "quick-1",
-  type: "quick",
-  name: "Morning rhythm",
-  sessionId: "session-quick",
-  sheetId: null,
-  createdAt: "2026-06-21T09:00:00.000Z",
-  durationMs: 65_000,
-  sizeBytes: 12_000,
-  mimeType: "audio/wav",
-  audioDataUrl: "data:audio/wav;base64,UklGRg==",
-  settings: {
-    bpm: 120,
-    timeSignature: "4/4"
-  },
-  trustedPeaks: [0.1, 0.5, 1]
-};
-
-const sheetRecording: ReviewRecording = {
-  id: "sheet-1",
-  type: "sheet",
-  name: "Etude take",
-  sessionId: "session-sheet",
-  sheetId: "sheet-42",
-  sheetName: "Moonlight Etude",
-  createdAt: "2026-06-21T10:00:00.000Z",
-  durationMs: 125_000,
-  sizeBytes: 24_000,
-  mimeType: "audio/wav",
-  audioDataUrl: "data:audio/wav;base64,UklGRg==",
-  settings: {
-    bpm: 96,
-    timeSignature: "3/4"
-  },
-  trustedPeaks: [0.2, 0.8, 0.4]
-};
-
-const segmentSheetRecording: ReviewRecording = {
-  ...sheetRecording,
-  id: "sheet-segment-1",
-  name: "Focused segment take",
-  segmentContext: {
-    segmentId: "segment-bridge",
-    segmentName: "Bridge",
-    range: {
-      startMeasure: 5,
-      endMeasure: 8
+const quickRecording: ReviewRecording = makeQuickReviewRecording(
+  {
+    id: "quick-1",
+    name: "Morning rhythm",
+    sessionId: "session-quick",
+    createdAt: "2026-06-21T09:00:00.000Z",
+    durationMs: 65_000,
+    sizeBytes: 12_000,
+    mimeType: "audio/wav",
+    audioDataUrl: "data:audio/wav;base64,UklGRg==",
+    settings: {
+      bpm: 120,
+      timeSignature: "4/4"
     },
-    targetBpm: 96,
-    measureGridVersion:
-      "bpm:96|timeSignature:3/4|pickupBeats:0|measureOneOffsetMs:1000",
-    measureGridSnapshot: {
+    trustedPeaks: [0.1, 0.5, 1]
+  },
+  { withArtifactRef: false }
+);
+
+const sheetRecording: ReviewRecording = makeSheetReviewRecording(
+  {
+    id: "sheet-1",
+    name: "Etude take",
+    sessionId: "session-sheet",
+    sheetId: "sheet-42",
+    sheetName: "Moonlight Etude",
+    createdAt: "2026-06-21T10:00:00.000Z",
+    durationMs: 125_000,
+    sizeBytes: 24_000,
+    mimeType: "audio/wav",
+    audioDataUrl: "data:audio/wav;base64,UklGRg==",
+    settings: {
       bpm: 96,
-      timeSignature: "3/4",
-      pickupBeats: 0,
-      measureOneOffsetMs: 1_000
+      timeSignature: "3/4"
     },
-    measureRangeMs: {
-      startMs: 10_000,
-      endMs: 25_000
-    }
-  }
-};
+    trustedPeaks: [0.2, 0.8, 0.4]
+  },
+  { withArtifactRef: false }
+);
+
+const segmentSheetRecording: ReviewRecording = makeSheetReviewRecording(
+  {
+    ...sheetRecording,
+    id: "sheet-segment-1",
+    name: "Focused segment take",
+    segmentContext: makeSheetRecordingSegmentContext({
+      segmentId: "segment-bridge",
+      range: {
+        startMeasure: 5,
+        endMeasure: 8
+      },
+      measureGridVersion:
+        "bpm:96|timeSignature:3/4|pickupBeats:0|measureOneOffsetMs:1000",
+      measureGridSnapshot: {
+        bpm: 96,
+        timeSignature: "3/4",
+        pickupBeats: 0,
+        measureOneOffsetMs: 1_000
+      },
+      measureRangeMs: {
+        startMs: 10_000,
+        endMs: 25_000
+      }
+    })
+  },
+  { withArtifactRef: false }
+);
 
 describe("recordings review history helpers", () => {
   it("filters by visible metadata, type, and combined search", () => {

@@ -311,20 +311,26 @@ Phase 7 is intentionally split across multiple small PRs:
     recording-review unit tests.
   - Did not touch large UI-oriented unit tests or E2E tests.
 - `C2-08 large-unit-fixture-follow-up`
-  - Status: not_started.
-  - Follow-up for larger unit tests that were explicitly deferred from C2-07,
-    including `recordings-review-experience.test.tsx`,
-    `recordings-review-history.test.ts`, shared AudioContext mock reuse, and
-    shared memory artifact repository reuse where a separate plan proves the
-    scope is safe.
+  - Status: verified.
+  - Follow-up for the larger recording-review unit tests that were explicitly
+    deferred from C2-07.
+  - This slice is limited to recording/segment factory adoption in
+    `recordings-review-experience.test.tsx` and
+    `recordings-review-history.test.ts`.
 - `C2-09 e2e-fixture-and-spec-slimming`
   - Status: not_started.
   - Follow-up for E2E fixture helpers such as `seedRecordingArtifacts`,
     `readSheetRecordings`, `expectArtifactRefOnly`, `clearRecordingState`, and
     the larger `recordings-review.spec.ts` slimming work.
+- `C2-10 shared-unit-audio-artifact-fixtures`
+  - Status: not_started.
+  - Follow-up for shared AudioContext mock reuse and shared in-memory artifact
+    fixture reuse across unit tests. This work is intentionally split out from
+    C2-08 because it crosses more files and can otherwise turn into a generic
+    test fixture framework.
 
-Do not mark Pack C verified until C2-08 and C2-09 are either completed or
-explicitly re-scoped out in a reviewed plan.
+Do not mark Pack C verified until C2-08, C2-09, and C2-10 are either completed
+or explicitly re-scoped out in a reviewed plan.
 
 ## F. Areas Not Recommended For Early Slimming
 
