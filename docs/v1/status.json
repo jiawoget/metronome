@@ -490,7 +490,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P3-03 segment-session-metadata",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P3-04 session-history-grouping",

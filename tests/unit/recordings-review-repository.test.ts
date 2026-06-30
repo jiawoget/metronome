@@ -1057,7 +1057,7 @@ function createTakeSelectionSnapshot(): RecordingReviewSnapshot {
 }
 
 function createSheetSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
-  return {
+  const session: PracticeSession = {
     id: "session-sheet-1",
     sourceType: "sheet",
     sheetId: "sheet-alpha",
@@ -1069,6 +1069,9 @@ function createSheetSession(overrides: Partial<PracticeSession> = {}): PracticeS
     recordingCount: 1,
     latestRecordingId: "sheet-metadata-1",
     updatedAt: "2026-06-21T12:00:00.000Z",
-    ...overrides
+    ...overrides,
+    segmentContext: overrides.segmentContext ?? null
   };
+
+  return session;
 }

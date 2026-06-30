@@ -109,7 +109,8 @@ function legacyQuickSessionToPracticeSession(
       (recording) => recording.sessionId === value.id
     ).length,
     latestRecordingId: latestRecording?.id ?? null,
-    updatedAt
+    updatedAt,
+    segmentContext: null
   });
 }
 

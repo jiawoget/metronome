@@ -209,7 +209,8 @@ export function createPracticeSessionService({
         timeSignature: input.timeSignature ?? null,
         recordingCount: 0,
         latestRecordingId: null,
-        updatedAt: timestamp
+        updatedAt: timestamp,
+        segmentContext: null
       };
     const nextSession = {
       ...session,
@@ -254,7 +255,8 @@ export function createPracticeSessionService({
         timeSignature: input.timeSignature ?? sheet.timeSignature,
         recordingCount: 0,
         latestRecordingId: null,
-        updatedAt: timestamp
+        updatedAt: timestamp,
+        segmentContext: null
       };
 
     const nextSession = {
@@ -263,7 +265,8 @@ export function createPracticeSessionService({
       bpm: input.bpm ?? session.bpm ?? sheet.bpm,
       timeSignature: input.timeSignature ?? session.timeSignature ?? sheet.timeSignature,
       durationMs: calculateActiveDuration(session),
-      updatedAt: timestamp
+      updatedAt: timestamp,
+      segmentContext: session.segmentContext ?? null
     };
 
     await saveSession(nextSession);
@@ -336,7 +339,8 @@ export function createPracticeSessionService({
       session: {
         ...session,
         recordingCount: session.recordingCount + 1,
-        latestRecordingId: metadata.id
+        latestRecordingId: metadata.id,
+        segmentContext: metadata.segmentContext
       }
     };
   }

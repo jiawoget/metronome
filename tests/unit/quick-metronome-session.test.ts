@@ -409,7 +409,8 @@ describe("quick metronome recording metadata", () => {
       timeSignature: "4/4",
       recordingCount: 0,
       latestRecordingId: null,
-      updatedAt: "2026-06-21T08:00:00.000Z"
+      updatedAt: "2026-06-21T08:00:00.000Z",
+      segmentContext: null
     };
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"], { type: "audio/webm" }),
@@ -520,7 +521,8 @@ describe("quick metronome recording metadata", () => {
       timeSignature: "4/4",
       recordingCount: 0,
       latestRecordingId: null,
-      updatedAt: "2026-06-21T08:00:00.000Z"
+      updatedAt: "2026-06-21T08:00:00.000Z",
+      segmentContext: null
     };
 
     quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
@@ -567,7 +569,8 @@ describe("quick metronome recording metadata", () => {
       timeSignature: "4/4",
       recordingCount: 0,
       latestRecordingId: null,
-      updatedAt: "2026-06-21T08:00:00.000Z"
+      updatedAt: "2026-06-21T08:00:00.000Z",
+      segmentContext: null
     };
 
     quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
@@ -641,7 +644,8 @@ describe("quick metronome recording metadata", () => {
       timeSignature: "4/4",
       recordingCount: 0,
       latestRecordingId: null,
-      updatedAt: "2026-06-21T08:00:00.000Z"
+      updatedAt: "2026-06-21T08:00:00.000Z",
+      segmentContext: null
     };
 
     quickExperienceMocks.recordingService.start.mockResolvedValue(undefined);
@@ -701,7 +705,8 @@ describe("quick metronome recording metadata", () => {
       timeSignature: "4/4",
       recordingCount: 0,
       latestRecordingId: null,
-      updatedAt: "2026-06-21T08:00:00.000Z"
+      updatedAt: "2026-06-21T08:00:00.000Z",
+      segmentContext: null
     };
     let savedRecordingId: string | null = null;
     const linkRecordingToSession = vi.fn(async ({ recordingId }: { recordingId?: string | null }) => {

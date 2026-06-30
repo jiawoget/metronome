@@ -40,6 +40,10 @@ function getDatabase() {
   return database;
 }
 
+export function parsePersistedPracticeSessionRecord(value: unknown) {
+  return parsePracticeSession(value);
+}
+
 function dispatchPracticeSessionChange() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(PRACTICE_SESSION_STORE_EVENT));
@@ -104,3 +108,25 @@ export const practiceSessionRepository: PracticeSessionRepository = {
     };
   }
 };
+
+export async function seedPracticeSessionRecordForTests(
+  sessionId: string,
+  value: unknown
+) {
+  await getDatabase().sessions.put({
+    ...(value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {}),
+    id: sessionId
+  } as PracticeSession);
+}
+
+export function resetPracticeSessionDatabaseConnectionForTests() {
+  database?.close();
+  database = null;
+}
+
+export async function clearPracticeSessionDatabaseForTests() {
+  await getDatabase().delete();
+  database = null;
+}

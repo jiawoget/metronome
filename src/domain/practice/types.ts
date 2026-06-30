@@ -6,6 +6,16 @@ export type PracticeActivityTrigger = "metronome" | "recording" | "reference";
 
 export type PracticeTimeSignature = "2/4" | "3/4" | "4/4" | "6/8" | "12/8";
 
+export type SheetRecordingSegmentContext = {
+  segmentId: string;
+  segmentName: string;
+  range: MeasureRange;
+  targetBpm: number | null;
+  measureGridVersion: string;
+  measureGridSnapshot: MeasureGrid;
+  measureRangeMs: MeasureRangeMs;
+};
+
 export type PracticeSession = {
   id: string;
   sourceType: PracticeSourceType;
@@ -18,16 +28,7 @@ export type PracticeSession = {
   recordingCount: number;
   latestRecordingId: string | null;
   updatedAt: string;
-};
-
-export type SheetRecordingSegmentContext = {
-  segmentId: string;
-  segmentName: string;
-  range: MeasureRange;
-  targetBpm: number | null;
-  measureGridVersion: string;
-  measureGridSnapshot: MeasureGrid;
-  measureRangeMs: MeasureRangeMs;
+  segmentContext: SheetRecordingSegmentContext | null;
 };
 
 export type SheetRecordingMetadata = {

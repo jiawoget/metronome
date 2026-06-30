@@ -49,7 +49,8 @@ const sheetSession: PracticeSession = {
   timeSignature: "4/4",
   recordingCount: 0,
   latestRecordingId: null,
-  updatedAt: "2026-06-21T12:00:00.000Z"
+  updatedAt: "2026-06-21T12:00:00.000Z",
+  segmentContext: null
 };
 
 const secondLocalReference: LocalAudioReference = {

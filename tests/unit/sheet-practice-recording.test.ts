@@ -72,7 +72,8 @@ const previousSession: PracticeSession = {
   timeSignature: "3/4",
   recordingCount: 0,
   latestRecordingId: null,
-  updatedAt: "2026-06-22T05:59:00.000Z"
+  updatedAt: "2026-06-22T05:59:00.000Z",
+  segmentContext: null
 };
 
 function createArtifact(overrides: Partial<RecordingArtifact> = {}): RecordingArtifact {
@@ -143,7 +144,8 @@ function createPreparedSessionService({
   preparedSession = {
     ...previousSession,
     recordingCount: 1,
-    latestRecordingId: preparedMetadata.id
+    latestRecordingId: preparedMetadata.id,
+    segmentContext: preparedMetadata.segmentContext
   },
   previous = previousSession,
   onPrepare,
@@ -371,6 +373,15 @@ describe("sheet practice recording service", () => {
       timeSignature: "3/4",
       segmentContext,
       forceNewSession: false
+    });
+    expect(sessionService.commitPreparedSheetRecordingSession).toHaveBeenCalledWith({
+      metadata: metadataWithSegment,
+      session: expect.objectContaining({
+        id: "session-new",
+        latestRecordingId: "recording-sheet-1",
+        recordingCount: 1,
+        segmentContext
+      })
     });
     expect(result.metadata.segmentContext).toEqual(segmentContext);
     expect(result.recording.segmentContext).toEqual(segmentContext);
@@ -638,7 +649,8 @@ describe("sheet practice recording service", () => {
     const createdSession: PracticeSession = {
       ...previousSession,
       recordingCount: 1,
-      latestRecordingId: metadata.id
+      latestRecordingId: metadata.id,
+      segmentContext: null
     };
     const sessionService = createPreparedSessionService({
       previous: storedSession,
@@ -718,5 +730,94 @@ describe("sheet practice recording service", () => {
       recordingArtifactRepository.getArtifact(metadata.id)
     ).resolves.toBeNull();
     expect(sessionService.restorePracticeSessionSnapshot).toHaveBeenCalledWith(previousSession);
+  });
+
+  it("restores the previous session segmentContext when a no-segment prepared commit fails", async () => {
+    const capture = createCaptureService();
+    const previousSegmentContext = createSegmentContext();
+    const previousSessionWithSegment: PracticeSession = {
+      ...previousSession,
+      segmentContext: previousSegmentContext
+    };
+    const sessionService = createPreparedSessionService({
+      previous: previousSessionWithSegment,
+      preparedMetadata: {
+        ...metadata,
+        segmentContext: null
+      },
+      preparedSession: {
+        ...previousSessionWithSegment,
+        recordingCount: 1,
+        latestRecordingId: metadata.id,
+        segmentContext: null
+      },
+      onCommit: () => {
+        throw new Error("session commit failed");
+      }
+    });
+    const service = new BrowserSheetRecordingService(capture.service);
+
+    await expect(
+      service.stopAndSave({
+        sheetId: "sheet-alpha",
+        sessionId: "session-new",
+        settings,
+        forceNewSession: false,
+        sessionService
+      })
+    ).rejects.toThrow("session commit failed");
+
+    expect(sessionService.restorePracticeSessionSnapshot).toHaveBeenCalledWith(
+      previousSessionWithSegment
+    );
+    expect(recordingHistoryRepository.getRecording(metadata.id)).toBeNull();
+    expectNoCaptureKind(sessionService.captureSessionEvent, "recording_stopped");
+  });
+
+  it("restores the previous session segmentContext when a new segment overwrite commit fails", async () => {
+    const capture = createCaptureService();
+    const previousSegmentContext = createSegmentContext();
+    const nextSegmentContext = createSegmentContext({
+      segmentId: "segment-bravo",
+      segmentName: "Coda"
+    });
+    const previousSessionWithSegment: PracticeSession = {
+      ...previousSession,
+      segmentContext: previousSegmentContext
+    };
+    const sessionService = createPreparedSessionService({
+      previous: previousSessionWithSegment,
+      preparedMetadata: {
+        ...metadata,
+        segmentContext: nextSegmentContext
+      },
+      preparedSession: {
+        ...previousSessionWithSegment,
+        recordingCount: 1,
+        latestRecordingId: metadata.id,
+        segmentContext: nextSegmentContext
+      },
+      onCommit: () => {
+        throw new Error("session commit failed");
+      }
+    });
+    const service = new BrowserSheetRecordingService(capture.service);
+
+    await expect(
+      service.stopAndSave({
+        sheetId: "sheet-alpha",
+        sessionId: "session-new",
+        settings,
+        segmentContext: nextSegmentContext,
+        forceNewSession: false,
+        sessionService
+      })
+    ).rejects.toThrow("session commit failed");
+
+    expect(sessionService.restorePracticeSessionSnapshot).toHaveBeenCalledWith(
+      previousSessionWithSegment
+    );
+    expect(recordingHistoryRepository.getRecording(metadata.id)).toBeNull();
+    expectNoCaptureKind(sessionService.captureSessionEvent, "recording_stopped");
   });
 });
