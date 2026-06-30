@@ -1610,6 +1610,9 @@ test("recordings review keeps summary chips readable at a narrow viewport", asyn
   await page.goto("/recordings");
   await page.evaluate(() => window.localStorage.clear());
 
+  const summaryOldArtifact = await createWavDataUrl(page, 260, 11);
+  const summaryLatestArtifact = await createWavDataUrl(page, 330, 12);
+
   const summarySnapshot = {
     sessions: [
       {
@@ -1625,10 +1628,7 @@ test("recordings review keeps summary chips readable at a narrow viewport", asyn
         sheetId: "sheet-readability",
         sheetName: "Narrow Summary Study",
         createdAt: "2026-06-21T09:00:00.000Z",
-        durationMs: 11_000,
-        sizeBytes: 128,
-        mimeType: "audio/wav",
-        audioDataUrl: "data:audio/wav;base64,UklGRg==",
+        artifact: summaryOldArtifact,
         segmentContext: createSegmentContext({
           segmentId: "segment-readability",
           segmentName: "Narrow bridge"
@@ -1645,10 +1645,7 @@ test("recordings review keeps summary chips readable at a narrow viewport", asyn
         sheetId: "sheet-readability",
         sheetName: "Narrow Summary Study",
         createdAt: "2026-06-21T12:00:00.000Z",
-        durationMs: 12_000,
-        sizeBytes: 128,
-        mimeType: "audio/wav",
-        audioDataUrl: "data:audio/wav;base64,UklGRg==",
+        artifact: summaryLatestArtifact,
         segmentContext: createSegmentContext({
           segmentId: "segment-readability",
           segmentName: "Narrow bridge"
@@ -1662,6 +1659,7 @@ test("recordings review keeps summary chips readable at a narrow viewport", asyn
     errorMarkers: []
   };
   await seedRecordingHistory(page, summarySnapshot);
+  await seedE2ERecordingArtifacts(page, summarySnapshot.recordings);
 
   await page.reload();
 
