@@ -3,6 +3,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  decodeRecordingHistoryAudio,
+  installSyntheticMicrophone
+} from "./fixtures/audio";
+import {
   PRACTICE_SESSION_DB_NAME,
   RECORDING_HISTORY_STORAGE_KEY,
   SHEET_LIBRARY_DB_NAME
@@ -26,7 +30,12 @@ type SavedSheetRecording = {
   sessionId: string;
   sheetId: string;
   durationMs: number;
-  audioDataUrl: string;
+  audioDataUrl?: string | null;
+  artifactRef?: {
+    kind: "indexeddb";
+    artifactId: string;
+    storageVersion: 1;
+  } | null;
   trustedPeaks: number[];
 };
 
@@ -86,38 +95,6 @@ async function importIntegrationSheet(page: Page) {
   return { link, sheetId };
 }
 
-async function installSyntheticMicrophone(page: Page, frequencyHz = 440) {
-  await page.addInitScript((frequency) => {
-    Object.defineProperty(navigator, "mediaDevices", {
-      configurable: true,
-      value: {
-        getUserMedia: async () => {
-          const audioWindow = window as Window &
-            typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-          const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
-
-          if (!AudioContextConstructor) {
-            throw new Error("Web Audio is not available in this browser.");
-          }
-
-          const audioContext = new AudioContextConstructor();
-          const destination = audioContext.createMediaStreamDestination();
-          const oscillator = audioContext.createOscillator();
-          const gain = audioContext.createGain();
-
-          oscillator.frequency.value = frequency;
-          gain.gain.value = 0.22;
-          oscillator.connect(gain);
-          gain.connect(destination);
-          oscillator.start();
-
-          return destination.stream;
-        }
-      }
-    });
-  }, frequencyHz);
-}
-
 async function getPracticeSnapshot(page: Page) {
   return page.evaluate(
     ({ databaseName, storageKey }: { databaseName: string; storageKey: string }) =>
@@ -168,57 +145,6 @@ async function getPracticeSnapshot(page: Page) {
         };
       }),
     { databaseName: practiceDbName, storageKey: recordingHistoryStorageKey }
-  );
-}
-
-async function decodeRecording(page: Page, recordingId: string) {
-  return page.evaluate(
-    async ({ storageKey, id }: { storageKey: string; id: string }) => {
-      const rawValue = window.localStorage.getItem(storageKey);
-      const parsed = rawValue ? JSON.parse(rawValue) : { recordings: [] };
-      const recording = parsed.recordings.find((item: { id: string }) => item.id === id);
-      const audioWindow = window as Window &
-        typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-      const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
-
-      if (!recording?.audioDataUrl || !AudioContextConstructor) {
-        throw new Error(`Cannot decode ${id}.`);
-      }
-
-      const response = await fetch(recording.audioDataUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioContext = new AudioContextConstructor();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
-      const samples = audioBuffer.getChannelData(0);
-      let peakAmplitude = 0;
-      let sumSquares = 0;
-      let positiveZeroCrossings = 0;
-      let previousSample = samples[0] ?? 0;
-
-      for (let index = 0; index < samples.length; index += 1) {
-        const sample = samples[index] ?? 0;
-
-        peakAmplitude = Math.max(peakAmplitude, Math.abs(sample));
-        sumSquares += sample * sample;
-
-        if (previousSample < 0 && sample >= 0) {
-          positiveZeroCrossings += 1;
-        }
-
-        previousSample = sample;
-      }
-
-      await audioContext.close();
-
-      return {
-        durationMs: audioBuffer.duration * 1_000,
-        peakAmplitude,
-        rmsAmplitude: Math.sqrt(sumSquares / Math.max(1, samples.length)),
-        estimatedFrequencyHz:
-          audioBuffer.duration > 0 ? positiveZeroCrossings / audioBuffer.duration : null
-      };
-    },
-    { storageKey: recordingHistoryStorageKey, id: recordingId }
   );
 }
 
@@ -398,9 +324,9 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   });
   expect(sheetRecordings[0]?.trustedPeaks.length).toBeGreaterThan(12);
 
-  const decodedRecording = await decodeRecording(page, sheetRecordings[0]?.id ?? "");
+  const decodedRecording = await decodeRecordingHistoryAudio(page, sheetRecordings[0]?.id ?? "");
 
-  expect(decodedRecording.durationMs).toBeGreaterThan(600);
+  expect(decodedRecording.decodedDurationMs).toBeGreaterThan(600);
   expect(decodedRecording.rmsAmplitude).toBeGreaterThan(0.01);
   expect(decodedRecording.peakAmplitude).toBeGreaterThan(0.02);
   expect(decodedRecording.estimatedFrequencyHz ?? 0).toBeGreaterThan(390);

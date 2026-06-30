@@ -38,6 +38,8 @@ type E2EReviewRecording = Record<string, unknown> & {
   settings: E2ERecordingSettings;
 };
 
+const seedArtifactDataUrls = new WeakMap<E2EReviewRecording, string>();
+
 export function createE2ESegmentContext({
   segmentId = "segment-bridge",
   segmentName = "Bridge"
@@ -83,7 +85,7 @@ export function createE2EQuickRecording({
       durationMs: artifact?.durationMs ?? 1_000,
       sizeBytes: artifact?.sizeBytes ?? 0,
       mimeType: artifact?.mimeType ?? "audio/wav",
-      audioDataUrl: artifact?.dataUrl ?? null,
+      audioDataUrl: null,
       ...overrides,
       settings: { bpm: 120, timeSignature: "4/4", ...settings }
     },
@@ -116,7 +118,7 @@ export function createE2ESheetRecording({
       durationMs: artifact?.durationMs ?? 1_000,
       sizeBytes: artifact?.sizeBytes ?? 0,
       mimeType: artifact?.mimeType ?? "audio/wav",
-      audioDataUrl: artifact?.dataUrl ?? null,
+      audioDataUrl: null,
       ...overrides,
       settings: { bpm: 96, timeSignature: "4/4", ...settings }
     },
@@ -139,9 +141,11 @@ export async function seedE2ERecordingArtifacts(
   recordings: E2EReviewRecording[]
 ) {
   const artifacts = recordings.flatMap((recording) => {
+    const seedDataUrl = seedArtifactDataUrls.get(recording) ?? recording.audioDataUrl;
+
     if (
       recording.artifactRef?.kind !== "indexeddb" ||
-      typeof recording.audioDataUrl !== "string"
+      typeof seedDataUrl !== "string"
     ) {
       return [];
     }
@@ -153,7 +157,7 @@ export async function seedE2ERecordingArtifacts(
         recordingType: recording.type,
         mimeType: recording.mimeType,
         sizeBytes: recording.sizeBytes,
-        dataUrl: recording.audioDataUrl,
+        dataUrl: seedDataUrl,
         createdAt: recording.createdAt
       }
     ];
@@ -172,7 +176,7 @@ export async function seedE2ERecordingArtifacts(
         }))
       );
       const database = await new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open(databaseName, 1);
+        const request = indexedDB.open(databaseName);
 
         request.onupgradeneeded = () => {
           const upgradeDatabase = request.result;
@@ -234,7 +238,7 @@ function withArtifactDefaults(
     return recording;
   }
 
-  return {
+  const recordingWithArtifactRef: E2EReviewRecording = {
     ...recording,
     artifactRef: {
       kind: "indexeddb",
@@ -242,4 +246,8 @@ function withArtifactDefaults(
       storageVersion: 1
     }
   };
+
+  seedArtifactDataUrls.set(recordingWithArtifactRef, artifact.dataUrl);
+
+  return recordingWithArtifactRef;
 }

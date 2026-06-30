@@ -13,6 +13,10 @@ import {
   seedRecordingHistory,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
+import {
+  createE2ESheetRecording,
+  seedE2ERecordingArtifacts
+} from "./fixtures/recordings-review";
 
 type SavedRecordingEvidence = {
   id: string;
@@ -119,52 +123,44 @@ async function seedSheetMarkerRecordings({
   const markerBArtifact = await createWavDataUrl(page, 440, 2);
   const existing = await readRecordingHistory(page);
   const recordings = [
-    {
+    createE2ESheetRecording({
       id: "marker-sheet-a",
-      type: "sheet",
       origin: "user",
       name: "Marker sheet take A",
       sessionId: "session-marker-a",
       sheetId,
       sheetName: "Marker Contract Sheet",
+      artifact: markerAArtifact,
       createdAt:
         latestRecordingId === "marker-sheet-a"
           ? "2026-06-22T08:10:00.000Z"
           : "2026-06-22T08:00:00.000Z",
-      durationMs: markerAArtifact.durationMs,
-      sizeBytes: markerAArtifact.sizeBytes,
-      mimeType: "audio/wav",
-      audioDataUrl: markerAArtifact.dataUrl,
       trustedPeaks: [0.1, 0.6, 0.9, 0.4, 0.2],
       settings: {
         bpm: 88,
         timeSignature: "3/4"
       }
-    },
+    }),
     ...(includeSecondRecording
       ? [
-          {
+          createE2ESheetRecording({
             id: "marker-sheet-b",
-            type: "sheet",
             origin: "user",
             name: "Marker sheet take B",
             sessionId: "session-marker-b",
             sheetId,
             sheetName: "Marker Contract Sheet",
+            artifact: markerBArtifact,
             createdAt:
               latestRecordingId === "marker-sheet-b"
                 ? "2026-06-22T08:20:00.000Z"
                 : "2026-06-22T07:50:00.000Z",
-            durationMs: markerBArtifact.durationMs,
-            sizeBytes: markerBArtifact.sizeBytes,
-            mimeType: "audio/wav",
-            audioDataUrl: markerBArtifact.dataUrl,
             trustedPeaks: [0.2, 0.7, 0.5, 0.3, 0.1],
             settings: {
               bpm: 92,
               timeSignature: "4/4"
             }
-          }
+          })
         ]
       : [])
   ];
@@ -181,6 +177,7 @@ async function seedSheetMarkerRecordings({
       ? existing.errorMarkers
       : []
   });
+  await seedE2ERecordingArtifacts(page, recordings);
 }
 
 test("sheet practice records real synthetic audio, replays latest take, persists waveform, and keeps Practice Again immutable", async ({
@@ -695,31 +692,35 @@ test("sheet recording surfaces microphone denial and bad artifact states", async
     "stopped"
   );
 
+  const badArtifact = {
+    dataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
+    durationMs: 900,
+    sizeBytes: 12
+  };
+  const badRecordings = [
+    createE2ESheetRecording({
+      id: "bad-sheet-recording",
+      origin: "user",
+      name: "Bad sheet take",
+      sessionId: "session-bad-sheet",
+      sheetId,
+      sheetName: "Bad Artifact Contract Sheet",
+      artifact: badArtifact,
+      createdAt: "2026-06-22T06:30:00.000Z",
+      trustedPeaks: [0.4, 0.8],
+      settings: {
+        bpm: 88,
+        timeSignature: "3/4"
+      }
+    })
+  ];
+
   await seedRecordingHistory(page, {
     sessions: [{ id: "session-bad-sheet", sourceType: "sheet", sheetId }],
-    recordings: [
-      {
-        id: "bad-sheet-recording",
-        type: "sheet",
-        origin: "user",
-        name: "Bad sheet take",
-        sessionId: "session-bad-sheet",
-        sheetId,
-        sheetName: "Bad Artifact Contract Sheet",
-        createdAt: "2026-06-22T06:30:00.000Z",
-        durationMs: 900,
-        sizeBytes: 12,
-        mimeType: "audio/wav",
-        audioDataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
-        trustedPeaks: [0.4, 0.8],
-        settings: {
-          bpm: 88,
-          timeSignature: "3/4"
-        }
-      }
-    ],
+    recordings: badRecordings,
     errorMarkers: []
   });
+  await seedE2ERecordingArtifacts(page, badRecordings);
 
   await page.goto(`/sheet-practice/${sheetId}`);
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
@@ -732,31 +733,31 @@ test("sheet recording surfaces microphone denial and bad artifact states", async
 
   const mismatchArtifact = await createWavDataUrl(page, 330, 1);
 
+  const mismatchRecordings = [
+    createE2ESheetRecording({
+      id: "mismatch-sheet-recording",
+      origin: "user",
+      name: "Mismatch sheet take",
+      sessionId: "session-mismatch-sheet",
+      sheetId,
+      sheetName: "Bad Artifact Contract Sheet",
+      artifact: mismatchArtifact,
+      createdAt: "2026-06-22T06:35:00.000Z",
+      durationMs: 4_000,
+      trustedPeaks: [0.2, 0.7, 0.4],
+      settings: {
+        bpm: 88,
+        timeSignature: "3/4"
+      }
+    })
+  ];
+
   await seedRecordingHistory(page, {
     sessions: [{ id: "session-mismatch-sheet", sourceType: "sheet", sheetId }],
-    recordings: [
-      {
-        id: "mismatch-sheet-recording",
-        type: "sheet",
-        origin: "user",
-        name: "Mismatch sheet take",
-        sessionId: "session-mismatch-sheet",
-        sheetId,
-        sheetName: "Bad Artifact Contract Sheet",
-        createdAt: "2026-06-22T06:35:00.000Z",
-        durationMs: 4_000,
-        sizeBytes: mismatchArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: mismatchArtifact.dataUrl,
-        trustedPeaks: [0.2, 0.7, 0.4],
-        settings: {
-          bpm: 88,
-          timeSignature: "3/4"
-        }
-      }
-    ],
+    recordings: mismatchRecordings,
     errorMarkers: []
   });
+  await seedE2ERecordingArtifacts(page, mismatchRecordings);
 
   await page.goto(`/sheet-practice/${sheetId}`);
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
