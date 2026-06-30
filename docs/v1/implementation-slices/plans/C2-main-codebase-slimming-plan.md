@@ -318,7 +318,7 @@ Phase 7 is intentionally split across multiple small PRs:
     `recordings-review-experience.test.tsx` and
     `recordings-review-history.test.ts`.
 - `C2-09 e2e-fixture-and-spec-slimming`
-  - Status: not_started.
+  - Status: planning_in_progress.
   - Follow-up for E2E fixture helpers such as `seedRecordingArtifacts`,
     `readSheetRecordings`, `expectArtifactRefOnly`, `clearRecordingState`, and
     the larger `recordings-review.spec.ts` slimming work.
