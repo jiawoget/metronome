@@ -17,6 +17,13 @@ import {
   seedRecordingHistory,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
+import {
+  createE2EQuickRecording,
+  createE2ERecordingOrganizationItem,
+  createE2ESegmentContext as createSegmentContext,
+  createE2ESheetRecording,
+  seedE2ERecordingArtifacts
+} from "./fixtures/recordings-review";
 
 type WaveformEvidence = {
   source: string | null;
@@ -27,38 +34,6 @@ type WaveformEvidence = {
   nonZeroBarCount: number;
   barHeights: number[];
 };
-
-type SegmentContextFixture = {
-  segmentId?: string;
-  segmentName?: string;
-};
-
-function createSegmentContext({
-  segmentId = "segment-bridge",
-  segmentName = "Bridge"
-}: SegmentContextFixture = {}) {
-  return {
-    segmentId,
-    segmentName,
-    range: {
-      startMeasure: 5,
-      endMeasure: 12
-    },
-    targetBpm: 96,
-    measureGridVersion:
-      "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
-    measureGridSnapshot: {
-      bpm: 96,
-      timeSignature: "4/4",
-      pickupBeats: 0,
-      measureOneOffsetMs: 1_000
-    },
-    measureRangeMs: {
-      startMs: 11_000,
-      endMs: 31_000
-    }
-  };
-}
 
 async function saveMeasureGridThroughUi(page: Page) {
   await page.getByRole("spinbutton", { name: "Grid BPM" }).fill("96");
@@ -303,110 +278,75 @@ test("recordings review renders grouped take history, filters it, deletes a take
   const artifact = await createWavDataUrl(page, 440, 0.8);
   const sheetArtifact = await createWavDataUrl(page, 330, 0.9);
 
-  await seedRecordingHistory(page, {
+  const groupedSnapshot = {
     sessions: [
-      { id: "session-quick-grouped", sourceType: "quick" },
-      { id: "session-sheet-grouped", sourceType: "sheet" }
+      {
+        id: "session-quick-grouped",
+        sourceType: "quick"
+      },
+      {
+        id: "session-sheet-grouped",
+        sourceType: "sheet"
+      }
     ],
     recordings: [
-      {
+      createE2ESheetRecording({
         id: "sheet-alpha-bridge-old",
-        type: "sheet",
-        origin: "user",
         name: "Bridge take 1",
         sessionId: "session-sheet-grouped",
         sheetId: "sheet-alpha",
         sheetName: "Alpha Etude",
         createdAt: "2026-06-21T09:00:00.000Z",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
+        artifact: sheetArtifact,
         trustedPeaks: [0.1, 0.5, 0.8, 0.3],
         segmentContext: createSegmentContext({
           segmentId: "segment-bridge",
           segmentName: "Bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2ESheetRecording({
         id: "sheet-alpha-bridge-new",
-        type: "sheet",
-        origin: "user",
         name: "Bridge take 2",
         sessionId: "session-sheet-grouped",
         sheetId: "sheet-alpha",
         sheetName: "Alpha Etude",
         createdAt: "2026-06-21T13:00:00.000Z",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
+        artifact: sheetArtifact,
         trustedPeaks: [0.1, 0.5, 0.8, 0.3],
         segmentContext: createSegmentContext({
           segmentId: "segment-bridge",
           segmentName: "Bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2ESheetRecording({
         id: "sheet-alpha-whole-legacy",
-        type: "sheet",
-        origin: "user",
         name: "Whole sheet legacy",
         sessionId: "session-sheet-grouped",
         sheetId: "sheet-alpha",
         sheetName: "Alpha Etude",
         createdAt: "2026-06-21T10:00:00.000Z",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
-        trustedPeaks: [0.1, 0.4, 0.6, 0.2],
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        artifact: sheetArtifact,
+        trustedPeaks: [0.1, 0.4, 0.6, 0.2]
+      }),
+      createE2ESheetRecording({
         id: "sheet-alpha-whole-null",
-        type: "sheet",
-        origin: "user",
         name: "Whole sheet current",
         sessionId: "session-sheet-grouped",
         sheetId: "sheet-alpha",
         sheetName: "Alpha Etude",
         createdAt: "2026-06-21T11:00:00.000Z",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
+        artifact: sheetArtifact,
         trustedPeaks: [0.1, 0.4, 0.6, 0.2],
-        segmentContext: null,
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        segmentContext: null
+      }),
+      createE2ESheetRecording({
         id: "sheet-beta-bridge",
-        type: "sheet",
-        origin: "user",
         name: "Beta bridge take",
         sessionId: "session-sheet-grouped",
         sheetId: "sheet-beta",
         sheetName: "Beta Study",
         createdAt: "2026-06-21T12:00:00.000Z",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
+        artifact: sheetArtifact,
         trustedPeaks: [0.2, 0.5, 0.7, 0.2],
         segmentContext: createSegmentContext({
           segmentId: "segment-bridge",
@@ -416,44 +356,29 @@ test("recordings review renders grouped take history, filters it, deletes a take
           bpm: 102,
           timeSignature: "3/4"
         }
-      },
-      {
+      }),
+      createE2EQuickRecording({
         id: "quick-grouped",
-        type: "quick",
-        origin: "user",
         name: "Grouped quick take",
         sessionId: "session-quick-grouped",
-        sheetId: null,
         createdAt: "2026-06-21T14:00:00.000Z",
-        durationMs: artifact.durationMs,
-        sizeBytes: artifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: artifact.dataUrl,
-        settings: {
-          bpm: 120,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        artifact
+      }),
+      createE2ESheetRecording({
         id: "sheet-missing-link",
-        type: "sheet",
-        origin: "user",
         name: "Missing sheet link take",
         sessionId: "session-sheet-grouped",
         sheetId: null,
         sheetName: null,
         createdAt: "2026-06-21T08:00:00.000Z",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
+        artifact: sheetArtifact,
         trustedPeaks: [0.1, 0.4, 0.6, 0.2],
         segmentContext: null,
         settings: {
           bpm: 88,
           timeSignature: "4/4"
         }
-      }
+      })
     ],
     errorMarkers: [
       {
@@ -475,7 +400,9 @@ test("recordings review renders grouped take history, filters it, deletes a take
         note: "Beta marker"
       }
     ]
-  });
+  };
+  await seedRecordingHistory(page, groupedSnapshot);
+  await seedE2ERecordingArtifacts(page, groupedSnapshot.recordings);
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Take History" })).toBeVisible();
@@ -728,99 +655,68 @@ test("recordings review organizes recordings with tags favorites and archive rec
   const quickArtifact = await createWavDataUrl(page, 440, 0.8);
   const sheetArtifact = await createWavDataUrl(page, 330, 0.9);
 
-  await seedRecordingHistory(page, {
+  const organizationSnapshot = {
     sessions: [
       { id: "session-org-quick", sourceType: "quick" },
       { id: "session-org-sheet", sourceType: "sheet" }
     ],
     recordings: [
-      {
+      createE2ESheetRecording({
         id: "org-sheet-old",
-        type: "sheet",
-        origin: "user",
         name: "Archive one take",
         sessionId: "session-org-sheet",
         sheetId: "sheet-org",
         sheetName: "Organization Etude",
         createdAt: "2026-06-21T09:00:00.000Z",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
+        artifact: sheetArtifact,
         trustedPeaks: [0.1, 0.4, 0.7, 0.2],
         segmentContext: createSegmentContext({
           segmentId: "segment-org",
           segmentName: "Organize bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2ESheetRecording({
         id: "org-sheet-new",
-        type: "sheet",
-        origin: "user",
         name: "Tagged favorite take",
         sessionId: "session-org-sheet",
         sheetId: "sheet-org",
         sheetName: "Organization Etude",
         createdAt: "2026-06-21T12:00:00.000Z",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
+        artifact: sheetArtifact,
         trustedPeaks: [0.1, 0.4, 0.7, 0.2],
         segmentContext: createSegmentContext({
           segmentId: "segment-org",
           segmentName: "Organize bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2EQuickRecording({
         id: "org-quick",
-        type: "quick",
-        origin: "user",
         name: "Quick favorite take",
         sessionId: "session-org-quick",
-        sheetId: null,
         createdAt: "2026-06-21T13:00:00.000Z",
-        durationMs: quickArtifact.durationMs,
-        sizeBytes: quickArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: quickArtifact.dataUrl,
-        trustedPeaks: [0.2, 0.8, 0.4],
-        settings: {
-          bpm: 120,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        artifact: quickArtifact,
+        trustedPeaks: [0.2, 0.8, 0.4]
+      }),
+      createE2ESheetRecording({
         id: "org-legacy",
-        type: "sheet",
-        origin: "user",
         name: "Legacy missing link",
         sessionId: "session-org-sheet",
         sheetId: null,
         sheetName: null,
         createdAt: "2026-06-21T08:00:00.000Z",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
+        artifact: sheetArtifact,
         trustedPeaks: [0.1, 0.4, 0.7, 0.2],
         segmentContext: null,
         settings: {
           bpm: 88,
           timeSignature: "4/4"
         }
-      }
+      })
     ],
     errorMarkers: []
-  });
+  };
+  await seedRecordingHistory(page, organizationSnapshot);
+  await seedE2ERecordingArtifacts(page, organizationSnapshot.recordings);
 
   await page.reload();
   await expect(page.getByTestId("recording-details")).toHaveAttribute(
@@ -948,102 +844,75 @@ test("recordings review exports one visible audio artifact and respects archived
   const quickArtifact = await createWavDataUrl(page, 440, 0.8);
   const sheetArtifact = await createWavDataUrl(page, 330, 0.8);
 
-  await seedRecordingHistory(page, {
+  const exportSnapshot = {
     sessions: [
-      { id: "session-export-quick", sourceType: "quick" },
-      { id: "session-export-sheet", sourceType: "sheet" }
-    ],
-    recordings: [
       {
-        id: "quick-export",
-        type: "quick",
-        origin: "user",
-        name: "Export quick",
-        sessionId: "session-export-quick",
-        sheetId: null,
-        createdAt: "2026-06-21T10:00:00",
-        durationMs: quickArtifact.durationMs,
-        sizeBytes: quickArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: quickArtifact.dataUrl,
-        settings: {
-          bpm: 120,
-          timeSignature: "4/4"
-        }
+        id: "session-export-quick",
+        sourceType: "quick"
       },
       {
+        id: "session-export-sheet",
+        sourceType: "sheet"
+      }
+    ],
+    recordings: [
+      createE2EQuickRecording({
+        id: "quick-export",
+        name: "Export quick",
+        sessionId: "session-export-quick",
+        createdAt: "2026-06-21T10:00:00",
+        artifact: quickArtifact
+      }),
+      createE2ESheetRecording({
         id: "sheet-export",
-        type: "sheet",
-        origin: "user",
         name: "Export sheet",
         sessionId: "session-export-sheet",
         sheetId: "sheet-export-alpha",
         sheetName: "Export Etude",
         createdAt: "2026-06-21T11:00:00",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
+        artifact: sheetArtifact,
         segmentContext: createSegmentContext({
           segmentId: "segment-export",
           segmentName: "Export Bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2EQuickRecording({
         id: "missing-export",
-        type: "quick",
-        origin: "user",
         name: "Missing export artifact",
         sessionId: "session-export-quick",
-        sheetId: null,
         createdAt: "2026-06-21T09:00:00",
         durationMs: 800,
         sizeBytes: 0,
         mimeType: "audio/wav",
         audioDataUrl: null,
-        settings: {
-          bpm: 100,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        artifactRef: null,
+        settings: { bpm: 100 }
+      }),
+      createE2ESheetRecording({
         id: "archived-export",
-        type: "sheet",
-        origin: "user",
         name: "Archived export",
         sessionId: "session-export-sheet",
         sheetId: "sheet-export-alpha",
         sheetName: "Export Etude",
         createdAt: "2026-06-21T12:00:00",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
+        artifact: sheetArtifact,
         segmentContext: createSegmentContext({
           segmentId: "segment-export",
           segmentName: "Export Bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      }
+        })
+      })
     ],
     errorMarkers: [],
     recordingOrganization: [
-      {
+      createE2ERecordingOrganizationItem({
         recordingId: "archived-export",
-        tags: [],
-        favorite: false,
         archived: true,
         updatedAt: "2026-06-21T12:30:00.000Z"
-      }
+      })
     ]
-  });
+  };
+  await seedRecordingHistory(page, exportSnapshot);
+  await seedE2ERecordingArtifacts(page, exportSnapshot.recordings);
 
   await page.reload();
   await expect(page.getByTestId("recordings-list")).toBeVisible();
@@ -1115,61 +984,47 @@ test("recordings review compares selected sheet takes with waveform evidence", a
   const decodedArtifact = await createWavDataUrl(page, 440, 0.9);
   const trustedArtifact = await createWavDataUrl(page, 330, 1);
 
-  await seedRecordingHistory(page, {
+  const waveformSnapshot = {
     sessions: [
-      { id: "session-waveform-sheet", sourceType: "sheet" },
-      { id: "session-waveform-quick", sourceType: "quick" }
+      {
+        id: "session-waveform-sheet",
+        sourceType: "sheet"
+      },
+      {
+        id: "session-waveform-quick",
+        sourceType: "quick"
+      }
     ],
     recordings: [
-      {
+      createE2ESheetRecording({
         id: "wave-decoded",
-        type: "sheet",
-        origin: "user",
         name: "Comparison decoded",
         sessionId: "session-waveform-sheet",
         sheetId: "sheet-wave",
         sheetName: "Waveform Study",
         createdAt: "2026-06-21T09:00:00.000Z",
-        durationMs: decodedArtifact.durationMs,
-        sizeBytes: decodedArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: decodedArtifact.dataUrl,
+        artifact: decodedArtifact,
         segmentContext: createSegmentContext({
           segmentId: "segment-wave",
           segmentName: "Wave bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2ESheetRecording({
         id: "wave-trusted",
-        type: "sheet",
-        origin: "user",
         name: "Comparison trusted",
         sessionId: "session-waveform-sheet",
         sheetId: "sheet-wave",
         sheetName: "Waveform Study",
         createdAt: "2026-06-21T10:00:00.000Z",
-        durationMs: trustedArtifact.durationMs,
-        sizeBytes: trustedArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: trustedArtifact.dataUrl,
+        artifact: trustedArtifact,
         trustedPeaks: [0.15, 0.55, 0.95, 0.35],
         segmentContext: createSegmentContext({
           segmentId: "segment-wave",
           segmentName: "Wave bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2ESheetRecording({
         id: "wave-missing",
-        type: "sheet",
-        origin: "user",
         name: "Comparison missing artifact",
         sessionId: "session-waveform-sheet",
         sheetId: "sheet-wave",
@@ -1183,96 +1038,59 @@ test("recordings review compares selected sheet takes with waveform evidence", a
           segmentId: "segment-wave",
           segmentName: "Wave bridge"
         }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        artifactRef: null
+      }),
+      createE2ESheetRecording({
         id: "wave-unsupported",
-        type: "sheet",
-        origin: "user",
         name: "Comparison unsupported artifact",
         sessionId: "session-waveform-sheet",
         sheetId: "sheet-wave",
         sheetName: "Waveform Study",
         createdAt: "2026-06-21T12:00:00.000Z",
-        durationMs: trustedArtifact.durationMs,
-        sizeBytes: trustedArtifact.sizeBytes,
-        mimeType: "application/pdf",
-        audioDataUrl: trustedArtifact.dataUrl,
+        artifact: {
+          ...trustedArtifact,
+          mimeType: "application/pdf"
+        },
         segmentContext: createSegmentContext({
           segmentId: "segment-wave",
           segmentName: "Wave bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2ESheetRecording({
         id: "wave-invalid-peaks",
-        type: "sheet",
-        origin: "user",
         name: "Comparison invalid peaks",
         sessionId: "session-waveform-sheet",
         sheetId: "sheet-wave",
         sheetName: "Waveform Study",
         createdAt: "2026-06-21T13:00:00.000Z",
-        durationMs: trustedArtifact.durationMs,
-        sizeBytes: trustedArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: trustedArtifact.dataUrl,
+        artifact: trustedArtifact,
         trustedPeaks: [0, 0],
         segmentContext: createSegmentContext({
           segmentId: "segment-wave",
           segmentName: "Wave bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2EQuickRecording({
         id: "wave-quick",
-        type: "quick",
-        origin: "user",
         name: "Comparison quick take",
         sessionId: "session-waveform-quick",
-        sheetId: null,
         createdAt: "2026-06-21T14:00:00.000Z",
-        durationMs: decodedArtifact.durationMs,
-        sizeBytes: decodedArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: decodedArtifact.dataUrl,
-        settings: {
-          bpm: 120,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        artifact: decodedArtifact
+      }),
+      createE2ESheetRecording({
         id: "wave-archived",
-        type: "sheet",
-        origin: "user",
         name: "Comparison archived take",
         sessionId: "session-waveform-sheet",
         sheetId: "sheet-wave",
         sheetName: "Waveform Study",
         createdAt: "2026-06-21T15:00:00.000Z",
-        durationMs: trustedArtifact.durationMs,
-        sizeBytes: trustedArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: trustedArtifact.dataUrl,
+        artifact: trustedArtifact,
         trustedPeaks: [0.2, 0.65, 0.9, 0.25],
         segmentContext: createSegmentContext({
           segmentId: "segment-wave",
           segmentName: "Wave bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      }
+        })
+      })
     ],
     errorMarkers: [
       {
@@ -1283,22 +1101,22 @@ test("recordings review compares selected sheet takes with waveform evidence", a
       }
     ],
     recordingOrganization: [
-      {
+      createE2ERecordingOrganizationItem({
         recordingId: "wave-trusted",
         tags: ["review"],
         favorite: true,
-        archived: false,
         updatedAt: "2026-06-22T09:00:00.000Z"
-      },
-      {
+      }),
+      createE2ERecordingOrganizationItem({
         recordingId: "wave-archived",
         tags: ["review"],
-        favorite: false,
         archived: true,
         updatedAt: "2026-06-22T09:30:00.000Z"
-      }
+      })
     ]
-  });
+  };
+  await seedRecordingHistory(page, waveformSnapshot);
+  await seedE2ERecordingArtifacts(page, waveformSnapshot.recordings);
 
   await page.reload();
 
@@ -1582,141 +1400,94 @@ test("recordings review returns to sheet practice with segment validation and st
   const artifact = await createWavDataUrl(page, 330, 0.8);
   const segmentId = bridgeSegment?.id ?? "";
 
-  await seedRecordingHistory(page, {
-    sessions: [{ id: "session-return-sheet", sourceType: "sheet", sheetId }],
-    recordings: [
+  const returnSnapshot = {
+    sessions: [
       {
+        id: "session-return-sheet",
+        sourceType: "sheet",
+        sheetId
+      }
+    ],
+    recordings: [
+      createE2ESheetRecording({
         id: "return-segment-old",
-        type: "sheet",
-        origin: "user",
         name: "Bridge return 1",
         sessionId: "session-return-sheet",
         sheetId,
         sheetName: "Return Segment Sheet",
         createdAt: "2026-06-21T09:00:00.000Z",
-        durationMs: artifact.durationMs,
-        sizeBytes: artifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: artifact.dataUrl,
+        artifact,
         trustedPeaks: [0.1, 0.5, 0.8, 0.3],
         segmentContext: createSegmentContext({
           segmentId,
           segmentName: "Bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2ESheetRecording({
         id: "return-segment-new",
-        type: "sheet",
-        origin: "user",
         name: "Bridge return 2",
         sessionId: "session-return-sheet",
         sheetId,
         sheetName: "Return Segment Sheet",
         createdAt: "2026-06-21T10:00:00.000Z",
-        durationMs: artifact.durationMs,
-        sizeBytes: artifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: artifact.dataUrl,
+        artifact,
         trustedPeaks: [0.1, 0.5, 0.8, 0.3],
         segmentContext: createSegmentContext({
           segmentId,
           segmentName: "Bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2ESheetRecording({
         id: "return-whole",
-        type: "sheet",
-        origin: "user",
         name: "Whole sheet return",
         sessionId: "session-return-sheet",
         sheetId,
         sheetName: "Return Segment Sheet",
         createdAt: "2026-06-21T11:00:00.000Z",
-        durationMs: artifact.durationMs,
-        sizeBytes: artifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: artifact.dataUrl,
+        artifact,
         trustedPeaks: [0.1, 0.4, 0.7, 0.2],
-        segmentContext: null,
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        segmentContext: null
+      }),
+      createE2ESheetRecording({
         id: "return-stale",
-        type: "sheet",
-        origin: "user",
         name: "Deleted segment return",
         sessionId: "session-return-sheet",
         sheetId,
         sheetName: "Return Segment Sheet",
         createdAt: "2026-06-21T12:00:00.000Z",
-        durationMs: artifact.durationMs,
-        sizeBytes: artifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: artifact.dataUrl,
+        artifact,
         trustedPeaks: [0.1, 0.4, 0.7, 0.2],
         segmentContext: createSegmentContext({
           segmentId: "segment-deleted",
           segmentName: "Deleted bridge"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2ESheetRecording({
         id: "return-missing-sheet",
-        type: "sheet",
-        origin: "user",
         name: "Missing sheet return",
         sessionId: "session-return-sheet",
         sheetId: "sheet-deleted",
         sheetName: "Deleted Return Sheet",
         createdAt: "2026-06-21T08:30:00.000Z",
-        durationMs: artifact.durationMs,
-        sizeBytes: artifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: artifact.dataUrl,
+        artifact,
         trustedPeaks: [0.1, 0.4, 0.7, 0.2],
         segmentContext: createSegmentContext({
           segmentId: "segment-deleted-sheet",
           segmentName: "Deleted sheet segment"
-        }),
-        settings: {
-          bpm: 96,
-          timeSignature: "4/4"
-        }
-      },
-      {
+        })
+      }),
+      createE2EQuickRecording({
         id: "return-quick",
-        type: "quick",
-        origin: "user",
         name: "Quick return",
         sessionId: "session-return-quick",
-        sheetId: null,
         createdAt: "2026-06-21T13:00:00.000Z",
-        durationMs: artifact.durationMs,
-        sizeBytes: artifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: artifact.dataUrl,
-        settings: {
-          bpm: 120,
-          timeSignature: "4/4"
-        }
-      }
+        artifact
+      })
     ],
     errorMarkers: []
-  });
+  };
+  await seedRecordingHistory(page, returnSnapshot);
+  await seedE2ERecordingArtifacts(page, returnSnapshot.recordings);
 
   await page.goto("/recordings");
 
@@ -1839,13 +1610,16 @@ test("recordings review keeps summary chips readable at a narrow viewport", asyn
   await page.goto("/recordings");
   await page.evaluate(() => window.localStorage.clear());
 
-  await seedRecordingHistory(page, {
-    sessions: [{ id: "session-summary-readability", sourceType: "sheet" }],
-    recordings: [
+  const summarySnapshot = {
+    sessions: [
       {
+        id: "session-summary-readability",
+        sourceType: "sheet"
+      }
+    ],
+    recordings: [
+      createE2ESheetRecording({
         id: "summary-readable-old",
-        type: "sheet",
-        origin: "user",
         name: "Readability older take",
         sessionId: "session-summary-readability",
         sheetId: "sheet-readability",
@@ -1863,11 +1637,9 @@ test("recordings review keeps summary chips readable at a narrow viewport", asyn
           bpm: 88,
           timeSignature: "3/4"
         }
-      },
-      {
+      }),
+      createE2ESheetRecording({
         id: "summary-readable-latest",
-        type: "sheet",
-        origin: "user",
         name: "Readability newest take",
         sessionId: "session-summary-readability",
         sheetId: "sheet-readability",
@@ -1885,10 +1657,11 @@ test("recordings review keeps summary chips readable at a narrow viewport", asyn
           bpm: 96,
           timeSignature: "   "
         }
-      }
+      })
     ],
     errorMarkers: []
-  });
+  };
+  await seedRecordingHistory(page, summarySnapshot);
 
   await page.reload();
 
@@ -1964,25 +1737,30 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
   const sheetArtifact = await createWavDataUrl(page, 330, 1.2);
   const mismatchArtifact = await createWavDataUrl(page, 220, 1);
   const invalidPeaksArtifact = await createWavDataUrl(page, 260, 1);
+  const badAudioArtifact = {
+    dataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
+    durationMs: 900,
+    sizeBytes: 12
+  };
 
-  await seedRecordingHistory(page, {
+  const reviewSnapshot = {
     sessions: [
-      { id: "session-quick-1", sourceType: "quick" },
-      { id: "session-sheet-1", sourceType: "sheet" }
+      {
+        id: "session-quick-1",
+        sourceType: "quick"
+      },
+      {
+        id: "session-sheet-1",
+        sourceType: "sheet"
+      }
     ],
     recordings: [
-      {
+      createE2EQuickRecording({
         id: "quick-alpha",
-        type: "quick",
-        origin: "user",
         name: "Alpha quick take",
         sessionId: "session-quick-1",
-        sheetId: null,
         createdAt: "2026-06-21T09:00:00.000Z",
-        durationMs: quickArtifact.durationMs,
-        sizeBytes: quickArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: quickArtifact.dataUrl,
+        artifact: quickArtifact,
         artifactAnalysis: {
           decodedDurationMs: quickArtifact.durationMs,
           sampleRate: 8_000,
@@ -1990,25 +1768,16 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
           rmsAmplitude: 0.24,
           estimatedFrequencyHz: 440,
           isSilent: false
-        },
-        settings: {
-          bpm: 120,
-          timeSignature: "4/4"
         }
-      },
-      {
+      }),
+      createE2ESheetRecording({
         id: "sheet-beta",
-        type: "sheet",
-        origin: "user",
         name: "Beta sheet take",
         sessionId: "session-sheet-1",
         sheetId: "sheet-42",
         sheetName: "Moonlight Etude",
         createdAt: "2026-06-21T10:00:00.000Z",
-        durationMs: sheetArtifact.durationMs,
-        sizeBytes: sheetArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: sheetArtifact.dataUrl,
+        artifact: sheetArtifact,
         artifactAnalysis: {
           decodedDurationMs: sheetArtifact.durationMs,
           sampleRate: 8_000,
@@ -2019,31 +1788,21 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
         },
         trustedPeaks: [0.1, 0.4, 0.9, 0.45, 0.2],
         settings: {
-          bpm: 96,
           timeSignature: "3/4"
         }
-      },
-      {
+      }),
+      createE2EQuickRecording({
         id: "bad-gamma",
-        type: "quick",
-        origin: "user",
         name: "Broken audio take",
         sessionId: "session-quick-1",
-        sheetId: null,
         createdAt: "2026-06-21T11:00:00.000Z",
-        durationMs: 900,
-        sizeBytes: 12,
-        mimeType: "audio/wav",
-        audioDataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
+        artifact: badAudioArtifact,
         settings: {
-          bpm: 72,
-          timeSignature: "4/4"
+          bpm: 72
         }
-      },
-      {
+      }),
+      createE2ESheetRecording({
         id: "trusted-missing",
-        type: "sheet",
-        origin: "user",
         name: "Trusted peaks missing artifact",
         sessionId: "session-sheet-1",
         sheetId: "sheet-42",
@@ -2053,67 +1812,50 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
         sizeBytes: 0,
         mimeType: "audio/wav",
         audioDataUrl: null,
+        artifactRef: null,
         trustedPeaks: [0.1, 0.7, 0.2],
         settings: {
-          bpm: 96,
           timeSignature: "3/4"
         }
-      },
-      {
+      }),
+      createE2ESheetRecording({
         id: "trusted-bad",
-        type: "sheet",
-        origin: "user",
         name: "Trusted peaks bad artifact",
         sessionId: "session-sheet-1",
         sheetId: "sheet-42",
         sheetName: "Moonlight Etude",
         createdAt: "2026-06-21T13:00:00.000Z",
+        artifact: badAudioArtifact,
         durationMs: 1_000,
-        sizeBytes: 12,
-        mimeType: "audio/wav",
-        audioDataUrl: "data:audio/wav;base64,bm90LWF1ZGlv",
         trustedPeaks: [0.1, 0.7, 0.2],
         settings: {
-          bpm: 96,
           timeSignature: "3/4"
         }
-      },
-      {
+      }),
+      createE2EQuickRecording({
         id: "mismatch-delta",
-        type: "quick",
-        origin: "user",
         name: "Duration mismatch take",
         sessionId: "session-quick-1",
-        sheetId: null,
         createdAt: "2026-06-21T14:00:00.000Z",
+        artifact: mismatchArtifact,
         durationMs: 4_000,
-        sizeBytes: mismatchArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: mismatchArtifact.dataUrl,
         settings: {
-          bpm: 88,
-          timeSignature: "4/4"
+          bpm: 88
         }
-      },
-      {
+      }),
+      createE2ESheetRecording({
         id: "invalid-peaks-epsilon",
-        type: "sheet",
-        origin: "user",
         name: "Invalid waveform peaks take",
         sessionId: "session-sheet-1",
         sheetId: "sheet-42",
         sheetName: "Moonlight Etude",
         createdAt: "2026-06-21T15:00:00.000Z",
-        durationMs: invalidPeaksArtifact.durationMs,
-        sizeBytes: invalidPeaksArtifact.sizeBytes,
-        mimeType: "audio/wav",
-        audioDataUrl: invalidPeaksArtifact.dataUrl,
+        artifact: invalidPeaksArtifact,
         trustedPeaks: [0, 0],
         settings: {
-          bpm: 96,
           timeSignature: "3/4"
         }
-      }
+      })
     ],
     errorMarkers: [
       {
@@ -2129,7 +1871,9 @@ test("recordings review lists, filters, plays, continues, deletes, and handles b
         note: "Early entrance"
       }
     ]
-  });
+  };
+  await seedRecordingHistory(page, reviewSnapshot);
+  await seedE2ERecordingArtifacts(page, reviewSnapshot.recordings);
 
   await page.reload();
   await expect(page.getByTestId("recordings-list")).toBeVisible();

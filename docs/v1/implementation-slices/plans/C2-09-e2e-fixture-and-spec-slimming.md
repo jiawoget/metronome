@@ -4,7 +4,7 @@
 
 - Workstream: `pack-c-codebase-slimming`
 - Slice: `C2-09 e2e-fixture-and-spec-slimming`
-- Current lifecycle state: `planning_in_progress`
+- Current lifecycle state: `verified`
 - Parent plan: `docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md`
 - Baseline branch: `main`
 - Baseline commit: `4a7190b40b69cb1af0f5e48786bc38784f8744e6`
@@ -12,7 +12,7 @@
   merged.
 - Plan review: initial `PASS`, then reopened for review after targeted E2E
   baseline exposed stale legacy `audioDataUrl` fixture assumptions; revised
-  plan review pending.
+  plan review `PASS`.
 
 This plan intentionally covers the first narrow E2E fixture slimming PR. It
 does not cover broad cross-spec E2E fixture framework work, unit AudioContext
@@ -23,7 +23,7 @@ mock extraction, or in-memory artifact repository helper extraction.
 - `C2-07 test-fixture-slimming`: `verified`.
 - `C2-08 large-unit-fixture-follow-up`: `verified`.
 - `C2-09 e2e-fixture-and-spec-slimming`: this plan;
-  `planning_in_progress`.
+  `verified`.
 - `C2-10 shared-unit-audio-artifact-fixtures`: deferred; `not_started`.
 - `pack-c-codebase-slimming` must remain `in_progress` until C2-09 and C2-10
   are completed, or explicitly re-scoped out by review.
@@ -332,6 +332,10 @@ Required before PR:
 & .\scripts\npm-local.ps1 --% run test:unit
 git diff --check
 ```
+
+Local verification on 2026-06-30: `typecheck`, `lint`, `build`,
+`test:unit` (41 files / 436 tests), targeted `recordings-review.spec.ts` E2E
+(7 tests), and `git diff --check` all passed.
 
 If preserving E2E semantics requires deleting user flows, splitting the spec
 file, or introducing a broad generic E2E DSL, stop and ask for review before
