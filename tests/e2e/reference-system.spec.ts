@@ -2,8 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { installSyntheticMicrophone } from "./fixtures/audio";
 import { importTestSheet } from "./fixtures/sheets";
 import {
-  clearDatabases as clearDatabaseList,
-  clearRecordingHistory,
+  clearSheetLibraryTestState,
   PRACTICE_SESSION_DB_NAME,
   readRecordingHistory,
   REFERENCE_DB_NAME,
@@ -52,17 +51,11 @@ function createReferenceWavBuffer() {
 }
 
 async function clearState(page: Page) {
-  await page.goto("/sheet-library");
-  await clearRecordingHistory(page);
-  await clearDatabaseList(page, [
+  await clearSheetLibraryTestState(page, [
     SHEET_LIBRARY_DB_NAME,
     REFERENCE_DB_NAME,
     PRACTICE_SESSION_DB_NAME
   ]);
-  await page.reload();
-  await expect(
-    page.getByRole("heading", { name: "Sheet Library" })
-  ).toBeVisible();
 }
 
 async function getReferenceSnapshot(
