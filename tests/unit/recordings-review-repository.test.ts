@@ -7,7 +7,14 @@ import {
 } from "@/lib/recordings-review/repository";
 import { recordingHistoryMetadataRepository } from "@/infrastructure/db/recording-history-metadata-repository";
 import type { RecordingReviewSnapshot, ReviewRecording } from "@/lib/recordings-review/types";
-import type { PracticeSession, SheetRecordingMetadata, SheetRecordingSegmentContext } from "@/domain/practice";
+import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
+import {
+  makeQuickReviewRecording,
+  makeSheetRecordingSegmentContext as createSegmentContext,
+  makeSheetReviewRecording,
+  type MakeQuickReviewRecordingOverrides,
+  type MakeSheetReviewRecordingOverrides
+} from "./factories/recordings-review";
 
 const snapshot: RecordingReviewSnapshot = {
   sessions: [{ id: "session-1" }],
@@ -974,30 +981,6 @@ describe("recording history repository", () => {
   });
 });
 
-function createSegmentContext(overrides: Partial<SheetRecordingSegmentContext> = {}): SheetRecordingSegmentContext {
-  return {
-    segmentId: "segment-alpha",
-    segmentName: "Bridge",
-    range: {
-      startMeasure: 5,
-      endMeasure: 12
-    },
-    targetBpm: 96,
-    measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
-    measureGridSnapshot: {
-      bpm: 96,
-      timeSignature: "4/4",
-      pickupBeats: 0,
-      measureOneOffsetMs: 1_000
-    },
-    measureRangeMs: {
-      startMs: 11_000,
-      endMs: 31_000
-    },
-    ...overrides
-  };
-}
-
 function createSheetRecording(overrides: Partial<SheetRecordingMetadata> = {}): SheetRecordingMetadata {
   return {
     id: "sheet-metadata-1",
@@ -1015,48 +998,33 @@ function createSheetRecording(overrides: Partial<SheetRecordingMetadata> = {}): 
 }
 
 function createReviewSheetRecording(
-  overrides: Partial<Omit<ReviewRecording, "segmentContext">> & { segmentContext?: unknown } = {}
+  overrides: MakeSheetReviewRecordingOverrides = {}
 ): ReviewRecording {
-  return {
-    id: "sheet-recording-with-segment",
-    type: "sheet",
-    name: "Alpha Sheet take",
-    sessionId: "session-sheet-1",
-    sheetId: "sheet-alpha",
-    sheetName: "Alpha Sheet",
-    createdAt: "2026-06-21T12:00:00.000Z",
-    durationMs: 12_000,
-    sizeBytes: 256,
-    mimeType: "audio/webm",
-    audioDataUrl: "data:audio/webm;base64,UklGRg==",
-    settings: {
-      bpm: 96,
-      timeSignature: "4/4"
+  return makeSheetReviewRecording(overrides, {
+    defaults: {
+      id: "sheet-recording-with-segment",
+      name: "Alpha Sheet take",
+      sessionId: "session-sheet-1",
+      sheetName: "Alpha Sheet"
     },
-    ...overrides
-  } as ReviewRecording;
+    withArtifactRef: false
+  });
 }
 
 function createQuickReviewRecording(
-  overrides: Partial<ReviewRecording> = {}
+  overrides: MakeQuickReviewRecordingOverrides = {}
 ): ReviewRecording {
-  return {
-    id: "quick-review-recording",
-    type: "quick",
-    name: "Quick review take",
-    sessionId: "session-quick-1",
-    sheetId: null,
-    createdAt: "2026-06-21T08:00:00.000Z",
-    durationMs: 9_000,
-    sizeBytes: 64,
-    mimeType: "audio/wav",
-    audioDataUrl: "data:audio/wav;base64,UklGRg==",
-    settings: {
-      bpm: 120,
-      timeSignature: "4/4"
+  return makeQuickReviewRecording(overrides, {
+    defaults: {
+      id: "quick-review-recording",
+      name: "Quick review take",
+      sessionId: "session-quick-1",
+      createdAt: "2026-06-21T08:00:00.000Z",
+      durationMs: 9_000,
+      sizeBytes: 64
     },
-    ...overrides
-  };
+    withArtifactRef: false
+  });
 }
 
 function createTakeSelectionSnapshot(): RecordingReviewSnapshot {
