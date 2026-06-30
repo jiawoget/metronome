@@ -1,4 +1,5 @@
 import { getCreatedAtSortValue } from "@/lib/recordings-review/take-groups";
+import { normalizeRequiredString } from "@/lib/recordings-review/string-normalization";
 import type {
   RecordingOrganizationMetadata,
   ResolvedRecordingOrganization,
@@ -241,16 +242,6 @@ function normalizeRecordingTag(tag: unknown) {
   }
 
   return normalizedTag;
-}
-
-function normalizeRequiredString(value: unknown) {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-
-  return normalized.length > 0 ? normalized : null;
 }
 
 function compareRecordingOrganizationPriority(
