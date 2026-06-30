@@ -7,15 +7,47 @@ import type {
 } from "@/domain/practice/types";
 import { getSheetPracticeHref } from "@/domain/sheet/routes";
 
-export function calculatePracticeDurationMs(session: Pick<PracticeSession, "startedAt" | "endedAt">, now = new Date()) {
-  const startedAtMs = Date.parse(session.startedAt);
-  const endMs = Date.parse(session.endedAt ?? now.toISOString());
+export type PracticeSessionDurationInput = Pick<PracticeSession, "startedAt" | "endedAt">;
 
-  if (!Number.isFinite(startedAtMs) || !Number.isFinite(endMs)) {
+function parseFiniteTimestampMs(value: Date | string | null | undefined) {
+  if (value instanceof Date) {
+    const timestamp = value.getTime();
+
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const timestamp = Date.parse(value);
+
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+export function calculatePracticeDurationMs(
+  session: PracticeSessionDurationInput,
+  now = new Date()
+) {
+  const startedAtMs = parseFiniteTimestampMs(session.startedAt);
+  const endMs = parseFiniteTimestampMs(session.endedAt === null ? now : session.endedAt);
+
+  if (startedAtMs === null || endMs === null) {
     return 0;
   }
 
   return Math.max(0, Math.round(endMs - startedAtMs));
+}
+
+export function withUpdatedPracticeSessionDuration(
+  session: PracticeSession,
+  updatedAt: string
+): PracticeSession {
+  return {
+    ...session,
+    durationMs: calculatePracticeDurationMs(session, new Date(updatedAt)),
+    updatedAt
+  };
 }
 
 export function sortSessionsByRecentActivity(sessions: PracticeSession[]) {

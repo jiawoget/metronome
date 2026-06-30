@@ -493,6 +493,108 @@ describe("practice session service", () => {
     });
   });
 
+  it("keeps ended session durations stable when later update paths run", async () => {
+    const { service, repository } = createService();
+    const quickSession = await service.ensureQuickSession({
+      trigger: "metronome",
+      bpm: 96,
+      timeSignature: "4/4"
+    });
+
+    nowMs += 4_000;
+    await expect(service.endPracticeSession(quickSession.id)).resolves.toMatchObject({
+      endedAt: "2026-06-21T12:00:04.000Z",
+      durationMs: 4_000
+    });
+
+    nowMs += 60_000;
+    await expect(service.updatePracticeSessionDuration(quickSession.id)).resolves.toMatchObject({
+      endedAt: "2026-06-21T12:00:04.000Z",
+      durationMs: 4_000,
+      updatedAt: "2026-06-21T12:01:04.000Z"
+    });
+    await expect(service.endPracticeSession(quickSession.id)).resolves.toMatchObject({
+      endedAt: "2026-06-21T12:00:04.000Z",
+      durationMs: 4_000
+    });
+
+    const sheetSession = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "metronome"
+    });
+
+    nowMs += 6_000;
+    await service.endPracticeSession(sheetSession?.id ?? "");
+
+    nowMs += 60_000;
+    await expect(service.updateSheetSessionDuration(sheetSession?.id ?? "")).resolves.toMatchObject({
+      endedAt: "2026-06-21T12:01:10.000Z",
+      durationMs: 6_000,
+      updatedAt: "2026-06-21T12:02:10.000Z"
+    });
+    await expect(repository.getSession(sheetSession?.id ?? "")).resolves.toMatchObject({
+      endedAt: "2026-06-21T12:01:10.000Z",
+      durationMs: 6_000
+    });
+  });
+
+  it("does not reopen ended sessions when recording link or prepare paths update duration", async () => {
+    const { service, repository } = createService();
+    const quickSession = await service.ensureQuickSession({
+      trigger: "recording",
+      bpm: 96,
+      timeSignature: "4/4"
+    });
+
+    nowMs += 2_000;
+    await service.endPracticeSession(quickSession.id);
+
+    nowMs += 60_000;
+    await expect(
+      service.linkRecordingToSession({
+        sessionId: quickSession.id,
+        recordingId: "quick-recording-after-end"
+      })
+    ).resolves.toMatchObject({
+      endedAt: "2026-06-21T12:00:02.000Z",
+      durationMs: 2_000,
+      recordingCount: 1,
+      latestRecordingId: "quick-recording-after-end",
+      updatedAt: "2026-06-21T12:01:02.000Z"
+    });
+
+    const sheetSession = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording"
+    });
+
+    nowMs += 3_000;
+    await service.endPracticeSession(sheetSession?.id ?? "");
+
+    nowMs += 60_000;
+    const prepared = await service.prepareSheetRecordingMetadata({
+      sheetId: "sheet-alpha",
+      sessionId: sheetSession?.id,
+      durationMs: 900
+    });
+
+    expect(prepared?.session).toMatchObject({
+      endedAt: "2026-06-21T12:01:05.000Z",
+      durationMs: 3_000,
+      recordingCount: 1,
+      updatedAt: "2026-06-21T12:02:05.000Z"
+    });
+    expect(prepared?.metadata).toMatchObject({
+      createdAt: "2026-06-21T12:02:05.000Z",
+      durationMs: 900
+    });
+    await expect(repository.getSession(sheetSession?.id ?? "")).resolves.toMatchObject({
+      endedAt: "2026-06-21T12:01:05.000Z",
+      durationMs: 3_000,
+      recordingCount: 0
+    });
+  });
+
   it("aggregates Today Summary using the browser-local day boundary", async () => {
     const { service, repository } = createService();
     nowMs = new Date(2026, 5, 21, 12, 0, 0).getTime();
@@ -1258,15 +1360,79 @@ describe("practice session service", () => {
     await expect(globalRepository.getSession("legacy-quick-session")).resolves.toMatchObject({
       id: "legacy-quick-session",
       sourceType: "quick",
+      durationMs: 60_000,
       segmentContext: null
     });
     await expect(globalRepository.listSessions()).resolves.toEqual([
       expect.objectContaining({
         id: "legacy-quick-session",
         sourceType: "quick",
+        durationMs: 60_000,
         segmentContext: null
       })
     ]);
+  });
+
+  it("keeps latest recording duration as the legacy quick-session conversion source of truth", async () => {
+    const sheetRepository = createMemorySessionRepository();
+    const globalRepository = createGlobalPracticeSessionRepository(sheetRepository);
+
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify({
+        sessions: [
+          {
+            id: "legacy-quick-session",
+            sourceType: "quick",
+            startedAt: "2026-06-21T12:05:00.000Z",
+            endedAt: "2026-06-21T12:06:00.000Z",
+            settings: {
+              bpm: 120,
+              timeSignature: "4/4"
+            }
+          }
+        ],
+        recordings: [
+          {
+            id: "legacy-quick-recording-old",
+            type: "quick",
+            sessionId: "legacy-quick-session",
+            sheetId: null,
+            createdAt: "2026-06-21T12:05:30.000Z",
+            durationMs: 12_300,
+            sizeBytes: 1024,
+            mimeType: "audio/webm",
+            settings: {
+              bpm: 120,
+              timeSignature: "4/4"
+            }
+          },
+          {
+            id: "legacy-quick-recording-latest",
+            type: "quick",
+            sessionId: "legacy-quick-session",
+            sheetId: null,
+            createdAt: "2026-06-21T12:07:00.000Z",
+            durationMs: 45_600,
+            sizeBytes: 1024,
+            mimeType: "audio/webm",
+            settings: {
+              bpm: 120,
+              timeSignature: "4/4"
+            }
+          }
+        ],
+        errorMarkers: []
+      })
+    );
+
+    await expect(globalRepository.getSession("legacy-quick-session")).resolves.toMatchObject({
+      id: "legacy-quick-session",
+      durationMs: 45_600,
+      recordingCount: 2,
+      latestRecordingId: "legacy-quick-recording-latest",
+      updatedAt: "2026-06-21T12:07:00.000Z"
+    });
   });
 
   it("builds history groups from listSessions without mutating repository rows", async () => {
