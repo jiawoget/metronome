@@ -1,15 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
+import { importTestSheet } from "./fixtures/sheets";
 import {
   PRACTICE_SESSION_DB_NAME,
   RECORDING_HISTORY_STORAGE_KEY,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
 const sheetDbName = SHEET_LIBRARY_DB_NAME;
 const practiceDbName = PRACTICE_SESSION_DB_NAME;
 const recordingHistoryStorageKey = RECORDING_HISTORY_STORAGE_KEY;
@@ -148,22 +145,6 @@ async function seedDateBoundarySessions(page: Page) {
   );
 }
 
-async function importSheet(page: Page) {
-  await page.goto("/sheet-library");
-  await page.getByLabel("File").setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
-  await expect(page.getByText(/^Ready:/)).toBeVisible();
-  await page.getByLabel("Name").fill("Practice Session Sheet");
-  await page.getByRole("button", { name: "Save Imported Sheet" }).click();
-  await expect(page.getByRole("heading", { name: "Practice Session Sheet" })).toBeVisible();
-
-  const href = await page.getByRole("link", { name: "Open Sheet Practice" }).first().getAttribute("href");
-  const sheetId = new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
-
-  expect(sheetId).toBeTruthy();
-
-  return sheetId;
-}
-
 test("practice sessions drive quick, sheet, summary, recording links, reload, and clear data", async ({ page }) => {
   const consoleErrors: string[] = [];
 
@@ -252,7 +233,11 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   expect(quickWithRecording?.id).not.toBe(quickSession?.id);
   expect(sessions.filter((session) => session.sourceType === "quick")).toHaveLength(2);
 
-  const sheetId = await importSheet(page);
+  const { sheetId } = await importTestSheet(page, {
+    name: "Practice Session Sheet",
+    bpm: "72",
+    timeSignature: "4/4"
+  });
 
   await page.goto(`/sheet-practice/${sheetId}`);
   await page.getByRole("button", { name: "Start metronome" }).click();

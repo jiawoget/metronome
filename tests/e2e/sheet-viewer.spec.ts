@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { importTestSheet } from "./fixtures/sheets";
 import { SHEET_LIBRARY_DB_NAME } from "./fixtures/storage";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
@@ -35,23 +36,6 @@ async function clearSheetDatabase(page: Page) {
   );
   await page.reload();
   await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
-}
-
-async function importSheet(page: Page, fixtureName: string, name: string) {
-  await page.goto("/sheet-library");
-  await page.getByLabel("File").setInputFiles(path.join(sheetFixturesDir, fixtureName));
-  await expect(page.getByText(/^Ready:/)).toBeVisible();
-  await page.getByLabel("Name").fill(name);
-  await page.getByRole("button", { name: "Save Imported Sheet" }).click();
-  await expect(page.getByRole("heading", { name })).toBeVisible();
-
-  const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
-  const href = await link.getAttribute("href");
-  const sheetId = new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
-
-  expect(sheetId).toBeTruthy();
-
-  return { sheetId: sheetId ?? "", link };
 }
 
 function getSheetPracticePath(sheetId: string) {
@@ -210,7 +194,12 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   });
 
   await clearSheetDatabase(page);
-  const { link, sheetId } = await importSheet(page, "two-page-sheet.pdf", "Viewer Two Page PDF");
+  const { link, sheetId } = await importTestSheet(page, {
+    fixture: "two-page-sheet.pdf",
+    name: "Viewer Two Page PDF",
+    bpm: "72",
+    timeSignature: "4/4"
+  });
 
   await link.click();
   await expect(page).toHaveURL(/\/sheet-practice\/sheet_/);
@@ -274,7 +263,12 @@ test("sheet viewer renders imported image artifact with zoom, resize, and reload
   });
 
   await clearSheetDatabase(page);
-  const { link } = await importSheet(page, "real-sheet.png", "Viewer Pixel Scale");
+  const { link } = await importTestSheet(page, {
+    fixture: "real-sheet.png",
+    name: "Viewer Pixel Scale",
+    bpm: "72",
+    timeSignature: "4/4"
+  });
 
   await link.click();
   await expect(page.getByRole("heading", { name: "Viewer Pixel Scale" })).toBeVisible();

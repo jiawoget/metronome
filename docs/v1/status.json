@@ -896,6 +896,37 @@
                                                                 "status":  "verified"
                                                             }
                                                         ]
+                                         },
+                                         {
+                                             "pack":  "pack-d-codebase-slimming-follow-up",
+                                             "scope":  "Post-Pack-C maintenance slimming follow-up based on the main-branch line/function scan and web ChatGPT review. This pack targets only verified real net deletion or maintenance-surface reduction: E2E helper duplication, narrow recordings-review normalization duplication, and explicitly reviewed deferred/no-go cleanup candidates. It must not use formatting, line wrapping, large-component splitting, generic DB adapters, package-lock churn, or assertion weakening as slimming.",
+                                             "status":  "in_progress",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "D1-01 e2e-sheet-import-helper-adoption",
+                                                                "status":  "verified"
+                                                            },
+                                                            {
+                                                                "slice":  "D1-02 e2e-clear-state-storage-helper-consolidation",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "D1-03 e2e-practice-snapshot-reader-helper",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "D1-04 recordings-review-string-normalization-helper",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "D1-05 unit-recording-fixture-residual-audit",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "D1-06 deferred-no-go-validation-and-closeout",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
                                          }
                                      ]
                        }

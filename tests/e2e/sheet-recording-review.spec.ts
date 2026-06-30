@@ -58,14 +58,6 @@ async function clearState(page: Page) {
   ).toBeVisible();
 }
 
-async function importSheet(page: Page, name = "Recording Contract Sheet") {
-  return importTestSheet(page, {
-    name,
-    bpm: 88,
-    timeSignature: "3/4"
-  });
-}
-
 async function getSavedRecordings(page: Page) {
   const parsed = await readRecordingHistory(page);
 
@@ -218,7 +210,11 @@ test("sheet practice records real synthetic audio, replays latest take, persists
 
   await page.setViewportSize({ width: 1280, height: 820 });
   await clearState(page);
-  const { link, sheetId } = await importSheet(page);
+  const { link, sheetId } = await importTestSheet(page, {
+    name: "Recording Contract Sheet",
+    bpm: 88,
+    timeSignature: "3/4"
+  });
 
   await link.click();
   await expect(
@@ -489,7 +485,11 @@ test("sheet practice creates recording-scoped error markers and seeks playback t
 
   await page.setViewportSize({ width: 1280, height: 820 });
   await clearState(page);
-  const { link, sheetId } = await importSheet(page, "Marker Contract Sheet");
+  const { link, sheetId } = await importTestSheet(page, {
+    name: "Marker Contract Sheet",
+    bpm: 88,
+    timeSignature: "3/4"
+  });
   const longUnbrokenNote = "L".repeat(160);
 
   await link.click();
@@ -676,10 +676,11 @@ test("sheet recording surfaces microphone denial and bad artifact states", async
   });
 
   await clearState(page);
-  const { link, sheetId } = await importSheet(
-    page,
-    "Bad Artifact Contract Sheet"
-  );
+  const { link, sheetId } = await importTestSheet(page, {
+    name: "Bad Artifact Contract Sheet",
+    bpm: 88,
+    timeSignature: "3/4"
+  });
 
   await link.click();
   await page.getByRole("button", { name: "Start recording" }).click();

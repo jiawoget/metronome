@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
+import { importTestSheet } from "./fixtures/sheets";
 import {
   clearDatabases,
   clearRecordingHistory,
@@ -10,8 +9,6 @@ import {
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
 const recordingHarnessEvent = "sheet-practice-controls:set-recording-harness-active";
 
 type MetronomeTrace = {
@@ -30,25 +27,6 @@ function average(values: number[]) {
 
 function intervalsFromAudioTime(traces: MetronomeTrace[]) {
   return traces.slice(1).map((trace, index) => (trace.audioTime - traces[index].audioTime) * 1_000);
-}
-
-async function importSheet(page: Page) {
-  await page.goto("/sheet-library");
-  await page.getByLabel("File").setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
-  await expect(page.getByText(/^Ready:/)).toBeVisible();
-  await page.getByLabel("Name").fill("Controls Contract Sheet");
-  await page.getByLabel("BPM").fill("72");
-  await page.getByLabel("Time signature").fill("4/4");
-  await page.getByRole("button", { name: "Save Imported Sheet" }).click();
-  await expect(page.getByRole("heading", { name: "Controls Contract Sheet" })).toBeVisible();
-
-  const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
-  const href = await link.getAttribute("href");
-  const sheetId = new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
-
-  expect(sheetId).toBeTruthy();
-
-  return { link, sheetId };
 }
 
 async function getPracticeSnapshot(page: Page) {
@@ -185,7 +163,11 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await clearDatabases(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME]);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
-  const { link, sheetId } = await importSheet(page);
+  const { link, sheetId } = await importTestSheet(page, {
+    name: "Controls Contract Sheet",
+    bpm: "72",
+    timeSignature: "4/4"
+  });
 
   await link.click();
   await expect(page.getByRole("heading", { name: "Controls Contract Sheet" })).toBeVisible();

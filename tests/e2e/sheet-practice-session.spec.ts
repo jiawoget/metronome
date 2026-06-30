@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
+import { importTestSheet } from "./fixtures/sheets";
 import {
   clearDatabases,
   clearRecordingHistory,
@@ -10,26 +9,7 @@ import {
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
 const recordingHarnessEvent = "sheet-practice-controls:set-recording-harness-active";
-
-async function importSheet(page: Page) {
-  await page.goto("/sheet-library");
-  await page.getByLabel("File").setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
-  await expect(page.getByText(/^Ready:/)).toBeVisible();
-  await page.getByLabel("Name").fill("Session Contract Sheet");
-  await page.getByRole("button", { name: "Save Imported Sheet" }).click();
-  await expect(page.getByRole("heading", { name: "Session Contract Sheet" })).toBeVisible();
-
-  const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
-  const href = await link.getAttribute("href");
-  const sheetId = new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
-
-  expect(sheetId).toBeTruthy();
-
-  return { link, sheetId: sheetId ?? "" };
-}
 
 async function getPracticeSnapshot(page: Page) {
   return page.evaluate(
@@ -207,7 +187,11 @@ test("sheet practice session starts only on activity, persists, keeps recording 
   await clearDatabases(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME]);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
-  const { link, sheetId } = await importSheet(page);
+  const { link, sheetId } = await importTestSheet(page, {
+    name: "Session Contract Sheet",
+    bpm: "72",
+    timeSignature: "4/4"
+  });
 
   await link.click();
   await expect(page.getByRole("heading", { name: "Session Contract Sheet" })).toBeVisible();
