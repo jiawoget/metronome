@@ -1,3 +1,4 @@
+import { normalizeRequiredString } from "@/lib/recordings-review/string-normalization";
 import type {
   RecordingTakeGroup,
   RecordingTakeGroupKind,
@@ -205,16 +206,6 @@ export function createRecordingTakeGroupId({
   return `sheet:${encodeURIComponent(sheetId)}:segment:${
     segmentId === null ? "none" : `id:${encodeURIComponent(segmentId)}`
   }`;
-}
-
-function normalizeRequiredString(value: unknown) {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-
-  return normalized.length > 0 ? normalized : null;
 }
 
 function normalizeOptionalDisplayString(value: unknown) {

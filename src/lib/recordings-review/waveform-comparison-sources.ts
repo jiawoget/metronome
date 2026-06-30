@@ -4,6 +4,7 @@ import {
 } from "@/lib/recordings-review/artifact-details";
 import { isPotentiallyDecodableAudioMime } from "@/lib/recordings-review/audio-mime";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
+import { normalizeRequiredString } from "@/lib/recordings-review/string-normalization";
 import type {
   RecordingArtifactDetails,
   RecordingTakeGroup,
@@ -293,16 +294,6 @@ function createUnavailableSource({
 
 function isSupportedAudioMime(mimeType: string) {
   return isPotentiallyDecodableAudioMime(mimeType);
-}
-
-function normalizeRequiredString(value: unknown) {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-
-  return normalized.length > 0 ? normalized : null;
 }
 
 function mapArtifactErrorToUnavailableReason(

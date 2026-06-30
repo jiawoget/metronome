@@ -1,4 +1,5 @@
 import { createRecordingTakeGroupId, getCreatedAtSortValue } from "@/lib/recordings-review/take-groups";
+import { normalizeRequiredString } from "@/lib/recordings-review/string-normalization";
 import type {
   RecordingTakeGroup,
   RecordingTakeSelectionMetadata,
@@ -227,16 +228,6 @@ function getResolvedRecording(
   }
 
   return recordingsById.get(recordingId) ?? null;
-}
-
-function normalizeRequiredString(value: unknown) {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-
-  return normalized.length > 0 ? normalized : null;
 }
 
 function normalizeOptionalString(value: unknown) {
