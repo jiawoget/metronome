@@ -6,84 +6,33 @@ import {
   clearRecordingHistory,
   PRACTICE_SESSION_DB_NAME,
   RECORDING_HISTORY_STORAGE_KEY,
+  readPracticeSnapshot,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
 const recordingHarnessEvent = "sheet-practice-controls:set-recording-harness-active";
 
+type PracticeSnapshot = {
+  sessions: Array<{
+    id: string;
+    sourceType: string;
+    sheetId: string | null;
+    durationMs: number;
+    recordingCount: number;
+    latestRecordingId: string | null;
+  }>;
+  recordings: Array<{
+    id: string;
+    type: string;
+    sessionId: string;
+    sheetId: string;
+    durationMs: number;
+    audioDataUrl?: string | null;
+  }>;
+};
+
 async function getPracticeSnapshot(page: Page) {
-  return page.evaluate(
-    ({ databaseName, storageKey }: { databaseName: string; storageKey: string }) =>
-      new Promise<{
-        sessions: Array<{
-          id: string;
-          sourceType: string;
-          sheetId: string | null;
-          durationMs: number;
-          recordingCount: number;
-          latestRecordingId: string | null;
-        }>;
-        recordings: Array<{
-          id: string;
-          type: string;
-          sessionId: string;
-          sheetId: string;
-          durationMs: number;
-          audioDataUrl?: string | null;
-        }>;
-      }>((resolve, reject) => {
-        const readRecordings = () => {
-          const rawValue = window.localStorage.getItem(storageKey);
-          const parsed = rawValue ? JSON.parse(rawValue) : { recordings: [] };
-
-          return Array.isArray(parsed.recordings) ? parsed.recordings : [];
-        };
-        const openExistingDatabase = () => {
-          const openRequest = indexedDB.open(databaseName);
-
-          openRequest.onerror = () => reject(openRequest.error);
-          openRequest.onsuccess = () => {
-            const database = openRequest.result;
-
-            if (!database.objectStoreNames.contains("sessions")) {
-              database.close();
-              resolve({ sessions: [], recordings: readRecordings() });
-              return;
-            }
-
-            const transaction = database.transaction(["sessions"], "readonly");
-            const sessionsRequest = transaction.objectStore("sessions").getAll();
-
-            transaction.oncomplete = () => {
-              database.close();
-              resolve({
-                sessions: sessionsRequest.result,
-                recordings: readRecordings()
-              });
-            };
-            transaction.onerror = () => reject(transaction.error);
-          };
-        };
-
-        if ("databases" in indexedDB) {
-          indexedDB.databases().then((databases) => {
-            if (databases.some((database) => database.name === databaseName)) {
-              openExistingDatabase();
-              return;
-            }
-
-            resolve({ sessions: [], recordings: readRecordings() });
-          }, reject);
-          return;
-        }
-
-        openExistingDatabase();
-      }),
-    {
-      databaseName: PRACTICE_SESSION_DB_NAME,
-      storageKey: RECORDING_HISTORY_STORAGE_KEY
-    }
-  );
+  return readPracticeSnapshot<PracticeSnapshot>(page);
 }
 
 async function getSheetLastPracticedAt(page: Page, sheetId: string) {
