@@ -195,7 +195,9 @@ Before editing, inventory and preserve these file-specific semantics.
 
 0. Confirm status/source-of-truth before touching test files.
    - `docs/v1/status.json` keeps Pack C as `in_progress`.
-   - `docs/v1/status.json` lists C2-08 as `planning_in_progress`.
+   - Before implementation, `docs/v1/status.json` lists C2-08 as
+     `planning_in_progress`; after local verification, update it to
+     `verified`.
    - `docs/v1/status.json` lists C2-09 as `not_started`.
    - `docs/v1/status.json` lists C2-10 as `not_started`.
    - `docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md`
@@ -237,10 +239,10 @@ Before editing, inventory and preserve these file-specific semantics.
 - Only the two target unit test files, the shared factory file if needed,
   `docs/v1/status.json`, this plan file, and the C2 main plan change.
 - The C2 main plan may change only to register C2-10 as deferred remaining
-  Phase 7 work.
+  Phase 7 work and to update C2-08 final status after verification.
 - `docs/v1/status.json` confirms or updates:
   - Pack C = `in_progress`
-  - C2-08 = `planning_in_progress`
+  - C2-08 = `verified` after local verification
   - C2-09 = `not_started`
   - C2-10 = `not_started`
 - `recordings-review-experience.test.tsx` no longer owns a duplicate

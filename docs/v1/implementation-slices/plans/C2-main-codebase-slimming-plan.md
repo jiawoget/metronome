@@ -311,7 +311,7 @@ Phase 7 is intentionally split across multiple small PRs:
     recording-review unit tests.
   - Did not touch large UI-oriented unit tests or E2E tests.
 - `C2-08 large-unit-fixture-follow-up`
-  - Status: planning_in_progress.
+  - Status: verified.
   - Follow-up for the larger recording-review unit tests that were explicitly
     deferred from C2-07.
   - This slice is limited to recording/segment factory adoption in
