@@ -478,11 +478,11 @@
                                          },
                                          {
                                              "pack":  "pack-3-sessions-continue-practice",
-                                             "status":  "not_started",
+                                             "status":  "in_progress",
                                              "slices":  [
                                                             {
                                                                 "slice":  "P3-01 session-event-model",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P3-02 session-event-capture",
