@@ -900,7 +900,7 @@
                                          {
                                              "pack":  "pack-d-codebase-slimming-follow-up",
                                              "scope":  "Post-Pack-C maintenance slimming follow-up based on the main-branch line/function scan and web ChatGPT review. This pack targets only verified real net deletion or maintenance-surface reduction: E2E helper duplication, narrow recordings-review normalization duplication, and explicitly reviewed deferred/no-go cleanup candidates. It must not use formatting, line wrapping, large-component splitting, generic DB adapters, package-lock churn, or assertion weakening as slimming.",
-                                             "status":  "in_progress",
+                                             "status":  "verified",
                                              "slices":  [
                                                             {
                                                                 "slice":  "D1-01 e2e-sheet-import-helper-adoption",
@@ -924,7 +924,7 @@
                                                             },
                                                             {
                                                                 "slice":  "D1-06 deferred-no-go-validation-and-closeout",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             }
                                                         ]
                                          }
