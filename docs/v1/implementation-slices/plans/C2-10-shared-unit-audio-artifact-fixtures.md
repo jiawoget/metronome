@@ -4,14 +4,14 @@
 
 - Workstream: `pack-c-codebase-slimming`
 - Slice: `C2-10 shared-unit-audio-artifact-fixtures`
-- Current lifecycle state: `planning_in_progress`
+- Current lifecycle state: `verified`
 - Parent plan: `docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md`
 - Baseline branch: `main`
 - Baseline commit: `5188d82771a390d65fc005ef9d273a41ccc50568`
 - Previous slice: `C2-09 e2e-fixture-and-spec-slimming` is `verified` and
   merged.
-- Plan review: initial review returned `CHANGES_REQUIRED`; this revision
-  records the C2-10 re-scope and final Pack C status rule.
+- Plan review: initial review returned `CHANGES_REQUIRED`; revised review
+  returned `PASS_WITH_NITS`; the non-blocking heading nit has been applied.
 
 This plan covers one narrow unit-test fixture slimming PR. It does not cover
 E2E fixture work, production code, recording storage contract changes, or a
@@ -25,13 +25,10 @@ cleanup tests.
 - `C2-07 test-fixture-slimming`: `verified`.
 - `C2-08 large-unit-fixture-follow-up`: `verified`.
 - `C2-09 e2e-fixture-and-spec-slimming`: `verified`.
-- `C2-10 shared-unit-audio-artifact-fixtures`: this plan;
-  `planning_in_progress`.
+- `C2-10 shared-unit-audio-artifact-fixtures`: `verified`.
 - Broad shared in-memory artifact repository/helper extraction is explicitly
   re-scoped out by this reviewed plan and is not a remaining Pack C item.
-- `pack-c-codebase-slimming` remains `in_progress` during C2-10 planning and
-  implementation. After C2-10 is locally verified and review-approved, Pack C
-  should be marked `verified`.
+- `pack-c-codebase-slimming`: `verified`.
 
 ## Problem
 
@@ -67,7 +64,7 @@ literal construction in:
 - `tests/unit/quick-metronome-session.test.ts`
 - `tests/unit/sheet-practice-recording.test.ts`
 
-Related but intentionally deferred:
+Related but intentionally out of scope / re-scoped:
 
 - `tests/unit/recordings-review-artifact-storage.test.ts` owns repository
   ownership and cleanup behavior. Its `LocalRecordingArtifact` literals are
@@ -162,7 +159,7 @@ Out of scope:
    - `docs/v1/status.json`:
      - Pack C = `in_progress`
      - C2-09 = `verified`
-     - C2-10 = `planning_in_progress`
+     - C2-10 = `implementation_in_progress`
    - `docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md`
      must reflect this C2-10 re-scope and final Pack C status rule.
 
@@ -190,6 +187,17 @@ git diff --check
    - whether unit-test implementation code is net reduced after helper files.
    - confirmation that broad in-memory artifact repository/helper extraction
      was intentionally re-scoped out.
+
+## Implementation Notes
+
+- Implemented shared unit `installAudioContextMock(...)` in
+  `tests/unit/fixtures/audio-context.ts`.
+- Removed duplicate local AudioContext mock implementations from the four
+  target unit files.
+- Did not add the optional `makeRecordingArtifact(...)` helper: the
+  AudioContext extraction already produced a real net reduction, while forcing
+  artifact literals through a helper would cross more scenario-specific
+  capture/storage cases and risk hiding values that assertions depend on.
 
 ## Acceptance Criteria
 
@@ -233,6 +241,16 @@ Required before PR:
 & .\scripts\npm-local.ps1 --% run test:unit
 git diff --check
 ```
+
+Local verification on 2026-06-30:
+
+- Targeted unit baseline before implementation: PASS, 5 files / 62 tests.
+- Targeted unit verification after implementation: PASS, 5 files / 62 tests.
+- `typecheck`: PASS.
+- `lint`: PASS.
+- `build`: PASS.
+- `test:unit`: PASS, 41 files / 436 tests.
+- `git diff --check`: PASS.
 
 If replacing a fixture helper would require changing assertions, hiding
 negative cases, touching production code, or moving E2E helpers into unit

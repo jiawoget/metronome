@@ -12,6 +12,7 @@ import {
 } from "@/lib/sheet-practice/recording-service";
 import type { RecordingArtifact } from "@/lib/quick-metronome/types";
 import { recordingArtifactRepository } from "@/infrastructure/db/recording-artifact-repository";
+import { installAudioContextMock } from "./fixtures/audio-context";
 
 const settings = {
   bpm: 88,
@@ -20,6 +21,17 @@ const settings = {
   accent: "downbeat",
   countdownBeats: 0
 } as const;
+
+const sheetRecordingAudioSamples = new Float32Array([
+  0,
+  0.25,
+  -0.5,
+  0.75,
+  -0.35,
+  0.2,
+  -0.1,
+  0.4
+]);
 
 const metadata: SheetRecordingMetadata = {
   id: "recording-sheet-1",
@@ -91,32 +103,6 @@ function createSegmentContext(overrides: Partial<SheetRecordingSegmentContext> =
   };
 }
 
-function installAudioContextMock({ reject = false } = {}) {
-  class MockAudioContext {
-    async decodeAudioData() {
-      if (reject) {
-        throw new Error("decode failed");
-      }
-
-      return {
-        duration: 0.8,
-        sampleRate: 8_000,
-        getChannelData: () => new Float32Array([0, 0.25, -0.5, 0.75, -0.35, 0.2, -0.1, 0.4])
-      };
-    }
-
-    close() {
-      return Promise.resolve();
-    }
-  }
-
-  vi.stubGlobal("AudioContext", MockAudioContext);
-  Object.defineProperty(window, "AudioContext", {
-    configurable: true,
-    value: MockAudioContext
-  });
-}
-
 function createCaptureService(artifact = createArtifact()) {
   let active = false;
 
@@ -179,7 +165,10 @@ describe("sheet practice recording service", () => {
     window.localStorage.removeItem(RECORDINGS_STORAGE_KEY);
     await recordingArtifactRepository.clear().catch(() => undefined);
     vi.unstubAllGlobals();
-    installAudioContextMock();
+    installAudioContextMock({
+      durationSeconds: 0.8,
+      samples: sheetRecordingAudioSamples
+    });
   });
 
   it("builds sheet review metadata around a real capture artifact", () => {
@@ -462,7 +451,11 @@ describe("sheet practice recording service", () => {
   });
 
   it("does not persist sheet metadata or recording history when post-capture decode fails", async () => {
-    installAudioContextMock({ reject: true });
+    installAudioContextMock({
+      durationSeconds: 0.8,
+      samples: sheetRecordingAudioSamples,
+      reject: true
+    });
 
     const capture = createCaptureService();
     const sessionService = createPreparedSessionService();

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecordingArtifactReview } from "@/components/recordings-review/recording-artifact-review";
 import type { RecordingArtifactReviewController } from "@/lib/recordings-review/artifact-review-controller";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
+import { installAudioContextMock } from "./fixtures/audio-context";
 
 const artifactReviewMocks = vi.hoisted(() => {
   const adapterLoad = vi.fn(async () => undefined);
@@ -287,32 +288,4 @@ function createRecordingArtifactRef(recordingId: string) {
     artifactId: recordingId,
     storageVersion: 1 as const
   };
-}
-
-function installAudioContextMock({
-  durationSeconds = 1,
-  samples = new Float32Array([0, 0.25, -0.5, 1])
-}: {
-  durationSeconds?: number;
-  samples?: Float32Array;
-} = {}) {
-  class MockAudioContext {
-    async decodeAudioData() {
-      return {
-        duration: durationSeconds,
-        sampleRate: 8_000,
-        getChannelData: () => samples
-      };
-    }
-
-    close() {
-      return Promise.resolve();
-    }
-  }
-
-  vi.stubGlobal("AudioContext", MockAudioContext);
-  Object.defineProperty(window, "AudioContext", {
-    configurable: true,
-    value: MockAudioContext
-  });
 }
