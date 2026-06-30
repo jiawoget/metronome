@@ -68,6 +68,12 @@ export function QuickMetronomeExperience() {
   }, [settings.bpm, settings.timeSignature]);
   const handleStarted = useCallback((session: PracticeSession | null) => {
     setCurrentSession(session);
+    if (session) {
+      void browserPracticeSessionService.captureSessionEvent({
+        sessionId: session.id,
+        kind: "metronome_started"
+      });
+    }
     setMessage("Metronome playing.");
   }, []);
   const handleStartFailed = useCallback(
@@ -84,6 +90,10 @@ export function QuickMetronomeExperience() {
   );
   const handleStopped = useCallback(async () => {
     if (currentSession) {
+      await browserPracticeSessionService.captureSessionEvent({
+        sessionId: currentSession.id,
+        kind: "metronome_stopped"
+      });
       const nextSession = isRecording
         ? await browserPracticeSessionService.updatePracticeSessionDuration(
             currentSession.id
@@ -142,6 +152,10 @@ export function QuickMetronomeExperience() {
         }));
 
       setCurrentSession(session);
+      await browserPracticeSessionService.captureSessionEvent({
+        sessionId: session.id,
+        kind: "recording_started"
+      });
       setRecordingState("recording");
       setMessage(
         isPlaying

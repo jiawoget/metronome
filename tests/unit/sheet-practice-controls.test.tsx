@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,7 +18,10 @@ import {
 } from "@/domain/practice";
 import type { MeasureGridService } from "@/services/measure-grid";
 import type { PracticeSegmentService } from "@/services/practice-segments";
-import type { PracticeSessionService } from "@/services/practice-session";
+import type {
+  PracticeSessionEventCaptureInput,
+  PracticeSessionService
+} from "@/services/practice-session";
 import {
   BrowserMetronomeService,
   METRONOME_TRACE_EVENT,
@@ -28,12 +31,28 @@ import {
   type ToneScheduledCallback
 } from "@/lib/quick-metronome/metronome-service";
 import { DEFAULT_METRONOME_SETTINGS } from "@/lib/quick-metronome/types";
+import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
 import {
   initialSheetPracticeRecordingWorkflowState,
   useSheetPracticeRecordingWorkflowStore
 } from "@/stores/sheet-practice-recording-workflow-store";
 import type { SheetPracticeRecordingService } from "@/components/sheet-practice/controls/types";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
+
+function expectNoCaptureKind(
+  captureSessionEvent: { mock: { calls: unknown[][] } },
+  kind: string
+) {
+  expect(
+    captureSessionEvent.mock.calls.filter(
+      ([input]) =>
+        typeof input === "object" &&
+        input !== null &&
+        "kind" in input &&
+        input.kind === kind
+    )
+  ).toEqual([]);
+}
 
 function createFakeToneAdapter() {
   const callbacks: ToneScheduledCallback[] = [];
@@ -61,6 +80,13 @@ function createFakeToneAdapter() {
 
 function createIdleSessionService() {
   return {
+    captureSessionEvent: vi.fn(
+      async (input: PracticeSessionEventCaptureInput) => {
+        void input;
+
+        return null;
+      }
+    ),
     ensureSheetSession: vi.fn(async () => null),
     restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session),
     deletePracticeSessionSnapshot: vi.fn(async () => undefined),
@@ -76,6 +102,7 @@ function createIdleSessionService() {
   } satisfies Pick<
     PracticeSessionService,
     | "ensureSheetSession"
+    | "captureSessionEvent"
     | "restorePracticeSessionSnapshot"
     | "deletePracticeSessionSnapshot"
     | "updateSheetSessionDuration"
@@ -361,6 +388,11 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
       expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    });
+    expect(sessionService.captureSessionEvent).toHaveBeenCalledWith({
+      sessionId: "session-alpha",
+      kind: "recording_started",
+      segmentId: "segment-alpha"
     });
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
 
@@ -932,6 +964,37 @@ describe("sheet practice controls segment recording context", () => {
     });
   });
 
+  it("does not capture recording_started when sheet session creation fails after capture starts", async () => {
+    const user = userEvent.setup();
+    const sessionService = createIdleSessionService();
+    const recordingService = createInspectableSheetRecordingService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createSheetRecordingService={() => recordingService.service}
+        sessionService={sessionService}
+        measureGridService={createMeasureGridService(null)}
+        practiceSegmentService={createPracticeSegmentService()}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("No valid sheet context. Recording was stopped.")).toBeVisible();
+    });
+    expect(recordingService.service.startCapture).toHaveBeenCalledOnce();
+    expect(recordingService.service.discardCapture).toHaveBeenCalled();
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_started"
+    );
+  });
+
   it("invalidates Record again when selection changes and keeps normal recording available", async () => {
     const user = userEvent.setup();
     const grid = createTestGrid();
@@ -1090,6 +1153,7 @@ describe("sheet practice controls segment recording context", () => {
       expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
     });
 
+    sessionService.captureSessionEvent.mockClear();
     vi.mocked(recordingService.service.startCapture).mockRejectedValueOnce(
       new Error("Microphone access was denied.")
     );
@@ -1099,6 +1163,10 @@ describe("sheet practice controls segment recording context", () => {
       expect(screen.getByText("Microphone access was denied.")).toBeVisible();
     });
     expect(recordingService.service.stopAndSave).toHaveBeenCalledTimes(1);
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_started"
+    );
     expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       activeSegmentId: "segment-alpha",
@@ -1164,6 +1232,10 @@ describe("sheet practice controls segment recording context", () => {
     await waitFor(() => {
       expect(screen.getByText("Repeat save failed.")).toBeVisible();
     });
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       activeSegmentId: "segment-alpha",
       status: "error",
@@ -1239,6 +1311,10 @@ describe("sheet practice controls segment recording context", () => {
         segmentContext: createSheetRecordingSegmentContext(segment)
       })
     );
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: "segment-alpha",
@@ -1312,6 +1388,10 @@ describe("sheet practice controls segment recording context", () => {
     });
     expect(recordingService.service.stopAndSave).not.toHaveBeenCalled();
     expect(recordingService.service.discardCapture).toHaveBeenCalledOnce();
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
     expect(recordingService.isActive()).toBe(false);
     expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
     expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
@@ -1388,6 +1468,10 @@ describe("sheet practice controls segment recording context", () => {
     expect(segmentService.getSegment).toHaveBeenCalledWith("sheet-alpha", "segment-alpha");
     expect(recordingService.service.stopAndSave).not.toHaveBeenCalled();
     expect(recordingService.service.discardCapture).toHaveBeenCalledOnce();
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
     expect(recordingService.isActive()).toBe(false);
     expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
     expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
@@ -1469,6 +1553,10 @@ describe("sheet practice controls segment recording context", () => {
     expect(segmentService.getSegment).toHaveBeenCalledWith("sheet-alpha", "segment-alpha");
     expect(recordingService.service.stopAndSave).not.toHaveBeenCalled();
     expect(recordingService.service.discardCapture).toHaveBeenCalledOnce();
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
     expect(recordingService.isActive()).toBe(false);
     expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
     expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
@@ -1876,6 +1964,9 @@ describe("SheetPracticeControls failure handling", () => {
     expect(metronome.service.start).toHaveBeenCalled();
     expect(metronome.service.stop).toHaveBeenCalled();
     expect(sessionService.endPracticeSession).toHaveBeenCalledWith("session-alpha");
+    expect(sessionService.captureSessionEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "metronome_started" })
+    );
     expect(metronome.isPlaying()).toBe(false);
     expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
     expect(screen.getByTestId("sheet-session-id")).toHaveTextContent("session-alpha");
@@ -1958,6 +2049,92 @@ describe("SheetPracticeControls failure handling", () => {
     expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith("session-alpha");
     expect(sessionService.endPracticeSession).not.toHaveBeenCalled();
     expect(screen.getByTestId("sheet-session-id")).toHaveTextContent("session-alpha");
+  });
+
+  it("captures sheet metronome start and stop after successful transport transitions", async () => {
+    const user = userEvent.setup();
+    const session = createSheetSession();
+    const updatedSession = {
+      ...session,
+      durationMs: 2_000,
+      updatedAt: "2026-06-21T12:00:02.000Z"
+    };
+    const sessionService = {
+      ...createIdleSessionService(),
+      getRecentSheetSession: vi.fn(async () => null),
+      ensureSheetSession: vi.fn(async () => session),
+      updateSheetSessionDuration: vi.fn(async () => updatedSession)
+    };
+    const metronome = createInspectableMetronomeService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createMetronomeService={() => metronome.service}
+        sessionService={sessionService}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+    });
+    expect(sessionService.captureSessionEvent).toHaveBeenCalledWith({
+      sessionId: "session-alpha",
+      kind: "metronome_started"
+    });
+
+    await user.click(screen.getByRole("button", { name: "Stop metronome" }));
+
+    await waitFor(() => {
+      expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith("session-alpha");
+    });
+    expect(sessionService.captureSessionEvent).toHaveBeenCalledWith({
+      sessionId: "session-alpha",
+      kind: "metronome_stopped"
+    });
+  });
+
+  it("does not capture sheet metronome_stopped when the stop transition fails", async () => {
+    const sessionService = createIdleSessionService();
+    const metronomeService = {
+      update: vi.fn(),
+      start: vi.fn(async () => undefined),
+      stop: vi.fn((): void => {
+        throw new Error("Tone stop unavailable");
+      })
+    };
+    const { result, unmount } = renderHook(() =>
+      useMetronomeTransport({
+        settings: DEFAULT_METRONOME_SETTINGS,
+        metronomeService,
+        onStopped: () => {
+          void sessionService.captureSessionEvent({
+            sessionId: "session-alpha",
+            kind: "metronome_stopped"
+          });
+        }
+      })
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+    });
+    await act(async () => {
+      await expect(result.current.stopMetronome()).rejects.toThrow(
+        "Tone stop unavailable"
+      );
+    });
+
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "metronome_stopped"
+    );
+    metronomeService.stop.mockImplementation((): void => undefined);
+    unmount();
   });
 
   it("ends only a newly created replacement session when Tone start rejects after a previous session ended", async () => {

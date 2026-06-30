@@ -8,6 +8,7 @@ type SheetPracticeMetronomeService = Pick<MetronomeService, "onTick" | "update" 
 
 type SheetPracticeSessionService = Pick<
   PracticeSessionService,
+  | "captureSessionEvent"
   | "ensureSheetSession"
   | "restorePracticeSessionSnapshot"
   | "deletePracticeSessionSnapshot"

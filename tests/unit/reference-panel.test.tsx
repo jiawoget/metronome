@@ -1,14 +1,18 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReferencePanel } from "@/components/sheet-practice/reference/reference-panel";
+import type { PracticeSession } from "@/domain/practice";
 import type {
   BilibiliReference,
+  BilibiliSearchResult,
   LocalAudioReference,
   LocalAudioReferenceArtifact,
   SheetReference
 } from "@/domain/reference";
 import type { BrowserLocalReferenceAudioPlayer } from "@/infrastructure/reference/local-reference-audio-player";
+import type { PracticeSessionEventCaptureInput } from "@/services/practice-session";
 import type { ReferenceService } from "@/services/reference";
 
 const localReference: LocalAudioReference = {
@@ -34,6 +38,20 @@ const localArtifact: LocalAudioReferenceArtifact = {
   createdAt: "2026-06-21T12:00:00.000Z"
 };
 
+const sheetSession: PracticeSession = {
+  id: "session-alpha",
+  sourceType: "sheet",
+  sheetId: "sheet-alpha",
+  startedAt: "2026-06-21T12:00:00.000Z",
+  endedAt: null,
+  durationMs: 0,
+  bpm: 96,
+  timeSignature: "4/4",
+  recordingCount: 0,
+  latestRecordingId: null,
+  updatedAt: "2026-06-21T12:00:00.000Z"
+};
+
 const secondLocalReference: LocalAudioReference = {
   ...localReference,
   id: "reference-bravo",
@@ -57,6 +75,32 @@ const bilibiliReference: BilibiliReference = {
   updatedAt: "2026-06-21T12:00:00.000Z",
   isActive: true
 };
+
+const bilibiliSearchResult: BilibiliSearchResult = {
+  id: "bilibili-result-alpha",
+  title: "Alpha Bilibili result",
+  url: "https://www.bilibili.com/video/BV1234567890",
+  bvid: "BV1234567890",
+  author: "Uploader",
+  durationLabel: "3:21",
+  thumbnailUrl: null,
+  embedUrl: null
+};
+
+function expectNoCaptureKind(
+  captureSessionEvent: { mock: { calls: unknown[][] } },
+  kind: string
+) {
+  expect(
+    captureSessionEvent.mock.calls.filter(
+      ([input]) =>
+        typeof input === "object" &&
+        input !== null &&
+        "kind" in input &&
+        input.kind === kind
+    )
+  ).toEqual([]);
+}
 
 function createReferenceService({
   activeReference = localReference,
@@ -118,12 +162,27 @@ function createAudioPlayer(): BrowserLocalReferenceAudioPlayer {
   } as unknown as BrowserLocalReferenceAudioPlayer;
 }
 
-function dispatchReferenceAudioState(referenceId: string | null, currentTime: number) {
+function createSessionService(session: PracticeSession | null = sheetSession) {
+  return {
+    ensureSheetSession: vi.fn(async () => session),
+    captureSessionEvent: vi.fn(async (input: PracticeSessionEventCaptureInput) => {
+      void input;
+
+      return null;
+    })
+  };
+}
+
+function dispatchReferenceAudioState(
+  referenceId: string | null,
+  currentTime: number,
+  state: "idle" | "playing" | "paused" | "error" = "paused"
+) {
   window.dispatchEvent(
     new CustomEvent("reference-audio:state-change", {
       detail: {
         referenceId,
-        state: "paused",
+        state,
         currentTime,
         volume: 1,
         duration: 3,
@@ -134,6 +193,217 @@ function dispatchReferenceAudioState(referenceId: string | null, currentTime: nu
 }
 
 describe("ReferencePanel playback timestamp", () => {
+  it("captures local reference playback started once and stopped from audio state transitions", async () => {
+    const user = userEvent.setup();
+    const { service } = createReferenceService();
+    const sessionService = createSessionService();
+
+    render(
+      <ReferencePanel
+        sheetId="sheet-alpha"
+        referenceService={service}
+        sessionService={sessionService}
+        createAudioPlayer={createAudioPlayer}
+      />
+    );
+
+    await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
+    await waitFor(() => {
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+    });
+
+    await user.click(screen.getByRole("button", { name: "Play local reference" }));
+    dispatchReferenceAudioState(localReference.id, 0.1, "playing");
+
+    await waitFor(() => {
+      expect(sessionService.captureSessionEvent).toHaveBeenCalledWith({
+        sessionId: "session-alpha",
+        kind: "reference_started",
+        referenceId: "reference-alpha"
+      });
+    });
+
+    dispatchReferenceAudioState(localReference.id, 0.2, "playing");
+    expect(
+      sessionService.captureSessionEvent.mock.calls.filter(
+        ([input]) => input.kind === "reference_started"
+      )
+    ).toHaveLength(1);
+
+    dispatchReferenceAudioState(localReference.id, 0.3, "paused");
+
+    await waitFor(() => {
+      expect(sessionService.captureSessionEvent).toHaveBeenCalledWith({
+        sessionId: "session-alpha",
+        kind: "reference_stopped",
+        referenceId: "reference-alpha"
+      });
+    });
+  });
+
+  it("captures reference_stopped with the previous playing reference id after selection changes", async () => {
+    const user = userEvent.setup();
+    const { service, setActiveReference } = createReferenceService({
+      references: [localReference, secondLocalReference]
+    });
+    const sessionService = createSessionService();
+
+    render(
+      <ReferencePanel
+        sheetId="sheet-alpha"
+        referenceService={service}
+        sessionService={sessionService}
+        createAudioPlayer={createAudioPlayer}
+      />
+    );
+
+    await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
+    await waitFor(() => {
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+    });
+
+    await user.click(screen.getByRole("button", { name: "Play local reference" }));
+    dispatchReferenceAudioState(localReference.id, 0.1, "playing");
+
+    await waitFor(() => {
+      expect(sessionService.captureSessionEvent).toHaveBeenCalledWith({
+        sessionId: "session-alpha",
+        kind: "reference_started",
+        referenceId: "reference-alpha"
+      });
+    });
+
+    setActiveReference(secondLocalReference, [secondLocalReference]);
+    await expect(screen.findByText("Bravo reference")).resolves.toBeVisible();
+
+    dispatchReferenceAudioState(localReference.id, 0.2, "paused");
+
+    await waitFor(() => {
+      expect(sessionService.captureSessionEvent).toHaveBeenCalledWith({
+        sessionId: "session-alpha",
+        kind: "reference_stopped",
+        referenceId: "reference-alpha"
+      });
+    });
+  });
+
+  it("does not capture playback events for Bilibili search, save, or open flows", async () => {
+    const user = userEvent.setup();
+    const { service, setActiveReference } = createReferenceService();
+    const sessionService = createSessionService();
+
+    vi.mocked(service.searchBilibili).mockResolvedValue({
+      ok: true,
+      value: [bilibiliSearchResult]
+    });
+    vi.mocked(service.saveBilibiliSearchResultReference).mockResolvedValue({
+      ok: true,
+      value: bilibiliReference
+    });
+    vi.mocked(service.saveBilibiliUrlReference).mockResolvedValue({
+      ok: true,
+      value: bilibiliReference
+    });
+
+    render(
+      <ReferencePanel
+        sheetId="sheet-alpha"
+        referenceService={service}
+        sessionService={sessionService}
+        createAudioPlayer={createAudioPlayer}
+      />
+    );
+
+    await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
+
+    await user.type(screen.getByPlaceholderText("Search Bilibili"), "alpha");
+    await user.click(screen.getByRole("button", { name: "Search Bilibili" }));
+    await expect(screen.findByText("Alpha Bilibili result")).resolves.toBeVisible();
+    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_started");
+    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_stopped");
+
+    await user.click(screen.getByText("Alpha Bilibili result"));
+    await user.click(screen.getByRole("button", { name: "Save selected result" }));
+
+    await waitFor(() => {
+      expect(service.saveBilibiliSearchResultReference).toHaveBeenCalledWith({
+        sheetId: "sheet-alpha",
+        result: bilibiliSearchResult
+      });
+    });
+
+    await user.type(
+      screen.getByPlaceholderText("https://www.bilibili.com/video/BV..."),
+      "https://www.bilibili.com/video/BV1234567890"
+    );
+    await user.click(screen.getByRole("button", { name: "Save Bilibili URL" }));
+
+    await waitFor(() => {
+      expect(service.saveBilibiliUrlReference).toHaveBeenCalledWith({
+        sheetId: "sheet-alpha",
+        url: "https://www.bilibili.com/video/BV1234567890",
+        title: ""
+      });
+    });
+
+    setActiveReference(bilibiliReference, [bilibiliReference]);
+    await expect(screen.findByText("Bilibili reference")).resolves.toBeVisible();
+    await user.click(screen.getByRole("link", { name: "Open Bilibili reference" }));
+
+    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_started");
+    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_stopped");
+  });
+
+  it("does not capture playback events when a local reference artifact is missing", async () => {
+    const { service } = createReferenceService({
+      artifacts: new Map([[localReference.id, null]])
+    });
+    const sessionService = createSessionService();
+
+    render(
+      <ReferencePanel
+        sheetId="sheet-alpha"
+        referenceService={service}
+        sessionService={sessionService}
+        createAudioPlayer={createAudioPlayer}
+      />
+    );
+
+    await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Local audio artifact is missing. Add the file again."
+      );
+    });
+
+    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_started");
+    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_stopped");
+  });
+
+  it("does not capture reference_stopped for playback errors before a playing transition", async () => {
+    const { service } = createReferenceService();
+    const sessionService = createSessionService();
+
+    render(
+      <ReferencePanel
+        sheetId="sheet-alpha"
+        referenceService={service}
+        sessionService={sessionService}
+        createAudioPlayer={createAudioPlayer}
+      />
+    );
+
+    await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
+    await waitFor(() => {
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+    });
+
+    dispatchReferenceAudioState(localReference.id, 0, "error");
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_stopped");
+  });
+
   it("reports local audio playback time as milliseconds for measure-grid calibration", async () => {
     const onPlaybackTimestampChange = vi.fn();
     const { service } = createReferenceService();
@@ -142,7 +412,7 @@ describe("ReferencePanel playback timestamp", () => {
       <ReferencePanel
         sheetId="sheet-alpha"
         referenceService={service}
-        sessionService={{ ensureSheetSession: vi.fn(async () => null) }}
+        sessionService={createSessionService(null)}
         createAudioPlayer={createAudioPlayer}
         onPlaybackTimestampChange={onPlaybackTimestampChange}
       />
@@ -168,7 +438,7 @@ describe("ReferencePanel playback timestamp", () => {
       <ReferencePanel
         sheetId="sheet-alpha"
         referenceService={service}
-        sessionService={{ ensureSheetSession: vi.fn(async () => null) }}
+        sessionService={createSessionService(null)}
         createAudioPlayer={createAudioPlayer}
         onPlaybackTimestampChange={onPlaybackTimestampChange}
       />
@@ -210,7 +480,7 @@ describe("ReferencePanel playback timestamp", () => {
       <ReferencePanel
         sheetId="sheet-alpha"
         referenceService={service}
-        sessionService={{ ensureSheetSession: vi.fn(async () => null) }}
+        sessionService={createSessionService(null)}
         createAudioPlayer={createAudioPlayer}
         onPlaybackTimestampChange={onPlaybackTimestampChange}
       />

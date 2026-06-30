@@ -43,6 +43,26 @@ function deleteQuickRecordingMetadataByIdentity(recording: QuickRecording) {
   });
 }
 
+async function captureQuickRecordingStopped({
+  sessionService,
+  sessionId,
+  recordingId
+}: {
+  sessionService: Pick<PracticeSessionService, "captureSessionEvent">;
+  sessionId: string;
+  recordingId: string;
+}) {
+  try {
+    await sessionService.captureSessionEvent({
+      sessionId,
+      kind: "recording_stopped",
+      recordingId
+    });
+  } catch {
+    return null;
+  }
+}
+
 export const quickRecordingController = {
   subscribe: recordingHistoryRepository.subscribe,
   getLatestQuickRecording,
@@ -77,6 +97,7 @@ export const quickRecordingController = {
       | "endPracticeSession"
       | "restorePracticeSessionSnapshot"
       | "deletePracticeSessionSnapshot"
+      | "captureSessionEvent"
     >;
   }) {
     if (artifact.sizeBytes <= 0) {
@@ -119,6 +140,14 @@ export const quickRecordingController = {
       const nextSession = isPlaying
         ? linkedSession
         : await sessionService.endPracticeSession(linkedSession.id);
+
+      if (nextSession) {
+        await captureQuickRecordingStopped({
+          sessionService,
+          sessionId: linkedSession.id,
+          recordingId: recording.id
+        });
+      }
 
       return {
         recording: metadataSaved,
