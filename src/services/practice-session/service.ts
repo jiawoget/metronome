@@ -2,6 +2,7 @@ import {
   PRACTICE_SESSION_EVENT_SCHEMA_VERSION,
   createSessionHistorySegmentTargetKey,
   evaluatePracticeGoalCompletion,
+  getHomeDashboardAnalyticsSource as selectHomeDashboardAnalyticsSource,
   getHomeCompatibleContinuePracticeTarget,
   selectContinuePracticeTargets,
   getTodayPracticeSummary,
@@ -815,6 +816,21 @@ export function createPracticeSessionService({
         sessions,
         recordings,
         now: now()
+      });
+    },
+
+    async getHomeDashboardAnalyticsSource() {
+      const generatedAt = now();
+      const [sessions, recordings] = await Promise.all([
+        repository.listSessions(),
+        recordingRepository.listRecordingMetadata()
+      ]);
+
+      return selectHomeDashboardAnalyticsSource({
+        sessions,
+        recordings,
+        generatedAt: generatedAt.toISOString(),
+        now: generatedAt
       });
     },
 

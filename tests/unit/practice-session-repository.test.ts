@@ -672,6 +672,97 @@ describe("practice session browser repository", () => {
     ]);
   });
 
+  it("derives the same Home dashboard analytics after reopening persisted storage", async () => {
+    const quickSession = createQuickSession({
+      id: "quick-session",
+      durationMs: 60_000,
+      recordingCount: 2,
+      updatedAt: "2026-06-21T12:01:00.000Z"
+    });
+    const sheetSession = createSheetSession({
+      id: "sheet-session",
+      durationMs: 90_000,
+      recordingCount: 10,
+      updatedAt: "2026-06-21T12:02:00.000Z"
+    });
+    const segmentSession = createSheetSession({
+      id: "segment-session",
+      sheetId: "sheet-beta",
+      durationMs: 120_000,
+      recordingCount: 0,
+      updatedAt: "2026-06-20T12:03:00.000Z",
+      startedAt: "2026-06-20T12:00:00.000Z",
+      segmentContext: createSegmentContext({
+        segmentId: "segment-beta"
+      })
+    });
+    const metadataOnlySession = createSheetSession({
+      id: "metadata-only-session",
+      sheetId: "sheet-gamma",
+      updatedAt: "2026-06-21T12:04:00.000Z"
+    });
+
+    await practiceSessionRepository.saveSession(quickSession);
+    await practiceSessionRepository.saveSession(sheetSession);
+    await practiceSessionRepository.saveSession(segmentSession);
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecordingMetadata({
+        id: "sheet-recording",
+        sessionId: sheetSession.id,
+        createdAt: "2026-06-21T12:04:00.000Z"
+      }),
+      sheetSession
+    );
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecordingMetadata({
+        id: "metadata-only-recording",
+        sessionId: metadataOnlySession.id,
+        sheetId: metadataOnlySession.sheetId ?? "",
+        createdAt: "2026-06-21T12:05:00.000Z",
+        durationMs: 15_000
+      }),
+      metadataOnlySession
+    );
+
+    const beforeReload = await createRepositoryBackedRecentActivityService(
+      "2026-06-21T12:30:00.000Z"
+    ).getHomeDashboardAnalyticsSource();
+
+    resetPracticeSessionDatabaseConnectionForTests();
+
+    const afterReload = await createRepositoryBackedRecentActivityService(
+      "2026-06-21T12:31:00.000Z"
+    ).getHomeDashboardAnalyticsSource();
+
+    expect({
+      ...afterReload,
+      generatedAt: beforeReload.generatedAt
+    }).toEqual(beforeReload);
+    expect(afterReload.generatedAt).not.toBe(beforeReload.generatedAt);
+    expect(afterReload).toMatchObject({
+      summary: {
+        durationMs: 150_000,
+        minutesToday: 3,
+        sessionsToday: 2,
+        recordingsToday: 12
+      },
+      totals: {
+        durationMs: 270_000,
+        sessions: 3,
+        sheetTakes: 2,
+        practicedSheets: 3,
+        segmentSessions: 1
+      },
+      emptyState: {
+        hasPracticeHistory: true,
+        hasSheetPractice: true,
+        hasSegmentPractice: true,
+        hasRecordings: true,
+        hasGoals: false
+      }
+    });
+  });
+
   it("derives incomplete goal evaluations after persisted activity is cleared and reopened", async () => {
     const quickSession = createQuickSession({
       id: "quick-session",

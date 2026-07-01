@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculatePracticeDurationMs,
   evaluatePracticeGoalCompletion,
+  getHomeDashboardAnalyticsSource,
   getTodayPracticeSummary,
   groupPracticeSessionsByHistory,
   withUpdatedPracticeSessionDuration,
@@ -245,6 +246,114 @@ describe("practice session duration rules", () => {
       minutesToday: 0,
       sessionsToday: 2,
       recordingsToday: 2
+    });
+  });
+
+  it("derives Home dashboard analytics from persisted sessions and sheet recording metadata", () => {
+    const analytics = getHomeDashboardAnalyticsSource({
+      generatedAt: "2026-06-21T15:00:00.000Z",
+      now: new Date("2026-06-21T15:00:00.000Z"),
+      sessions: [
+        createSession({
+          id: "today-quick",
+          sourceType: "quick",
+          sheetId: null,
+          durationMs: 60_000,
+          recordingCount: 3
+        }),
+        createSession({
+          id: "today-sheet",
+          sourceType: "sheet",
+          sheetId: " sheet-alpha ",
+          durationMs: 30_000,
+          recordingCount: 10,
+          segmentContext: createSegmentContext({
+            segmentId: " "
+          })
+        } as PracticeSession),
+        createSession({
+          id: "old-segment-session",
+          sourceType: "sheet",
+          sheetId: "sheet-beta",
+          startedAt: "2026-06-20T12:00:00.000Z",
+          durationMs: 120_000,
+          recordingCount: 2,
+          segmentContext: createSegmentContext({
+            segmentId: "segment-beta"
+          })
+        })
+      ],
+      recordings: [
+        createRecording({
+          id: "take-alpha",
+          sheetId: "sheet-alpha"
+        }),
+        createRecording({
+          id: "take-bravo",
+          sheetId: " sheet-bravo "
+        } as SheetRecordingMetadata),
+        createRecording({
+          id: "take-without-sheet-id",
+          sheetId: " "
+        } as SheetRecordingMetadata)
+      ]
+    });
+
+    expect(analytics).toEqual({
+      generatedAt: "2026-06-21T15:00:00.000Z",
+      summary: {
+        durationMs: 90_000,
+        minutesToday: 2,
+        sessionsToday: 2,
+        recordingsToday: 13
+      },
+      totals: {
+        durationMs: 210_000,
+        sessions: 3,
+        sheetTakes: 3,
+        practicedSheets: 3,
+        segmentSessions: 1
+      },
+      emptyState: {
+        hasPracticeHistory: true,
+        hasSheetPractice: true,
+        hasSegmentPractice: true,
+        hasRecordings: true,
+        hasGoals: false
+      }
+    });
+  });
+
+  it("returns honest empty Home dashboard analytics", () => {
+    expect(
+      getHomeDashboardAnalyticsSource({
+        generatedAt: "2026-06-21T15:00:00.000Z",
+        now: new Date("2026-06-21T15:00:00.000Z"),
+        sessions: [],
+        recordings: []
+      })
+    ).toEqual({
+      generatedAt: "2026-06-21T15:00:00.000Z",
+      summary: {
+        durationMs: 0,
+        minutesToday: 0,
+        sessionsToday: 0,
+        recordingsToday: 0
+      },
+      totals: {
+        durationMs: 0,
+        sessions: 0,
+        sheetTakes: 0,
+        practicedSheets: 0,
+        segmentSessions: 0
+      },
+      emptyState: {
+        hasPracticeHistory: false,
+        hasSheetPractice: false,
+        hasSegmentPractice: false,
+        hasRecordings: false,
+        hasGoals: false
+      }
     });
   });
 

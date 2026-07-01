@@ -76,6 +76,26 @@ export type GoalCompletionEvaluation = {
   reason: string | null;
 };
 
+export type HomeDashboardAnalyticsSource = {
+  generatedAt: string;
+  summary: TodayPracticeSummary;
+  totals: {
+    durationMs: number;
+    sessions: number;
+    sheetTakes: number;
+    practicedSheets: number;
+    segmentSessions: number;
+  };
+  emptyState: {
+    hasPracticeHistory: boolean;
+    hasSheetPractice: boolean;
+    hasSegmentPractice: boolean;
+    hasRecordings: boolean;
+    hasGoals: boolean;
+  };
+  goals?: GoalCompletionEvaluation[];
+};
+
 export type ContinuePracticeTarget =
   | {
       sourceType: "quick";

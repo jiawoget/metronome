@@ -254,7 +254,7 @@ If `use-practice-session-dashboard.ts` is touched, add:
 Recommended tier: Tier B, local service/source boundary.
 
 - Planning agent: `gpt-5.5`, medium effort, standard speed.
-- Coding agent: `gpt-5.4`, high effort, standard speed.
+- Coding agent: `gpt-5.5`, extra high effort, standard speed.
 - Review agent: `gpt-5.4-mini`, high effort, standard speed.
 - Verification agent: `gpt-5.4-mini`, high effort, standard speed.
 
