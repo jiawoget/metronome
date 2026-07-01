@@ -522,7 +522,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P3-11 home-dashboard-analytics-source",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P3-12 home-dashboard-analytics-ui",
