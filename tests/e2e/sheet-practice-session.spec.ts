@@ -150,7 +150,10 @@ test("sheet practice session starts only on activity, persists, keeps recording 
 
   await seedQuickSession(page);
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Continue Practice" })).toHaveAttribute("href", "/quick-metronome");
+  await expect(page.getByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
+    "href",
+    "/quick-metronome"
+  );
   await page.goto(`/sheet-practice/${sheetId}`);
   await expect(page.getByRole("heading", { name: "Session Contract Sheet" })).toBeVisible();
 
@@ -180,7 +183,7 @@ test("sheet practice session starts only on activity, persists, keeps recording 
   await expect(page.getByTestId("sheet-session-id")).toHaveText(sessionId);
 
   await page.goto("/");
-  const continueLink = page.getByRole("link", { name: "Continue Practice" });
+  const continueLink = page.getByRole("link", { name: "Continue sheet practice Session Contract Sheet" });
 
   await expect(continueLink).toBeVisible();
   await expect(continueLink).toHaveAttribute("href", `/sheet-practice/${sheetId}`);
@@ -224,8 +227,9 @@ test("sheet practice session starts only on activity, persists, keeps recording 
 
   await deleteSheetRecord(page, sheetId);
   await page.goto("/");
-  await expect(page.getByText(/No recent practice session yet/i)).toBeVisible();
-  await expect(page.getByRole("link", { name: "Continue Practice" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Continue Practice" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continue sheet practice Session Contract Sheet" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Continue Practice", exact: true })).toHaveCount(0);
 
   await page.goto("/sheet-practice/unknown-sheet");
   await expect(page.getByText("Sheet not found")).toBeVisible();

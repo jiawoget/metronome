@@ -15,8 +15,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
   DEFAULT_HOME_RECENT_ACTIVITY_LIMIT,
   type ContinuePracticeTarget,
+  type ContinuePracticeTargetIdentity,
+  type ContinuePracticeTargetsResult,
   type HomeRecentActivityItem,
   type HomeRecentActivityResult,
   type HomeRecentActivityTargetState,
@@ -24,9 +27,11 @@ import {
 } from "@/domain/practice";
 import {
   usePracticeSessionDashboard,
+  type PracticeSessionDashboardContinueTargetsStatus,
   type PracticeSessionDashboardRecentActivityStatus,
   type PracticeSessionDashboardState
 } from "@/hooks/use-practice-session-dashboard";
+import { getContinuePracticeTargetHref } from "@/components/home/continue-practice-navigation";
 
 export type HomeDashboardData = {
   summary: {
@@ -37,11 +42,21 @@ export type HomeDashboardData = {
   };
   recentSession: PracticeSession | null;
   continueTarget: ContinuePracticeTarget | null;
+  continueTargets?: ContinuePracticeTargetsResult;
+  continueTargetsStatus?: PracticeSessionDashboardContinueTargetsStatus;
+  continueTargetsErrorMessage?: string | null;
   recentActivity?: HomeRecentActivityResult;
   recentActivityStatus?: PracticeSessionDashboardRecentActivityStatus;
   recentActivityErrorMessage?: string | null;
   recentSheets: [];
   recentRecordings: [];
+};
+
+const emptyContinuePracticeTargets: ContinuePracticeTargetsResult = {
+  targets: [],
+  generatedAt: "",
+  limit: DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
+  rejected: []
 };
 
 const emptyHomeRecentActivity: HomeRecentActivityResult = {
@@ -59,6 +74,9 @@ const emptyHomeDashboardData: HomeDashboardData = {
   },
   recentSession: null,
   continueTarget: null,
+  continueTargets: emptyContinuePracticeTargets,
+  continueTargetsStatus: "idle",
+  continueTargetsErrorMessage: null,
   recentActivity: emptyHomeRecentActivity,
   recentActivityStatus: "idle",
   recentActivityErrorMessage: null,
@@ -69,6 +87,9 @@ const emptyHomeDashboardData: HomeDashboardData = {
 export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDashboardData }) {
   const liveData = usePracticeSessionDashboard();
   const dashboardData: HomeDashboardData | PracticeSessionDashboardState = data === emptyHomeDashboardData ? liveData : data;
+  const continueTargets = dashboardData.continueTargets ?? emptyContinuePracticeTargets;
+  const continueTargetsStatus = dashboardData.continueTargetsStatus ?? "idle";
+  const continueTargetsErrorMessage = dashboardData.continueTargetsErrorMessage ?? null;
   const recentActivity = dashboardData.recentActivity ?? emptyHomeRecentActivity;
   const recentActivityStatus = dashboardData.recentActivityStatus ?? "idle";
   const recentActivityErrorMessage = dashboardData.recentActivityErrorMessage ?? null;
@@ -118,37 +139,11 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
                 </p>
               </Link>
 
-              {dashboardData.continueTarget ? (
-                <Link
-                  href={dashboardData.continueTarget.href}
-                  aria-label="Continue Practice"
-                  className="group rounded-md border border-border bg-card px-4 py-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <Music2 className="h-6 w-6 text-accent" aria-hidden="true" />
-                    <ArrowRight className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                  </div>
-                  <h2 className="mt-5 text-lg font-semibold">Continue Practice</h2>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {dashboardData.continueTarget.sourceType === "sheet"
-                      ? "Resume the most recent sheet practice session."
-                      : "Resume the most recent quick practice session."}
-                  </p>
-                </Link>
-              ) : (
-                <div className="rounded-md border border-border bg-muted px-4 py-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <Music2 className="h-6 w-6 text-accent" aria-hidden="true" />
-                    <span className="rounded-md border border-border bg-card px-2 py-1 text-xs font-medium text-muted-foreground">
-                      Empty
-                    </span>
-                  </div>
-                  <h2 className="mt-5 text-lg font-semibold">Continue Practice</h2>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    No recent practice session yet. Resume controls will appear after session data exists.
-                  </p>
-                </div>
-              )}
+              <ContinuePracticePanel
+                continueTargets={continueTargets}
+                status={continueTargetsStatus}
+                errorMessage={continueTargetsErrorMessage}
+              />
             </div>
           </CardContent>
         </Card>
@@ -247,6 +242,212 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
       </div>
     </section>
   );
+}
+
+function ContinuePracticePanel({
+  continueTargets,
+  status,
+  errorMessage
+}: {
+  continueTargets: ContinuePracticeTargetsResult;
+  status: PracticeSessionDashboardContinueTargetsStatus;
+  errorMessage: string | null;
+}) {
+  const targets = continueTargets.targets.slice(0, continueTargets.limit);
+  const isInitialLoading = status === "loading" && targets.length === 0;
+
+  return (
+    <div
+      role="region"
+      aria-labelledby="continue-practice-title"
+      data-testid="continue-practice-panel"
+      className="rounded-md border border-border bg-card px-4 py-4"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <Music2 className="h-6 w-6 text-accent" aria-hidden="true" />
+        <span className="rounded-md border border-border bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+          {targets.length > 0 ? `${targets.length} ready` : "Ready"}
+        </span>
+      </div>
+      <h2 id="continue-practice-title" className="mt-5 text-lg font-semibold">
+        Continue Practice
+      </h2>
+
+      {isInitialLoading ? (
+        <div
+          role="status"
+          className="mt-3 rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground"
+        >
+          Loading Continue Practice targets.
+        </div>
+      ) : status === "error" ? (
+        <div
+          role="status"
+          className="mt-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3 text-sm leading-6 text-destructive"
+        >
+          {errorMessage ?? "Continue Practice targets could not be loaded."}
+        </div>
+      ) : targets.length === 0 ? (
+        <div className="mt-3 rounded-md border border-border bg-muted px-3 py-3">
+          <p className="text-sm leading-6 text-muted-foreground">
+            No recent practice targets yet.
+          </p>
+          <Button asChild variant="secondary" className="mt-3">
+            <Link href="/quick-metronome">
+              Start Quick Metronome
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </Button>
+        </div>
+      ) : (
+        <ul className="mt-3 divide-y divide-border" aria-label="Continue Practice recommendations">
+          {targets.map((target, index) => (
+            <ContinuePracticeTargetRow key={`${target.targetKey}-${index}`} target={target} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ContinuePracticeTargetRow({ target }: { target: ContinuePracticeTargetIdentity }) {
+  const row = getContinuePracticeRowContent(target);
+
+  if (!row) {
+    return null;
+  }
+
+  const href = safelyGetContinuePracticeHref(target);
+
+  if (!href) {
+    return (
+      <li
+        data-testid="continue-practice-row-disabled"
+        className="flex min-w-0 gap-3 py-3 first:pt-0 last:pb-0 text-muted-foreground"
+      >
+        <ContinuePracticeKindIcon kind={target.kind} />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="min-w-0 break-words text-sm font-semibold leading-5">
+              {row.title}
+            </p>
+            <span className="rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium leading-5">
+              {row.typeLabel}
+            </span>
+            <span className="rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium leading-5">
+              Unavailable
+            </span>
+          </div>
+          <p className="mt-1 break-words text-xs leading-5">
+            {row.metadata}
+          </p>
+          <p className="mt-2 break-words text-xs leading-5">
+            Target unavailable.
+          </p>
+        </div>
+      </li>
+    );
+  }
+
+  return (
+    <li className="first:pt-0 last:pb-0">
+      <Link
+        href={href}
+        aria-label={row.accessibleName}
+        data-testid="continue-practice-row-link"
+        className="group flex min-w-0 gap-3 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <ContinuePracticeKindIcon kind={target.kind} />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="min-w-0 break-words text-sm font-semibold leading-5 text-foreground">
+              {row.title}
+            </p>
+            <span className="rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium leading-5 text-muted-foreground">
+              {row.typeLabel}
+            </span>
+          </div>
+          <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
+            {row.metadata}
+          </p>
+        </div>
+        <ArrowRight
+          className="mt-2 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
+      </Link>
+    </li>
+  );
+}
+
+function ContinuePracticeKindIcon({
+  kind
+}: {
+  kind: ContinuePracticeTargetIdentity["kind"];
+}) {
+  const className = "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-accent";
+
+  if (kind === "quick") {
+    return (
+      <span className={className} aria-hidden="true">
+        <Gauge className="h-4 w-4" />
+      </span>
+    );
+  }
+
+  return (
+    <span className={className} aria-hidden="true">
+      <Music2 className="h-4 w-4" />
+    </span>
+  );
+}
+
+function getContinuePracticeRowContent(target: ContinuePracticeTargetIdentity) {
+  switch (target.kind) {
+    case "quick":
+      return {
+        title: "Quick practice",
+        typeLabel: "Quick",
+        metadata: `Recent quick practice: ${formatActivityTime(target.sortTimestamp ?? target.occurredAt)}`,
+        accessibleName: "Continue quick practice"
+      };
+    case "sheet": {
+      const sheetLabel = target.sheetName ?? target.sheetId;
+
+      return {
+        title: "Sheet practice",
+        typeLabel: "Sheet",
+        metadata: `Sheet: ${sheetLabel}`,
+        accessibleName: `Continue sheet practice ${sheetLabel}`
+      };
+    }
+    case "segment": {
+      const title = target.segmentName ?? "Saved segment";
+      const sheetLabel = target.sheetName ?? target.sheetId;
+      const metadata = [target.segmentRangeLabel, sheetLabel].filter(Boolean).join(" · ");
+
+      return {
+        title,
+        typeLabel: "Segment",
+        metadata,
+        accessibleName: ["Continue segment", title, target.segmentRangeLabel, sheetLabel]
+          .filter(Boolean)
+          .join(" ")
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+function safelyGetContinuePracticeHref(target: ContinuePracticeTargetIdentity) {
+  try {
+    const href = getContinuePracticeTargetHref(target);
+
+    return href && href.trim().length > 0 ? href : null;
+  } catch {
+    return null;
+  }
 }
 
 function RecentActivityPanel({

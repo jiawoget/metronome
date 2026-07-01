@@ -4,7 +4,9 @@ import { importTestSheet } from "./fixtures/sheets";
 import {
   clearDatabases,
   clearRecordingHistory,
+  MEASURE_GRID_DB_NAME,
   PRACTICE_SESSION_DB_NAME,
+  PRACTICE_SEGMENT_DB_NAME,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
@@ -63,6 +65,63 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true);
 }
 
+async function installFakeMicrophone(page: Page) {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: async () => {
+          const audioWindow = window as Window &
+            typeof globalThis & { webkitAudioContext?: typeof AudioContext };
+          const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+          const audioContext = new AudioContextConstructor();
+          const destination = audioContext.createMediaStreamDestination();
+          const oscillator = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+
+          oscillator.frequency.value = 440;
+          gain.gain.value = 0.2;
+          oscillator.connect(gain);
+          gain.connect(destination);
+          oscillator.start();
+
+          return destination.stream;
+        }
+      }
+    });
+  });
+}
+
+async function saveMeasureGridThroughUi(page: Page) {
+  await page.getByRole("spinbutton", { name: "Grid BPM" }).fill("96");
+  await page.getByLabel("Grid time signature").selectOption("4/4");
+  await page.getByRole("spinbutton", { name: "Pickup beats" }).fill("0");
+  await page.getByRole("spinbutton", { name: "Measure 1 offset" }).fill("1000");
+  await page.getByRole("button", { name: "Save grid" }).click();
+  await expect(page.getByTestId("measure-grid-status")).toContainText("Calibrated");
+}
+
+async function createPracticeSegmentThroughUi(page: Page) {
+  await page.getByRole("button", { name: "New segment" }).click();
+  await page.getByLabel("Segment name").fill("Bridge focus");
+  await page.getByLabel("Start measure").fill("5");
+  await page.getByLabel("End measure").fill("8");
+  await page.getByLabel("Target BPM").fill("96");
+  await page.getByLabel("Segment notes").fill("Keep the bridge even.");
+  await page.getByRole("button", { name: "Save segment" }).click();
+  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");
+  await expect(page.getByText("Bridge focus").first()).toBeVisible();
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Bridge focus");
+
+  const row = page.locator("[data-testid^='practice-segment-row-']").filter({ hasText: "Bridge focus" }).first();
+  const rowTestId = await row.getAttribute("data-testid");
+  const segmentId = rowTestId?.replace("practice-segment-row-", "") ?? "";
+
+  expect(segmentId).toBeTruthy();
+
+  return segmentId;
+}
+
 test("app shell home navigation works on desktop and mobile without console errors", async ({ page }) => {
   const consoleErrors: string[] = [];
 
@@ -83,7 +142,7 @@ test("app shell home navigation works on desktop and mobile without console erro
   await expect(page.getByText("Today Practice Summary")).toBeVisible();
   await expect(page.getByRole("region", { name: "Recent Activity" })).toBeVisible();
   await expect(page.getByText("No local practice activity yet.")).toBeVisible();
-  await expect(page.getByText(/No recent practice session yet/i)).toBeVisible();
+  await expect(page.getByText("No recent practice targets yet.")).toBeVisible();
   await expect(page.getByText(/No sheets imported yet/i)).toBeVisible();
   await expect(page.getByRole("link", { name: "Import Sheet" })).toBeVisible();
   await expect(page.getByText(/Opens the Sheet Library import flow/i)).toBeVisible();
@@ -165,6 +224,113 @@ test("app shell home navigation works on desktop and mobile without console erro
   await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 
+  expect(consoleErrors).toEqual([]);
+});
+
+test("home Continue Practice recommendations navigate to quick, sheet, and segment targets", async ({ page }) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await installFakeMicrophone(page);
+  await page.goto("/");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [
+    PRACTICE_SESSION_DB_NAME,
+    SHEET_LIBRARY_DB_NAME,
+    MEASURE_GRID_DB_NAME,
+    PRACTICE_SEGMENT_DB_NAME
+  ]);
+
+  await page.goto("/quick-metronome");
+  await page.getByRole("button", { name: "Start metronome" }).click();
+  await expect(page.getByText("Metronome playing.")).toBeVisible();
+  await page.getByRole("button", { name: "Stop metronome" }).click();
+  await expect(page.getByText("Metronome stopped.")).toBeVisible();
+
+  const { sheetId } = await importTestSheet(page, {
+    name: "Continue Practice Sheet",
+    bpm: "96",
+    timeSignature: "4/4"
+  });
+
+  await page.goto(`/sheet-practice/${sheetId}`);
+  await expect(page.getByRole("heading", { name: "Continue Practice Sheet" })).toBeVisible();
+  await page.getByRole("button", { name: "Start recording" }).click();
+  await expect(page.getByText("Recording without metronome.")).toBeVisible();
+  await page.waitForTimeout(700);
+  await page.getByRole("button", { name: "Stop recording" }).click();
+  await expect(page.getByText(/^Recording saved/)).toBeVisible();
+
+  await saveMeasureGridThroughUi(page);
+  const segmentId = await createPracticeSegmentThroughUi(page);
+  await page.getByRole("button", { name: "Start recording" }).click();
+  await expect(page.getByText("Recording without metronome.")).toBeVisible();
+  await page.waitForTimeout(700);
+  await page.getByRole("button", { name: "Stop recording" }).click();
+  await expect(page.getByText("Recording saved for Bridge focus.")).toBeVisible();
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  const panel = page.getByRole("region", { name: "Continue Practice" });
+
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
+    "href",
+    "/quick-metronome"
+  );
+  await expect(
+    panel.getByRole("link", { name: "Continue sheet practice Continue Practice Sheet" })
+  ).toHaveAttribute("href", `/sheet-practice/${sheetId}`);
+  await expect(
+    panel.getByRole("link", { name: /Continue segment Bridge focus .* Continue Practice Sheet/ })
+  ).toHaveAttribute("href", `/sheet-practice?sheetId=${sheetId}&segmentId=${segmentId}`);
+  await expect(page.getByRole("link", { name: "Continue Practice", exact: true })).toHaveCount(0);
+  await expectNoHorizontalOverflow(page);
+
+  await panel.getByRole("link", { name: "Continue quick practice" }).click();
+  await expect(page).toHaveURL(/\/quick-metronome$/);
+  await expect(page.getByRole("heading", { name: "Quick Metronome" })).toBeVisible();
+
+  await page.goto("/");
+  await panel.getByRole("link", { name: "Continue sheet practice Continue Practice Sheet" }).click();
+  await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
+  await expect(page.getByRole("heading", { name: "Continue Practice Sheet" })).toBeVisible();
+
+  await page.goto("/");
+  await panel.getByRole("link", { name: /Continue segment Bridge focus .* Continue Practice Sheet/ }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("sheetId")).toBe(sheetId);
+  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBe(segmentId);
+  await expect(page.getByRole("heading", { name: "Continue Practice Sheet" })).toBeVisible();
+  await expect(page.getByTestId(`practice-segment-row-${segmentId}`)).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  );
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Bridge focus");
+
+  await page.getByRole("button", { name: "Delete Bridge focus" }).click();
+  await page.getByRole("button", { name: "Confirm delete Bridge focus" }).click();
+  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("0 saved");
+
+  await page.goto("/");
+  await page.reload();
+  await expect(panel.getByRole("link", { name: /Continue segment Bridge focus/ })).toHaveCount(0);
+  await expect(
+    panel.getByRole("link", { name: "Continue sheet practice Continue Practice Sheet" })
+  ).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole("link", { name: "Continue quick practice" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
   expect(consoleErrors).toEqual([]);
 });
 
