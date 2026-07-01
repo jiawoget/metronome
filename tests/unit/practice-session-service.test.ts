@@ -1129,7 +1129,7 @@ describe("practice session service", () => {
     });
   });
 
-  it("does not return Continue Practice for a stale sheet session after the sheet is deleted", async () => {
+  it("rejects a stale latest sheet session while preserving an older valid quick target", async () => {
     const { service, repository, validSheetIds } = createService();
 
     await service.ensureQuickSession({ trigger: "metronome", bpm: 120, timeSignature: "4/4" });
@@ -1151,8 +1151,72 @@ describe("practice session service", () => {
 
     validSheetIds.delete("sheet-alpha");
 
-    await expect(service.getContinuePracticeTarget()).resolves.toBeNull();
+    await expect(service.getContinuePracticeTargets()).resolves.toMatchObject({
+      targets: [
+        {
+          kind: "quick",
+          sourceType: "quick",
+          targetKey: "quick",
+          sessionId: "session-1"
+        }
+      ],
+      rejected: [
+        {
+          id: "session:session-2",
+          reason: "missing-sheet",
+          sheetId: "sheet-alpha"
+        }
+      ]
+    });
+    await expect(service.getContinuePracticeTarget()).resolves.toEqual({
+      sourceType: "quick",
+      href: "/quick-metronome",
+      label: "Continue Quick Practice",
+      sessionId: "session-1"
+    });
     await expect(repository.listSessions()).resolves.toHaveLength(2);
+  });
+
+  it("keeps the Home Continue Practice wrapper from returning segment-specific navigation", async () => {
+    const { service, repository } = createService({
+      segmentGateway: {
+        async getSegmentContext(_sheetId, segmentId) {
+          return {
+            id: segmentId,
+            name: "Live Bridge"
+          };
+        }
+      }
+    });
+
+    await repository.saveSession(
+      createPracticeSessionFixture({
+        id: "sheet-session",
+        updatedAt: "2026-06-21T12:02:00.000Z"
+      })
+    );
+    await repository.saveSession(
+      createPracticeSessionFixture({
+        id: "segment-session",
+        updatedAt: "2026-06-21T12:03:00.000Z",
+        segmentContext: createSegmentContext()
+      })
+    );
+
+    const targets = await service.getContinuePracticeTargets();
+
+    expect(targets.targets.map((target) => [target.kind, target.targetKey])).toEqual([
+      ["segment", "segment:sheet-alpha:segment-alpha"],
+      ["sheet", "sheet:sheet-alpha"]
+    ]);
+    expect(targets.targets[0]).not.toHaveProperty("href");
+    await expect(service.getContinuePracticeTarget()).resolves.toEqual({
+      sourceType: "sheet",
+      href: "/sheet-practice/sheet-alpha",
+      label: "Continue Sheet Practice",
+      sessionId: "sheet-session",
+      sheetId: "sheet-alpha"
+    });
   });
 
   it("rejects invalid session and recording metadata at validation boundaries", () => {
@@ -1934,6 +1998,135 @@ describe("practice session service", () => {
     expect(getSegmentContext).not.toHaveBeenCalledWith("sheet-alpha", "");
     expect(repository.saveSession).not.toHaveBeenCalled();
     expect(recordingRepository.saveRecordingMetadata).not.toHaveBeenCalled();
+  });
+
+  it("reads bounded Continue Practice targets from valid sessions and recordings without writes", async () => {
+    const sessions = [
+      createPracticeSessionFixture({
+        id: "quick-session",
+        sourceType: "quick",
+        sheetId: null,
+        updatedAt: "2026-06-21T12:01:00.000Z",
+        segmentContext: null
+      }),
+      createPracticeSessionFixture({
+        id: "sheet-session",
+        updatedAt: "2026-06-21T12:02:00.000Z"
+      }),
+      createPracticeSessionFixture({
+        id: "segment-session",
+        updatedAt: "2026-06-21T12:05:00.000Z",
+        segmentContext: createSegmentContext()
+      }),
+      createPracticeSessionFixture({
+        id: "missing-segment",
+        updatedAt: "2026-06-21T12:06:00.000Z",
+        segmentContext: createSegmentContext({
+          segmentId: "segment-missing",
+          segmentName: "Deleted Segment"
+        })
+      }),
+      createPracticeSessionFixture({
+        id: "failed-sheet",
+        sheetId: "sheet-failed",
+        updatedAt: "2026-06-21T12:07:00.000Z"
+      })
+    ];
+    const recordings = [
+      createSheetRecordingMetadataFixture({
+        id: "sheet-recording",
+        sessionId: "missing-linked-session",
+        createdAt: "2026-06-21T12:04:00.000Z"
+      }),
+      createSheetRecordingMetadataFixture({
+        id: "segment-recording",
+        sessionId: "segment-session",
+        createdAt: "2026-06-21T12:08:00.000Z",
+        segmentContext: createSegmentContext()
+      })
+    ];
+    const repository: PracticeSessionRepository = {
+      listSessions: vi.fn(async () => sessions),
+      getSession: vi.fn(async () => null),
+      getRecentSession: vi.fn(async () => null),
+      getRecentSheetSession: vi.fn(async () => null),
+      saveSession: vi.fn(async () => undefined),
+      deleteSession: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const recordingRepository: PracticeRecordingMetadataRepository = {
+      listRecordingMetadata: vi.fn(async () => recordings),
+      listRecordingMetadataForSession: vi.fn(async () => []),
+      saveRecordingMetadata: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const updateLastPracticedAt = vi.fn(async () => undefined);
+    const getSheetContext = vi.fn(async (sheetId: string) => {
+      if (sheetId === "sheet-failed") {
+        throw new Error("sheet lookup failed");
+      }
+
+      return {
+        id: sheetId,
+        name: "Alpha Sheet",
+        bpm: 96,
+        timeSignature: "4/4" as const
+      };
+    });
+    const getSegmentContext = vi.fn(async (_sheetId: string, segmentId: string) => {
+      if (segmentId === "segment-missing") {
+        return null;
+      }
+
+      return {
+        id: segmentId,
+        name: "Live Bridge"
+      };
+    });
+    const service = createPracticeSessionService({
+      repository,
+      recordingRepository,
+      sheetGateway: {
+        getSheetContext,
+        updateLastPracticedAt
+      },
+      segmentGateway: {
+        getSegmentContext
+      },
+      now: () => new Date(nowMs)
+    });
+
+    const result = await service.getContinuePracticeTargets({ limit: 3 });
+
+    expect(result).toMatchObject({
+      generatedAt: "2026-06-21T12:00:00.000Z",
+      limit: 3
+    });
+    expect(result.targets.map((target) => [target.kind, target.targetKey, target.sessionId, target.recordingId])).toEqual([
+      ["segment", "segment:sheet-alpha:segment-alpha", "segment-session", "segment-recording"],
+      ["sheet", "sheet:sheet-alpha", "missing-linked-session", "sheet-recording"],
+      ["quick", "quick", "quick-session", null]
+    ]);
+    expect(result.targets[0]).toMatchObject({
+      kind: "segment",
+      sourceType: "sheet",
+      sheetId: "sheet-alpha",
+      segmentId: "segment-alpha",
+      segmentRangeLabel: "m5-12"
+    });
+    expect(result.targets[0]).not.toHaveProperty("href");
+    expect(Object.fromEntries(result.rejected.map((target) => [target.id, target.reason]))).toMatchObject({
+      "session:missing-segment": "missing-segment",
+      "session:failed-sheet": "lookup-failed"
+    });
+    expect(repository.listSessions).toHaveBeenCalledTimes(1);
+    expect(recordingRepository.listRecordingMetadata).toHaveBeenCalledTimes(1);
+    expect(repository.saveSession).not.toHaveBeenCalled();
+    expect(repository.deleteSession).not.toHaveBeenCalled();
+    expect(repository.clear).not.toHaveBeenCalled();
+    expect(recordingRepository.saveRecordingMetadata).not.toHaveBeenCalled();
+    expect(recordingRepository.clear).not.toHaveBeenCalled();
+    expect(updateLastPracticedAt).not.toHaveBeenCalled();
   });
 
   it("captures validated quick and sheet transport events through the event sink", async () => {

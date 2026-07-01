@@ -1,7 +1,8 @@
 import {
   PRACTICE_SESSION_EVENT_SCHEMA_VERSION,
   createSessionHistorySegmentTargetKey,
-  getContinuePracticeTarget,
+  getHomeCompatibleContinuePracticeTarget,
+  selectContinuePracticeTargets,
   getTodayPracticeSummary,
   groupPracticeSessionsByHistory,
   isBrowserLocalDay,
@@ -15,7 +16,8 @@ import {
   type SessionHistorySheetTarget,
   type HomeRecentActivityTargetResolution,
   type PracticeSession,
-  type SheetRecordingMetadata
+  type SheetRecordingMetadata,
+  type ContinuePracticeTargetsOptions
 } from "@/domain/practice";
 import type {
   PracticeSessionEventCaptureInput,
@@ -405,6 +407,47 @@ export function createPracticeSessionService({
     return segmentTargets;
   }
 
+  async function readHomeRecentActivity(
+    sessions: PracticeSession[],
+    recordings: SheetRecordingMetadata[],
+    limit: number | undefined
+  ) {
+    const sheets = await resolveHomeRecentActivitySheetTargets(
+      sessions,
+      recordings
+    );
+    const segments = await resolveHomeRecentActivitySegmentTargets(
+      sessions,
+      recordings,
+      sheets
+    );
+
+    return selectHomeRecentActivity({
+      sessions,
+      recordings,
+      targets: {
+        sheets,
+        segments
+      },
+      generatedAt: now().toISOString(),
+      limit
+    });
+  }
+
+  async function readContinuePracticeTargets(options: ContinuePracticeTargetsOptions = {}) {
+    const [sessions, recordings] = await Promise.all([
+      repository.listSessions(),
+      recordingRepository.listRecordingMetadata()
+    ]);
+    const recentActivity = await readHomeRecentActivity(
+      sessions,
+      recordings,
+      sessions.length + recordings.length
+    );
+
+    return selectContinuePracticeTargets(recentActivity, options);
+  }
+
   async function updateSessionDuration(session: PracticeSession) {
     const timestamp = now().toISOString();
     const nextSession = withUpdatedPracticeSessionDuration(session, timestamp);
@@ -715,26 +758,8 @@ export function createPracticeSessionService({
         repository.listSessions(),
         recordingRepository.listRecordingMetadata()
       ]);
-      const sheets = await resolveHomeRecentActivitySheetTargets(
-        sessions,
-        recordings
-      );
-      const segments = await resolveHomeRecentActivitySegmentTargets(
-        sessions,
-        recordings,
-        sheets
-      );
 
-      return selectHomeRecentActivity({
-        sessions,
-        recordings,
-        targets: {
-          sheets,
-          segments
-        },
-        generatedAt: now().toISOString(),
-        limit: options?.limit
-      });
+      return readHomeRecentActivity(sessions, recordings, options?.limit);
     },
 
     async getSessionHistoryGroups(mode) {
@@ -767,22 +792,14 @@ export function createPracticeSessionService({
       return repository.getRecentSheetSession(sheetId);
     },
 
+    async getContinuePracticeTargets(options) {
+      return readContinuePracticeTargets(options);
+    },
+
     async getContinuePracticeTarget() {
-      const recentSession = await repository.getRecentSession();
+      const result = await readContinuePracticeTargets();
 
-      if (recentSession?.sourceType === "sheet") {
-        if (!recentSession.sheetId) {
-          return null;
-        }
-
-        const sheet = await sheetGateway.getSheetContext(recentSession.sheetId);
-
-        if (!sheet) {
-          return null;
-        }
-      }
-
-      return getContinuePracticeTarget(recentSession);
+      return getHomeCompatibleContinuePracticeTarget(result.targets);
     },
 
     listRecordingMetadata() {
