@@ -4,6 +4,7 @@ import {
   ArrowRight,
   FileUp,
   Gauge,
+  History,
   LibraryBig,
   Mic2,
   Music2,
@@ -13,7 +14,19 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { usePracticeSessionDashboard, type PracticeSessionDashboardState } from "@/hooks/use-practice-session-dashboard";
+import {
+  DEFAULT_HOME_RECENT_ACTIVITY_LIMIT,
+  type ContinuePracticeTarget,
+  type HomeRecentActivityItem,
+  type HomeRecentActivityResult,
+  type HomeRecentActivityTargetState,
+  type PracticeSession
+} from "@/domain/practice";
+import {
+  usePracticeSessionDashboard,
+  type PracticeSessionDashboardRecentActivityStatus,
+  type PracticeSessionDashboardState
+} from "@/hooks/use-practice-session-dashboard";
 
 export type HomeDashboardData = {
   summary: {
@@ -22,10 +35,19 @@ export type HomeDashboardData = {
     sessionsToday: number;
     recordingsToday: number;
   };
-  recentSession: null;
-  continueTarget: null;
+  recentSession: PracticeSession | null;
+  continueTarget: ContinuePracticeTarget | null;
+  recentActivity?: HomeRecentActivityResult;
+  recentActivityStatus?: PracticeSessionDashboardRecentActivityStatus;
+  recentActivityErrorMessage?: string | null;
   recentSheets: [];
   recentRecordings: [];
+};
+
+const emptyHomeRecentActivity: HomeRecentActivityResult = {
+  items: [],
+  generatedAt: "",
+  limit: DEFAULT_HOME_RECENT_ACTIVITY_LIMIT
 };
 
 const emptyHomeDashboardData: HomeDashboardData = {
@@ -37,6 +59,9 @@ const emptyHomeDashboardData: HomeDashboardData = {
   },
   recentSession: null,
   continueTarget: null,
+  recentActivity: emptyHomeRecentActivity,
+  recentActivityStatus: "idle",
+  recentActivityErrorMessage: null,
   recentSheets: [],
   recentRecordings: []
 };
@@ -44,6 +69,9 @@ const emptyHomeDashboardData: HomeDashboardData = {
 export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDashboardData }) {
   const liveData = usePracticeSessionDashboard();
   const dashboardData: HomeDashboardData | PracticeSessionDashboardState = data === emptyHomeDashboardData ? liveData : data;
+  const recentActivity = dashboardData.recentActivity ?? emptyHomeRecentActivity;
+  const recentActivityStatus = dashboardData.recentActivityStatus ?? "idle";
+  const recentActivityErrorMessage = dashboardData.recentActivityErrorMessage ?? null;
 
   return (
     <section aria-labelledby="home-title" className="mx-auto flex w-full max-w-6xl flex-col gap-5">
@@ -125,27 +153,35 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Today Practice Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-3 gap-3">
-              <div className="rounded-md border border-border bg-muted px-3 py-3">
-                <dt className="text-xs font-medium text-muted-foreground">Minutes</dt>
-                <dd data-testid="today-summary-minutes" className="mt-2 text-2xl font-semibold">{dashboardData.summary.minutesToday}</dd>
-              </div>
-              <div className="rounded-md border border-border bg-muted px-3 py-3">
-                <dt className="text-xs font-medium text-muted-foreground">Sessions</dt>
-                <dd data-testid="today-summary-sessions" className="mt-2 text-2xl font-semibold">{dashboardData.summary.sessionsToday}</dd>
-              </div>
-              <div className="rounded-md border border-border bg-muted px-3 py-3">
-                <dt className="text-xs font-medium text-muted-foreground">Recordings</dt>
-                <dd data-testid="today-summary-recordings" className="mt-2 text-2xl font-semibold">{dashboardData.summary.recordingsToday}</dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Today Practice Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-3 gap-3">
+                <div className="rounded-md border border-border bg-muted px-3 py-3">
+                  <dt className="text-xs font-medium text-muted-foreground">Minutes</dt>
+                  <dd data-testid="today-summary-minutes" className="mt-2 text-2xl font-semibold">{dashboardData.summary.minutesToday}</dd>
+                </div>
+                <div className="rounded-md border border-border bg-muted px-3 py-3">
+                  <dt className="text-xs font-medium text-muted-foreground">Sessions</dt>
+                  <dd data-testid="today-summary-sessions" className="mt-2 text-2xl font-semibold">{dashboardData.summary.sessionsToday}</dd>
+                </div>
+                <div className="rounded-md border border-border bg-muted px-3 py-3">
+                  <dt className="text-xs font-medium text-muted-foreground">Recordings</dt>
+                  <dd data-testid="today-summary-recordings" className="mt-2 text-2xl font-semibold">{dashboardData.summary.recordingsToday}</dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
+
+          <RecentActivityPanel
+            recentActivity={recentActivity}
+            status={recentActivityStatus}
+            errorMessage={recentActivityErrorMessage}
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -211,4 +247,189 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
       </div>
     </section>
   );
+}
+
+function RecentActivityPanel({
+  recentActivity,
+  status,
+  errorMessage
+}: {
+  recentActivity: HomeRecentActivityResult;
+  status: PracticeSessionDashboardRecentActivityStatus;
+  errorMessage: string | null;
+}) {
+  const items = recentActivity.items;
+  const isInitialLoading = status === "loading" && items.length === 0;
+
+  return (
+    <Card role="region" aria-labelledby="recent-activity-title" data-testid="recent-activity-panel">
+      <CardHeader>
+        <CardTitle id="recent-activity-title" className="flex items-center gap-2">
+          <History className="h-5 w-5 text-accent" aria-hidden="true" />
+          Recent Activity
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isInitialLoading ? (
+          <div className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground">
+            Loading recent activity.
+          </div>
+        ) : status === "error" ? (
+          <div
+            role="status"
+            className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3 text-sm leading-6 text-destructive"
+          >
+            {errorMessage ?? "Recent activity could not be loaded."}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground">
+            No local practice activity yet.
+          </div>
+        ) : (
+          <ul className="divide-y divide-border" aria-label="Recent practice activity">
+            {items.map((item) => (
+              <RecentActivityRow key={item.id} item={item} />
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RecentActivityRow({ item }: { item: HomeRecentActivityItem }) {
+  const status = getActivityStatus(item.targetState);
+  const timestamp = formatActivityTime(item.sortTimestamp);
+  const isStale = item.targetState !== "valid" && item.targetState !== "quick";
+
+  return (
+    <li
+      data-testid="recent-activity-row"
+      data-activity-state={item.targetState}
+      className={`flex min-w-0 gap-3 py-3 first:pt-0 last:pb-0 ${isStale ? "text-muted-foreground" : ""}`}
+    >
+      <span
+        className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border ${
+          isStale ? "bg-muted" : "bg-card"
+        }`}
+        aria-hidden="true"
+      >
+        <ActivityKindIcon kind={item.kind} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="min-w-0 break-words text-sm font-semibold leading-5 text-foreground">
+            {item.label}
+          </p>
+          <span
+            className={`rounded-md border px-2 py-0.5 text-xs font-medium leading-5 ${status.className}`}
+          >
+            Status: {status.label}
+          </span>
+        </div>
+        <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
+          {getActivityKindLabel(item.kind)} · {timestamp}
+        </p>
+        {item.metadata.length > 0 ? (
+          <ul className="mt-2 flex min-w-0 flex-wrap gap-1.5" aria-label={`Metadata for ${item.label}`}>
+            {item.metadata.map((metadata) => (
+              <li
+                key={metadata}
+                className="max-w-full break-words rounded-md border border-border bg-muted px-2 py-0.5 text-xs leading-5 text-muted-foreground"
+              >
+                {metadata}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {item.disabledReason ? (
+          <p className="mt-2 break-words text-xs leading-5 text-muted-foreground">
+            Stale: {item.disabledReason}
+          </p>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+function ActivityKindIcon({ kind }: { kind: HomeRecentActivityItem["kind"] }) {
+  if (kind === "quick-session") {
+    return <Gauge className="h-4 w-4" />;
+  }
+
+  if (kind === "sheet-recording" || kind === "segment-recording") {
+    return <Mic2 className="h-4 w-4" />;
+  }
+
+  return <Music2 className="h-4 w-4" />;
+}
+
+function getActivityKindLabel(kind: HomeRecentActivityItem["kind"]) {
+  switch (kind) {
+    case "quick-session":
+      return "Quick practice";
+    case "sheet-session":
+      return "Sheet practice";
+    case "sheet-recording":
+      return "Sheet recording";
+    case "segment-session":
+      return "Segment practice";
+    case "segment-recording":
+      return "Segment recording";
+  }
+}
+
+function getActivityStatus(targetState: HomeRecentActivityTargetState) {
+  switch (targetState) {
+    case "valid":
+      return {
+        label: "Ready",
+        className: "border-border bg-muted text-foreground"
+      };
+    case "quick":
+      return {
+        label: "Quick practice",
+        className: "border-border bg-muted text-foreground"
+      };
+    case "lookup-failed":
+      return {
+        label: "Lookup failed",
+        className: "border-destructive/30 bg-destructive/5 text-destructive"
+      };
+    case "missing-sheet":
+      return {
+        label: "Missing sheet",
+        className: "border-border bg-muted text-muted-foreground"
+      };
+    case "missing-segment":
+      return {
+        label: "Missing segment",
+        className: "border-border bg-muted text-muted-foreground"
+      };
+    case "no-target":
+      return {
+        label: "No target",
+        className: "border-border bg-muted text-muted-foreground"
+      };
+  }
+}
+
+function formatActivityTime(value: string | null) {
+  if (!value) {
+    return "Unknown time";
+  }
+
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "Unknown time";
+  }
+
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
 }
