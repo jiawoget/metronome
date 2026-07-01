@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BarChart3,
   FileUp,
+  Flame,
   Gauge,
   History,
   LibraryBig,
@@ -22,6 +23,7 @@ import {
   type ContinuePracticeTargetIdentity,
   type ContinuePracticeTargetsResult,
   type HomeDashboardAnalyticsSource,
+  type HomePracticeStreaks,
   type HomeRecentActivityItem,
   type HomeRecentActivityResult,
   type HomeRecentActivityTargetState,
@@ -32,6 +34,7 @@ import {
   type PracticeSessionDashboardAnalyticsStatus,
   type PracticeSessionDashboardContinueTargetsStatus,
   type PracticeSessionDashboardRecentActivityStatus,
+  type PracticeSessionDashboardStreaksStatus,
   type PracticeSessionDashboardState
 } from "@/hooks/use-practice-session-dashboard";
 import { getContinuePracticeTargetHref } from "@/components/home/continue-practice-navigation";
@@ -54,6 +57,9 @@ export type HomeDashboardData = {
   analytics?: HomeDashboardAnalyticsSource;
   analyticsStatus?: PracticeSessionDashboardAnalyticsStatus;
   analyticsErrorMessage?: string | null;
+  streaks?: HomePracticeStreaks;
+  streaksStatus?: PracticeSessionDashboardStreaksStatus;
+  streaksErrorMessage?: string | null;
   recentSheets: [];
   recentRecordings: [];
 };
@@ -95,6 +101,17 @@ const emptyHomeAnalytics: HomeDashboardAnalyticsSource = {
   }
 };
 
+const emptyHomeStreaks: HomePracticeStreaks = {
+  generatedAt: "",
+  currentStreakDays: 0,
+  longestStreakDays: 0,
+  practicedToday: false,
+  lastPracticedLocalDay: null,
+  emptyState: {
+    hasPracticeHistory: false
+  }
+};
+
 const emptyHomeDashboardData: HomeDashboardData = {
   summary: {
     durationMs: 0,
@@ -113,6 +130,9 @@ const emptyHomeDashboardData: HomeDashboardData = {
   analytics: emptyHomeAnalytics,
   analyticsStatus: "idle",
   analyticsErrorMessage: null,
+  streaks: emptyHomeStreaks,
+  streaksStatus: "idle",
+  streaksErrorMessage: null,
   recentSheets: [],
   recentRecordings: []
 };
@@ -129,6 +149,9 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
   const analytics = dashboardData.analytics ?? emptyHomeAnalytics;
   const analyticsStatus = dashboardData.analyticsStatus ?? "idle";
   const analyticsErrorMessage = dashboardData.analyticsErrorMessage ?? null;
+  const streaks = dashboardData.streaks ?? emptyHomeStreaks;
+  const streaksStatus = dashboardData.streaksStatus ?? "idle";
+  const streaksErrorMessage = dashboardData.streaksErrorMessage ?? null;
 
   return (
     <section aria-labelledby="home-title" className="mx-auto flex w-full max-w-6xl flex-col gap-5">
@@ -213,6 +236,12 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
             errorMessage={analyticsErrorMessage}
           />
 
+          <PracticeStreaksPanel
+            streaks={streaks}
+            status={streaksStatus}
+            errorMessage={streaksErrorMessage}
+          />
+
           <RecentActivityPanel
             recentActivity={recentActivity}
             status={recentActivityStatus}
@@ -284,6 +313,118 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
       </div>
     </section>
   );
+}
+
+function PracticeStreaksPanel({
+  streaks,
+  status,
+  errorMessage
+}: {
+  streaks: HomePracticeStreaks;
+  status: PracticeSessionDashboardStreaksStatus;
+  errorMessage: string | null;
+}) {
+  const hasHistory = streaks.emptyState.hasPracticeHistory;
+  const hasGeneratedAt = streaks.generatedAt.trim().length > 0;
+  const isInitialLoading = status === "loading" && !hasGeneratedAt && !hasHistory;
+  const isUnavailable = status === "idle" && !hasGeneratedAt && !hasHistory;
+  const canShowDerivedStreaks = hasGeneratedAt || hasHistory;
+  const todayStatus = canShowDerivedStreaks ? getPracticeStreakTodayStatus(streaks) : null;
+
+  return (
+    <Card role="region" aria-labelledby="practice-streaks-title" data-testid="practice-streaks-panel">
+      <CardHeader>
+        <CardTitle id="practice-streaks-title" className="flex items-center gap-2">
+          <Flame className="h-5 w-5 text-accent" aria-hidden="true" />
+          Practice Streaks
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isInitialLoading ? (
+          <div
+            role="status"
+            className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground"
+          >
+            Loading practice streaks.
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {status === "error" ? (
+              <div
+                role="status"
+                className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3 text-sm leading-6 text-destructive"
+              >
+                {errorMessage ?? "Practice streaks could not be loaded."}
+              </div>
+            ) : status === "loading" ? (
+              <div
+                role="status"
+                className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground"
+              >
+                Refreshing practice streaks.
+              </div>
+            ) : isUnavailable ? (
+              <div className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground">
+                Practice streaks are unavailable in this browser.
+              </div>
+            ) : !hasHistory ? (
+              <div className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground">
+                No local practice streak yet.
+              </div>
+            ) : null}
+
+            {canShowDerivedStreaks ? (
+              <dl className="grid grid-cols-2 gap-3">
+                <AnalyticsMetric
+                  label="Current streak"
+                  value={formatStreakDays(streaks.currentStreakDays)}
+                  testId="home-streak-current"
+                />
+                <AnalyticsMetric
+                  label="Longest streak"
+                  value={formatStreakDays(streaks.longestStreakDays)}
+                  testId="home-streak-longest"
+                />
+              </dl>
+            ) : null}
+
+            {todayStatus ? (
+              <p data-testid="home-streak-today-status" className="text-sm leading-6 text-muted-foreground">
+                {todayStatus}
+              </p>
+            ) : null}
+            {streaks.lastPracticedLocalDay ? (
+              <p className="text-xs leading-5 text-muted-foreground">
+                Last practiced {streaks.lastPracticedLocalDay}
+              </p>
+            ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function getPracticeStreakTodayStatus(streaks: HomePracticeStreaks) {
+  if (!streaks.emptyState.hasPracticeHistory) {
+    return "No practice logged yet.";
+  }
+
+  if (streaks.practicedToday) {
+    return "Practiced today.";
+  }
+
+  if (streaks.currentStreakDays > 0) {
+    return "Streak is waiting on today's practice.";
+  }
+
+  return "No practice logged today.";
+}
+
+function formatStreakDays(value: number) {
+  const days = Number.isFinite(value) && value > 0 ? Math.round(value) : 0;
+
+  return days === 1 ? "1 day" : `${days} days`;
 }
 
 function PracticeAnalyticsPanel({

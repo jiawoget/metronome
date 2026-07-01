@@ -179,6 +179,145 @@ async function seedHomeAnalyticsActivity(page: Page) {
   });
 }
 
+async function seedHomePracticeStreakActivity(page: Page) {
+  await page.evaluate(
+    (databaseName: string) =>
+      new Promise<void>((resolve, reject) => {
+        const now = new Date();
+        const createLocalTimestamp = (dayOffset: number, hour: number, minute = 0) =>
+          new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate() + dayOffset,
+            hour,
+            minute,
+            0
+          ).toISOString();
+        const sessions = [
+          {
+            id: "streak-today-morning",
+            sourceType: "quick",
+            sheetId: null,
+            startedAt: createLocalTimestamp(0, 9),
+            endedAt: createLocalTimestamp(0, 9, 5),
+            durationMs: 300_000,
+            bpm: 96,
+            timeSignature: "4/4",
+            recordingCount: 0,
+            latestRecordingId: null,
+            updatedAt: createLocalTimestamp(0, 9, 5),
+            segmentContext: null
+          },
+          {
+            id: "streak-today-evening-duplicate",
+            sourceType: "sheet",
+            sheetId: "streak-sheet-alpha",
+            startedAt: createLocalTimestamp(0, 18),
+            endedAt: createLocalTimestamp(0, 18, 2),
+            durationMs: 120_000,
+            bpm: 84,
+            timeSignature: "3/4",
+            recordingCount: 1,
+            latestRecordingId: "streak-recording",
+            updatedAt: createLocalTimestamp(0, 18, 2),
+            segmentContext: null
+          },
+          {
+            id: "streak-yesterday",
+            sourceType: "quick",
+            sheetId: null,
+            startedAt: createLocalTimestamp(-1, 10),
+            endedAt: createLocalTimestamp(-1, 10, 3),
+            durationMs: 180_000,
+            bpm: 100,
+            timeSignature: "4/4",
+            recordingCount: 0,
+            latestRecordingId: null,
+            updatedAt: createLocalTimestamp(-1, 10, 3),
+            segmentContext: null
+          },
+          {
+            id: "streak-older-longest-one",
+            sourceType: "quick",
+            sheetId: null,
+            startedAt: createLocalTimestamp(-5, 12),
+            endedAt: createLocalTimestamp(-5, 12, 1),
+            durationMs: 60_000,
+            bpm: 96,
+            timeSignature: "4/4",
+            recordingCount: 0,
+            latestRecordingId: null,
+            updatedAt: createLocalTimestamp(-5, 12, 1),
+            segmentContext: null
+          },
+          {
+            id: "streak-older-longest-two",
+            sourceType: "quick",
+            sheetId: null,
+            startedAt: createLocalTimestamp(-6, 12),
+            endedAt: createLocalTimestamp(-6, 12, 1),
+            durationMs: 60_000,
+            bpm: 96,
+            timeSignature: "4/4",
+            recordingCount: 0,
+            latestRecordingId: null,
+            updatedAt: createLocalTimestamp(-6, 12, 1),
+            segmentContext: null
+          },
+          {
+            id: "streak-older-longest-three",
+            sourceType: "quick",
+            sheetId: null,
+            startedAt: createLocalTimestamp(-7, 12),
+            endedAt: createLocalTimestamp(-7, 12, 1),
+            durationMs: 60_000,
+            bpm: 96,
+            timeSignature: "4/4",
+            recordingCount: 0,
+            latestRecordingId: null,
+            updatedAt: createLocalTimestamp(-7, 12, 1),
+            segmentContext: null
+          }
+        ];
+        const openRequest = indexedDB.open(databaseName, 2);
+
+        openRequest.onupgradeneeded = () => {
+          const database = openRequest.result;
+
+          if (!database.objectStoreNames.contains("sessions")) {
+            const store = database.createObjectStore("sessions", {
+              keyPath: "id"
+            });
+
+            for (const indexName of ["sourceType", "sheetId", "startedAt", "updatedAt"]) {
+              store.createIndex(indexName, indexName);
+            }
+          }
+        };
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const database = openRequest.result;
+          const transaction = database.transaction(["sessions"], "readwrite");
+          const store = transaction.objectStore("sessions");
+
+          for (const session of sessions) {
+            store.put(session);
+          }
+
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () => {
+            database.close();
+            reject(transaction.error);
+          };
+        };
+      }),
+    PRACTICE_SESSION_DB_NAME
+  );
+}
+
 async function expectNoHorizontalOverflow(page: Page) {
   await expect
     .poll(() =>
@@ -262,6 +401,8 @@ test("app shell home navigation works on desktop and mobile without console erro
   await expect(page.getByTestId("desktop-sidebar")).toBeVisible();
   await expect(page.getByTestId("mobile-bottom-nav")).toBeHidden();
   await expect(page.getByText("Today Practice Summary")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Practice Streaks" })).toBeVisible();
+  await expect(page.getByText("No local practice streak yet.")).toBeVisible();
   await expect(page.getByRole("region", { name: "Recent Activity" })).toBeVisible();
   await expect(page.getByText("No local practice activity yet.")).toBeVisible();
   await expect(page.getByText("No recent practice targets yet.")).toBeVisible();
@@ -318,6 +459,7 @@ test("app shell home navigation works on desktop and mobile without console erro
   await page.goto("/");
   await expect(page.getByTestId("desktop-sidebar")).toBeVisible();
   await expect(page.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Practice Streaks" })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
@@ -325,6 +467,7 @@ test("app shell home navigation works on desktop and mobile without console erro
   await expect(page.getByTestId("mobile-bottom-nav")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Practice Streaks" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   const mobileNav = page.getByTestId("mobile-bottom-nav");
@@ -571,6 +714,52 @@ test("home practice analytics renders persisted local totals across responsive v
   await expect(page.getByTestId("mobile-bottom-nav")).toBeVisible();
   await expect(panel).toBeVisible();
   await expect(page.getByTestId("home-analytics-segment-sessions")).toHaveText("1");
+  await expectNoHorizontalOverflow(page);
+
+  expect(consoleErrors).toEqual([]);
+});
+
+test("home practice streaks render persisted local-day streaks across responsive viewports", async ({ page }) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await page.goto("/");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [PRACTICE_SESSION_DB_NAME]);
+  await seedHomePracticeStreakActivity(page);
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.reload();
+  const panel = page.getByRole("region", { name: "Practice Streaks" });
+
+  await expect(panel).toBeVisible();
+  await expect(page.getByTestId("home-streak-current")).toHaveText("2 days");
+  await expect(page.getByTestId("home-streak-longest")).toHaveText("3 days");
+  await expect(page.getByTestId("home-streak-today-status")).toHaveText("Practiced today.");
+  await expectNoHorizontalOverflow(page);
+
+  await page.reload();
+  await expect(panel).toBeVisible();
+  await expect(page.getByTestId("home-streak-current")).toHaveText("2 days");
+  await expect(page.getByTestId("home-streak-longest")).toHaveText("3 days");
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(panel).toBeVisible();
+  await expect(page.getByTestId("home-streak-current")).toHaveText("2 days");
+  await expectNoHorizontalOverflow(page);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId("mobile-bottom-nav")).toBeVisible();
+  await expect(panel).toBeVisible();
+  await expect(page.getByTestId("home-streak-longest")).toHaveText("3 days");
   await expectNoHorizontalOverflow(page);
 
   expect(consoleErrors).toEqual([]);

@@ -2,6 +2,7 @@ import type {
   ContinuePracticeTarget,
   GoalCompletionEvaluation,
   HomeDashboardAnalyticsSource,
+  HomePracticeStreaks,
   LocalPracticeGoal,
   LocalPracticeGoalKind,
   LocalPracticeGoalPeriod,
@@ -105,6 +106,121 @@ export function isBrowserLocalDay(isoValue: string, now = new Date()) {
     value.getMonth() === now.getMonth() &&
     value.getDate() === now.getDate()
   );
+}
+
+function padLocalDatePart(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+export function getBrowserLocalDayKey(value: Date) {
+  if (!Number.isFinite(value.getTime())) {
+    return null;
+  }
+
+  return `${value.getFullYear()}-${padLocalDatePart(value.getMonth() + 1)}-${padLocalDatePart(value.getDate())}`;
+}
+
+function getBrowserLocalDayKeyFromIso(isoValue: string) {
+  return getBrowserLocalDayKey(new Date(isoValue));
+}
+
+function parseBrowserLocalDayKey(localDayKey: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(localDayKey);
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  return { year, month, day };
+}
+
+function getRelativeBrowserLocalDayKey(localDayKey: string, offsetDays: number) {
+  const parsed = parseBrowserLocalDayKey(localDayKey);
+
+  if (!parsed) {
+    return null;
+  }
+
+  return getBrowserLocalDayKey(
+    new Date(parsed.year, parsed.month - 1, parsed.day + offsetDays)
+  );
+}
+
+function countConsecutiveLocalDaysEndingAt(
+  practicedLocalDays: ReadonlySet<string>,
+  anchorLocalDay: string
+) {
+  let streakDays = 0;
+  let cursor: string | null = anchorLocalDay;
+
+  while (cursor && practicedLocalDays.has(cursor)) {
+    streakDays += 1;
+    cursor = getRelativeBrowserLocalDayKey(cursor, -1);
+  }
+
+  return streakDays;
+}
+
+export type HomePracticeStreaksInput = {
+  sessions: readonly PracticeSession[];
+  generatedAt: string;
+  now?: Date;
+};
+
+export function getHomePracticeStreaks({
+  sessions,
+  generatedAt,
+  now = new Date()
+}: HomePracticeStreaksInput): HomePracticeStreaks {
+  const practicedLocalDays = new Set<string>();
+
+  for (const session of sessions) {
+    const localDayKey = getBrowserLocalDayKeyFromIso(session.startedAt);
+
+    if (localDayKey) {
+      practicedLocalDays.add(localDayKey);
+    }
+  }
+
+  const orderedLocalDays = Array.from(practicedLocalDays).sort();
+  let longestStreakDays = 0;
+  let currentRunDays = 0;
+  let previousLocalDay: string | null = null;
+
+  for (const localDay of orderedLocalDays) {
+    currentRunDays = previousLocalDay && getRelativeBrowserLocalDayKey(localDay, -1) === previousLocalDay
+      ? currentRunDays + 1
+      : 1;
+    longestStreakDays = Math.max(longestStreakDays, currentRunDays);
+    previousLocalDay = localDay;
+  }
+
+  const todayLocalDay = getBrowserLocalDayKey(now);
+  const practicedToday = !!todayLocalDay && practicedLocalDays.has(todayLocalDay);
+  const currentStreakAnchor = practicedToday
+    ? todayLocalDay
+    : todayLocalDay ? getRelativeBrowserLocalDayKey(todayLocalDay, -1) : null;
+
+  return {
+    generatedAt,
+    currentStreakDays: currentStreakAnchor
+      ? countConsecutiveLocalDaysEndingAt(practicedLocalDays, currentStreakAnchor)
+      : 0,
+    longestStreakDays,
+    practicedToday,
+    lastPracticedLocalDay: orderedLocalDays.at(-1) ?? null,
+    emptyState: {
+      hasPracticeHistory: practicedLocalDays.size > 0
+    }
+  };
 }
 
 export function getTodayPracticeSummary(
