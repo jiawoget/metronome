@@ -7,6 +7,7 @@ import {
   DEFAULT_HOME_RECENT_ACTIVITY_LIMIT,
   type ContinuePracticeTarget,
   type ContinuePracticeTargetsResult,
+  type HomeDashboardAnalyticsSource,
   type HomeRecentActivityResult,
   type PracticeSession
 } from "@/domain/practice";
@@ -15,6 +16,7 @@ import { browserPracticeSessionService } from "@/infrastructure/db/browser-pract
 export type PracticeSessionDashboardReadStatus = "idle" | "loading" | "loaded" | "error";
 export type PracticeSessionDashboardContinueTargetsStatus = PracticeSessionDashboardReadStatus;
 export type PracticeSessionDashboardRecentActivityStatus = PracticeSessionDashboardReadStatus;
+export type PracticeSessionDashboardAnalyticsStatus = PracticeSessionDashboardReadStatus;
 
 export type PracticeSessionDashboardState = {
   recentSession: PracticeSession | null;
@@ -31,6 +33,9 @@ export type PracticeSessionDashboardState = {
   recentActivity: HomeRecentActivityResult;
   recentActivityStatus: PracticeSessionDashboardRecentActivityStatus;
   recentActivityErrorMessage: string | null;
+  analytics: HomeDashboardAnalyticsSource;
+  analyticsStatus: PracticeSessionDashboardAnalyticsStatus;
+  analyticsErrorMessage: string | null;
 };
 
 const emptyContinueTargets: ContinuePracticeTargetsResult = {
@@ -44,6 +49,30 @@ const emptyRecentActivity: HomeRecentActivityResult = {
   items: [],
   generatedAt: "",
   limit: DEFAULT_HOME_RECENT_ACTIVITY_LIMIT
+};
+
+const emptyAnalytics: HomeDashboardAnalyticsSource = {
+  generatedAt: "",
+  summary: {
+    durationMs: 0,
+    minutesToday: 0,
+    sessionsToday: 0,
+    recordingsToday: 0
+  },
+  totals: {
+    durationMs: 0,
+    sessions: 0,
+    sheetTakes: 0,
+    practicedSheets: 0,
+    segmentSessions: 0
+  },
+  emptyState: {
+    hasPracticeHistory: false,
+    hasSheetPractice: false,
+    hasSegmentPractice: false,
+    hasRecordings: false,
+    hasGoals: false
+  }
 };
 
 const emptyState: PracticeSessionDashboardState = {
@@ -60,11 +89,15 @@ const emptyState: PracticeSessionDashboardState = {
   },
   recentActivity: emptyRecentActivity,
   recentActivityStatus: "idle",
-  recentActivityErrorMessage: null
+  recentActivityErrorMessage: null,
+  analytics: emptyAnalytics,
+  analyticsStatus: "idle",
+  analyticsErrorMessage: null
 };
 
 const continueTargetsErrorMessage = "Continue Practice targets could not be loaded.";
 const recentActivityErrorMessage = "Recent activity could not be loaded.";
+const analyticsErrorMessage = "Practice analytics could not be loaded.";
 
 export function usePracticeSessionDashboard() {
   const [state, setState] = useState<PracticeSessionDashboardState>(emptyState);
@@ -82,10 +115,12 @@ export function usePracticeSessionDashboard() {
         continueTargetsStatus: "loading",
         continueTargetsErrorMessage: null,
         recentActivityStatus: "loading",
-        recentActivityErrorMessage: null
+        recentActivityErrorMessage: null,
+        analyticsStatus: "loading",
+        analyticsErrorMessage: null
       }));
 
-      const [recentSession, continueTargetsRead, summary, recentActivityRead] = await Promise.all([
+      const [recentSession, continueTargetsRead, summary, recentActivityRead, analyticsRead] = await Promise.all([
         browserPracticeSessionService.getRecentSession(),
         browserPracticeSessionService
           .getContinuePracticeTargets({ limit: DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT })
@@ -95,7 +130,11 @@ export function usePracticeSessionDashboard() {
         browserPracticeSessionService
           .getHomeRecentActivity()
           .then((recentActivity) => ({ recentActivity, errorMessage: null }))
-          .catch(() => ({ recentActivity: null, errorMessage: recentActivityErrorMessage }))
+          .catch(() => ({ recentActivity: null, errorMessage: recentActivityErrorMessage })),
+        browserPracticeSessionService
+          .getHomeDashboardAnalyticsSource()
+          .then((analytics) => ({ analytics, errorMessage: null }))
+          .catch(() => ({ analytics: null, errorMessage: analyticsErrorMessage }))
       ]);
 
       if (!isActive) {
@@ -111,7 +150,10 @@ export function usePracticeSessionDashboard() {
         summary,
         recentActivity: recentActivityRead.recentActivity ?? currentState.recentActivity,
         recentActivityStatus: recentActivityRead.errorMessage ? "error" : "loaded",
-        recentActivityErrorMessage: recentActivityRead.errorMessage
+        recentActivityErrorMessage: recentActivityRead.errorMessage,
+        analytics: analyticsRead.analytics ?? currentState.analytics,
+        analyticsStatus: analyticsRead.errorMessage ? "error" : "loaded",
+        analyticsErrorMessage: analyticsRead.errorMessage
       }));
     }
 

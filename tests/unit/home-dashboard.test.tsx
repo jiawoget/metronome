@@ -5,6 +5,7 @@ import { HomeDashboard, type HomeDashboardData } from "@/components/home/home-da
 import type {
   ContinuePracticeTargetIdentity,
   ContinuePracticeTargetsResult,
+  HomeDashboardAnalyticsSource,
   HomeRecentActivityItem,
   HomeRecentActivityResult
 } from "@/domain/practice";
@@ -15,6 +16,7 @@ const serviceMocks = vi.hoisted(() => ({
   getContinuePracticeTargets: vi.fn(),
   getTodaySummary: vi.fn(),
   getHomeRecentActivity: vi.fn(),
+  getHomeDashboardAnalyticsSource: vi.fn(),
   subscribe: vi.fn()
 }));
 
@@ -50,6 +52,58 @@ function createActivityResult(items: HomeRecentActivityItem[] = []): HomeRecentA
     items,
     generatedAt: "2026-06-21T12:10:00.000Z",
     limit: 8
+  };
+}
+
+type AnalyticsSourceOverrides = Omit<
+  Partial<HomeDashboardAnalyticsSource>,
+  "summary" | "totals" | "emptyState"
+> & {
+  summary?: Partial<HomeDashboardAnalyticsSource["summary"]>;
+  totals?: Partial<HomeDashboardAnalyticsSource["totals"]>;
+  emptyState?: Partial<HomeDashboardAnalyticsSource["emptyState"]>;
+};
+
+function createAnalyticsSource(overrides: AnalyticsSourceOverrides = {}): HomeDashboardAnalyticsSource {
+  const base: HomeDashboardAnalyticsSource = {
+    generatedAt: "2026-06-21T12:10:00.000Z",
+    summary: {
+      durationMs: 0,
+      minutesToday: 0,
+      sessionsToday: 0,
+      recordingsToday: 0
+    },
+    totals: {
+      durationMs: 0,
+      sessions: 0,
+      sheetTakes: 0,
+      practicedSheets: 0,
+      segmentSessions: 0
+    },
+    emptyState: {
+      hasPracticeHistory: false,
+      hasSheetPractice: false,
+      hasSegmentPractice: false,
+      hasRecordings: false,
+      hasGoals: false
+    }
+  };
+
+  return {
+    ...base,
+    ...overrides,
+    summary: {
+      ...base.summary,
+      ...overrides.summary
+    },
+    totals: {
+      ...base.totals,
+      ...overrides.totals
+    },
+    emptyState: {
+      ...base.emptyState,
+      ...overrides.emptyState
+    }
   };
 }
 
@@ -101,6 +155,9 @@ function createDashboardData(overrides: Partial<HomeDashboardData> = {}): HomeDa
     recentActivity: createActivityResult(),
     recentActivityStatus: "loaded",
     recentActivityErrorMessage: null,
+    analytics: createAnalyticsSource(),
+    analyticsStatus: "loaded",
+    analyticsErrorMessage: null,
     recentSheets: [],
     recentRecordings: [],
     ...overrides
@@ -116,6 +173,7 @@ describe("HomeDashboard", () => {
     serviceMocks.getContinuePracticeTargets.mockReset();
     serviceMocks.getTodaySummary.mockReset();
     serviceMocks.getHomeRecentActivity.mockReset();
+    serviceMocks.getHomeDashboardAnalyticsSource.mockReset();
     serviceMocks.subscribe.mockReset();
     serviceMocks.getRecentSession.mockResolvedValue(null);
     serviceMocks.getContinuePracticeTarget.mockResolvedValue(null);
@@ -127,6 +185,7 @@ describe("HomeDashboard", () => {
       recordingsToday: 0
     });
     serviceMocks.getHomeRecentActivity.mockResolvedValue(createActivityResult());
+    serviceMocks.getHomeDashboardAnalyticsSource.mockResolvedValue(createAnalyticsSource());
     serviceMocks.subscribe.mockReturnValue(() => undefined);
   });
 
@@ -136,9 +195,18 @@ describe("HomeDashboard", () => {
     expect(screen.getByRole("heading", { name: "Home" })).toBeVisible();
     expect(screen.getByText("Today Practice Summary")).toBeVisible();
     expect(screen.getByText("Minutes")).toBeVisible();
-    expect(screen.getByText("Sessions")).toBeVisible();
+    expect(screen.getAllByText("Sessions").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Recordings")).toBeVisible();
-    expect(screen.getAllByText("0")).toHaveLength(3);
+    expect(screen.getByTestId("today-summary-minutes")).toHaveTextContent("0");
+    expect(screen.getByTestId("today-summary-sessions")).toHaveTextContent("0");
+    expect(screen.getByTestId("today-summary-recordings")).toHaveTextContent("0");
+    expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
+    expect(screen.getByText("No local practice analytics yet.")).toBeVisible();
+    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("0 min");
+    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent("0");
+    expect(screen.getByTestId("home-analytics-sheet-takes")).toHaveTextContent("0");
+    expect(screen.getByTestId("home-analytics-practiced-sheets")).toHaveTextContent("0");
+    expect(screen.getByTestId("home-analytics-segment-sessions")).toHaveTextContent("0");
     expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
     expect(screen.getByText("No recent practice targets yet.")).toBeVisible();
     expect(screen.getByRole("link", { name: "Start Quick Metronome" })).toHaveAttribute(
@@ -165,6 +233,113 @@ describe("HomeDashboard", () => {
       "href",
       "/quick-metronome"
     );
+  });
+
+  it("renders populated practice analytics from injected source data", () => {
+    render(
+      <HomeDashboard
+        data={createDashboardData({
+          analytics: createAnalyticsSource({
+            totals: {
+              durationMs: 3_900_000,
+              sessions: 4,
+              sheetTakes: 2,
+              practicedSheets: 2,
+              segmentSessions: 1
+            },
+            emptyState: {
+              hasPracticeHistory: true,
+              hasSheetPractice: true,
+              hasSegmentPractice: true,
+              hasRecordings: true
+            }
+          })
+        })}
+      />
+    );
+
+    const panel = screen.getByRole("region", { name: "Practice Analytics" });
+
+    expect(within(panel).queryByText("No local practice analytics yet.")).not.toBeInTheDocument();
+    expect(within(panel).getByText("Total practice")).toBeVisible();
+    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("1 hr 5 min");
+    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent("4");
+    expect(screen.getByTestId("home-analytics-sheet-takes")).toHaveTextContent("2");
+    expect(screen.getByTestId("home-analytics-practiced-sheets")).toHaveTextContent("2");
+    expect(screen.getByTestId("home-analytics-segment-sessions")).toHaveTextContent("1");
+    expect(within(panel).getByText("Local history totals · Updated 2026-06-21 12:10 UTC")).toBeVisible();
+  });
+
+  it("formats analytics duration boundaries honestly", () => {
+    const { rerender } = render(
+      <HomeDashboard
+        data={createDashboardData({
+          analytics: createAnalyticsSource({
+            totals: { durationMs: 30_000 },
+            emptyState: { hasPracticeHistory: true }
+          })
+        })}
+      />
+    );
+
+    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("<1 min");
+
+    rerender(
+      <HomeDashboard
+        data={createDashboardData({
+          analytics: createAnalyticsSource({
+            totals: { durationMs: 59 * 60_000 },
+            emptyState: { hasPracticeHistory: true }
+          })
+        })}
+      />
+    );
+
+    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("59 min");
+
+    rerender(
+      <HomeDashboard
+        data={createDashboardData({
+          analytics: createAnalyticsSource({
+            totals: { durationMs: 2 * 60 * 60_000 },
+            emptyState: { hasPracticeHistory: true }
+          })
+        })}
+      />
+    );
+
+    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("2 hr");
+  });
+
+  it("shows contained loading and error states for practice analytics", () => {
+    const { rerender } = render(
+      <HomeDashboard
+        data={createDashboardData({
+          analyticsStatus: "loading",
+          analytics: createAnalyticsSource({ generatedAt: "" })
+        })}
+      />
+    );
+
+    expect(screen.getByText("Loading practice analytics.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
+      "href",
+      "/quick-metronome"
+    );
+
+    rerender(
+      <HomeDashboard
+        data={createDashboardData({
+          analyticsStatus: "error",
+          analyticsErrorMessage: "Practice analytics could not be loaded."
+        })}
+      />
+    );
+
+    expect(screen.getByText("Practice analytics could not be loaded.")).toBeVisible();
+    expect(screen.getByText("Today Practice Summary")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
   });
 
   it("links primary and utility entries to route shells", () => {
@@ -558,6 +733,20 @@ describe("HomeDashboard", () => {
         })
       ])
     );
+    serviceMocks.getHomeDashboardAnalyticsSource.mockResolvedValue(
+      createAnalyticsSource({
+        totals: {
+          durationMs: 120_000,
+          sessions: 1,
+          sheetTakes: 0,
+          practicedSheets: 0,
+          segmentSessions: 0
+        },
+        emptyState: {
+          hasPracticeHistory: true
+        }
+      })
+    );
 
     const { unmount } = render(<HomeDashboard />);
 
@@ -565,20 +754,88 @@ describe("HomeDashboard", () => {
       expect(serviceMocks.getContinuePracticeTargets).toHaveBeenCalledWith({ limit: 5 })
     );
     await waitFor(() => expect(serviceMocks.getHomeRecentActivity).toHaveBeenCalled());
+    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalled());
     expect(await screen.findByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
       "href",
       "/quick-metronome"
     );
     expect(await screen.findByText("Service Activity")).toBeVisible();
     expect(screen.getByTestId("today-summary-sessions")).toHaveTextContent("1");
+    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("2 min");
     unmount();
 
     serviceMocks.getContinuePracticeTargets.mockRejectedValue(new Error("IndexedDB unavailable"));
     serviceMocks.getHomeRecentActivity.mockRejectedValue(new Error("IndexedDB unavailable"));
+    serviceMocks.getHomeDashboardAnalyticsSource.mockRejectedValue(new Error("IndexedDB unavailable"));
     render(<HomeDashboard />);
 
     expect(await screen.findByText("Continue Practice targets could not be loaded.")).toBeVisible();
     expect(await screen.findByText("Recent activity could not be loaded.")).toBeVisible();
+    expect(await screen.findByText("Practice analytics could not be loaded.")).toBeVisible();
     expect(screen.getByTestId("today-summary-sessions")).toHaveTextContent("1");
+  });
+
+  it("does not read practice analytics when IndexedDB is unavailable", async () => {
+    render(<HomeDashboard />);
+
+    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).not.toHaveBeenCalled());
+    expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
+    expect(screen.getByText("No local practice analytics yet.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
+      "href",
+      "/quick-metronome"
+    );
+    expect(screen.getByText("Today Practice Summary")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+  });
+
+  it("keeps previous analytics visible when a subscription refresh analytics read fails", async () => {
+    vi.stubGlobal("indexedDB", {});
+    const subscription: { refresh: (() => void) | null } = { refresh: null };
+
+    serviceMocks.subscribe.mockImplementation((listener: () => void) => {
+      subscription.refresh = listener;
+
+      return () => undefined;
+    });
+    serviceMocks.getHomeDashboardAnalyticsSource.mockResolvedValueOnce(
+      createAnalyticsSource({
+        totals: {
+          durationMs: 3_900_000,
+          sessions: 4,
+          sheetTakes: 2,
+          practicedSheets: 2,
+          segmentSessions: 1
+        },
+        emptyState: {
+          hasPracticeHistory: true,
+          hasSheetPractice: true,
+          hasSegmentPractice: true,
+          hasRecordings: true
+        }
+      })
+    );
+
+    render(<HomeDashboard />);
+
+    expect(await screen.findByTestId("home-analytics-total-practice")).toHaveTextContent("1 hr 5 min");
+
+    const refresh = subscription.refresh;
+
+    if (!refresh) {
+      throw new Error("Dashboard subscription was not registered.");
+    }
+
+    serviceMocks.getHomeDashboardAnalyticsSource.mockRejectedValueOnce(
+      new Error("analytics read failed")
+    );
+    refresh();
+
+    expect(await screen.findByText("Practice analytics could not be loaded.")).toBeVisible();
+    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("1 hr 5 min");
+    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent("4");
+    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
   });
 });

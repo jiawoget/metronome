@@ -2,6 +2,7 @@
 
 import {
   ArrowRight,
+  BarChart3,
   FileUp,
   Gauge,
   History,
@@ -20,6 +21,7 @@ import {
   type ContinuePracticeTarget,
   type ContinuePracticeTargetIdentity,
   type ContinuePracticeTargetsResult,
+  type HomeDashboardAnalyticsSource,
   type HomeRecentActivityItem,
   type HomeRecentActivityResult,
   type HomeRecentActivityTargetState,
@@ -27,6 +29,7 @@ import {
 } from "@/domain/practice";
 import {
   usePracticeSessionDashboard,
+  type PracticeSessionDashboardAnalyticsStatus,
   type PracticeSessionDashboardContinueTargetsStatus,
   type PracticeSessionDashboardRecentActivityStatus,
   type PracticeSessionDashboardState
@@ -48,6 +51,9 @@ export type HomeDashboardData = {
   recentActivity?: HomeRecentActivityResult;
   recentActivityStatus?: PracticeSessionDashboardRecentActivityStatus;
   recentActivityErrorMessage?: string | null;
+  analytics?: HomeDashboardAnalyticsSource;
+  analyticsStatus?: PracticeSessionDashboardAnalyticsStatus;
+  analyticsErrorMessage?: string | null;
   recentSheets: [];
   recentRecordings: [];
 };
@@ -65,6 +71,30 @@ const emptyHomeRecentActivity: HomeRecentActivityResult = {
   limit: DEFAULT_HOME_RECENT_ACTIVITY_LIMIT
 };
 
+const emptyHomeAnalytics: HomeDashboardAnalyticsSource = {
+  generatedAt: "",
+  summary: {
+    durationMs: 0,
+    minutesToday: 0,
+    sessionsToday: 0,
+    recordingsToday: 0
+  },
+  totals: {
+    durationMs: 0,
+    sessions: 0,
+    sheetTakes: 0,
+    practicedSheets: 0,
+    segmentSessions: 0
+  },
+  emptyState: {
+    hasPracticeHistory: false,
+    hasSheetPractice: false,
+    hasSegmentPractice: false,
+    hasRecordings: false,
+    hasGoals: false
+  }
+};
+
 const emptyHomeDashboardData: HomeDashboardData = {
   summary: {
     durationMs: 0,
@@ -80,6 +110,9 @@ const emptyHomeDashboardData: HomeDashboardData = {
   recentActivity: emptyHomeRecentActivity,
   recentActivityStatus: "idle",
   recentActivityErrorMessage: null,
+  analytics: emptyHomeAnalytics,
+  analyticsStatus: "idle",
+  analyticsErrorMessage: null,
   recentSheets: [],
   recentRecordings: []
 };
@@ -93,6 +126,9 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
   const recentActivity = dashboardData.recentActivity ?? emptyHomeRecentActivity;
   const recentActivityStatus = dashboardData.recentActivityStatus ?? "idle";
   const recentActivityErrorMessage = dashboardData.recentActivityErrorMessage ?? null;
+  const analytics = dashboardData.analytics ?? emptyHomeAnalytics;
+  const analyticsStatus = dashboardData.analyticsStatus ?? "idle";
+  const analyticsErrorMessage = dashboardData.analyticsErrorMessage ?? null;
 
   return (
     <section aria-labelledby="home-title" className="mx-auto flex w-full max-w-6xl flex-col gap-5">
@@ -171,6 +207,12 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
             </CardContent>
           </Card>
 
+          <PracticeAnalyticsPanel
+            analytics={analytics}
+            status={analyticsStatus}
+            errorMessage={analyticsErrorMessage}
+          />
+
           <RecentActivityPanel
             recentActivity={recentActivity}
             status={recentActivityStatus}
@@ -241,6 +283,118 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
         </Card>
       </div>
     </section>
+  );
+}
+
+function PracticeAnalyticsPanel({
+  analytics,
+  status,
+  errorMessage
+}: {
+  analytics: HomeDashboardAnalyticsSource;
+  status: PracticeSessionDashboardAnalyticsStatus;
+  errorMessage: string | null;
+}) {
+  const hasHistory = analytics.emptyState.hasPracticeHistory;
+  const hasGeneratedAt = analytics.generatedAt.trim().length > 0;
+  const isInitialLoading = status === "loading" && !hasGeneratedAt && !hasHistory;
+
+  return (
+    <Card role="region" aria-labelledby="practice-analytics-title" data-testid="practice-analytics-panel">
+      <CardHeader>
+        <CardTitle id="practice-analytics-title" className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-accent" aria-hidden="true" />
+          Practice Analytics
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isInitialLoading ? (
+          <div
+            role="status"
+            className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground"
+          >
+            Loading practice analytics.
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {status === "error" ? (
+              <div
+                role="status"
+                className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3 text-sm leading-6 text-destructive"
+              >
+                {errorMessage ?? "Practice analytics could not be loaded."}
+              </div>
+            ) : status === "loading" ? (
+              <div
+                role="status"
+                className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground"
+              >
+                Refreshing practice analytics.
+              </div>
+            ) : null}
+
+            {!hasHistory ? (
+              <div className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground">
+                No local practice analytics yet.
+              </div>
+            ) : null}
+
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <AnalyticsMetric
+                label="Total practice"
+                value={formatAnalyticsDuration(analytics.totals.durationMs)}
+                testId="home-analytics-total-practice"
+              />
+              <AnalyticsMetric
+                label="Sessions"
+                value={String(analytics.totals.sessions)}
+                testId="home-analytics-sessions"
+              />
+              <AnalyticsMetric
+                label="Sheet takes"
+                value={String(analytics.totals.sheetTakes)}
+                testId="home-analytics-sheet-takes"
+              />
+              <AnalyticsMetric
+                label="Practiced sheets"
+                value={String(analytics.totals.practicedSheets)}
+                testId="home-analytics-practiced-sheets"
+              />
+              <AnalyticsMetric
+                label="Segment sessions"
+                value={String(analytics.totals.segmentSessions)}
+                testId="home-analytics-segment-sessions"
+              />
+            </dl>
+
+            <p className="text-xs leading-5 text-muted-foreground">
+              Local history totals{hasGeneratedAt ? ` · Updated ${formatAnalyticsTimestamp(analytics.generatedAt)}` : ""}
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AnalyticsMetric({
+  label,
+  value,
+  testId
+}: {
+  label: string;
+  value: string;
+  testId: string;
+}) {
+  return (
+    <div className="min-h-20 rounded-md border border-border bg-muted px-3 py-3">
+      <dt className="break-words text-xs font-medium leading-5 text-muted-foreground">
+        {label}
+      </dt>
+      <dd data-testid={testId} className="mt-2 break-words text-2xl font-semibold leading-8">
+        {value}
+      </dd>
+    </div>
   );
 }
 
@@ -624,6 +778,43 @@ function formatActivityTime(value: string | null) {
 
   if (!Number.isFinite(date.getTime())) {
     return "Unknown time";
+  }
+
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
+}
+
+function formatAnalyticsDuration(value: number) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "0 min";
+  }
+
+  if (value < 60_000) {
+    return "<1 min";
+  }
+
+  const totalMinutes = Math.floor(value / 60_000);
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return minutes > 0 ? `${hours} hr ${minutes} min` : `${hours} hr`;
+}
+
+function formatAnalyticsTimestamp(value: string) {
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "Unknown update time";
   }
 
   const year = date.getUTCFullYear();
