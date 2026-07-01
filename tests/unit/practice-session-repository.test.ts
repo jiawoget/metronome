@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type {
   PracticeSession,
+  SheetRecordingMetadata,
   SheetRecordingSegmentContext
 } from "@/domain/practice";
 import {
@@ -11,6 +12,7 @@ import {
   resetPracticeSessionDatabaseConnectionForTests,
   seedPracticeSessionRecordForTests
 } from "@/infrastructure/db/practice-session-repository";
+import { recordingHistoryMetadataRepository } from "@/infrastructure/db/recording-history-metadata-repository";
 import {
   createPracticeSessionService,
   type PracticeRecordingMetadataRepository,
@@ -89,6 +91,24 @@ function createQuickSession(
   return session;
 }
 
+function createSheetRecordingMetadata(
+  overrides: Partial<SheetRecordingMetadata> = {}
+): SheetRecordingMetadata {
+  return {
+    id: "recording-alpha",
+    type: "sheet",
+    sessionId: "sheet-alpha",
+    sheetId: "sheet-alpha",
+    sheetName: "Alpha Sheet Snapshot",
+    createdAt: "2026-06-21T12:04:00.000Z",
+    durationMs: 12_000,
+    bpm: 96,
+    timeSignature: "4/4",
+    segmentContext: null,
+    ...overrides
+  };
+}
+
 const emptyRecordingRepository: PracticeRecordingMetadataRepository = {
   async listRecordingMetadata() {
     return [];
@@ -146,6 +166,17 @@ function createRepositoryBackedHistoryService() {
   });
 }
 
+function createRepositoryBackedRecentActivityService(nowIso: string) {
+  return createPracticeSessionService({
+    repository: practiceSessionRepository,
+    recordingRepository: recordingHistoryMetadataRepository,
+    sheetGateway,
+    segmentGateway,
+    now: () => new Date(nowIso),
+    createId: (prefix) => `${prefix}-repository-test`
+  });
+}
+
 describe("practice session persisted row parsing", () => {
   it("normalizes missing segmentContext to null and rejects malformed non-null context", () => {
     expect(
@@ -184,10 +215,12 @@ describe("practice session persisted row parsing", () => {
 describe("practice session browser repository", () => {
   beforeEach(async () => {
     await clearPracticeSessionDatabaseForTests();
+    window.localStorage.clear();
   });
 
   afterEach(() => {
     resetPracticeSessionDatabaseConnectionForTests();
+    window.localStorage.clear();
   });
 
   it("persists a valid sheet session segmentContext across a Dexie reset and reload", async () => {
@@ -354,5 +387,117 @@ describe("practice session browser repository", () => {
 
     expect(groupedSessionIds).not.toContain("malformed-segment-context");
     expect(groupedSessionIds).toContain("legacy-sheet-no-segment");
+  });
+
+  it("derives the same logical home recent activity after reopening persisted storage", async () => {
+    const quickSession = createQuickSession({
+      id: "quick-session",
+      updatedAt: "2026-06-21T12:01:00.000Z"
+    });
+    const sheetNoSegmentSession = createSheetSession({
+      id: "sheet-no-segment",
+      updatedAt: "2026-06-21T12:03:00.000Z",
+      durationMs: 30_000,
+      recordingCount: 0
+    });
+    const sheetSegmentSession = createSheetSession({
+      id: "sheet-segment",
+      updatedAt: "2026-06-21T12:05:00.000Z",
+      durationMs: 90_000,
+      recordingCount: 2,
+      latestRecordingId: "recording-segment",
+      segmentContext: createSegmentContext()
+    });
+    const missingSegmentSession = createSheetSession({
+      id: "missing-segment",
+      updatedAt: "2026-06-21T12:07:00.000Z",
+      durationMs: 45_000,
+      recordingCount: 1,
+      latestRecordingId: "recording-missing-segment",
+      segmentContext: createSegmentContext({
+        segmentId: "segment-missing",
+        segmentName: "Deleted Segment Snapshot"
+      })
+    });
+    const deletedSheetSession = createSheetSession({
+      id: "deleted-sheet",
+      sheetId: "sheet-deleted",
+      updatedAt: "2026-06-21T12:08:00.000Z",
+      durationMs: 15_000,
+      recordingCount: 0
+    });
+    const missingSessionForRecording = createSheetSession({
+      id: "missing-session",
+      updatedAt: "2026-06-21T12:09:00.000Z"
+    });
+
+    await practiceSessionRepository.saveSession(quickSession);
+    await practiceSessionRepository.saveSession(sheetNoSegmentSession);
+    await practiceSessionRepository.saveSession(sheetSegmentSession);
+    await practiceSessionRepository.saveSession(missingSegmentSession);
+    await practiceSessionRepository.saveSession(deletedSheetSession);
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecordingMetadata({
+        id: "recording-sheet",
+        sessionId: sheetNoSegmentSession.id,
+        createdAt: "2026-06-21T12:04:00.000Z",
+        durationMs: 12_000
+      }),
+      sheetNoSegmentSession
+    );
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecordingMetadata({
+        id: "recording-segment",
+        sessionId: sheetSegmentSession.id,
+        createdAt: "2026-06-21T12:06:00.000Z",
+        durationMs: 20_000,
+        segmentContext: createSegmentContext()
+      }),
+      sheetSegmentSession
+    );
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecordingMetadata({
+        id: "recording-missing-session",
+        sessionId: missingSessionForRecording.id,
+        createdAt: "2026-06-21T12:09:00.000Z",
+        durationMs: 9_000
+      }),
+      missingSessionForRecording
+    );
+
+    const beforeReload = await createRepositoryBackedRecentActivityService(
+      "2026-06-21T12:30:00.000Z"
+    ).getHomeRecentActivity({ limit: 10 });
+
+    resetPracticeSessionDatabaseConnectionForTests();
+
+    const afterReload = await createRepositoryBackedRecentActivityService(
+      "2026-06-21T12:31:00.000Z"
+    ).getHomeRecentActivity({ limit: 10 });
+    const logicalItems = (items: typeof beforeReload.items) =>
+      items.map((item) => ({
+        id: item.id,
+        kind: item.kind,
+        targetState: item.targetState,
+        label: item.label,
+        durationMs: item.durationMs,
+        sessionId: item.sessionId,
+        recordingId: item.recordingId,
+        sheetId: item.sheetId,
+        segmentId: item.segmentId
+      }));
+
+    expect(logicalItems(afterReload.items)).toEqual(logicalItems(beforeReload.items));
+    expect(afterReload.generatedAt).not.toBe(beforeReload.generatedAt);
+    expect(Object.fromEntries(afterReload.items.map((item) => [item.id, item.targetState]))).toMatchObject({
+      "session:quick-session": "quick",
+      "session:sheet-no-segment": "valid",
+      "recording:recording-sheet": "valid",
+      "session:sheet-segment": "valid",
+      "recording:recording-segment": "valid",
+      "session:missing-segment": "missing-segment",
+      "session:deleted-sheet": "missing-sheet",
+      "recording:recording-missing-session": "valid"
+    });
   });
 });

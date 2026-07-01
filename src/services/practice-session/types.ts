@@ -1,5 +1,7 @@
 import type {
   ContinuePracticeTarget,
+  HomeRecentActivityOptions,
+  HomeRecentActivityResult,
   PracticeActivityTrigger,
   PracticeSession,
   PracticeSessionEvent,
@@ -123,6 +125,7 @@ export type PracticeSessionService = {
   commitPreparedSheetRecordingSession: (input: PreparedSheetRecordingSessionInput) => Promise<void>;
   createSheetRecordingMetadata: (input: SheetRecordingMetadataInput) => Promise<SheetRecordingMetadata | null>;
   listSessions: () => Promise<PracticeSession[]>;
+  getHomeRecentActivity: (options?: HomeRecentActivityOptions) => Promise<HomeRecentActivityResult>;
   getSessionHistoryGroups: (mode: SessionHistoryGroupingMode) => Promise<SessionHistoryGroup[]>;
   getTodaySummary: () => Promise<TodayPracticeSummary>;
   getRecentSession: () => Promise<PracticeSession | null>;
