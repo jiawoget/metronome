@@ -4,6 +4,7 @@ import {
   calculatePracticeDurationMs,
   evaluatePracticeGoalCompletion,
   getHomeDashboardAnalyticsSource,
+  getHomePracticeStreaks,
   getTodayPracticeSummary,
   groupPracticeSessionsByHistory,
   withUpdatedPracticeSessionDuration,
@@ -83,6 +84,16 @@ function createGoal(overrides: Partial<LocalPracticeGoal> = {}): LocalPracticeGo
     createdAt: "2026-06-21T08:00:00.000Z",
     ...overrides
   };
+}
+
+function localIso(
+  year: number,
+  monthIndex: number,
+  day: number,
+  hour = 12,
+  minute = 0
+) {
+  return new Date(year, monthIndex, day, hour, minute, 0).toISOString();
 }
 
 describe("practice session duration rules", () => {
@@ -354,6 +365,182 @@ describe("practice session duration rules", () => {
         hasRecordings: false,
         hasGoals: false
       }
+    });
+  });
+
+  it("derives honest empty Home practice streaks from no valid local practice days", () => {
+    expect(
+      getHomePracticeStreaks({
+        generatedAt: "2026-06-21T15:00:00.000Z",
+        now: new Date(2026, 5, 21, 15, 0, 0),
+        sessions: [
+          createSession({
+            id: "invalid-started-at",
+            startedAt: "not-a-date"
+          })
+        ]
+      })
+    ).toEqual({
+      generatedAt: "2026-06-21T15:00:00.000Z",
+      currentStreakDays: 0,
+      longestStreakDays: 0,
+      practicedToday: false,
+      lastPracticedLocalDay: null,
+      emptyState: {
+        hasPracticeHistory: false
+      }
+    });
+  });
+
+  it("counts duplicate sessions on one local day once and keeps a streak through today", () => {
+    const now = new Date(2026, 5, 21, 15, 0, 0);
+    const streaks = getHomePracticeStreaks({
+      generatedAt: "2026-06-21T15:00:00.000Z",
+      now,
+      sessions: [
+        createSession({
+          id: "today-late",
+          sourceType: "sheet",
+          sheetId: "sheet-alpha",
+          startedAt: localIso(2026, 5, 21, 23, 30),
+          durationMs: 0,
+          recordingCount: 99,
+          segmentContext: createSegmentContext()
+        }),
+        createSession({
+          id: "today-early",
+          sourceType: "quick",
+          sheetId: null,
+          startedAt: localIso(2026, 5, 21, 0, 30),
+          durationMs: 9_999_999,
+          recordingCount: 0,
+          segmentContext: null
+        }),
+        createSession({
+          id: "yesterday",
+          startedAt: localIso(2026, 5, 20, 12, 0)
+        }),
+        createSession({
+          id: "two-days-ago",
+          startedAt: localIso(2026, 5, 19, 12, 0)
+        })
+      ]
+    });
+
+    expect(streaks).toMatchObject({
+      currentStreakDays: 3,
+      longestStreakDays: 3,
+      practicedToday: true,
+      lastPracticedLocalDay: "2026-06-21",
+      emptyState: {
+        hasPracticeHistory: true
+      }
+    });
+  });
+
+  it("keeps current streak through yesterday before today's practice", () => {
+    expect(
+      getHomePracticeStreaks({
+        generatedAt: "2026-06-21T15:00:00.000Z",
+        now: new Date(2026, 5, 21, 15, 0, 0),
+        sessions: [
+          createSession({
+            id: "yesterday",
+            startedAt: localIso(2026, 5, 20)
+          }),
+          createSession({
+            id: "two-days-ago",
+            startedAt: localIso(2026, 5, 19)
+          })
+        ]
+      })
+    ).toMatchObject({
+      currentStreakDays: 2,
+      longestStreakDays: 2,
+      practicedToday: false,
+      lastPracticedLocalDay: "2026-06-20"
+    });
+  });
+
+  it("returns zero current streak when today and yesterday are both unpracticed", () => {
+    expect(
+      getHomePracticeStreaks({
+        generatedAt: "2026-06-21T15:00:00.000Z",
+        now: new Date(2026, 5, 21, 15, 0, 0),
+        sessions: [
+          createSession({
+            id: "older-practice",
+            startedAt: localIso(2026, 5, 18)
+          })
+        ]
+      })
+    ).toMatchObject({
+      currentStreakDays: 0,
+      longestStreakDays: 1,
+      practicedToday: false,
+      lastPracticedLocalDay: "2026-06-18"
+    });
+  });
+
+  it("preserves the longest streak when the current streak is shorter", () => {
+    expect(
+      getHomePracticeStreaks({
+        generatedAt: "2026-06-21T15:00:00.000Z",
+        now: new Date(2026, 5, 21, 15, 0, 0),
+        sessions: [
+          createSession({ id: "today", startedAt: localIso(2026, 5, 21) }),
+          createSession({ id: "old-one", startedAt: localIso(2026, 5, 17) }),
+          createSession({ id: "old-two", startedAt: localIso(2026, 5, 16) }),
+          createSession({ id: "old-three", startedAt: localIso(2026, 5, 15) })
+        ]
+      })
+    ).toMatchObject({
+      currentStreakDays: 1,
+      longestStreakDays: 3,
+      practicedToday: true,
+      lastPracticedLocalDay: "2026-06-21"
+    });
+  });
+
+  it("computes streaks consistently from unordered local-day input near midnight", () => {
+    const unorderedSessions = [
+      createSession({
+        id: "today-late",
+        startedAt: localIso(2026, 5, 21, 23, 59)
+      }),
+      createSession({
+        id: "older",
+        startedAt: localIso(2026, 5, 17, 0, 1)
+      }),
+      createSession({
+        id: "yesterday-early",
+        startedAt: localIso(2026, 5, 20, 0, 1)
+      }),
+      createSession({
+        id: "two-days-ago",
+        startedAt: localIso(2026, 5, 19, 23, 59)
+      })
+    ];
+    const sortedSessions = [...unorderedSessions].sort((first, second) =>
+      first.startedAt.localeCompare(second.startedAt)
+    );
+
+    const unordered = getHomePracticeStreaks({
+      generatedAt: "2026-06-21T15:00:00.000Z",
+      now: new Date(2026, 5, 21, 15, 0, 0),
+      sessions: unorderedSessions
+    });
+    const sorted = getHomePracticeStreaks({
+      generatedAt: "2026-06-21T15:00:00.000Z",
+      now: new Date(2026, 5, 21, 15, 0, 0),
+      sessions: sortedSessions
+    });
+
+    expect(unordered).toEqual(sorted);
+    expect(unordered).toMatchObject({
+      currentStreakDays: 3,
+      longestStreakDays: 3,
+      lastPracticedLocalDay: "2026-06-21"
     });
   });
 

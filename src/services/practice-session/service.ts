@@ -3,6 +3,7 @@ import {
   createSessionHistorySegmentTargetKey,
   evaluatePracticeGoalCompletion,
   getHomeDashboardAnalyticsSource as selectHomeDashboardAnalyticsSource,
+  getHomePracticeStreaks as selectHomePracticeStreaks,
   getHomeCompatibleContinuePracticeTarget,
   selectContinuePracticeTargets,
   getTodayPracticeSummary,
@@ -829,6 +830,17 @@ export function createPracticeSessionService({
       return selectHomeDashboardAnalyticsSource({
         sessions,
         recordings,
+        generatedAt: generatedAt.toISOString(),
+        now: generatedAt
+      });
+    },
+
+    async getHomePracticeStreaks() {
+      const generatedAt = now();
+      const sessions = await repository.listSessions();
+
+      return selectHomePracticeStreaks({
+        sessions,
         generatedAt: generatedAt.toISOString(),
         now: generatedAt
       });

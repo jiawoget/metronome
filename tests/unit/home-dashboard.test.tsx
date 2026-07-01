@@ -6,6 +6,7 @@ import type {
   ContinuePracticeTargetIdentity,
   ContinuePracticeTargetsResult,
   HomeDashboardAnalyticsSource,
+  HomePracticeStreaks,
   HomeRecentActivityItem,
   HomeRecentActivityResult
 } from "@/domain/practice";
@@ -17,6 +18,7 @@ const serviceMocks = vi.hoisted(() => ({
   getTodaySummary: vi.fn(),
   getHomeRecentActivity: vi.fn(),
   getHomeDashboardAnalyticsSource: vi.fn(),
+  getHomePracticeStreaks: vi.fn(),
   subscribe: vi.fn()
 }));
 
@@ -107,6 +109,28 @@ function createAnalyticsSource(overrides: AnalyticsSourceOverrides = {}): HomeDa
   };
 }
 
+function createPracticeStreaks(overrides: Partial<HomePracticeStreaks> = {}): HomePracticeStreaks {
+  const base: HomePracticeStreaks = {
+    generatedAt: "2026-06-21T12:10:00.000Z",
+    currentStreakDays: 0,
+    longestStreakDays: 0,
+    practicedToday: false,
+    lastPracticedLocalDay: null,
+    emptyState: {
+      hasPracticeHistory: false
+    }
+  };
+
+  return {
+    ...base,
+    ...overrides,
+    emptyState: {
+      ...base.emptyState,
+      ...overrides.emptyState
+    }
+  };
+}
+
 function createContinueTarget(
   overrides: Partial<ContinuePracticeTargetIdentity> = {}
 ): ContinuePracticeTargetIdentity {
@@ -158,6 +182,9 @@ function createDashboardData(overrides: Partial<HomeDashboardData> = {}): HomeDa
     analytics: createAnalyticsSource(),
     analyticsStatus: "loaded",
     analyticsErrorMessage: null,
+    streaks: createPracticeStreaks(),
+    streaksStatus: "loaded",
+    streaksErrorMessage: null,
     recentSheets: [],
     recentRecordings: [],
     ...overrides
@@ -174,6 +201,7 @@ describe("HomeDashboard", () => {
     serviceMocks.getTodaySummary.mockReset();
     serviceMocks.getHomeRecentActivity.mockReset();
     serviceMocks.getHomeDashboardAnalyticsSource.mockReset();
+    serviceMocks.getHomePracticeStreaks.mockReset();
     serviceMocks.subscribe.mockReset();
     serviceMocks.getRecentSession.mockResolvedValue(null);
     serviceMocks.getContinuePracticeTarget.mockResolvedValue(null);
@@ -186,6 +214,7 @@ describe("HomeDashboard", () => {
     });
     serviceMocks.getHomeRecentActivity.mockResolvedValue(createActivityResult());
     serviceMocks.getHomeDashboardAnalyticsSource.mockResolvedValue(createAnalyticsSource());
+    serviceMocks.getHomePracticeStreaks.mockResolvedValue(createPracticeStreaks());
     serviceMocks.subscribe.mockReturnValue(() => undefined);
   });
 
@@ -207,6 +236,11 @@ describe("HomeDashboard", () => {
     expect(screen.getByTestId("home-analytics-sheet-takes")).toHaveTextContent("0");
     expect(screen.getByTestId("home-analytics-practiced-sheets")).toHaveTextContent("0");
     expect(screen.getByTestId("home-analytics-segment-sessions")).toHaveTextContent("0");
+    expect(screen.getByRole("region", { name: "Practice Streaks" })).toBeVisible();
+    expect(screen.getByText("No local practice streak yet.")).toBeVisible();
+    expect(screen.getByTestId("home-streak-current")).toHaveTextContent("0 days");
+    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent("0 days");
+    expect(screen.getByTestId("home-streak-today-status")).toHaveTextContent("No practice logged yet.");
     expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
     expect(screen.getByText("No recent practice targets yet.")).toBeVisible();
     expect(screen.getByRole("link", { name: "Start Quick Metronome" })).toHaveAttribute(
@@ -268,6 +302,55 @@ describe("HomeDashboard", () => {
     expect(screen.getByTestId("home-analytics-practiced-sheets")).toHaveTextContent("2");
     expect(screen.getByTestId("home-analytics-segment-sessions")).toHaveTextContent("1");
     expect(within(panel).getByText("Local history totals · Updated 2026-06-21 12:10 UTC")).toBeVisible();
+  });
+
+  it("renders populated practice streaks from injected source data", () => {
+    render(
+      <HomeDashboard
+        data={createDashboardData({
+          streaks: createPracticeStreaks({
+            currentStreakDays: 4,
+            longestStreakDays: 9,
+            practicedToday: true,
+            lastPracticedLocalDay: "2026-06-21",
+            emptyState: {
+              hasPracticeHistory: true
+            }
+          })
+        })}
+      />
+    );
+
+    const panel = screen.getByRole("region", { name: "Practice Streaks" });
+
+    expect(within(panel).queryByText("No local practice streak yet.")).not.toBeInTheDocument();
+    expect(screen.getByTestId("home-streak-current")).toHaveTextContent("4 days");
+    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent("9 days");
+    expect(screen.getByTestId("home-streak-today-status")).toHaveTextContent("Practiced today.");
+    expect(within(panel).getByText("Last practiced 2026-06-21")).toBeVisible();
+  });
+
+  it("shows a restrained today status when a streak is waiting on today's practice", () => {
+    render(
+      <HomeDashboard
+        data={createDashboardData({
+          streaks: createPracticeStreaks({
+            currentStreakDays: 3,
+            longestStreakDays: 5,
+            practicedToday: false,
+            lastPracticedLocalDay: "2026-06-20",
+            emptyState: {
+              hasPracticeHistory: true
+            }
+          })
+        })}
+      />
+    );
+
+    expect(screen.getByTestId("home-streak-current")).toHaveTextContent("3 days");
+    expect(screen.getByTestId("home-streak-today-status")).toHaveTextContent(
+      "Streak is waiting on today's practice."
+    );
   });
 
   it("formats analytics duration boundaries honestly", () => {
@@ -338,6 +421,50 @@ describe("HomeDashboard", () => {
 
     expect(screen.getByText("Practice analytics could not be loaded.")).toBeVisible();
     expect(screen.getByText("Today Practice Summary")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+  });
+
+  it("shows contained loading and first-load error states for practice streaks", () => {
+    const { rerender } = render(
+      <HomeDashboard
+        data={createDashboardData({
+          streaksStatus: "loading",
+          streaks: createPracticeStreaks({ generatedAt: "" })
+        })}
+      />
+    );
+
+    expect(screen.getByText("Loading practice streaks.")).toBeVisible();
+    expect(screen.queryByTestId("home-streak-current")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-streak-longest")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-streak-today-status")).not.toBeInTheDocument();
+    expect(screen.queryByText("No practice logged yet.")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
+      "href",
+      "/quick-metronome"
+    );
+
+    rerender(
+      <HomeDashboard
+        data={createDashboardData({
+          streaksStatus: "error",
+          streaksErrorMessage: "Practice streaks could not be loaded.",
+          streaks: createPracticeStreaks({ generatedAt: "" })
+        })}
+      />
+    );
+
+    const panel = screen.getByRole("region", { name: "Practice Streaks" });
+
+    expect(within(panel).getByText("Practice streaks could not be loaded.")).toBeVisible();
+    expect(within(panel).queryByText("No local practice streak yet.")).not.toBeInTheDocument();
+    expect(within(panel).queryByTestId("home-streak-current")).not.toBeInTheDocument();
+    expect(within(panel).queryByTestId("home-streak-longest")).not.toBeInTheDocument();
+    expect(within(panel).queryByTestId("home-streak-today-status")).not.toBeInTheDocument();
+    expect(within(panel).queryByText("No practice logged yet.")).not.toBeInTheDocument();
+    expect(screen.getByText("Today Practice Summary")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
   });
@@ -747,6 +874,17 @@ describe("HomeDashboard", () => {
         }
       })
     );
+    serviceMocks.getHomePracticeStreaks.mockResolvedValue(
+      createPracticeStreaks({
+        currentStreakDays: 2,
+        longestStreakDays: 5,
+        practicedToday: false,
+        lastPracticedLocalDay: "2026-06-20",
+        emptyState: {
+          hasPracticeHistory: true
+        }
+      })
+    );
 
     const { unmount } = render(<HomeDashboard />);
 
@@ -755,6 +893,7 @@ describe("HomeDashboard", () => {
     );
     await waitFor(() => expect(serviceMocks.getHomeRecentActivity).toHaveBeenCalled());
     await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalled());
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalled());
     expect(await screen.findByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
       "href",
       "/quick-metronome"
@@ -762,25 +901,41 @@ describe("HomeDashboard", () => {
     expect(await screen.findByText("Service Activity")).toBeVisible();
     expect(screen.getByTestId("today-summary-sessions")).toHaveTextContent("1");
     expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("2 min");
+    expect(screen.getByTestId("home-streak-current")).toHaveTextContent("2 days");
+    expect(screen.getByText("Streak is waiting on today's practice.")).toBeVisible();
     unmount();
 
     serviceMocks.getContinuePracticeTargets.mockRejectedValue(new Error("IndexedDB unavailable"));
     serviceMocks.getHomeRecentActivity.mockRejectedValue(new Error("IndexedDB unavailable"));
     serviceMocks.getHomeDashboardAnalyticsSource.mockRejectedValue(new Error("IndexedDB unavailable"));
+    serviceMocks.getHomePracticeStreaks.mockRejectedValue(new Error("IndexedDB unavailable"));
     render(<HomeDashboard />);
 
     expect(await screen.findByText("Continue Practice targets could not be loaded.")).toBeVisible();
     expect(await screen.findByText("Recent activity could not be loaded.")).toBeVisible();
     expect(await screen.findByText("Practice analytics could not be loaded.")).toBeVisible();
+    expect(await screen.findByText("Practice streaks could not be loaded.")).toBeVisible();
+    expect(screen.queryByTestId("home-streak-current")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-streak-longest")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-streak-today-status")).not.toBeInTheDocument();
+    expect(screen.queryByText("No practice logged yet.")).not.toBeInTheDocument();
     expect(screen.getByTestId("today-summary-sessions")).toHaveTextContent("1");
   });
 
-  it("does not read practice analytics when IndexedDB is unavailable", async () => {
+  it("does not read practice analytics or streaks when IndexedDB is unavailable", async () => {
     render(<HomeDashboard />);
 
     await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).not.toHaveBeenCalled());
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).not.toHaveBeenCalled());
     expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
     expect(screen.getByText("No local practice analytics yet.")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Practice Streaks" })).toBeVisible();
+    expect(screen.getByText("Practice streaks are unavailable in this browser.")).toBeVisible();
+    expect(screen.queryByText("No local practice streak yet.")).not.toBeInTheDocument();
+    expect(screen.queryByText("No practice logged yet.")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-streak-current")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-streak-longest")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-streak-today-status")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
       "href",
       "/quick-metronome"
@@ -835,6 +990,50 @@ describe("HomeDashboard", () => {
     expect(await screen.findByText("Practice analytics could not be loaded.")).toBeVisible();
     expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("1 hr 5 min");
     expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent("4");
+    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+  });
+
+  it("keeps previous streaks visible when a subscription refresh streak read fails", async () => {
+    vi.stubGlobal("indexedDB", {});
+    const subscription: { refresh: (() => void) | null } = { refresh: null };
+
+    serviceMocks.subscribe.mockImplementation((listener: () => void) => {
+      subscription.refresh = listener;
+
+      return () => undefined;
+    });
+    serviceMocks.getHomePracticeStreaks.mockResolvedValueOnce(
+      createPracticeStreaks({
+        currentStreakDays: 4,
+        longestStreakDays: 8,
+        practicedToday: true,
+        lastPracticedLocalDay: "2026-06-21",
+        emptyState: {
+          hasPracticeHistory: true
+        }
+      })
+    );
+
+    render(<HomeDashboard />);
+
+    expect(await screen.findByTestId("home-streak-current")).toHaveTextContent("4 days");
+
+    const refresh = subscription.refresh;
+
+    if (!refresh) {
+      throw new Error("Dashboard subscription was not registered.");
+    }
+
+    serviceMocks.getHomePracticeStreaks.mockRejectedValueOnce(
+      new Error("streak read failed")
+    );
+    refresh();
+
+    expect(await screen.findByText("Practice streaks could not be loaded.")).toBeVisible();
+    expect(screen.getByTestId("home-streak-current")).toHaveTextContent("4 days");
+    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent("8 days");
+    expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
   });
@@ -916,5 +1115,140 @@ describe("HomeDashboard", () => {
     expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("2 hr");
     expect(screen.getByText("Local history totals · Updated 2026-06-21 12:10 UTC")).toBeVisible();
     expect(screen.queryByText("Local history totals · Updated 2026-06-21 12:00 UTC")).not.toBeInTheDocument();
+  });
+
+  it("ignores older overlapping refreshes that resolve after newer streaks", async () => {
+    vi.stubGlobal("indexedDB", {});
+    const subscription: { refresh: (() => void) | null } = { refresh: null };
+    function createDeferredStreakRead() {
+      let resolveStreaks!: (streaks: HomePracticeStreaks) => void;
+      const promise = new Promise<HomePracticeStreaks>((resolve) => {
+        resolveStreaks = resolve;
+      });
+
+      return { promise, resolve: resolveStreaks };
+    }
+
+    const olderStreakRead = createDeferredStreakRead();
+    const newerStreakRead = createDeferredStreakRead();
+    const olderStreaks = createPracticeStreaks({
+      generatedAt: "2026-06-21T12:00:00.000Z",
+      currentStreakDays: 1,
+      longestStreakDays: 1,
+      practicedToday: true,
+      lastPracticedLocalDay: "2026-06-21",
+      emptyState: {
+        hasPracticeHistory: true
+      }
+    });
+    const newerStreaks = createPracticeStreaks({
+      generatedAt: "2026-06-21T12:10:00.000Z",
+      currentStreakDays: 5,
+      longestStreakDays: 7,
+      practicedToday: true,
+      lastPracticedLocalDay: "2026-06-21",
+      emptyState: {
+        hasPracticeHistory: true
+      }
+    });
+
+    serviceMocks.subscribe.mockImplementation((listener: () => void) => {
+      subscription.refresh = listener;
+
+      return () => undefined;
+    });
+    serviceMocks.getHomePracticeStreaks
+      .mockReturnValueOnce(olderStreakRead.promise)
+      .mockReturnValueOnce(newerStreakRead.promise);
+
+    render(<HomeDashboard />);
+
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(1));
+
+    const refresh = subscription.refresh;
+
+    if (!refresh) {
+      throw new Error("Dashboard subscription was not registered.");
+    }
+
+    refresh();
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(2));
+
+    newerStreakRead.resolve(newerStreaks);
+
+    expect(await screen.findByTestId("home-streak-current")).toHaveTextContent("5 days");
+    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent("7 days");
+    expect(screen.queryByText("Loading practice streaks.")).not.toBeInTheDocument();
+
+    olderStreakRead.resolve(olderStreaks);
+
+    await waitFor(() => expect(screen.getByTestId("home-streak-current")).toHaveTextContent("5 days"));
+    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent("7 days");
+    expect(screen.queryByText("1 day")).not.toBeInTheDocument();
+  });
+
+  it("ignores older overlapping streak failures after newer streaks load", async () => {
+    vi.stubGlobal("indexedDB", {});
+    const subscription: { refresh: (() => void) | null } = { refresh: null };
+    function createDeferredRejectedStreakRead() {
+      let rejectStreaks!: (error: Error) => void;
+      const promise = new Promise<HomePracticeStreaks>((_resolve, reject) => {
+        rejectStreaks = reject;
+      });
+
+      return { promise, reject: rejectStreaks };
+    }
+    function createDeferredResolvedStreakRead() {
+      let resolveStreaks!: (streaks: HomePracticeStreaks) => void;
+      const promise = new Promise<HomePracticeStreaks>((resolve) => {
+        resolveStreaks = resolve;
+      });
+
+      return { promise, resolve: resolveStreaks };
+    }
+
+    const olderStreakRead = createDeferredRejectedStreakRead();
+    const newerStreakRead = createDeferredResolvedStreakRead();
+    const newerStreaks = createPracticeStreaks({
+      generatedAt: "2026-06-21T12:10:00.000Z",
+      currentStreakDays: 6,
+      longestStreakDays: 6,
+      practicedToday: true,
+      lastPracticedLocalDay: "2026-06-21",
+      emptyState: {
+        hasPracticeHistory: true
+      }
+    });
+
+    serviceMocks.subscribe.mockImplementation((listener: () => void) => {
+      subscription.refresh = listener;
+
+      return () => undefined;
+    });
+    serviceMocks.getHomePracticeStreaks
+      .mockReturnValueOnce(olderStreakRead.promise)
+      .mockReturnValueOnce(newerStreakRead.promise);
+
+    render(<HomeDashboard />);
+
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(1));
+
+    const refresh = subscription.refresh;
+
+    if (!refresh) {
+      throw new Error("Dashboard subscription was not registered.");
+    }
+
+    refresh();
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(2));
+
+    newerStreakRead.resolve(newerStreaks);
+
+    expect(await screen.findByTestId("home-streak-current")).toHaveTextContent("6 days");
+
+    olderStreakRead.reject(new Error("older streak read failed"));
+
+    await waitFor(() => expect(screen.getByTestId("home-streak-current")).toHaveTextContent("6 days"));
+    expect(screen.queryByText("Practice streaks could not be loaded.")).not.toBeInTheDocument();
   });
 });

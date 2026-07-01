@@ -96,6 +96,17 @@ export type HomeDashboardAnalyticsSource = {
   goals?: GoalCompletionEvaluation[];
 };
 
+export type HomePracticeStreaks = {
+  generatedAt: string;
+  currentStreakDays: number;
+  longestStreakDays: number;
+  practicedToday: boolean;
+  lastPracticedLocalDay: string | null;
+  emptyState: {
+    hasPracticeHistory: boolean;
+  };
+};
+
 export type ContinuePracticeTarget =
   | {
       sourceType: "quick";

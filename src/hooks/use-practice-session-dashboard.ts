@@ -8,6 +8,7 @@ import {
   type ContinuePracticeTarget,
   type ContinuePracticeTargetsResult,
   type HomeDashboardAnalyticsSource,
+  type HomePracticeStreaks,
   type HomeRecentActivityResult,
   type PracticeSession
 } from "@/domain/practice";
@@ -17,6 +18,7 @@ export type PracticeSessionDashboardReadStatus = "idle" | "loading" | "loaded" |
 export type PracticeSessionDashboardContinueTargetsStatus = PracticeSessionDashboardReadStatus;
 export type PracticeSessionDashboardRecentActivityStatus = PracticeSessionDashboardReadStatus;
 export type PracticeSessionDashboardAnalyticsStatus = PracticeSessionDashboardReadStatus;
+export type PracticeSessionDashboardStreaksStatus = PracticeSessionDashboardReadStatus;
 
 export type PracticeSessionDashboardState = {
   recentSession: PracticeSession | null;
@@ -36,6 +38,9 @@ export type PracticeSessionDashboardState = {
   analytics: HomeDashboardAnalyticsSource;
   analyticsStatus: PracticeSessionDashboardAnalyticsStatus;
   analyticsErrorMessage: string | null;
+  streaks: HomePracticeStreaks;
+  streaksStatus: PracticeSessionDashboardStreaksStatus;
+  streaksErrorMessage: string | null;
 };
 
 const emptyContinueTargets: ContinuePracticeTargetsResult = {
@@ -75,6 +80,17 @@ const emptyAnalytics: HomeDashboardAnalyticsSource = {
   }
 };
 
+const emptyStreaks: HomePracticeStreaks = {
+  generatedAt: "",
+  currentStreakDays: 0,
+  longestStreakDays: 0,
+  practicedToday: false,
+  lastPracticedLocalDay: null,
+  emptyState: {
+    hasPracticeHistory: false
+  }
+};
+
 const emptyState: PracticeSessionDashboardState = {
   recentSession: null,
   continueTarget: null,
@@ -92,12 +108,16 @@ const emptyState: PracticeSessionDashboardState = {
   recentActivityErrorMessage: null,
   analytics: emptyAnalytics,
   analyticsStatus: "idle",
-  analyticsErrorMessage: null
+  analyticsErrorMessage: null,
+  streaks: emptyStreaks,
+  streaksStatus: "idle",
+  streaksErrorMessage: null
 };
 
 const continueTargetsErrorMessage = "Continue Practice targets could not be loaded.";
 const recentActivityErrorMessage = "Recent activity could not be loaded.";
 const analyticsErrorMessage = "Practice analytics could not be loaded.";
+const streaksErrorMessage = "Practice streaks could not be loaded.";
 
 export function usePracticeSessionDashboard() {
   const [state, setState] = useState<PracticeSessionDashboardState>(emptyState);
@@ -121,10 +141,12 @@ export function usePracticeSessionDashboard() {
         recentActivityStatus: "loading",
         recentActivityErrorMessage: null,
         analyticsStatus: "loading",
-        analyticsErrorMessage: null
+        analyticsErrorMessage: null,
+        streaksStatus: "loading",
+        streaksErrorMessage: null
       }));
 
-      const [recentSession, continueTargetsRead, summary, recentActivityRead, analyticsRead] = await Promise.all([
+      const [recentSession, continueTargetsRead, summary, recentActivityRead, analyticsRead, streaksRead] = await Promise.all([
         browserPracticeSessionService.getRecentSession(),
         browserPracticeSessionService
           .getContinuePracticeTargets({ limit: DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT })
@@ -138,7 +160,11 @@ export function usePracticeSessionDashboard() {
         browserPracticeSessionService
           .getHomeDashboardAnalyticsSource()
           .then((analytics) => ({ analytics, errorMessage: null }))
-          .catch(() => ({ analytics: null, errorMessage: analyticsErrorMessage }))
+          .catch(() => ({ analytics: null, errorMessage: analyticsErrorMessage })),
+        browserPracticeSessionService
+          .getHomePracticeStreaks()
+          .then((streaks) => ({ streaks, errorMessage: null }))
+          .catch(() => ({ streaks: null, errorMessage: streaksErrorMessage }))
       ]);
 
       if (!isActive || refreshId !== latestRefreshId) {
@@ -157,7 +183,10 @@ export function usePracticeSessionDashboard() {
         recentActivityErrorMessage: recentActivityRead.errorMessage,
         analytics: analyticsRead.analytics ?? currentState.analytics,
         analyticsStatus: analyticsRead.errorMessage ? "error" : "loaded",
-        analyticsErrorMessage: analyticsRead.errorMessage
+        analyticsErrorMessage: analyticsRead.errorMessage,
+        streaks: streaksRead.streaks ?? currentState.streaks,
+        streaksStatus: streaksRead.errorMessage ? "error" : "loaded",
+        streaksErrorMessage: streaksRead.errorMessage
       }));
     }
 

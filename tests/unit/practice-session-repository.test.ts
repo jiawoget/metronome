@@ -178,6 +178,16 @@ function createRepositoryBackedRecentActivityService(nowIso: string) {
   });
 }
 
+function localIso(
+  year: number,
+  monthIndex: number,
+  day: number,
+  hour = 12,
+  minute = 0
+) {
+  return new Date(year, monthIndex, day, hour, minute, 0).toISOString();
+}
+
 describe("practice session persisted row parsing", () => {
   it("normalizes missing segmentContext to null and rejects malformed non-null context", () => {
     expect(
@@ -759,6 +769,76 @@ describe("practice session browser repository", () => {
         hasSegmentPractice: true,
         hasRecordings: true,
         hasGoals: false
+      }
+    });
+  });
+
+  it("derives the same Home practice streaks after reopening persisted storage and clearing history", async () => {
+    const todaySession = createQuickSession({
+      id: "today-session",
+      startedAt: localIso(2026, 5, 23, 9),
+      updatedAt: localIso(2026, 5, 23, 9, 1)
+    });
+    const duplicateTodaySession = createSheetSession({
+      id: "duplicate-today-session",
+      startedAt: localIso(2026, 5, 23, 18),
+      updatedAt: localIso(2026, 5, 23, 18, 1),
+      durationMs: 0,
+      recordingCount: 0
+    });
+    const yesterdaySession = createSheetSession({
+      id: "yesterday-session",
+      startedAt: localIso(2026, 5, 22, 12),
+      updatedAt: localIso(2026, 5, 22, 12, 1)
+    });
+    const olderSession = createSheetSession({
+      id: "older-session",
+      startedAt: localIso(2026, 5, 18, 12),
+      updatedAt: localIso(2026, 5, 18, 12, 1)
+    });
+
+    await practiceSessionRepository.saveSession(todaySession);
+    await practiceSessionRepository.saveSession(duplicateTodaySession);
+    await practiceSessionRepository.saveSession(yesterdaySession);
+    await practiceSessionRepository.saveSession(olderSession);
+
+    const beforeReload = await createRepositoryBackedRecentActivityService(
+      localIso(2026, 5, 23, 20)
+    ).getHomePracticeStreaks();
+
+    resetPracticeSessionDatabaseConnectionForTests();
+
+    const afterReload = await createRepositoryBackedRecentActivityService(
+      localIso(2026, 5, 23, 20)
+    ).getHomePracticeStreaks();
+
+    expect(afterReload).toEqual(beforeReload);
+    expect(afterReload).toMatchObject({
+      currentStreakDays: 2,
+      longestStreakDays: 2,
+      practicedToday: true,
+      lastPracticedLocalDay: "2026-06-23",
+      emptyState: {
+        hasPracticeHistory: true
+      }
+    });
+
+    await createRepositoryBackedRecentActivityService(
+      localIso(2026, 5, 23, 20)
+    ).clear();
+    resetPracticeSessionDatabaseConnectionForTests();
+
+    await expect(
+      createRepositoryBackedRecentActivityService(
+        localIso(2026, 5, 23, 20)
+      ).getHomePracticeStreaks()
+    ).resolves.toMatchObject({
+      currentStreakDays: 0,
+      longestStreakDays: 0,
+      practicedToday: false,
+      lastPracticedLocalDay: null,
+      emptyState: {
+        hasPracticeHistory: false
       }
     });
   });

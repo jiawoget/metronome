@@ -960,6 +960,98 @@ describe("practice session service", () => {
     ).rejects.toThrow("recording read failed");
   });
 
+  it("reads Home practice streaks from sessions only with one captured service clock", async () => {
+    const todaySession = createPracticeSessionFixture({
+      id: "today-practice",
+      startedAt: "2026-06-21T09:00:00.000Z",
+      updatedAt: "2026-06-21T09:01:00.000Z",
+      durationMs: 0,
+      recordingCount: 99
+    });
+    const yesterdaySession = createPracticeSessionFixture({
+      id: "yesterday-practice",
+      startedAt: "2026-06-20T09:00:00.000Z",
+      updatedAt: "2026-06-20T09:01:00.000Z",
+      segmentContext: createSegmentContext()
+    });
+    const repository: PracticeSessionRepository = {
+      listSessions: vi.fn(async () => [yesterdaySession, todaySession]),
+      getSession: vi.fn(async () => null),
+      getRecentSession: vi.fn(async () => null),
+      getRecentSheetSession: vi.fn(async () => null),
+      saveSession: vi.fn(async () => undefined),
+      deleteSession: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const recordingRepository: PracticeRecordingMetadataRepository = {
+      listRecordingMetadata: vi.fn(async () => []),
+      listRecordingMetadataForSession: vi.fn(async () => []),
+      saveRecordingMetadata: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const getSheetContext = vi.fn();
+    const updateLastPracticedAt = vi.fn(async () => undefined);
+    const getSegmentContext = vi.fn();
+    const clock = vi.fn()
+      .mockReturnValueOnce(new Date("2026-06-21T12:00:00.000Z"))
+      .mockReturnValueOnce(new Date("2030-01-01T00:00:00.000Z"));
+    const service = createPracticeSessionService({
+      repository,
+      recordingRepository,
+      sheetGateway: {
+        getSheetContext,
+        updateLastPracticedAt
+      },
+      segmentGateway: {
+        getSegmentContext
+      },
+      now: clock
+    });
+
+    await expect(service.getHomePracticeStreaks()).resolves.toEqual({
+      generatedAt: "2026-06-21T12:00:00.000Z",
+      currentStreakDays: 2,
+      longestStreakDays: 2,
+      practicedToday: true,
+      lastPracticedLocalDay: "2026-06-21",
+      emptyState: {
+        hasPracticeHistory: true
+      }
+    });
+    expect(clock).toHaveBeenCalledTimes(1);
+    expect(repository.listSessions).toHaveBeenCalledTimes(1);
+    expect(recordingRepository.listRecordingMetadata).not.toHaveBeenCalled();
+    expect(repository.getSession).not.toHaveBeenCalled();
+    expect(repository.getRecentSession).not.toHaveBeenCalled();
+    expect(repository.getRecentSheetSession).not.toHaveBeenCalled();
+    expect(repository.saveSession).not.toHaveBeenCalled();
+    expect(repository.deleteSession).not.toHaveBeenCalled();
+    expect(repository.clear).not.toHaveBeenCalled();
+    expect(recordingRepository.saveRecordingMetadata).not.toHaveBeenCalled();
+    expect(recordingRepository.clear).not.toHaveBeenCalled();
+    expect(getSheetContext).not.toHaveBeenCalled();
+    expect(updateLastPracticedAt).not.toHaveBeenCalled();
+    expect(getSegmentContext).not.toHaveBeenCalled();
+  });
+
+  it("rejects Home practice streaks when session reads fail", async () => {
+    const { gateway } = createSheetGateway(new Set(["sheet-alpha"]));
+    const sessionReadFailureRepository = createMemorySessionRepository();
+
+    vi.spyOn(sessionReadFailureRepository, "listSessions").mockRejectedValue(
+      new Error("session read failed")
+    );
+
+    await expect(
+      createPracticeSessionService({
+        repository: sessionReadFailureRepository,
+        recordingRepository: createMemoryRecordingRepository(),
+        sheetGateway: gateway,
+        now: () => new Date(nowMs)
+      }).getHomePracticeStreaks()
+    ).rejects.toThrow("session read failed");
+  });
+
   it("prepares sheet recording metadata without persisting recording metadata or session recording counts until commit", async () => {
     const { service, repository } = createService();
 
