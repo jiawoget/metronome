@@ -104,11 +104,15 @@ export function usePracticeSessionDashboard() {
 
   useEffect(() => {
     let isActive = true;
+    let latestRefreshId = 0;
 
     async function refresh() {
       if (typeof indexedDB === "undefined") {
         return;
       }
+
+      const refreshId = latestRefreshId + 1;
+      latestRefreshId = refreshId;
 
       setState((currentState) => ({
         ...currentState,
@@ -137,7 +141,7 @@ export function usePracticeSessionDashboard() {
           .catch(() => ({ analytics: null, errorMessage: analyticsErrorMessage }))
       ]);
 
-      if (!isActive) {
+      if (!isActive || refreshId !== latestRefreshId) {
         return;
       }
 

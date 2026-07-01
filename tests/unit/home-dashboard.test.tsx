@@ -838,4 +838,83 @@ describe("HomeDashboard", () => {
     expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
   });
+
+  it("ignores older overlapping refreshes that resolve after newer analytics", async () => {
+    vi.stubGlobal("indexedDB", {});
+    const subscription: { refresh: (() => void) | null } = { refresh: null };
+    function createDeferredAnalyticsRead() {
+      let resolveAnalytics!: (analytics: HomeDashboardAnalyticsSource) => void;
+      const promise = new Promise<HomeDashboardAnalyticsSource>((resolve) => {
+        resolveAnalytics = resolve;
+      });
+
+      return { promise, resolve: resolveAnalytics };
+    }
+
+    const olderAnalyticsRead = createDeferredAnalyticsRead();
+    const newerAnalyticsRead = createDeferredAnalyticsRead();
+    const olderAnalytics = createAnalyticsSource({
+      generatedAt: "2026-06-21T12:00:00.000Z",
+      totals: {
+        durationMs: 60_000,
+        sessions: 1,
+        sheetTakes: 0,
+        practicedSheets: 0,
+        segmentSessions: 0
+      },
+      emptyState: {
+        hasPracticeHistory: true
+      }
+    });
+    const newerAnalytics = createAnalyticsSource({
+      generatedAt: "2026-06-21T12:10:00.000Z",
+      totals: {
+        durationMs: 7_200_000,
+        sessions: 6,
+        sheetTakes: 3,
+        practicedSheets: 2,
+        segmentSessions: 2
+      },
+      emptyState: {
+        hasPracticeHistory: true,
+        hasSheetPractice: true,
+        hasSegmentPractice: true
+      }
+    });
+
+    serviceMocks.subscribe.mockImplementation((listener: () => void) => {
+      subscription.refresh = listener;
+
+      return () => undefined;
+    });
+    serviceMocks.getHomeDashboardAnalyticsSource
+      .mockReturnValueOnce(olderAnalyticsRead.promise)
+      .mockReturnValueOnce(newerAnalyticsRead.promise);
+
+    render(<HomeDashboard />);
+
+    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalledTimes(1));
+
+    const refresh = subscription.refresh;
+
+    if (!refresh) {
+      throw new Error("Dashboard subscription was not registered.");
+    }
+
+    refresh();
+    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalledTimes(2));
+
+    newerAnalyticsRead.resolve(newerAnalytics);
+
+    expect(await screen.findByTestId("home-analytics-total-practice")).toHaveTextContent("2 hr");
+    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent("6");
+    expect(screen.queryByText("Loading practice analytics.")).not.toBeInTheDocument();
+
+    olderAnalyticsRead.resolve(olderAnalytics);
+
+    await waitFor(() => expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent("6"));
+    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("2 hr");
+    expect(screen.getByText("Local history totals · Updated 2026-06-21 12:10 UTC")).toBeVisible();
+    expect(screen.queryByText("Local history totals · Updated 2026-06-21 12:00 UTC")).not.toBeInTheDocument();
+  });
 });
