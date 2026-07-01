@@ -500,4 +500,96 @@ describe("practice session browser repository", () => {
       "recording:recording-missing-session": "valid"
     });
   });
+
+  it("derives the same logical Continue Practice targets after reopening persisted storage", async () => {
+    const quickSession = createQuickSession({
+      id: "quick-session",
+      updatedAt: "2026-06-21T12:01:00.000Z"
+    });
+    const sheetSession = createSheetSession({
+      id: "sheet-session",
+      updatedAt: "2026-06-21T12:02:00.000Z"
+    });
+    const segmentSession = createSheetSession({
+      id: "segment-session",
+      updatedAt: "2026-06-21T12:03:00.000Z",
+      segmentContext: createSegmentContext()
+    });
+    const missingSegmentSession = createSheetSession({
+      id: "missing-segment",
+      updatedAt: "2026-06-21T12:06:00.000Z",
+      segmentContext: createSegmentContext({
+        segmentId: "segment-missing",
+        segmentName: "Deleted Segment Snapshot"
+      })
+    });
+    const deletedSheetSession = createSheetSession({
+      id: "deleted-sheet",
+      sheetId: "sheet-deleted",
+      updatedAt: "2026-06-21T12:07:00.000Z"
+    });
+
+    await practiceSessionRepository.saveSession(quickSession);
+    await practiceSessionRepository.saveSession(sheetSession);
+    await practiceSessionRepository.saveSession(segmentSession);
+    await practiceSessionRepository.saveSession(missingSegmentSession);
+    await practiceSessionRepository.saveSession(deletedSheetSession);
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecordingMetadata({
+        id: "sheet-recording",
+        sessionId: sheetSession.id,
+        createdAt: "2026-06-21T12:04:00.000Z"
+      }),
+      sheetSession
+    );
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecordingMetadata({
+        id: "segment-recording",
+        sessionId: segmentSession.id,
+        createdAt: "2026-06-21T12:05:00.000Z",
+        segmentContext: createSegmentContext()
+      }),
+      segmentSession
+    );
+
+    const beforeReload = await createRepositoryBackedRecentActivityService(
+      "2026-06-21T12:30:00.000Z"
+    ).getContinuePracticeTargets({ limit: 10 });
+
+    resetPracticeSessionDatabaseConnectionForTests();
+
+    const afterReload = await createRepositoryBackedRecentActivityService(
+      "2026-06-21T12:31:00.000Z"
+    ).getContinuePracticeTargets({ limit: 10 });
+    const logicalTargets = (targets: typeof beforeReload.targets) =>
+      targets.map((target) => ({
+        kind: target.kind,
+        targetKey: target.targetKey,
+        sessionId: target.sessionId,
+        recordingId: target.recordingId,
+        sheetId: target.sourceType === "sheet" ? target.sheetId : null,
+        segmentId: target.kind === "segment" ? target.segmentId : null,
+        label: target.label
+      }));
+    const logicalRejected = (targets: typeof beforeReload.rejected) =>
+      targets.map((target) => ({
+        id: target.id,
+        reason: target.reason,
+        sheetId: target.sheetId,
+        segmentId: target.segmentId
+      }));
+
+    expect(logicalTargets(afterReload.targets)).toEqual(logicalTargets(beforeReload.targets));
+    expect(logicalRejected(afterReload.rejected)).toEqual(logicalRejected(beforeReload.rejected));
+    expect(afterReload.generatedAt).not.toBe(beforeReload.generatedAt);
+    expect(afterReload.targets.map((target) => [target.kind, target.targetKey])).toEqual([
+      ["segment", "segment:sheet-alpha:segment-alpha"],
+      ["sheet", "sheet:sheet-alpha"],
+      ["quick", "quick"]
+    ]);
+    expect(Object.fromEntries(afterReload.rejected.map((target) => [target.id, target.reason]))).toMatchObject({
+      "session:missing-segment": "missing-segment",
+      "session:deleted-sheet": "missing-sheet"
+    });
+  });
 });

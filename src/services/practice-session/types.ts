@@ -1,5 +1,7 @@
 import type {
   ContinuePracticeTarget,
+  ContinuePracticeTargetsOptions,
+  ContinuePracticeTargetsResult,
   HomeRecentActivityOptions,
   HomeRecentActivityResult,
   PracticeActivityTrigger,
@@ -130,6 +132,7 @@ export type PracticeSessionService = {
   getTodaySummary: () => Promise<TodayPracticeSummary>;
   getRecentSession: () => Promise<PracticeSession | null>;
   getRecentSheetSession: (sheetId: string) => Promise<PracticeSession | null>;
+  getContinuePracticeTargets: (options?: ContinuePracticeTargetsOptions) => Promise<ContinuePracticeTargetsResult>;
   getContinuePracticeTarget: () => Promise<ContinuePracticeTarget | null>;
   listRecordingMetadata: () => Promise<SheetRecordingMetadata[]>;
   clear: () => Promise<void>;
