@@ -5,6 +5,7 @@ import {
   getTodayPracticeSummary,
   groupPracticeSessionsByHistory,
   isBrowserLocalDay,
+  selectHomeRecentActivity,
   validatePracticeSessionEvent,
   validateSheetRecordingMetadata,
   withUpdatedPracticeSessionDuration,
@@ -12,7 +13,9 @@ import {
   type SessionHistoryLookupResult,
   type SessionHistorySegmentTarget,
   type SessionHistorySheetTarget,
-  type PracticeSession
+  type HomeRecentActivityTargetResolution,
+  type PracticeSession,
+  type SheetRecordingMetadata
 } from "@/domain/practice";
 import type {
   PracticeSessionEventCaptureInput,
@@ -232,6 +235,130 @@ export function createPracticeSessionService({
 
       const sheetId = normalizeOptionalContextId(session.sheetId);
       const segmentId = normalizeOptionalContextId(session.segmentContext?.segmentId);
+
+      if (!sheetId || !segmentId) {
+        continue;
+      }
+
+      const sheetTarget = sheetTargets[sheetId];
+
+      if (sheetTarget?.state === "lookup-failed" || sheetTarget?.state === "missing") {
+        continue;
+      }
+
+      segmentKeys.set(createSessionHistorySegmentTargetKey(sheetId, segmentId), {
+        sheetId,
+        segmentId
+      });
+    }
+
+    await Promise.all(
+      Array.from(segmentKeys.entries()).map(async ([targetKey, target]) => {
+        try {
+          const segment = await segmentGateway.getSegmentContext(
+            target.sheetId,
+            target.segmentId
+          );
+
+          segmentTargets[targetKey] = segment
+            ? {
+                state: "valid",
+                value: {
+                  name: segment.name
+                }
+              }
+            : {
+                state: "missing"
+              };
+        } catch {
+          segmentTargets[targetKey] = {
+            state: "lookup-failed"
+          };
+        }
+      })
+    );
+
+    return segmentTargets;
+  }
+
+  function getHomeRecentActivityTargetSources(
+    sessions: PracticeSession[],
+    recordings: SheetRecordingMetadata[]
+  ) {
+    return [
+      ...sessions.map((session) => ({
+        sourceType: session.sourceType,
+        sheetId: session.sheetId,
+        segmentContext: session.segmentContext
+      })),
+      ...recordings.map((recording) => ({
+        sourceType: "sheet" as const,
+        sheetId: recording.sheetId,
+        segmentContext: recording.segmentContext
+      }))
+    ];
+  }
+
+  async function resolveHomeRecentActivitySheetTargets(
+    sessions: PracticeSession[],
+    recordings: SheetRecordingMetadata[]
+  ) {
+    const sheetTargets: NonNullable<HomeRecentActivityTargetResolution["sheets"]> = {};
+    const sheetIds = Array.from(
+      new Set(
+        getHomeRecentActivityTargetSources(sessions, recordings)
+          .filter((source) => source.sourceType === "sheet")
+          .map((source) => normalizeOptionalContextId(source.sheetId))
+          .filter((sheetId): sheetId is string => sheetId !== null)
+      )
+    );
+
+    await Promise.all(
+      sheetIds.map(async (sheetId) => {
+        try {
+          const sheet = await sheetGateway.getSheetContext(sheetId);
+
+          sheetTargets[sheetId] = sheet
+            ? {
+                state: "valid",
+                value: {
+                  name: sheet.name
+                }
+              }
+            : {
+                state: "missing"
+              };
+        } catch {
+          sheetTargets[sheetId] = {
+            state: "lookup-failed"
+          };
+        }
+      })
+    );
+
+    return sheetTargets;
+  }
+
+  async function resolveHomeRecentActivitySegmentTargets(
+    sessions: PracticeSession[],
+    recordings: SheetRecordingMetadata[],
+    sheetTargets: NonNullable<HomeRecentActivityTargetResolution["sheets"]>
+  ) {
+    const segmentTargets: NonNullable<HomeRecentActivityTargetResolution["segments"]> = {};
+
+    if (!segmentGateway) {
+      return segmentTargets;
+    }
+
+    const segmentKeys = new Map<string, { sheetId: string; segmentId: string }>();
+
+    for (const source of getHomeRecentActivityTargetSources(sessions, recordings)) {
+      if (source.sourceType !== "sheet") {
+        continue;
+      }
+
+      const sheetId = normalizeOptionalContextId(source.sheetId);
+      const segmentId = normalizeOptionalContextId(source.segmentContext?.segmentId);
 
       if (!sheetId || !segmentId) {
         continue;
@@ -581,6 +708,33 @@ export function createPracticeSessionService({
 
     listSessions() {
       return repository.listSessions();
+    },
+
+    async getHomeRecentActivity(options) {
+      const [sessions, recordings] = await Promise.all([
+        repository.listSessions(),
+        recordingRepository.listRecordingMetadata()
+      ]);
+      const sheets = await resolveHomeRecentActivitySheetTargets(
+        sessions,
+        recordings
+      );
+      const segments = await resolveHomeRecentActivitySegmentTargets(
+        sessions,
+        recordings,
+        sheets
+      );
+
+      return selectHomeRecentActivity({
+        sessions,
+        recordings,
+        targets: {
+          sheets,
+          segments
+        },
+        generatedAt: now().toISOString(),
+        limit: options?.limit
+      });
     },
 
     async getSessionHistoryGroups(mode) {

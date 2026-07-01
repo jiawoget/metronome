@@ -128,6 +128,44 @@ function createSegmentContext(overrides: Partial<SheetRecordingSegmentContext> =
   };
 }
 
+function createPracticeSessionFixture(
+  overrides: Partial<PracticeSession> = {}
+): PracticeSession {
+  return {
+    id: "session-alpha",
+    sourceType: "sheet",
+    sheetId: "sheet-alpha",
+    startedAt: "2026-06-21T12:00:00.000Z",
+    endedAt: null,
+    durationMs: 60_000,
+    bpm: 96,
+    timeSignature: "4/4",
+    recordingCount: 1,
+    latestRecordingId: "recording-alpha",
+    updatedAt: "2026-06-21T12:01:00.000Z",
+    segmentContext: null,
+    ...overrides
+  };
+}
+
+function createSheetRecordingMetadataFixture(
+  overrides: Partial<SheetRecordingMetadata> = {}
+): SheetRecordingMetadata {
+  return {
+    id: "recording-alpha",
+    type: "sheet",
+    sessionId: "session-alpha",
+    sheetId: "sheet-alpha",
+    sheetName: "Alpha Sheet Snapshot",
+    createdAt: "2026-06-21T12:02:00.000Z",
+    durationMs: 12_000,
+    bpm: 96,
+    timeSignature: "4/4",
+    segmentContext: null,
+    ...overrides
+  };
+}
+
 describe("practice session service", () => {
   let nowMs: number;
 
@@ -1693,6 +1731,209 @@ describe("practice session service", () => {
         targetState: "lookup-failed"
       })
     ]);
+  });
+
+  it("returns home recent activity from sessions and recordings without repository writes", async () => {
+    const sessions = [
+      createPracticeSessionFixture({
+        id: "latest-missing-recording",
+        latestRecordingId: "deleted-recording",
+        durationMs: 15_000,
+        updatedAt: "2026-06-21T12:03:00.000Z"
+      })
+    ];
+    const recordings = [
+      createSheetRecordingMetadataFixture({
+        id: "recording-missing-session",
+        sessionId: "missing-session",
+        createdAt: "2026-06-21T12:04:00.000Z",
+        durationMs: 22_000
+      })
+    ];
+    const repository: PracticeSessionRepository = {
+      listSessions: vi.fn(async () => sessions),
+      getSession: vi.fn(async () => null),
+      getRecentSession: vi.fn(async () => null),
+      getRecentSheetSession: vi.fn(async () => null),
+      saveSession: vi.fn(async () => undefined),
+      deleteSession: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const recordingRepository: PracticeRecordingMetadataRepository = {
+      listRecordingMetadata: vi.fn(async () => recordings),
+      listRecordingMetadataForSession: vi.fn(async () => []),
+      saveRecordingMetadata: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const updateLastPracticedAt = vi.fn(async () => undefined);
+    const service = createPracticeSessionService({
+      repository,
+      recordingRepository,
+      sheetGateway: {
+        async getSheetContext(sheetId) {
+          return {
+            id: sheetId,
+            name: "Alpha Sheet",
+            bpm: 96,
+            timeSignature: "4/4"
+          };
+        },
+        updateLastPracticedAt
+      },
+      now: () => new Date(nowMs)
+    });
+
+    const result = await service.getHomeRecentActivity({ limit: 6 });
+
+    expect(result).toMatchObject({
+      generatedAt: "2026-06-21T12:00:00.000Z",
+      limit: 6
+    });
+    expect(result.items.map((item) => [item.id, item.kind, item.targetState])).toEqual([
+      ["recording:recording-missing-session", "sheet-recording", "valid"],
+      ["session:latest-missing-recording", "sheet-session", "valid"]
+    ]);
+    expect(result.items[0]).toMatchObject({
+      sessionId: "missing-session",
+      durationMs: 22_000
+    });
+    expect(result.items[1]).toMatchObject({
+      sessionId: "latest-missing-recording",
+      durationMs: 15_000
+    });
+    expect(repository.listSessions).toHaveBeenCalledTimes(1);
+    expect(recordingRepository.listRecordingMetadata).toHaveBeenCalledTimes(1);
+    expect(repository.saveSession).not.toHaveBeenCalled();
+    expect(repository.deleteSession).not.toHaveBeenCalled();
+    expect(repository.clear).not.toHaveBeenCalled();
+    expect(recordingRepository.saveRecordingMetadata).not.toHaveBeenCalled();
+    expect(recordingRepository.clear).not.toHaveBeenCalled();
+    expect(updateLastPracticedAt).not.toHaveBeenCalled();
+  });
+
+  it("maps home recent activity target states with no-target priority and contained lookup failures", async () => {
+    const sessions = [
+      createPracticeSessionFixture({
+        id: "blank-sheet",
+        sheetId: "",
+        updatedAt: "2026-06-21T12:07:00.000Z"
+      }),
+      createPracticeSessionFixture({
+        id: "blank-segment",
+        updatedAt: "2026-06-21T12:06:00.000Z",
+        segmentContext: createSegmentContext({ segmentId: "" })
+      }),
+      createPracticeSessionFixture({
+        id: "failed-sheet",
+        sheetId: "sheet-failed",
+        updatedAt: "2026-06-21T12:05:00.000Z"
+      }),
+      createPracticeSessionFixture({
+        id: "deleted-sheet",
+        sheetId: "sheet-deleted",
+        updatedAt: "2026-06-21T12:04:00.000Z"
+      })
+    ];
+    const recordings = [
+      createSheetRecordingMetadataFixture({
+        id: "blank-recording-sheet",
+        sheetId: "",
+        createdAt: "2026-06-21T12:03:00.000Z"
+      }),
+      createSheetRecordingMetadataFixture({
+        id: "failed-segment",
+        createdAt: "2026-06-21T12:02:00.000Z",
+        segmentContext: createSegmentContext({
+          segmentId: "segment-failed",
+          segmentName: "Failed Segment"
+        })
+      }),
+      createSheetRecordingMetadataFixture({
+        id: "missing-segment",
+        createdAt: "2026-06-21T12:01:00.000Z",
+        segmentContext: createSegmentContext({
+          segmentId: "segment-missing",
+          segmentName: "Deleted Segment"
+        })
+      })
+    ];
+    const repository: PracticeSessionRepository = {
+      listSessions: vi.fn(async () => sessions),
+      getSession: vi.fn(async () => null),
+      getRecentSession: vi.fn(async () => null),
+      getRecentSheetSession: vi.fn(async () => null),
+      saveSession: vi.fn(async () => undefined),
+      deleteSession: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const recordingRepository: PracticeRecordingMetadataRepository = {
+      listRecordingMetadata: vi.fn(async () => recordings),
+      listRecordingMetadataForSession: vi.fn(async () => []),
+      saveRecordingMetadata: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const getSheetContext = vi.fn(async (sheetId: string) => {
+      if (sheetId === "sheet-failed") {
+        throw new Error("sheet lookup failed");
+      }
+
+      if (sheetId === "sheet-deleted") {
+        return null;
+      }
+
+      return {
+        id: sheetId,
+        name: "Alpha Sheet",
+        bpm: 96,
+        timeSignature: "4/4" as const
+      };
+    });
+    const getSegmentContext = vi.fn(async (_sheetId: string, segmentId: string) => {
+      if (segmentId === "segment-failed") {
+        throw new Error("segment lookup failed");
+      }
+
+      if (segmentId === "segment-missing") {
+        return null;
+      }
+
+      return {
+        id: segmentId,
+        name: "Live Segment"
+      };
+    });
+    const service = createPracticeSessionService({
+      repository,
+      recordingRepository,
+      sheetGateway: {
+        getSheetContext,
+        async updateLastPracticedAt() {
+          return undefined;
+        }
+      },
+      segmentGateway: {
+        getSegmentContext
+      },
+      now: () => new Date(nowMs)
+    });
+    const result = await service.getHomeRecentActivity({ limit: 10 });
+    const statesById = Object.fromEntries(
+      result.items.map((item) => [item.id, item.targetState])
+    );
+
+    expect(statesById).toMatchObject({
+      "session:blank-sheet": "no-target",
+      "session:blank-segment": "no-target",
+      "session:failed-sheet": "lookup-failed",
+      "session:deleted-sheet": "missing-sheet",
+      "recording:blank-recording-sheet": "no-target",
+      "recording:failed-segment": "lookup-failed",
+      "recording:missing-segment": "missing-segment"
+    });
+    expect(getSheetContext).not.toHaveBeenCalledWith("");
+    expect(getSegmentContext).not.toHaveBeenCalledWith("sheet-alpha", "");
+    expect(repository.saveSession).not.toHaveBeenCalled();
+    expect(recordingRepository.saveRecordingMetadata).not.toHaveBeenCalled();
   });
 
   it("captures validated quick and sheet transport events through the event sink", async () => {
