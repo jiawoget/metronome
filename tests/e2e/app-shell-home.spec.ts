@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { createE2ESegmentContext } from "./fixtures/recordings-review";
 import { importTestSheet } from "./fixtures/sheets";
 import {
   clearDatabases,
@@ -7,7 +8,8 @@ import {
   MEASURE_GRID_DB_NAME,
   PRACTICE_SESSION_DB_NAME,
   PRACTICE_SEGMENT_DB_NAME,
-  SHEET_LIBRARY_DB_NAME
+  SHEET_LIBRARY_DB_NAME,
+  seedRecordingHistory
 } from "./fixtures/storage";
 
 async function seedMissingSheetActivity(page: Page) {
@@ -55,6 +57,126 @@ async function seedMissingSheetActivity(page: Page) {
       }),
     PRACTICE_SESSION_DB_NAME
   );
+}
+
+async function seedHomeAnalyticsActivity(page: Page) {
+  const segmentContext = createE2ESegmentContext({
+    segmentId: "analytics-segment",
+    segmentName: "Analytics Bridge"
+  });
+
+  await page.evaluate(
+    ({
+      databaseName,
+      sessions
+    }: {
+      databaseName: string;
+      sessions: unknown[];
+    }) =>
+      new Promise<void>((resolve, reject) => {
+        const openRequest = indexedDB.open(databaseName, 2);
+
+        openRequest.onupgradeneeded = () => {
+          const database = openRequest.result;
+
+          if (!database.objectStoreNames.contains("sessions")) {
+            const store = database.createObjectStore("sessions", {
+              keyPath: "id"
+            });
+
+            for (const indexName of ["sourceType", "sheetId", "startedAt", "updatedAt"]) {
+              store.createIndex(indexName, indexName);
+            }
+          }
+        };
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const database = openRequest.result;
+          const transaction = database.transaction(["sessions"], "readwrite");
+          const store = transaction.objectStore("sessions");
+
+          for (const session of sessions) {
+            store.put(session);
+          }
+
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () => {
+            database.close();
+            reject(transaction.error);
+          };
+        };
+      }),
+    {
+      databaseName: PRACTICE_SESSION_DB_NAME,
+      sessions: [
+        {
+          id: "analytics-quick-session",
+          sourceType: "quick",
+          sheetId: null,
+          startedAt: "2026-06-21T08:00:00.000Z",
+          endedAt: "2026-06-21T08:01:00.000Z",
+          durationMs: 60_000,
+          bpm: 96,
+          timeSignature: "4/4",
+          recordingCount: 0,
+          latestRecordingId: null,
+          updatedAt: "2026-06-21T08:01:00.000Z",
+          segmentContext: null
+        },
+        {
+          id: "analytics-sheet-session",
+          sourceType: "sheet",
+          sheetId: "analytics-sheet-alpha",
+          startedAt: "2026-06-21T09:00:00.000Z",
+          endedAt: "2026-06-21T09:02:00.000Z",
+          durationMs: 120_000,
+          bpm: 84,
+          timeSignature: "3/4",
+          recordingCount: 0,
+          latestRecordingId: null,
+          updatedAt: "2026-06-21T09:02:00.000Z",
+          segmentContext: null
+        },
+        {
+          id: "analytics-segment-session",
+          sourceType: "sheet",
+          sheetId: "analytics-sheet-alpha",
+          startedAt: "2026-06-21T10:00:00.000Z",
+          endedAt: "2026-06-21T10:03:00.000Z",
+          durationMs: 180_000,
+          bpm: 96,
+          timeSignature: "4/4",
+          recordingCount: 1,
+          latestRecordingId: "analytics-sheet-take",
+          updatedAt: "2026-06-21T10:03:00.000Z",
+          segmentContext
+        }
+      ]
+    }
+  );
+
+  await seedRecordingHistory(page, {
+    sessions: [],
+    recordings: [],
+    errorMarkers: [],
+    sheetRecordingMetadata: [
+      {
+        id: "analytics-sheet-take",
+        type: "sheet",
+        sessionId: "analytics-segment-session",
+        sheetId: "analytics-sheet-bravo",
+        sheetName: "Analytics Bravo",
+        createdAt: "2026-06-21T10:03:00.000Z",
+        durationMs: 30_000,
+        bpm: 96,
+        timeSignature: "4/4",
+        segmentContext: null
+      }
+    ]
+  });
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -402,6 +524,53 @@ test("home recent activity renders persisted rows as read-only across responsive
   await expect(page.getByTestId("mobile-bottom-nav")).toBeVisible();
   await expect(panel).toBeVisible();
   await expect(panel.getByText("Deleted sheet", { exact: true })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  expect(consoleErrors).toEqual([]);
+});
+
+test("home practice analytics renders persisted local totals across responsive viewports", async ({ page }) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await page.goto("/");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [PRACTICE_SESSION_DB_NAME]);
+  await seedHomeAnalyticsActivity(page);
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.reload();
+  const panel = page.getByRole("region", { name: "Practice Analytics" });
+
+  await expect(panel).toBeVisible();
+  await expect(page.getByTestId("home-analytics-total-practice")).toHaveText("6 min");
+  await expect(page.getByTestId("home-analytics-sessions")).toHaveText("3");
+  await expect(page.getByTestId("home-analytics-sheet-takes")).toHaveText("1");
+  await expect(page.getByTestId("home-analytics-practiced-sheets")).toHaveText("2");
+  await expect(page.getByTestId("home-analytics-segment-sessions")).toHaveText("1");
+  await expectNoHorizontalOverflow(page);
+
+  await page.reload();
+  await expect(panel).toBeVisible();
+  await expect(page.getByTestId("home-analytics-total-practice")).toHaveText("6 min");
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(panel).toBeVisible();
+  await expect(page.getByTestId("home-analytics-practiced-sheets")).toHaveText("2");
+  await expectNoHorizontalOverflow(page);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId("mobile-bottom-nav")).toBeVisible();
+  await expect(panel).toBeVisible();
+  await expect(page.getByTestId("home-analytics-segment-sessions")).toHaveText("1");
   await expectNoHorizontalOverflow(page);
 
   expect(consoleErrors).toEqual([]);
