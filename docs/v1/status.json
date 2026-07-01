@@ -518,7 +518,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P3-10 goal-completion-evaluator",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P3-11 home-dashboard-analytics-source",
