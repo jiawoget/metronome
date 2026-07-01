@@ -6,6 +6,7 @@ import {
   parseSheetRecordingMetadata,
   validatePracticeSession,
   validateSheetRecordingMetadata,
+  type LocalPracticeGoal,
   type PracticeSession,
   type SheetRecordingSegmentContext,
   type SheetRecordingMetadata
@@ -751,6 +752,104 @@ describe("practice session service", () => {
       endedAt: "2026-06-21T12:00:13.500Z",
       durationMs: 13_500
     });
+  });
+
+  it("evaluates goal completion from existing session and recording reads without writes", async () => {
+    const { service, repository, recordingRepository } = createService();
+    const session = createPracticeSessionFixture({
+      id: "session-for-goals",
+      durationMs: 60_000,
+      recordingCount: 10
+    });
+    const recording = createSheetRecordingMetadataFixture({
+      id: "recording-for-goals",
+      sessionId: session.id
+    });
+    const goals: LocalPracticeGoal[] = [
+      {
+        id: "minutes-goal",
+        kind: "minutes",
+        target: 1,
+        period: "today",
+        createdAt: "2026-06-21T08:00:00.000Z"
+      },
+      {
+        id: "takes-goal",
+        kind: "takes",
+        target: 1,
+        period: "today",
+        createdAt: "2026-06-21T08:00:00.000Z"
+      }
+    ];
+
+    await repository.saveSession(session);
+    await recordingRepository.saveRecordingMetadata(recording, session);
+
+    const listSessionsSpy = vi.spyOn(repository, "listSessions");
+    const listRecordingsSpy = vi.spyOn(recordingRepository, "listRecordingMetadata");
+    const saveSessionSpy = vi.spyOn(repository, "saveSession");
+    const deleteSessionSpy = vi.spyOn(repository, "deleteSession");
+    const clearSessionsSpy = vi.spyOn(repository, "clear");
+    const saveRecordingSpy = vi.spyOn(recordingRepository, "saveRecordingMetadata");
+    const clearRecordingsSpy = vi.spyOn(recordingRepository, "clear");
+
+    await expect(service.evaluateGoalCompletion(goals)).resolves.toEqual([
+      expect.objectContaining({
+        goalId: "minutes-goal",
+        status: "completed",
+        progress: 1
+      }),
+      expect.objectContaining({
+        goalId: "takes-goal",
+        status: "completed",
+        progress: 1
+      })
+    ]);
+    expect(listSessionsSpy).toHaveBeenCalledTimes(1);
+    expect(listRecordingsSpy).toHaveBeenCalledTimes(1);
+    expect(saveSessionSpy).not.toHaveBeenCalled();
+    expect(deleteSessionSpy).not.toHaveBeenCalled();
+    expect(clearSessionsSpy).not.toHaveBeenCalled();
+    expect(saveRecordingSpy).not.toHaveBeenCalled();
+    expect(clearRecordingsSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects goal completion evaluation when required reads fail", async () => {
+    const goal: LocalPracticeGoal = {
+      id: "minutes-goal",
+      kind: "minutes",
+      target: 1,
+      period: "today",
+      createdAt: "2026-06-21T08:00:00.000Z"
+    };
+    const { gateway } = createSheetGateway(new Set(["sheet-alpha"]));
+    const sessionReadFailureRepository = createMemorySessionRepository();
+    const recordingReadFailureRepository = createMemoryRecordingRepository();
+
+    vi.spyOn(sessionReadFailureRepository, "listSessions").mockRejectedValue(
+      new Error("session read failed")
+    );
+    vi.spyOn(recordingReadFailureRepository, "listRecordingMetadata").mockRejectedValue(
+      new Error("recording read failed")
+    );
+
+    await expect(
+      createPracticeSessionService({
+        repository: sessionReadFailureRepository,
+        recordingRepository: createMemoryRecordingRepository(),
+        sheetGateway: gateway,
+        now: () => new Date(nowMs)
+      }).evaluateGoalCompletion([goal])
+    ).rejects.toThrow("session read failed");
+
+    await expect(
+      createPracticeSessionService({
+        repository: createMemorySessionRepository(),
+        recordingRepository: recordingReadFailureRepository,
+        sheetGateway: gateway,
+        now: () => new Date(nowMs)
+      }).evaluateGoalCompletion([goal])
+    ).rejects.toThrow("recording read failed");
   });
 
   it("prepares sheet recording metadata without persisting recording metadata or session recording counts until commit", async () => {

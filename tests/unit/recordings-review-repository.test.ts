@@ -737,6 +737,16 @@ describe("recording history repository", () => {
     ]);
   });
 
+  it("clears 05e sheet recording metadata from the shared recording history boundary", async () => {
+    const recording = createSheetRecording();
+
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(recording, createSheetSession());
+    await recordingHistoryMetadataRepository.clear();
+
+    expect(recordingHistoryRepository.getSnapshot().sheetRecordingMetadata).toBeUndefined();
+    await expect(recordingHistoryMetadataRepository.listRecordingMetadata()).resolves.toEqual([]);
+  });
+
   it("filters invalid persisted sheet metadata bucket rows before listing", async () => {
     window.localStorage.setItem(
       RECORDINGS_STORAGE_KEY,

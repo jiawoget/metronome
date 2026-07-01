@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type {
+  LocalPracticeGoal,
   PracticeSession,
   SheetRecordingMetadata,
   SheetRecordingSegmentContext
@@ -591,5 +592,191 @@ describe("practice session browser repository", () => {
       "session:missing-segment": "missing-segment",
       "session:deleted-sheet": "missing-sheet"
     });
+  });
+
+  it("derives the same goal completion evaluations after reopening persisted storage", async () => {
+    const quickSession = createQuickSession({
+      id: "quick-session",
+      durationMs: 60_000,
+      recordingCount: 10,
+      updatedAt: "2026-06-21T12:01:00.000Z"
+    });
+    const sheetSession = createSheetSession({
+      id: "sheet-session",
+      durationMs: 90_000,
+      recordingCount: 0,
+      updatedAt: "2026-06-21T12:02:00.000Z"
+    });
+    const goals: LocalPracticeGoal[] = [
+      {
+        id: "minutes-goal",
+        kind: "minutes",
+        target: 2,
+        period: "all-time",
+        createdAt: "2026-06-21T08:00:00.000Z"
+      },
+      {
+        id: "sessions-goal",
+        kind: "sessions",
+        target: 2,
+        period: "all-time",
+        createdAt: "2026-06-21T08:00:00.000Z"
+      },
+      {
+        id: "takes-goal",
+        kind: "takes",
+        target: 1,
+        period: "all-time",
+        createdAt: "2026-06-21T08:00:00.000Z"
+      }
+    ];
+
+    await practiceSessionRepository.saveSession(quickSession);
+    await practiceSessionRepository.saveSession(sheetSession);
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecordingMetadata({
+        id: "sheet-recording",
+        sessionId: sheetSession.id,
+        createdAt: "2026-06-21T12:04:00.000Z"
+      }),
+      sheetSession
+    );
+
+    const beforeReload = await createRepositoryBackedRecentActivityService(
+      "2026-06-21T12:30:00.000Z"
+    ).evaluateGoalCompletion(goals);
+
+    resetPracticeSessionDatabaseConnectionForTests();
+
+    const afterReload = await createRepositoryBackedRecentActivityService(
+      "2026-06-21T12:30:00.000Z"
+    ).evaluateGoalCompletion(goals);
+
+    expect(afterReload).toEqual(beforeReload);
+    expect(afterReload).toEqual([
+      expect.objectContaining({
+        goalId: "minutes-goal",
+        status: "completed",
+        progress: 2
+      }),
+      expect.objectContaining({
+        goalId: "sessions-goal",
+        status: "completed",
+        progress: 2
+      }),
+      expect.objectContaining({
+        goalId: "takes-goal",
+        status: "completed",
+        progress: 1
+      })
+    ]);
+  });
+
+  it("derives incomplete goal evaluations after persisted activity is cleared and reopened", async () => {
+    const quickSession = createQuickSession({
+      id: "quick-session",
+      durationMs: 60_000,
+      recordingCount: 1,
+      updatedAt: "2026-06-21T12:01:00.000Z"
+    });
+    const sheetSession = createSheetSession({
+      id: "sheet-session",
+      durationMs: 60_000,
+      recordingCount: 0,
+      updatedAt: "2026-06-21T12:02:00.000Z"
+    });
+    const goals: LocalPracticeGoal[] = [
+      {
+        id: "minutes-goal",
+        kind: "minutes",
+        target: 1,
+        period: "all-time",
+        status: "completed",
+        completedAt: "2026-06-21T12:10:00.000Z",
+        createdAt: "2026-06-21T08:00:00.000Z"
+      },
+      {
+        id: "sessions-goal",
+        kind: "sessions",
+        target: 2,
+        period: "all-time",
+        status: "completed",
+        completedAt: "2026-06-21T12:10:00.000Z",
+        createdAt: "2026-06-21T08:00:00.000Z"
+      },
+      {
+        id: "takes-goal",
+        kind: "takes",
+        target: 1,
+        period: "all-time",
+        status: "completed",
+        completedAt: "2026-06-21T12:10:00.000Z",
+        createdAt: "2026-06-21T08:00:00.000Z"
+      }
+    ];
+
+    await practiceSessionRepository.saveSession(quickSession);
+    await practiceSessionRepository.saveSession(sheetSession);
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecordingMetadata({
+        id: "sheet-recording",
+        sessionId: sheetSession.id,
+        createdAt: "2026-06-21T12:04:00.000Z"
+      }),
+      sheetSession
+    );
+
+    const service = createRepositoryBackedRecentActivityService(
+      "2026-06-21T12:30:00.000Z"
+    );
+
+    await expect(service.evaluateGoalCompletion(goals)).resolves.toEqual([
+      expect.objectContaining({
+        goalId: "minutes-goal",
+        status: "completed",
+        progress: 2,
+        completedAt: "2026-06-21T12:10:00.000Z"
+      }),
+      expect.objectContaining({
+        goalId: "sessions-goal",
+        status: "completed",
+        progress: 2,
+        completedAt: "2026-06-21T12:10:00.000Z"
+      }),
+      expect.objectContaining({
+        goalId: "takes-goal",
+        status: "completed",
+        progress: 1,
+        completedAt: "2026-06-21T12:10:00.000Z"
+      })
+    ]);
+
+    await service.clear();
+    resetPracticeSessionDatabaseConnectionForTests();
+
+    await expect(
+      createRepositoryBackedRecentActivityService(
+        "2026-06-21T12:30:00.000Z"
+      ).evaluateGoalCompletion(goals)
+    ).resolves.toEqual([
+      expect.objectContaining({
+        goalId: "minutes-goal",
+        status: "not-started",
+        progress: 0,
+        completedAt: null
+      }),
+      expect.objectContaining({
+        goalId: "sessions-goal",
+        status: "not-started",
+        progress: 0,
+        completedAt: null
+      }),
+      expect.objectContaining({
+        goalId: "takes-goal",
+        status: "not-started",
+        progress: 0,
+        completedAt: null
+      })
+    ]);
   });
 });
