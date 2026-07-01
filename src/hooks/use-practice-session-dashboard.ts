@@ -2,8 +2,15 @@
 
 import { useEffect, useState } from "react";
 
-import type { ContinuePracticeTarget, PracticeSession } from "@/domain/practice";
+import {
+  DEFAULT_HOME_RECENT_ACTIVITY_LIMIT,
+  type ContinuePracticeTarget,
+  type HomeRecentActivityResult,
+  type PracticeSession
+} from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
+
+export type PracticeSessionDashboardRecentActivityStatus = "idle" | "loading" | "loaded" | "error";
 
 export type PracticeSessionDashboardState = {
   recentSession: PracticeSession | null;
@@ -14,6 +21,15 @@ export type PracticeSessionDashboardState = {
     sessionsToday: number;
     recordingsToday: number;
   };
+  recentActivity: HomeRecentActivityResult;
+  recentActivityStatus: PracticeSessionDashboardRecentActivityStatus;
+  recentActivityErrorMessage: string | null;
+};
+
+const emptyRecentActivity: HomeRecentActivityResult = {
+  items: [],
+  generatedAt: "",
+  limit: DEFAULT_HOME_RECENT_ACTIVITY_LIMIT
 };
 
 const emptyState: PracticeSessionDashboardState = {
@@ -24,8 +40,13 @@ const emptyState: PracticeSessionDashboardState = {
     minutesToday: 0,
     sessionsToday: 0,
     recordingsToday: 0
-  }
+  },
+  recentActivity: emptyRecentActivity,
+  recentActivityStatus: "idle",
+  recentActivityErrorMessage: null
 };
+
+const recentActivityErrorMessage = "Recent activity could not be loaded.";
 
 export function usePracticeSessionDashboard() {
   const [state, setState] = useState<PracticeSessionDashboardState>(emptyState);
@@ -38,19 +59,34 @@ export function usePracticeSessionDashboard() {
         return;
       }
 
-      const recentSession = await browserPracticeSessionService.getRecentSession();
-      const continueTarget = await browserPracticeSessionService.getContinuePracticeTarget();
-      const summary = await browserPracticeSessionService.getTodaySummary();
+      setState((currentState) => ({
+        ...currentState,
+        recentActivityStatus: "loading",
+        recentActivityErrorMessage: null
+      }));
+
+      const [recentSession, continueTarget, summary, recentActivityRead] = await Promise.all([
+        browserPracticeSessionService.getRecentSession(),
+        browserPracticeSessionService.getContinuePracticeTarget(),
+        browserPracticeSessionService.getTodaySummary(),
+        browserPracticeSessionService
+          .getHomeRecentActivity()
+          .then((recentActivity) => ({ recentActivity, errorMessage: null }))
+          .catch(() => ({ recentActivity: null, errorMessage: recentActivityErrorMessage }))
+      ]);
 
       if (!isActive) {
         return;
       }
 
-      setState({
+      setState((currentState) => ({
         recentSession,
         continueTarget,
-        summary
-      });
+        summary,
+        recentActivity: recentActivityRead.recentActivity ?? currentState.recentActivity,
+        recentActivityStatus: recentActivityRead.errorMessage ? "error" : "loaded",
+        recentActivityErrorMessage: recentActivityRead.errorMessage
+      }));
     }
 
     void refresh();
