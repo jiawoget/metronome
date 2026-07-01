@@ -1,6 +1,7 @@
 import type {
   ContinuePracticeTarget,
   GoalCompletionEvaluation,
+  HomeDashboardAnalyticsSource,
   LocalPracticeGoal,
   LocalPracticeGoalKind,
   LocalPracticeGoalPeriod,
@@ -119,6 +120,83 @@ export function getTodayPracticeSummary(
     sessionsToday: todaySessions.length,
     recordingsToday: todaySessions.reduce((total, session) => total + session.recordingCount, 0)
   };
+}
+
+export type HomeDashboardAnalyticsSourceInput = {
+  sessions: readonly PracticeSession[];
+  recordings: readonly SheetRecordingMetadata[];
+  generatedAt: string;
+  now?: Date;
+};
+
+export function getHomeDashboardAnalyticsSource({
+  sessions,
+  recordings,
+  generatedAt,
+  now = new Date()
+}: HomeDashboardAnalyticsSourceInput): HomeDashboardAnalyticsSource {
+  const practicedSheetIds = new Set<string>();
+  let durationMs = 0;
+  let segmentSessions = 0;
+  let hasSessionRecordingCount = false;
+
+  for (const session of sessions) {
+    durationMs += validDurationMs(session.durationMs);
+
+    const sheetId = normalizeAnalyticsId(session.sheetId);
+
+    if (sheetId) {
+      practicedSheetIds.add(sheetId);
+    }
+
+    if (sheetId && normalizeAnalyticsId(session.segmentContext?.segmentId)) {
+      segmentSessions += 1;
+    }
+
+    if (Number.isFinite(session.recordingCount) && session.recordingCount > 0) {
+      hasSessionRecordingCount = true;
+    }
+  }
+
+  for (const recording of recordings) {
+    const sheetId = normalizeAnalyticsId(recording.sheetId);
+
+    if (sheetId) {
+      practicedSheetIds.add(sheetId);
+    }
+  }
+
+  const sheetTakes = recordings.filter((recording) => recording.type === "sheet").length;
+  const practicedSheets = practicedSheetIds.size;
+
+  return {
+    generatedAt,
+    summary: getTodayPracticeSummary([...sessions], now),
+    totals: {
+      durationMs,
+      sessions: sessions.length,
+      sheetTakes,
+      practicedSheets,
+      segmentSessions
+    },
+    emptyState: {
+      hasPracticeHistory: sessions.length > 0 || recordings.length > 0,
+      hasSheetPractice: practicedSheets > 0,
+      hasSegmentPractice: segmentSessions > 0,
+      hasRecordings: sheetTakes > 0 || hasSessionRecordingCount,
+      hasGoals: false
+    }
+  };
+}
+
+function normalizeAnalyticsId(value: string | null | undefined) {
+  const trimmed = value?.trim() ?? "";
+
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function validDurationMs(value: number) {
+  return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
 export type PracticeGoalEvaluationInput = {
