@@ -51,6 +51,31 @@ export type TodayPracticeSummary = {
   recordingsToday: number;
 };
 
+export type LocalPracticeGoalKind = "minutes" | "sessions" | "takes";
+export type LocalPracticeGoalPeriod = "today" | "all-time";
+export type LocalPracticeGoalStatus = "active" | "completed" | "invalid";
+
+export type LocalPracticeGoal = {
+  id: string;
+  kind: LocalPracticeGoalKind;
+  target: number;
+  period: LocalPracticeGoalPeriod;
+  createdAt: string;
+  completedAt?: string | null;
+  status?: LocalPracticeGoalStatus;
+};
+
+export type GoalCompletionEvaluation = {
+  goalId: string;
+  kind: LocalPracticeGoalKind | null;
+  status: "not-started" | "in-progress" | "completed" | "invalid";
+  progress: number;
+  target: number | null;
+  progressRatio: number;
+  completedAt: string | null;
+  reason: string | null;
+};
+
 export type ContinuePracticeTarget =
   | {
       sourceType: "quick";

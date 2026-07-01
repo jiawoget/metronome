@@ -1,6 +1,7 @@
 import {
   PRACTICE_SESSION_EVENT_SCHEMA_VERSION,
   createSessionHistorySegmentTargetKey,
+  evaluatePracticeGoalCompletion,
   getHomeCompatibleContinuePracticeTarget,
   selectContinuePracticeTargets,
   getTodayPracticeSummary,
@@ -15,6 +16,7 @@ import {
   type SessionHistorySegmentTarget,
   type SessionHistorySheetTarget,
   type HomeRecentActivityTargetResolution,
+  type LocalPracticeGoal,
   type PracticeSession,
   type SheetRecordingMetadata,
   type ContinuePracticeTargetsOptions
@@ -800,6 +802,20 @@ export function createPracticeSessionService({
       const result = await readContinuePracticeTargets();
 
       return getHomeCompatibleContinuePracticeTarget(result.targets);
+    },
+
+    async evaluateGoalCompletion(goals: readonly LocalPracticeGoal[]) {
+      const [sessions, recordings] = await Promise.all([
+        repository.listSessions(),
+        recordingRepository.listRecordingMetadata()
+      ]);
+
+      return evaluatePracticeGoalCompletion({
+        goals,
+        sessions,
+        recordings,
+        now: now()
+      });
     },
 
     listRecordingMetadata() {

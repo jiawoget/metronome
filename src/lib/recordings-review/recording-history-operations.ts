@@ -252,8 +252,11 @@ export function createRecordingHistoryOperations({
       removedRecordings = currentSnapshot.recordings.filter(
         (recording) => recording.type === recordingType
       );
+      const shouldClearSheetMetadata =
+        recordingType === "sheet" &&
+        (currentSnapshot.sheetRecordingMetadata?.length ?? 0) > 0;
 
-      if (removedRecordings.length === 0) {
+      if (removedRecordings.length === 0 && !shouldClearSheetMetadata) {
         return currentSnapshot;
       }
 
@@ -272,7 +275,8 @@ export function createRecordingHistoryOperations({
           retainedRecordings,
           sourceType: recordingType,
           removeAnyUnreferencedSourceSession: recordingType === "quick"
-        })
+        }),
+        ...(recordingType === "sheet" ? { sheetRecordingMetadata: [] } : {})
       });
     });
 

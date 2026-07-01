@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   calculatePracticeDurationMs,
+  evaluatePracticeGoalCompletion,
   getTodayPracticeSummary,
   groupPracticeSessionsByHistory,
   withUpdatedPracticeSessionDuration,
+  type LocalPracticeGoal,
   type PracticeSession,
+  type SheetRecordingMetadata,
   type SheetRecordingSegmentContext
 } from "@/domain/practice";
 
@@ -50,6 +53,33 @@ function createSession(overrides: Partial<PracticeSession> = {}): PracticeSessio
     latestRecordingId: "recording-alpha",
     updatedAt: "2026-06-21T12:01:00.000Z",
     segmentContext: null,
+    ...overrides
+  };
+}
+
+function createRecording(overrides: Partial<SheetRecordingMetadata> = {}): SheetRecordingMetadata {
+  return {
+    id: "recording-alpha",
+    type: "sheet",
+    sessionId: "session-alpha",
+    sheetId: "sheet-alpha",
+    sheetName: "Alpha Sheet",
+    createdAt: "2026-06-21T12:02:00.000Z",
+    durationMs: 12_000,
+    bpm: 96,
+    timeSignature: "4/4",
+    segmentContext: null,
+    ...overrides
+  };
+}
+
+function createGoal(overrides: Partial<LocalPracticeGoal> = {}): LocalPracticeGoal {
+  return {
+    id: "goal-alpha",
+    kind: "minutes",
+    target: 1,
+    period: "today",
+    createdAt: "2026-06-21T08:00:00.000Z",
     ...overrides
   };
 }
@@ -252,5 +282,263 @@ describe("practice session duration rules", () => {
       sessionCount: 2,
       recordingCount: 1
     });
+  });
+
+  it("evaluates minutes goals from raw persisted durationMs boundaries", () => {
+    const now = new Date("2026-06-21T15:00:00.000Z");
+    const evaluateMinutes = (durationMs: number, target: number) =>
+      evaluatePracticeGoalCompletion({
+        goals: [createGoal({ target })],
+        sessions: [createSession({ durationMs })],
+        recordings: [],
+        now
+      })[0];
+    const underOneMinute = evaluateMinutes(59_900, 1);
+    const atOneMinute = evaluateMinutes(60_000, 1);
+    const underTwoMinutes = evaluateMinutes(119_900, 2);
+
+    expect(underOneMinute).toEqual(
+      expect.objectContaining({
+        status: "in-progress",
+        progress: 0,
+        target: 1,
+        completedAt: null
+      })
+    );
+    expect(atOneMinute).toEqual(
+      expect.objectContaining({
+        status: "completed",
+        progress: 1,
+        target: 1,
+        progressRatio: 1,
+        completedAt: now.toISOString()
+      })
+    );
+    expect(underTwoMinutes).toEqual(
+      expect.objectContaining({
+        status: "in-progress",
+        progress: 1,
+        target: 2,
+        completedAt: null
+      })
+    );
+    expect(underOneMinute.progressRatio).toBeCloseTo(59_900 / 60_000);
+    expect(underTwoMinutes.progressRatio).toBeCloseTo(119_900 / 120_000);
+  });
+
+  it("evaluates sessions and takes from existing activity rows without recordingCount fallback", () => {
+    const evaluations = evaluatePracticeGoalCompletion({
+      goals: [
+        createGoal({
+          id: "sessions-goal",
+          kind: "sessions",
+          target: 2,
+          period: "today"
+        }),
+        createGoal({
+          id: "takes-goal",
+          kind: "takes",
+          target: 2,
+          period: "today"
+        })
+      ],
+      sessions: [
+        createSession({
+          id: "quick-session",
+          sourceType: "quick",
+          recordingCount: 10
+        }),
+        createSession({
+          id: "sheet-session",
+          sourceType: "sheet",
+          sheetId: "sheet-alpha",
+          recordingCount: 0
+        }),
+        createSession({
+          id: "other-day-session",
+          startedAt: "2026-06-20T12:00:00.000Z",
+          recordingCount: 10
+        })
+      ],
+      recordings: [
+        createRecording({ id: "recording-one" }),
+        createRecording({ id: "recording-two" }),
+        createRecording({
+          id: "old-recording",
+          createdAt: "2026-06-20T12:00:00.000Z"
+        })
+      ],
+      now: new Date("2026-06-21T15:00:00.000Z")
+    });
+
+    expect(evaluations).toEqual([
+      expect.objectContaining({
+        goalId: "sessions-goal",
+        kind: "sessions",
+        status: "completed",
+        progress: 2,
+        target: 2
+      }),
+      expect.objectContaining({
+        goalId: "takes-goal",
+        kind: "takes",
+        status: "completed",
+        progress: 2,
+        target: 2
+      })
+    ]);
+  });
+
+  it("normalizes goal status and invalid goal definitions without mutating inputs", () => {
+    const now = new Date("2026-06-21T15:00:00.000Z");
+    const goals = [
+      createGoal({
+        id: "completed-still-complete",
+        target: 1,
+        status: "completed",
+        completedAt: "2026-06-21T12:30:00.000Z"
+      }),
+      createGoal({
+        id: "completed-cleared-data",
+        target: 2,
+        status: "completed",
+        completedAt: "2026-06-21T12:30:00.000Z"
+      }),
+      createGoal({
+        id: "explicit-invalid",
+        status: "invalid"
+      }),
+      createGoal({
+        id: "unknown-status",
+        status: "paused" as unknown as LocalPracticeGoal["status"]
+      }),
+      createGoal({
+        id: "",
+        target: Number.NaN
+      }),
+      {
+        ...createGoal({ id: "unknown-kind" }),
+        kind: "streaks"
+      } as unknown as LocalPracticeGoal
+    ];
+    const originalGoals = structuredClone(goals);
+    const sessions = [
+      createSession({
+        id: "one-minute",
+        durationMs: 60_000
+      })
+    ];
+    const originalSessions = structuredClone(sessions);
+
+    const evaluations = evaluatePracticeGoalCompletion({
+      goals,
+      sessions,
+      recordings: [],
+      now
+    });
+
+    expect(evaluations).toEqual([
+      expect.objectContaining({
+        goalId: "completed-still-complete",
+        status: "completed",
+        completedAt: "2026-06-21T12:30:00.000Z"
+      }),
+      expect.objectContaining({
+        goalId: "completed-cleared-data",
+        status: "in-progress",
+        progress: 1,
+        completedAt: null
+      }),
+      expect.objectContaining({
+        goalId: "explicit-invalid",
+        status: "invalid",
+        reason: "goal-status-invalid"
+      }),
+      expect.objectContaining({
+        goalId: "unknown-status",
+        status: "invalid",
+        reason: "unknown-goal-status"
+      }),
+      expect.objectContaining({
+        goalId: "",
+        status: "invalid",
+        reason: "missing-goal-id"
+      }),
+      expect.objectContaining({
+        goalId: "unknown-kind",
+        kind: null,
+        status: "invalid",
+        reason: "unsupported-goal-kind"
+      })
+    ]);
+    expect(goals).toEqual(originalGoals);
+    expect(sessions).toEqual(originalSessions);
+  });
+
+  it("rejects invalid goal target, period, and createdAt variants", () => {
+    const evaluations = evaluatePracticeGoalCompletion({
+      goals: [
+        createGoal({
+          id: "zero-target",
+          target: 0
+        }),
+        createGoal({
+          id: "negative-target",
+          target: -1
+        }),
+        createGoal({
+          id: "fractional-target",
+          target: 1.5
+        }),
+        createGoal({
+          id: "infinite-target",
+          target: Infinity
+        }),
+        createGoal({
+          id: "invalid-period",
+          period: "weekly" as LocalPracticeGoal["period"]
+        }),
+        createGoal({
+          id: "invalid-created-at",
+          createdAt: "not-a-date"
+        })
+      ],
+      sessions: [createSession()],
+      recordings: [],
+      now: new Date("2026-06-21T15:00:00.000Z")
+    });
+
+    expect(evaluations).toEqual([
+      expect.objectContaining({
+        goalId: "zero-target",
+        status: "invalid",
+        reason: "invalid-goal-target"
+      }),
+      expect.objectContaining({
+        goalId: "negative-target",
+        status: "invalid",
+        reason: "invalid-goal-target"
+      }),
+      expect.objectContaining({
+        goalId: "fractional-target",
+        status: "invalid",
+        reason: "invalid-goal-target"
+      }),
+      expect.objectContaining({
+        goalId: "infinite-target",
+        status: "invalid",
+        reason: "invalid-goal-target"
+      }),
+      expect.objectContaining({
+        goalId: "invalid-period",
+        status: "invalid",
+        reason: "invalid-goal-period"
+      }),
+      expect.objectContaining({
+        goalId: "invalid-created-at",
+        status: "invalid",
+        reason: "invalid-goal-created-at"
+      })
+    ]);
   });
 });
