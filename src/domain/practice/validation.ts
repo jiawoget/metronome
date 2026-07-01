@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 import type {
+  LocalPracticeGoal,
   PracticeSession,
+  LocalPracticeGoalStatus,
   SheetRecordingSegmentContext,
   SheetRecordingMetadata
 } from "@/domain/practice/types";
@@ -13,7 +15,11 @@ import {
 
 const isoDateSchema = z.iso
   .datetime({ offset: true })
-  .refine((value) => new Date(value).toISOString() === value, {
+  .refine((value) => {
+    const parsedValue = new Date(value);
+
+    return Number.isFinite(parsedValue.getTime()) && parsedValue.toISOString() === value;
+  }, {
     message: "Expected a strict ISO datetime with a real calendar date."
   });
 
@@ -27,6 +33,8 @@ export function parsePracticeTimeSignature(value: unknown) {
 }
 
 const practiceTimeSignatureSchema = z.enum(PRACTICE_TIME_SIGNATURES);
+const LOCAL_PRACTICE_GOAL_STATUSES = ["active", "completed", "invalid"] as const;
+const localPracticeGoalStatusSchema = z.enum(LOCAL_PRACTICE_GOAL_STATUSES);
 const trimmedRequiredStringSchema = z.string().trim().min(1);
 const segmentNameSchema = z.string().trim().min(1).max(80);
 const targetBpmSchema = z.number().finite().int().min(30).max(300).nullable();
@@ -156,8 +164,24 @@ const sheetRecordingMetadataSchema = z.object({
   segmentContext: sheetRecordingSegmentContextFieldSchema
 });
 
+const localPracticeGoalSchema = z.object({
+  id: trimmedRequiredStringSchema,
+  kind: z.enum(["minutes", "sessions", "takes"]),
+  target: z.number().finite().int().positive(),
+  period: z.enum(["today", "all-time"]),
+  createdAt: isoDateSchema,
+  completedAt: isoDateSchema.nullable().optional().transform((value) => value ?? null),
+  status: localPracticeGoalStatusSchema.optional().transform((value) => value ?? "active")
+});
+
 export function parsePracticeSession(value: unknown): PracticeSession | null {
   const result = practiceSessionSchema.safeParse(value);
+
+  return result.success ? result.data : null;
+}
+
+export function parseLocalPracticeGoal(value: unknown): LocalPracticeGoal | null {
+  const result = localPracticeGoalSchema.safeParse(value);
 
   return result.success ? result.data : null;
 }
@@ -182,6 +206,15 @@ export function validatePracticeSession(
   value: PracticeSession
 ): PracticeSession {
   return practiceSessionSchema.parse(value);
+}
+
+export function validateLocalPracticeGoal(
+  value: LocalPracticeGoal
+): LocalPracticeGoal & {
+  completedAt: string | null;
+  status: LocalPracticeGoalStatus;
+} {
+  return localPracticeGoalSchema.parse(value);
 }
 
 export function validateSheetRecordingMetadata(
