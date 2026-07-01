@@ -207,7 +207,10 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   expect(quickSession?.id).toBeTruthy();
 
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Continue Practice" })).toHaveAttribute("href", "/quick-metronome");
+  await expect(page.getByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
+    "href",
+    "/quick-metronome"
+  );
 
   await page.goto("/quick-metronome");
   await page.getByRole("button", { name: "Start recording" }).click();
@@ -246,7 +249,7 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
 
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Continue Practice" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Continue sheet practice Practice Session Sheet" })).toHaveAttribute(
     "href",
     `/sheet-practice/${sheetId}`
   );
@@ -263,7 +266,7 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   await expect(page.getByTestId("today-summary-recordings")).toHaveText("3");
 
   await page.reload();
-  await expect(page.getByRole("link", { name: "Continue Practice" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Continue sheet practice Practice Session Sheet" })).toHaveAttribute(
     "href",
     `/sheet-practice/${sheetId}`
   );
@@ -277,7 +280,7 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   await expect(page.getByTestId("settings-count-sessions")).toHaveText("0");
 
   await page.goto("/");
-  await expect(page.getByText(/No recent practice session yet/i)).toBeVisible();
+  await expect(page.getByText("No recent practice targets yet.")).toBeVisible();
   await expect(page.getByTestId("today-summary-sessions")).toHaveText("0");
   await expect(page.getByTestId("today-summary-recordings")).toHaveText("0");
   await page.reload();

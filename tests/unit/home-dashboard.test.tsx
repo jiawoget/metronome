@@ -2,11 +2,17 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomeDashboard, type HomeDashboardData } from "@/components/home/home-dashboard";
-import type { HomeRecentActivityItem, HomeRecentActivityResult } from "@/domain/practice";
+import type {
+  ContinuePracticeTargetIdentity,
+  ContinuePracticeTargetsResult,
+  HomeRecentActivityItem,
+  HomeRecentActivityResult
+} from "@/domain/practice";
 
 const serviceMocks = vi.hoisted(() => ({
   getRecentSession: vi.fn(),
   getContinuePracticeTarget: vi.fn(),
+  getContinuePracticeTargets: vi.fn(),
   getTodaySummary: vi.fn(),
   getHomeRecentActivity: vi.fn(),
   subscribe: vi.fn()
@@ -47,6 +53,38 @@ function createActivityResult(items: HomeRecentActivityItem[] = []): HomeRecentA
   };
 }
 
+function createContinueTarget(
+  overrides: Partial<ContinuePracticeTargetIdentity> = {}
+): ContinuePracticeTargetIdentity {
+  const base: ContinuePracticeTargetIdentity = {
+    kind: "quick",
+    sourceType: "quick",
+    activitySource: "session",
+    label: "Quick Practice",
+    sessionId: "quick-session",
+    recordingId: null,
+    occurredAt: "2026-06-21T12:00:00.000Z",
+    sortTimestamp: "2026-06-21T12:00:00.000Z",
+    targetKey: "quick"
+  };
+
+  return {
+    ...base,
+    ...overrides
+  } as ContinuePracticeTargetIdentity;
+}
+
+function createContinueTargetsResult(
+  targets: ContinuePracticeTargetIdentity[] = []
+): ContinuePracticeTargetsResult {
+  return {
+    targets,
+    generatedAt: "2026-06-21T12:10:00.000Z",
+    limit: 5,
+    rejected: []
+  };
+}
+
 function createDashboardData(overrides: Partial<HomeDashboardData> = {}): HomeDashboardData {
   return {
     summary: {
@@ -57,6 +95,9 @@ function createDashboardData(overrides: Partial<HomeDashboardData> = {}): HomeDa
     },
     recentSession: null,
     continueTarget: null,
+    continueTargets: createContinueTargetsResult(),
+    continueTargetsStatus: "loaded",
+    continueTargetsErrorMessage: null,
     recentActivity: createActivityResult(),
     recentActivityStatus: "loaded",
     recentActivityErrorMessage: null,
@@ -72,11 +113,13 @@ describe("HomeDashboard", () => {
     vi.stubGlobal("indexedDB", undefined);
     serviceMocks.getRecentSession.mockReset();
     serviceMocks.getContinuePracticeTarget.mockReset();
+    serviceMocks.getContinuePracticeTargets.mockReset();
     serviceMocks.getTodaySummary.mockReset();
     serviceMocks.getHomeRecentActivity.mockReset();
     serviceMocks.subscribe.mockReset();
     serviceMocks.getRecentSession.mockResolvedValue(null);
     serviceMocks.getContinuePracticeTarget.mockResolvedValue(null);
+    serviceMocks.getContinuePracticeTargets.mockResolvedValue(createContinueTargetsResult());
     serviceMocks.getTodaySummary.mockResolvedValue({
       durationMs: 0,
       minutesToday: 0,
@@ -87,8 +130,8 @@ describe("HomeDashboard", () => {
     serviceMocks.subscribe.mockReturnValue(() => undefined);
   });
 
-  it("renders zero summary values and empty states without fake practice data", () => {
-    render(<HomeDashboard />);
+  it("renders zero summary values and loaded empty states without fake practice data", () => {
+    render(<HomeDashboard data={createDashboardData()} />);
 
     expect(screen.getByRole("heading", { name: "Home" })).toBeVisible();
     expect(screen.getByText("Today Practice Summary")).toBeVisible();
@@ -96,13 +139,32 @@ describe("HomeDashboard", () => {
     expect(screen.getByText("Sessions")).toBeVisible();
     expect(screen.getByText("Recordings")).toBeVisible();
     expect(screen.getAllByText("0")).toHaveLength(3);
-    expect(screen.getByText(/No recent practice session yet/i)).toBeVisible();
+    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
+    expect(screen.getByText("No recent practice targets yet.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Start Quick Metronome" })).toHaveAttribute(
+      "href",
+      "/quick-metronome"
+    );
     expect(screen.getByText(/No sheets imported yet/i)).toBeVisible();
     expect(screen.getByText(/Opens the Sheet Library import flow/i)).toBeVisible();
     expect(screen.getByText(/Quick takes appear after recording/i)).toBeVisible();
     expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
     expect(screen.getByText("No local practice activity yet.")).toBeVisible();
     expect(screen.getByText(/No recording or playback active/i)).toBeVisible();
+  });
+
+  it("shows the Continue Practice loading row on initial live mount before targets resolve", () => {
+    vi.stubGlobal("indexedDB", {});
+    serviceMocks.getContinuePracticeTargets.mockReturnValue(new Promise(() => undefined));
+
+    render(<HomeDashboard />);
+
+    expect(screen.getByText("Loading Continue Practice targets.")).toBeVisible();
+    expect(screen.queryByText("No recent practice targets yet.")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
+      "href",
+      "/quick-metronome"
+    );
   });
 
   it("links primary and utility entries to route shells", () => {
@@ -116,6 +178,192 @@ describe("HomeDashboard", () => {
     expect(screen.getByRole("link", { name: "Import Sheet" })).toHaveAttribute("href", "/sheet-library");
     expect(screen.getByRole("link", { name: "Open Recordings" })).toHaveAttribute("href", "/recordings");
     expect(screen.getByRole("link", { name: "Open Settings" })).toHaveAttribute("href", "/settings");
+  });
+
+  it("renders compact Continue Practice target rows for quick, sheet, and segment navigation", () => {
+    const data = createDashboardData({
+      continueTargets: createContinueTargetsResult([
+        createContinueTarget(),
+        createContinueTarget({
+          kind: "sheet",
+          sourceType: "sheet",
+          activitySource: "recording",
+          label: "Alpha Sheet",
+          sessionId: "sheet-session",
+          recordingId: "sheet-recording",
+          targetKey: "sheet:sheet-alpha",
+          sheetId: "sheet-alpha",
+          sheetName: "Alpha Sheet"
+        }),
+        createContinueTarget({
+          kind: "segment",
+          sourceType: "sheet",
+          activitySource: "recording",
+          label: "Bridge",
+          sessionId: "segment-session",
+          recordingId: "segment-recording",
+          targetKey: "segment:sheet-alpha:segment-alpha",
+          sheetId: "sheet-alpha",
+          sheetName: "Alpha Sheet",
+          segmentId: "segment-alpha",
+          segmentName: "Bridge",
+          segmentRangeLabel: "m5-12"
+        })
+      ])
+    });
+
+    render(<HomeDashboard data={data} />);
+
+    const panel = screen.getByRole("region", { name: "Continue Practice" });
+
+    expect(within(panel).getByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
+      "href",
+      "/quick-metronome"
+    );
+    expect(
+      within(panel).getByRole("link", { name: "Continue sheet practice Alpha Sheet" })
+    ).toHaveAttribute("href", "/sheet-practice/sheet-alpha");
+    expect(
+      within(panel).getByRole("link", { name: "Continue segment Bridge m5-12 Alpha Sheet" })
+    ).toHaveAttribute("href", "/sheet-practice?sheetId=sheet-alpha&segmentId=segment-alpha");
+    expect(within(panel).getByText("Recent quick practice: 2026-06-21 12:00 UTC")).toBeVisible();
+    expect(within(panel).getByText("Sheet: Alpha Sheet")).toBeVisible();
+    expect(within(panel).getByText("m5-12 · Alpha Sheet")).toBeVisible();
+    expect(within(panel).queryByRole("link", { name: "Continue Practice" })).not.toBeInTheDocument();
+  });
+
+  it("limits Continue Practice rows and renders malformed targets as static unavailable rows", () => {
+    const malformedSegment = createContinueTarget({
+      kind: "segment",
+      sourceType: "sheet",
+      activitySource: "recording",
+      label: "Missing segment id",
+      sessionId: "segment-session",
+      recordingId: "segment-recording",
+      targetKey: "segment:sheet-alpha:missing",
+      sheetId: "sheet-alpha",
+      sheetName: "Alpha Sheet",
+      segmentId: " ",
+      segmentName: "Missing segment id",
+      segmentRangeLabel: "m5-12"
+    });
+    const data = createDashboardData({
+      continueTargets: {
+        ...createContinueTargetsResult([
+          createContinueTarget({ sessionId: "quick-1", targetKey: "quick" }),
+          createContinueTarget({
+            kind: "sheet",
+            sourceType: "sheet",
+            targetKey: "sheet:sheet-alpha",
+            sheetId: "sheet-alpha",
+            sheetName: "Alpha Sheet"
+          }),
+          malformedSegment,
+          createContinueTarget({
+            kind: "sheet",
+            sourceType: "sheet",
+            targetKey: "sheet:sheet-bravo",
+            sheetId: "sheet-bravo",
+            sheetName: "Bravo Sheet"
+          }),
+          createContinueTarget({
+            kind: "sheet",
+            sourceType: "sheet",
+            targetKey: "sheet:sheet-charlie",
+            sheetId: "sheet-charlie",
+            sheetName: "Charlie Sheet"
+          }),
+          createContinueTarget({
+            kind: "sheet",
+            sourceType: "sheet",
+            targetKey: "sheet:sheet-delta",
+            sheetId: "sheet-delta",
+            sheetName: "Delta Sheet"
+          })
+        ]),
+        limit: 5
+      }
+    });
+
+    render(<HomeDashboard data={data} />);
+
+    const panel = screen.getByRole("region", { name: "Continue Practice" });
+
+    expect(within(panel).getAllByTestId("continue-practice-row-link")).toHaveLength(4);
+    expect(within(panel).getByTestId("continue-practice-row-disabled")).toBeVisible();
+    expect(within(panel).getByText("Target unavailable.")).toBeVisible();
+    expect(
+      within(panel).queryByRole("link", { name: /Missing segment id/i })
+    ).not.toBeInTheDocument();
+    expect(
+      within(panel).queryByRole("link", { name: "Continue sheet practice Delta Sheet" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not render the legacy single Continue Practice link when compatibility data is present", () => {
+    render(
+      <HomeDashboard
+        data={createDashboardData({
+          continueTarget: {
+            sourceType: "sheet",
+            href: "/sheet-practice/legacy-sheet",
+            label: "Continue Sheet Practice",
+            sessionId: "legacy-session",
+            sheetId: "legacy-sheet"
+          },
+          continueTargets: createContinueTargetsResult([
+            createContinueTarget({
+              kind: "sheet",
+              sourceType: "sheet",
+              targetKey: "sheet:sheet-alpha",
+              sheetId: "sheet-alpha",
+              sheetName: "Alpha Sheet"
+            })
+          ])
+        })}
+      />
+    );
+
+    const panel = screen.getByRole("region", { name: "Continue Practice" });
+
+    expect(within(panel).getByRole("link", { name: "Continue sheet practice Alpha Sheet" })).toHaveAttribute(
+      "href",
+      "/sheet-practice/sheet-alpha"
+    );
+    expect(screen.queryByRole("link", { name: "Continue Practice" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue Sheet Practice" })).not.toBeInTheDocument();
+  });
+
+  it("shows Continue Practice loading and error states without hiding Quick Metronome", () => {
+    const { rerender } = render(
+      <HomeDashboard
+        data={createDashboardData({
+          continueTargetsStatus: "loading",
+          continueTargets: createContinueTargetsResult()
+        })}
+      />
+    );
+
+    expect(screen.getByText("Loading Continue Practice targets.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
+      "href",
+      "/quick-metronome"
+    );
+
+    rerender(
+      <HomeDashboard
+        data={createDashboardData({
+          continueTargetsStatus: "error",
+          continueTargetsErrorMessage: "Continue Practice targets could not be loaded."
+        })}
+      />
+    );
+
+    expect(screen.getByText("Continue Practice targets could not be loaded.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
+      "href",
+      "/quick-metronome"
+    );
   });
 
   it("renders compact recent activity rows for quick, sheet, recording, and segment activity", () => {
@@ -298,6 +546,9 @@ describe("HomeDashboard", () => {
       sessionsToday: 1,
       recordingsToday: 0
     });
+    serviceMocks.getContinuePracticeTargets.mockResolvedValue(
+      createContinueTargetsResult([createContinueTarget()])
+    );
     serviceMocks.getHomeRecentActivity.mockResolvedValue(
       createActivityResult([
         createActivityItem({
@@ -310,14 +561,23 @@ describe("HomeDashboard", () => {
 
     const { unmount } = render(<HomeDashboard />);
 
+    await waitFor(() =>
+      expect(serviceMocks.getContinuePracticeTargets).toHaveBeenCalledWith({ limit: 5 })
+    );
     await waitFor(() => expect(serviceMocks.getHomeRecentActivity).toHaveBeenCalled());
+    expect(await screen.findByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
+      "href",
+      "/quick-metronome"
+    );
     expect(await screen.findByText("Service Activity")).toBeVisible();
     expect(screen.getByTestId("today-summary-sessions")).toHaveTextContent("1");
     unmount();
 
+    serviceMocks.getContinuePracticeTargets.mockRejectedValue(new Error("IndexedDB unavailable"));
     serviceMocks.getHomeRecentActivity.mockRejectedValue(new Error("IndexedDB unavailable"));
     render(<HomeDashboard />);
 
+    expect(await screen.findByText("Continue Practice targets could not be loaded.")).toBeVisible();
     expect(await screen.findByText("Recent activity could not be loaded.")).toBeVisible();
     expect(screen.getByTestId("today-summary-sessions")).toHaveTextContent("1");
   });

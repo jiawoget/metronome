@@ -339,7 +339,9 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   ]);
 
   await page.goto("/");
-  const continuePractice = page.getByRole("link", { name: "Continue Practice" });
+  const continuePractice = page.getByRole("link", {
+    name: "Continue sheet practice Integrated Practice Sheet"
+  });
 
   await expect(continuePractice).toBeVisible();
   await expect(continuePractice).toHaveAttribute("href", `/sheet-practice/${sheetId}`);
