@@ -11,6 +11,7 @@ import {
   SHEET_LIBRARY_DB_NAME,
   seedRecordingHistory
 } from "./fixtures/storage";
+import { PRACTICE_GOAL_DB_NAME } from "@/infrastructure/storage/storage-contracts";
 
 async function seedMissingSheetActivity(page: Page) {
   await page.evaluate(
@@ -74,7 +75,7 @@ async function seedHomeAnalyticsActivity(page: Page) {
       sessions: unknown[];
     }) =>
       new Promise<void>((resolve, reject) => {
-        const openRequest = indexedDB.open(databaseName, 2);
+        const openRequest = indexedDB.open(databaseName);
 
         openRequest.onupgradeneeded = () => {
           const database = openRequest.result;
@@ -279,7 +280,7 @@ async function seedHomePracticeStreakActivity(page: Page) {
             segmentContext: null
           }
         ];
-        const openRequest = indexedDB.open(databaseName, 2);
+        const openRequest = indexedDB.open(databaseName);
 
         openRequest.onupgradeneeded = () => {
           const database = openRequest.result;
@@ -318,6 +319,146 @@ async function seedHomePracticeStreakActivity(page: Page) {
   );
 }
 
+async function seedHomeGoalProgressActivity(page: Page) {
+  const segmentContext = createE2ESegmentContext({
+    segmentId: "goal-segment",
+    segmentName: "Goal Bridge"
+  });
+  const recordingTimestamps = await page.evaluate(() => {
+    const now = new Date();
+    const createLocalTimestamp = (hour: number, minute = 0) =>
+      new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        hour,
+        minute,
+        0
+      ).toISOString();
+
+    return {
+      first: createLocalTimestamp(10, 3),
+      second: createLocalTimestamp(10, 5)
+    };
+  });
+
+  await page.evaluate(
+    ({ databaseName, segment }) =>
+      new Promise<void>((resolve, reject) => {
+        const now = new Date();
+        const createLocalTimestamp = (hour: number, minute = 0) =>
+          new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+            hour,
+            minute,
+            0
+          ).toISOString();
+        const sessions = [
+          {
+            id: "goal-quick-session",
+            sourceType: "quick",
+            sheetId: null,
+            startedAt: createLocalTimestamp(9),
+            endedAt: createLocalTimestamp(9, 12),
+            durationMs: 12 * 60_000,
+            bpm: 96,
+            timeSignature: "4/4",
+            recordingCount: 0,
+            latestRecordingId: null,
+            updatedAt: createLocalTimestamp(9, 12),
+            segmentContext: null
+          },
+          {
+            id: "goal-sheet-session",
+            sourceType: "sheet",
+            sheetId: "goal-sheet-alpha",
+            startedAt: createLocalTimestamp(10),
+            endedAt: createLocalTimestamp(10, 6),
+            durationMs: 6 * 60_000,
+            bpm: 84,
+            timeSignature: "3/4",
+            recordingCount: 2,
+            latestRecordingId: "goal-sheet-take-two",
+            updatedAt: createLocalTimestamp(10, 6),
+            segmentContext: segment
+          }
+        ];
+        const openRequest = indexedDB.open(databaseName);
+
+        openRequest.onupgradeneeded = () => {
+          const database = openRequest.result;
+
+          if (!database.objectStoreNames.contains("sessions")) {
+            const store = database.createObjectStore("sessions", {
+              keyPath: "id"
+            });
+
+            for (const indexName of ["sourceType", "sheetId", "startedAt", "updatedAt"]) {
+              store.createIndex(indexName, indexName);
+            }
+          }
+        };
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const database = openRequest.result;
+          const transaction = database.transaction(["sessions"], "readwrite");
+          const store = transaction.objectStore("sessions");
+
+          for (const session of sessions) {
+            store.put(session);
+          }
+
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () => {
+            database.close();
+            reject(transaction.error);
+          };
+        };
+      }),
+    {
+      databaseName: PRACTICE_SESSION_DB_NAME,
+      segment: segmentContext
+    }
+  );
+
+  await seedRecordingHistory(page, {
+    sessions: [],
+    recordings: [],
+    errorMarkers: [],
+    sheetRecordingMetadata: [
+      {
+        id: "goal-sheet-take-one",
+        type: "sheet",
+        sessionId: "goal-sheet-session",
+        sheetId: "goal-sheet-alpha",
+        sheetName: "Goal Sheet Alpha",
+        createdAt: recordingTimestamps.first,
+        durationMs: 30_000,
+        bpm: 84,
+        timeSignature: "3/4",
+        segmentContext: null
+      },
+      {
+        id: "goal-sheet-take-two",
+        type: "sheet",
+        sessionId: "goal-sheet-session",
+        sheetId: "goal-sheet-alpha",
+        sheetName: "Goal Sheet Alpha",
+        createdAt: recordingTimestamps.second,
+        durationMs: 45_000,
+        bpm: 84,
+        timeSignature: "3/4",
+        segmentContext
+      }
+    ]
+  });
+}
+
 async function expectNoHorizontalOverflow(page: Page) {
   await expect
     .poll(() =>
@@ -351,6 +492,44 @@ async function installFakeMicrophone(page: Page) {
       }
     });
   });
+}
+
+async function selectGoalOption(page: Page, label: string, value: string, optionName: RegExp) {
+  const field = label === "Goal kind"
+    ? page.getByTestId("practice-goal-kind")
+    : page.getByTestId("practice-goal-period");
+  const tagName = await field.evaluate((element) => element.tagName).catch(() => "");
+
+  if (tagName === "SELECT") {
+    await field.selectOption(value);
+    return;
+  }
+
+  await field.click();
+  await page.getByRole("option", { name: optionName }).click();
+}
+
+async function createGoalThroughUi(
+  page: Page,
+  {
+    kind,
+    kindName,
+    period,
+    periodName,
+    target
+  }: {
+    kind: string;
+    kindName: RegExp;
+    period: string;
+    periodName: RegExp;
+    target: string;
+  }
+) {
+  await page.getByRole("button", { name: "New goal" }).click();
+  await selectGoalOption(page, "Goal kind", kind, kindName);
+  await selectGoalOption(page, "Period", period, periodName);
+  await page.getByLabel("Target").fill(target);
+  await page.getByRole("button", { name: "Create goal" }).click();
 }
 
 async function saveMeasureGridThroughUi(page: Page) {
@@ -714,6 +893,108 @@ test("home practice analytics renders persisted local totals across responsive v
   await expect(page.getByTestId("mobile-bottom-nav")).toBeVisible();
   await expect(panel).toBeVisible();
   await expect(page.getByTestId("home-analytics-segment-sessions")).toHaveText("1");
+  await expectNoHorizontalOverflow(page);
+
+  expect(consoleErrors).toEqual([]);
+});
+
+test("home practice goals create edit delete and persist evaluator progress after reload", async ({ page }) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await page.goto("/");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [PRACTICE_GOAL_DB_NAME, PRACTICE_SESSION_DB_NAME]);
+  await seedHomeGoalProgressActivity(page);
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.reload();
+  const panel = page.getByRole("region", { name: "Practice Goals" });
+
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText("No local goals yet.")).toBeVisible();
+
+  await createGoalThroughUi(page, {
+    kind: "minutes",
+    kindName: /minutes/i,
+    period: "today",
+    periodName: /today/i,
+    target: "20"
+  });
+  await expect(panel.getByText("Today practice minutes")).toBeVisible();
+  await expect(panel.getByText("18 / 20")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  await page.reload();
+  await expect(panel.getByText("Today practice minutes")).toBeVisible();
+  await expect(panel.getByText("18 / 20")).toBeVisible();
+
+  await panel.getByRole("button", { name: "Edit goal" }).click();
+  await selectGoalOption(page, "Period", "all-time", /all-time/i);
+  await page.getByLabel("Target").fill("30");
+  await page.getByRole("button", { name: "Save goal" }).click();
+  await expect(panel.getByText("All-time practice minutes")).toBeVisible();
+  await expect(panel.getByText("18 / 30")).toBeVisible();
+
+  await page.reload();
+  await expect(panel.getByText("All-time practice minutes")).toBeVisible();
+  await expect(panel.getByText("18 / 30")).toBeVisible();
+
+  await panel.getByRole("button", { name: "Delete goal" }).click();
+  await page.getByRole("button", { name: "Confirm delete goal" }).click();
+  await expect(panel.getByText("No local goals yet.")).toBeVisible();
+
+  await page.reload();
+  await expect(panel.getByText("No local goals yet.")).toBeVisible();
+
+  await createGoalThroughUi(page, {
+    kind: "sessions",
+    kindName: /sessions/i,
+    period: "all-time",
+    periodName: /all-time/i,
+    target: "3"
+  });
+  await expect(panel.getByText("All-time sessions")).toBeVisible();
+  await expect(panel.getByText("2 / 3 sessions")).toBeVisible();
+
+  await page.reload();
+  await expect(panel.getByText("All-time sessions")).toBeVisible();
+  await expect(panel.getByText("2 / 3 sessions")).toBeVisible();
+
+  await createGoalThroughUi(page, {
+    kind: "takes",
+    kindName: /takes/i,
+    period: "all-time",
+    periodName: /all-time/i,
+    target: "3"
+  });
+  await expect(panel.getByText(/All-time .*takes/i)).toBeVisible();
+  await expect(panel.getByText("2 / 3 sheet takes")).toBeVisible();
+
+  await page.reload();
+  await expect(panel.getByText("All-time sessions")).toBeVisible();
+  await expect(panel.getByText(/All-time .*takes/i)).toBeVisible();
+  await expect(panel.getByText("2 / 3 sessions")).toBeVisible();
+  await expect(panel.getByText("2 / 3 sheet takes")).toBeVisible();
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText(/All-time .*takes/i)).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId("mobile-bottom-nav")).toBeVisible();
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText("All-time sessions")).toBeVisible();
+  await expect(panel.getByText(/All-time .*takes/i)).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   expect(consoleErrors).toEqual([]);

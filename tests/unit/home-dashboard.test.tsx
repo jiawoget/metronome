@@ -1,14 +1,19 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomeDashboard, type HomeDashboardData } from "@/components/home/home-dashboard";
 import type {
   ContinuePracticeTargetIdentity,
   ContinuePracticeTargetsResult,
+  GoalCompletionEvaluation,
   HomeDashboardAnalyticsSource,
   HomePracticeStreaks,
   HomeRecentActivityItem,
-  HomeRecentActivityResult
+  HomeRecentActivityResult,
+  LocalPracticeGoal,
+  LocalPracticeGoalKind,
+  LocalPracticeGoalPeriod
 } from "@/domain/practice";
 
 const serviceMocks = vi.hoisted(() => ({
@@ -22,8 +27,21 @@ const serviceMocks = vi.hoisted(() => ({
   subscribe: vi.fn()
 }));
 
+const goalServiceMocks = vi.hoisted(() => ({
+  listPracticeGoals: vi.fn(),
+  getPracticeGoal: vi.fn(),
+  savePracticeGoal: vi.fn(),
+  deletePracticeGoal: vi.fn(),
+  getPracticeGoalEvaluations: vi.fn(),
+  subscribe: vi.fn()
+}));
+
 vi.mock("@/infrastructure/db/browser-practice-session-service", () => ({
   browserPracticeSessionService: serviceMocks
+}));
+
+vi.mock("@/infrastructure/db/browser-practice-goal-service", () => ({
+  browserPracticeGoalService: goalServiceMocks
 }));
 
 function createActivityItem(overrides: Partial<HomeRecentActivityItem> = {}): HomeRecentActivityItem {
@@ -191,6 +209,63 @@ function createDashboardData(overrides: Partial<HomeDashboardData> = {}): HomeDa
   };
 }
 
+function createGoal(overrides: Partial<LocalPracticeGoal> = {}): LocalPracticeGoal {
+  return {
+    id: "goal-minutes",
+    kind: "minutes",
+    target: 20,
+    period: "today",
+    createdAt: "2026-06-21T11:00:00.000Z",
+    completedAt: null,
+    status: "active",
+    ...overrides
+  };
+}
+
+function createGoalEvaluation(
+  overrides: Partial<GoalCompletionEvaluation> = {}
+): GoalCompletionEvaluation {
+  return {
+    goalId: "goal-minutes",
+    kind: "minutes",
+    status: "in-progress",
+    progress: 12,
+    target: 20,
+    progressRatio: 0.6,
+    completedAt: null,
+    reason: null,
+    ...overrides
+  };
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+
+  return { promise, resolve, reject };
+}
+
+async function chooseGoalOption(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+  value: LocalPracticeGoalKind | LocalPracticeGoalPeriod,
+  optionName: RegExp
+) {
+  const field = screen.getByLabelText(label);
+
+  if (field instanceof HTMLSelectElement) {
+    await user.selectOptions(field, value);
+    return;
+  }
+
+  await user.click(field);
+  await user.click(screen.getByRole("option", { name: optionName }));
+}
+
 describe("HomeDashboard", () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
@@ -203,6 +278,12 @@ describe("HomeDashboard", () => {
     serviceMocks.getHomeDashboardAnalyticsSource.mockReset();
     serviceMocks.getHomePracticeStreaks.mockReset();
     serviceMocks.subscribe.mockReset();
+    goalServiceMocks.listPracticeGoals.mockReset();
+    goalServiceMocks.getPracticeGoal.mockReset();
+    goalServiceMocks.savePracticeGoal.mockReset();
+    goalServiceMocks.deletePracticeGoal.mockReset();
+    goalServiceMocks.getPracticeGoalEvaluations.mockReset();
+    goalServiceMocks.subscribe.mockReset();
     serviceMocks.getRecentSession.mockResolvedValue(null);
     serviceMocks.getContinuePracticeTarget.mockResolvedValue(null);
     serviceMocks.getContinuePracticeTargets.mockResolvedValue(createContinueTargetsResult());
@@ -216,6 +297,12 @@ describe("HomeDashboard", () => {
     serviceMocks.getHomeDashboardAnalyticsSource.mockResolvedValue(createAnalyticsSource());
     serviceMocks.getHomePracticeStreaks.mockResolvedValue(createPracticeStreaks());
     serviceMocks.subscribe.mockReturnValue(() => undefined);
+    goalServiceMocks.listPracticeGoals.mockResolvedValue([]);
+    goalServiceMocks.getPracticeGoal.mockResolvedValue(null);
+    goalServiceMocks.savePracticeGoal.mockResolvedValue(undefined);
+    goalServiceMocks.deletePracticeGoal.mockResolvedValue(undefined);
+    goalServiceMocks.getPracticeGoalEvaluations.mockResolvedValue([]);
+    goalServiceMocks.subscribe.mockReturnValue(() => undefined);
   });
 
   it("renders zero summary values and loaded empty states without fake practice data", () => {
@@ -1250,5 +1337,467 @@ describe("HomeDashboard", () => {
 
     await waitFor(() => expect(screen.getByTestId("home-streak-current")).toHaveTextContent("6 days"));
     expect(screen.queryByText("Practice streaks could not be loaded.")).not.toBeInTheDocument();
+  });
+
+  describe("P3-15 Practice Goals", () => {
+    it("renders empty and populated local goals from stored-goal evaluations", () => {
+      const goals = [
+        createGoal({
+          id: "goal-minutes",
+          kind: "minutes",
+          period: "today",
+          target: 20
+        }),
+        createGoal({
+          id: "goal-sessions",
+          kind: "sessions",
+          period: "all-time",
+          target: 5,
+          createdAt: "2026-06-21T10:00:00.000Z"
+        }),
+        createGoal({
+          id: "goal-takes",
+          kind: "takes",
+          period: "today",
+          target: 3,
+          createdAt: "2026-06-21T09:00:00.000Z"
+        })
+      ];
+      const evaluations = [
+        createGoalEvaluation({
+          goalId: "goal-minutes",
+          kind: "minutes",
+          status: "in-progress",
+          progress: 12,
+          target: 20,
+          progressRatio: 0.6
+        }),
+        createGoalEvaluation({
+          goalId: "goal-sessions",
+          kind: "sessions",
+          status: "completed",
+          progress: 5,
+          target: 5,
+          progressRatio: 1,
+          completedAt: "2026-06-21T12:00:00.000Z"
+        }),
+        createGoalEvaluation({
+          goalId: "goal-takes",
+          kind: "takes",
+          status: "not-started",
+          progress: 0,
+          target: 3,
+          progressRatio: 0
+        })
+      ];
+
+      const { rerender } = render(
+        <HomeDashboard
+          data={createDashboardData({
+            practiceGoals: [],
+            practiceGoalEvaluations: [],
+            practiceGoalsStatus: "loaded",
+            practiceGoalProgressStatus: "loaded",
+            onSavePracticeGoal: vi.fn(),
+            onDeletePracticeGoal: vi.fn()
+          })}
+        />
+      );
+
+      const emptyPanel = screen.getByRole("region", { name: "Practice Goals" });
+
+      expect(within(emptyPanel).getByText("No local goals yet.")).toBeVisible();
+
+      rerender(
+        <HomeDashboard
+          data={createDashboardData({
+            practiceGoals: goals,
+            practiceGoalEvaluations: evaluations,
+            practiceGoalsStatus: "loaded",
+            practiceGoalProgressStatus: "loaded",
+            onSavePracticeGoal: vi.fn(),
+            onDeletePracticeGoal: vi.fn()
+          })}
+        />
+      );
+
+      const panel = screen.getByRole("region", { name: "Practice Goals" });
+      const rows = within(panel).getAllByTestId("practice-goal-row");
+      const progressRows = within(panel).getAllByTestId("practice-goal-progress");
+
+      expect(within(panel).queryByText("No local goals yet.")).not.toBeInTheDocument();
+      expect(rows).toHaveLength(3);
+      expect(rows[0]).toHaveTextContent("Today practice minutes");
+      expect(rows[0]).toHaveTextContent("In progress");
+      expect(progressRows[0]).toHaveTextContent("12 / 20 min");
+      expect(rows[1]).toHaveTextContent("All-time sessions");
+      expect(rows[1]).toHaveTextContent("Completed");
+      expect(progressRows[1]).toHaveTextContent("5 / 5 sessions");
+      expect(rows[2]).toHaveTextContent(/Today .*takes/i);
+      expect(rows[2]).toHaveTextContent("Not started");
+      expect(progressRows[2]).toHaveTextContent("0 / 3 sheet takes");
+      expect(screen.getByText("Today Practice Summary")).toBeVisible();
+      expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
+      expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+    });
+
+    it("renders invalid, missing-evaluation, and cleared completed-goal states from evaluations", () => {
+      render(
+        <HomeDashboard
+          data={createDashboardData({
+            practiceGoals: [
+              createGoal({
+                id: "goal-cleared-completed",
+                target: 20,
+                status: "completed",
+                completedAt: "2026-06-21T12:00:00.000Z"
+              }),
+              createGoal({
+                id: "goal-invalid",
+                kind: "takes",
+                target: 3,
+                createdAt: "2026-06-21T10:00:00.000Z"
+              }),
+              createGoal({
+                id: "goal-missing-evaluation",
+                kind: "sessions",
+                target: 2,
+                createdAt: "2026-06-21T09:00:00.000Z"
+              })
+            ],
+            practiceGoalEvaluations: [
+              createGoalEvaluation({
+                goalId: "goal-cleared-completed",
+                status: "not-started",
+                progress: 0,
+                target: 20,
+                progressRatio: 0,
+                completedAt: null
+              }),
+              createGoalEvaluation({
+                goalId: "goal-invalid",
+                kind: "takes",
+                status: "invalid",
+                progress: 0,
+                target: null,
+                progressRatio: 0,
+                reason: "goal-status-invalid"
+              })
+            ],
+            practiceGoalsStatus: "loaded",
+            practiceGoalProgressStatus: "loaded",
+            onSavePracticeGoal: vi.fn(),
+            onDeletePracticeGoal: vi.fn()
+          })}
+        />
+      );
+
+      const panel = screen.getByRole("region", { name: "Practice Goals" });
+      const rows = within(panel).getAllByTestId("practice-goal-row");
+      const progressRows = within(panel).getAllByTestId("practice-goal-progress");
+
+      expect(rows[0]).toHaveTextContent("Not started");
+      expect(rows[0]).not.toHaveTextContent("Completed");
+      expect(progressRows[0]).toHaveTextContent("0 / 20 min");
+      expect(rows[1]).toHaveTextContent("Invalid");
+      expect(progressRows[1]).toHaveTextContent("Progress unavailable.");
+      expect(rows[2]).toHaveTextContent("Unavailable");
+      expect(progressRows[2]).toHaveTextContent("Progress unavailable.");
+    });
+
+    it("validates create targets and keeps failed saves contained in the form", async () => {
+      const user = userEvent.setup();
+      const savePracticeGoal = vi.fn().mockRejectedValue(new Error("save failed"));
+
+      render(
+        <HomeDashboard
+          data={createDashboardData({
+            practiceGoals: [],
+            practiceGoalEvaluations: [],
+            practiceGoalsStatus: "loaded",
+            practiceGoalProgressStatus: "loaded",
+            onSavePracticeGoal: savePracticeGoal,
+            onDeletePracticeGoal: vi.fn(),
+            createPracticeGoalId: () => "goal-test-1",
+            getPracticeGoalNow: () => new Date("2026-06-21T12:00:00.000Z")
+          })}
+        />
+      );
+
+      const panel = screen.getByRole("region", { name: "Practice Goals" });
+      await user.click(within(panel).getByRole("button", { name: "New goal" }));
+
+      for (const [invalidTarget, message] of [
+        ["", "Enter a positive whole-number target."],
+        ["0", "Enter a positive safe-integer target."],
+        ["-1", "Enter a positive whole-number target."],
+        ["1.5", "Enter a positive whole-number target."],
+        ["abc", "Enter a positive whole-number target."],
+        ["1e309", "Enter a positive whole-number target."],
+        ["9007199254740992", "Enter a positive safe-integer target."],
+        ["1000001", "Enter a target of 1000000 or less."]
+      ] as const) {
+        const targetField = screen.getByLabelText("Target");
+        fireEvent.change(targetField, { target: { value: invalidTarget } });
+        await user.click(screen.getByRole("button", { name: "Create goal" }));
+        expect(await screen.findByText(message)).toBeVisible();
+      }
+
+      expect(savePracticeGoal).not.toHaveBeenCalled();
+
+      await chooseGoalOption(user, "Goal kind", "sessions", /sessions/i);
+      await chooseGoalOption(user, "Period", "all-time", /all-time/i);
+      await user.clear(screen.getByLabelText("Target"));
+      await user.type(screen.getByLabelText("Target"), "5");
+      await user.click(screen.getByRole("button", { name: "Create goal" }));
+
+      await waitFor(() =>
+        expect(savePracticeGoal).toHaveBeenCalledWith({
+          id: "goal-test-1",
+          kind: "sessions",
+          period: "all-time",
+          target: 5,
+          createdAt: "2026-06-21T12:00:00.000Z"
+        })
+      );
+      expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("status");
+      expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("completedAt");
+      expect(screen.getByText("Goal could not be saved.")).toBeVisible();
+      expect(screen.getByRole("form", { name: "Create practice goal" })).toBeVisible();
+      expect(within(panel).queryByText("All-time sessions")).not.toBeInTheDocument();
+    });
+
+    it("edits goals with preserved identity and confirms deletes before service mutation", async () => {
+      const user = userEvent.setup();
+      const savePracticeGoal = vi.fn().mockResolvedValue(undefined);
+      const deletePracticeGoal = vi.fn().mockResolvedValue(undefined);
+      const existingGoal = createGoal({
+        id: "goal-edit",
+        kind: "minutes",
+        period: "today",
+        target: 20,
+        createdAt: "2026-06-21T08:00:00.000Z"
+      });
+
+      render(
+        <HomeDashboard
+          data={createDashboardData({
+            practiceGoals: [existingGoal],
+            practiceGoalEvaluations: [
+              createGoalEvaluation({
+                goalId: "goal-edit",
+                progress: 10,
+                target: 20,
+                progressRatio: 0.5
+              })
+            ],
+            practiceGoalsStatus: "loaded",
+            practiceGoalProgressStatus: "loaded",
+            onSavePracticeGoal: savePracticeGoal,
+            onDeletePracticeGoal: deletePracticeGoal
+          })}
+        />
+      );
+
+      const panel = screen.getByRole("region", { name: "Practice Goals" });
+      await user.click(within(panel).getByRole("button", { name: "Edit goal" }));
+      await chooseGoalOption(user, "Goal kind", "takes", /takes/i);
+      await chooseGoalOption(user, "Period", "all-time", /all-time/i);
+      await user.clear(screen.getByLabelText("Target"));
+      await user.type(screen.getByLabelText("Target"), "7");
+      await user.click(screen.getByRole("button", { name: "Save goal" }));
+
+      await waitFor(() =>
+        expect(savePracticeGoal).toHaveBeenCalledWith({
+          id: "goal-edit",
+          kind: "takes",
+          period: "all-time",
+          target: 7,
+          createdAt: "2026-06-21T08:00:00.000Z"
+        })
+      );
+      expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("status");
+      expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("completedAt");
+
+      await user.click(within(panel).getByRole("button", { name: "Delete goal" }));
+      expect(deletePracticeGoal).not.toHaveBeenCalled();
+      await user.click(screen.getByTestId("practice-goal-delete-confirm-button"));
+
+      await waitFor(() =>
+        expect(deletePracticeGoal).toHaveBeenCalledWith("goal-edit")
+      );
+    });
+
+    it("edits a completed goal without preserving stale completion metadata", async () => {
+      const user = userEvent.setup();
+      const savePracticeGoal = vi.fn().mockResolvedValue(undefined);
+      const completedGoal = createGoal({
+        id: "goal-completed-edit",
+        kind: "minutes",
+        period: "today",
+        target: 20,
+        createdAt: "2026-06-21T08:00:00.000Z",
+        completedAt: "2026-06-21T09:00:00.000Z",
+        status: "completed"
+      });
+
+      render(
+        <HomeDashboard
+          data={createDashboardData({
+            practiceGoals: [completedGoal],
+            practiceGoalEvaluations: [
+              createGoalEvaluation({
+                goalId: "goal-completed-edit",
+                status: "completed",
+                progress: 20,
+                target: 20,
+                progressRatio: 1,
+                completedAt: "2026-06-21T09:00:00.000Z"
+              })
+            ],
+            practiceGoalsStatus: "loaded",
+            practiceGoalProgressStatus: "loaded",
+            onSavePracticeGoal: savePracticeGoal,
+            onDeletePracticeGoal: vi.fn()
+          })}
+        />
+      );
+
+      const panel = screen.getByRole("region", { name: "Practice Goals" });
+
+      await user.click(within(panel).getByRole("button", { name: "Edit goal" }));
+      await chooseGoalOption(user, "Goal kind", "sessions", /sessions/i);
+      await chooseGoalOption(user, "Period", "all-time", /all-time/i);
+      await user.clear(screen.getByLabelText("Target"));
+      await user.type(screen.getByLabelText("Target"), "7");
+      await user.click(screen.getByRole("button", { name: "Save goal" }));
+
+      await waitFor(() => expect(savePracticeGoal).toHaveBeenCalledTimes(1));
+
+      const savedGoal = savePracticeGoal.mock.calls[0]?.[0] as LocalPracticeGoal;
+
+      expect(savedGoal).toEqual({
+        id: "goal-completed-edit",
+        kind: "sessions",
+        period: "all-time",
+        target: 7,
+        createdAt: "2026-06-21T08:00:00.000Z"
+      });
+      expect(savedGoal).not.toHaveProperty("status");
+      expect(savedGoal).not.toHaveProperty("completedAt");
+    });
+
+    it("contains goal read, progress read, and mutation failures without hiding Home panels", async () => {
+      const user = userEvent.setup();
+      const existingGoal = createGoal({ id: "goal-progress-error" });
+      const deletePracticeGoal = vi.fn().mockRejectedValue(new Error("delete failed"));
+
+      const { rerender } = render(
+        <HomeDashboard
+          data={createDashboardData({
+            practiceGoals: [],
+            practiceGoalEvaluations: [],
+            practiceGoalsStatus: "error",
+            practiceGoalsErrorMessage: "Practice goals could not be loaded.",
+            onSavePracticeGoal: vi.fn(),
+            onDeletePracticeGoal: vi.fn()
+          })}
+        />
+      );
+
+      expect(screen.getByText("Practice goals could not be loaded.")).toBeVisible();
+      expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
+        "href",
+        "/quick-metronome"
+      );
+      expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
+
+      rerender(
+        <HomeDashboard
+          data={createDashboardData({
+            practiceGoals: [existingGoal],
+            practiceGoalEvaluations: [],
+            practiceGoalsStatus: "loaded",
+            practiceGoalProgressStatus: "error",
+            practiceGoalProgressErrorMessage: "Goal progress could not be loaded.",
+            onSavePracticeGoal: vi.fn(),
+            onDeletePracticeGoal: deletePracticeGoal
+          })}
+        />
+      );
+
+      const panel = screen.getByRole("region", { name: "Practice Goals" });
+
+      expect(within(panel).getByTestId("practice-goal-row")).toBeVisible();
+      expect(within(panel).getByText("Goal progress could not be loaded.")).toBeVisible();
+
+      await user.click(within(panel).getByRole("button", { name: "Delete goal" }));
+      await user.click(screen.getByTestId("practice-goal-delete-confirm-button"));
+
+      expect(await screen.findByText("Goal could not be deleted.")).toBeVisible();
+      expect(within(panel).getByTestId("practice-goal-row")).toBeVisible();
+    });
+
+    it("subscribes once, unsubscribes on unmount, and ignores stale goal refreshes", async () => {
+      vi.stubGlobal("indexedDB", {});
+      const initialRead = createDeferred<LocalPracticeGoal[]>();
+      const newerRead = createDeferred<LocalPracticeGoal[]>();
+      const unsubscribe = vi.fn();
+      const subscription: { refresh: (() => void) | null } = { refresh: null };
+
+      goalServiceMocks.subscribe.mockImplementation((listener: () => void) => {
+        subscription.refresh = listener;
+
+        return unsubscribe;
+      });
+      goalServiceMocks.listPracticeGoals
+        .mockReturnValueOnce(initialRead.promise)
+        .mockReturnValueOnce(newerRead.promise);
+      goalServiceMocks.getPracticeGoalEvaluations.mockResolvedValue([]);
+
+      const { unmount } = render(<HomeDashboard />);
+
+      await waitFor(() => expect(goalServiceMocks.subscribe).toHaveBeenCalledTimes(1));
+
+      const refresh = subscription.refresh;
+
+      if (!refresh) {
+        throw new Error("Goal subscription was not registered.");
+      }
+
+      refresh();
+      await waitFor(() => expect(goalServiceMocks.listPracticeGoals).toHaveBeenCalledTimes(2));
+
+      newerRead.resolve([
+        createGoal({
+          id: "goal-newer",
+          kind: "sessions",
+          target: 8,
+          createdAt: "2026-06-21T12:10:00.000Z"
+        })
+      ]);
+
+      const panel = await screen.findByRole("region", { name: "Practice Goals" });
+
+      expect(within(panel).getByText("Today sessions")).toBeVisible();
+
+      initialRead.resolve([
+        createGoal({
+          id: "goal-older",
+          kind: "takes",
+          target: 2,
+          createdAt: "2026-06-21T12:00:00.000Z"
+        })
+      ]);
+
+      await waitFor(() =>
+        expect(within(panel).queryByText("Today sheet takes")).not.toBeInTheDocument()
+      );
+      expect(within(panel).getByText("Today sessions")).toBeVisible();
+
+      unmount();
+
+      expect(unsubscribe).toHaveBeenCalledTimes(1);
+    });
   });
 });
