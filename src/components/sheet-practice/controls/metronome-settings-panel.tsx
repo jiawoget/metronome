@@ -46,6 +46,7 @@ type MetronomeSettingsPanelProps = {
   layout?: "sheet" | "stacked";
   bpmAccessory?: ReactNode;
   barCountInControl?: ReactNode;
+  presetControl?: ReactNode;
   isCountdownReplacedByBarCountIn?: boolean;
   countdownReplacementText?: string;
   onTapTempo?: () => void;
@@ -65,6 +66,7 @@ export function MetronomeSettingsPanel({
   layout = "sheet",
   bpmAccessory,
   barCountInControl,
+  presetControl,
   isCountdownReplacedByBarCountIn = false,
   countdownReplacementText = "Bar count-in replaces beat countdown for Sheet Practice.",
   onTapTempo,
@@ -208,6 +210,9 @@ export function MetronomeSettingsPanel({
         ) : null}
         {barCountInControl ? (
           <div className="min-w-0 sm:col-span-3">{barCountInControl}</div>
+        ) : null}
+        {presetControl ? (
+          <div className="min-w-0 sm:col-span-3">{presetControl}</div>
         ) : null}
       </div>
 

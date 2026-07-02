@@ -3,6 +3,7 @@ import type { MeasureGridService } from "@/services/measure-grid";
 import type { PracticeSegmentService } from "@/services/practice-segments";
 import type { MetronomeService } from "@/services/metronome";
 import type { SheetRecordingService } from "@/services/recording";
+import type { SheetMetronomePresetService } from "@/services/sheet-metronome-presets";
 import type { BarCountInReadyPlan } from "@/domain/practice/bar-count-in";
 import type { BarCountInSchedulerTick } from "@/lib/quick-metronome/use-metronome-transport";
 
@@ -66,6 +67,7 @@ export type SheetPracticeControlsProps = {
   sessionService?: SheetPracticeSessionService;
   measureGridService?: MeasureGridService;
   practiceSegmentService?: PracticeSegmentService;
+  sheetMetronomePresetService?: SheetMetronomePresetService;
   currentMeasureGridTimestampMs?: number | null;
   barCountIn?: SheetPracticeBarCountInOptions;
 };
