@@ -13,8 +13,10 @@ import type {
   HomeRecentActivityResult,
   LocalPracticeGoal,
   LocalPracticeGoalKind,
-  LocalPracticeGoalPeriod
+  LocalPracticeGoalPeriod,
+  SessionComparisonResult
 } from "@/domain/practice";
+import type { HomeSessionComparisonData } from "@/hooks/use-practice-session-dashboard";
 
 const serviceMocks = vi.hoisted(() => ({
   getRecentSession: vi.fn(),
@@ -24,6 +26,7 @@ const serviceMocks = vi.hoisted(() => ({
   getHomeRecentActivity: vi.fn(),
   getHomeDashboardAnalyticsSource: vi.fn(),
   getHomePracticeStreaks: vi.fn(),
+  getSessionComparison: vi.fn(),
   subscribe: vi.fn()
 }));
 
@@ -181,6 +184,60 @@ function createContinueTargetsResult(
   };
 }
 
+function createSessionComparisonCandidate(
+  overrides: Partial<HomeSessionComparisonData["candidates"][number]> = {}
+): HomeSessionComparisonData["candidates"][number] {
+  return {
+    sessionId: "quick-session",
+    label: "Quick practice · 2026-06-21 12:01 UTC",
+    sourceTypeLabel: "Quick practice",
+    startedText: "2026-06-21 12:00 UTC",
+    updatedText: "2026-06-21 12:01 UTC",
+    durationText: "1 min",
+    bpmText: "96 BPM",
+    timeSignatureText: "4/4",
+    recordingsText: "0 recordings",
+    sheetText: "Quick metronome",
+    segmentText: "Quick metronome",
+    goalContributionText: "Counts as 1 session; adds 1 min; 0 sheet takes linked",
+    eventText: "Event details not available yet",
+    ...overrides
+  };
+}
+
+function createSessionComparisonData(
+  candidates: HomeSessionComparisonData["candidates"] = []
+): HomeSessionComparisonData {
+  return {
+    generatedAt: "2026-06-21T12:10:00.000Z",
+    candidates,
+    limit: 8,
+    maxSelected: 3
+  };
+}
+
+function createServiceSessionComparisonResult(
+  overrides: Partial<SessionComparisonResult> = {}
+): SessionComparisonResult {
+  return {
+    generatedAt: "2026-06-21T12:10:00.000Z",
+    candidates: [],
+    selectedSessionIds: [],
+    comparedSessions: [],
+    metrics: [],
+    unavailable: [
+      {
+        key: "events",
+        label: "Events",
+        reason: "Event details are unavailable because no durable session event read source is exposed."
+      }
+    ],
+    limit: 8,
+    maxSelected: 3,
+    ...overrides
+  };
+}
+
 function createDashboardData(overrides: Partial<HomeDashboardData> = {}): HomeDashboardData {
   return {
     summary: {
@@ -203,6 +260,9 @@ function createDashboardData(overrides: Partial<HomeDashboardData> = {}): HomeDa
     streaks: createPracticeStreaks(),
     streaksStatus: "loaded",
     streaksErrorMessage: null,
+    sessionComparison: createSessionComparisonData(),
+    sessionComparisonStatus: "loaded",
+    sessionComparisonErrorMessage: null,
     recentSheets: [],
     recentRecordings: [],
     ...overrides
@@ -277,6 +337,7 @@ describe("HomeDashboard", () => {
     serviceMocks.getHomeRecentActivity.mockReset();
     serviceMocks.getHomeDashboardAnalyticsSource.mockReset();
     serviceMocks.getHomePracticeStreaks.mockReset();
+    serviceMocks.getSessionComparison.mockReset();
     serviceMocks.subscribe.mockReset();
     goalServiceMocks.listPracticeGoals.mockReset();
     goalServiceMocks.getPracticeGoal.mockReset();
@@ -296,6 +357,7 @@ describe("HomeDashboard", () => {
     serviceMocks.getHomeRecentActivity.mockResolvedValue(createActivityResult());
     serviceMocks.getHomeDashboardAnalyticsSource.mockResolvedValue(createAnalyticsSource());
     serviceMocks.getHomePracticeStreaks.mockResolvedValue(createPracticeStreaks());
+    serviceMocks.getSessionComparison.mockResolvedValue(createServiceSessionComparisonResult());
     serviceMocks.subscribe.mockReturnValue(() => undefined);
     goalServiceMocks.listPracticeGoals.mockResolvedValue([]);
     goalServiceMocks.getPracticeGoal.mockResolvedValue(null);
@@ -328,6 +390,8 @@ describe("HomeDashboard", () => {
     expect(screen.getByTestId("home-streak-current")).toHaveTextContent("0 days");
     expect(screen.getByTestId("home-streak-longest")).toHaveTextContent("0 days");
     expect(screen.getByTestId("home-streak-today-status")).toHaveTextContent("No practice logged yet.");
+    expect(screen.getByRole("region", { name: "Session Comparison" })).toBeVisible();
+    expect(screen.getByText("No local sessions yet.")).toBeVisible();
     expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
     expect(screen.getByText("No recent practice targets yet.")).toBeVisible();
     expect(screen.getByRole("link", { name: "Start Quick Metronome" })).toHaveAttribute(
@@ -354,6 +418,124 @@ describe("HomeDashboard", () => {
       "href",
       "/quick-metronome"
     );
+  });
+
+  it("compares two or three selected sessions without score or recommendation copy", async () => {
+    const user = userEvent.setup();
+    const candidates = [
+      createSessionComparisonCandidate({
+        sessionId: "quick-session",
+        label: "Quick practice · 2026-06-21 12:01 UTC",
+        sourceTypeLabel: "Quick practice",
+        durationText: "1 min",
+        recordingsText: "0 recordings",
+        sheetText: "Quick metronome",
+        segmentText: "Quick metronome"
+      }),
+      createSessionComparisonCandidate({
+        sessionId: "sheet-session",
+        label: "Sheet practice · 2026-06-21 12:04 UTC",
+        sourceTypeLabel: "Sheet practice",
+        startedText: "2026-06-21 12:02 UTC",
+        updatedText: "2026-06-21 12:04 UTC",
+        durationText: "2 min",
+        bpmText: "84 BPM",
+        timeSignatureText: "3/4",
+        recordingsText: "1 recording",
+        sheetText: "Alpha Etude",
+        segmentText: "Whole sheet / no segment",
+        goalContributionText: "Counts as 1 session; adds 2 min; 1 sheet take linked"
+      }),
+      createSessionComparisonCandidate({
+        sessionId: "segment-session",
+        label: "Sheet practice · 2026-06-21 12:08 UTC",
+        sourceTypeLabel: "Sheet practice",
+        durationText: "3 min",
+        recordingsText: "2 recordings",
+        sheetText: "Alpha Etude",
+        segmentText: "Bridge (m5-12)",
+        goalContributionText: "Counts as 1 session; adds 3 min; 2 sheet takes linked"
+      }),
+      createSessionComparisonCandidate({
+        sessionId: "fourth-session",
+        label: "Quick practice · 2026-06-21 12:09 UTC",
+        sourceTypeLabel: "Quick practice"
+      })
+    ];
+
+    render(
+      <HomeDashboard
+        data={createDashboardData({
+          sessionComparison: createSessionComparisonData(candidates)
+        })}
+      />
+    );
+
+    const panel = screen.getByRole("region", { name: "Session Comparison" });
+
+    expect(within(panel).getByText("Select sessions to compare")).toBeVisible();
+    expect(within(panel).getByText("Up to 3 sessions can be compared.")).toBeVisible();
+    expect(within(panel).getByText("Select sessions to compare.")).toBeVisible();
+
+    await user.click(within(panel).getByRole("checkbox", { name: /Compare Quick practice .*12:01/ }));
+    expect(within(panel).getByText("Select another session to compare.")).toBeVisible();
+
+    await user.click(within(panel).getByRole("checkbox", { name: /Compare Sheet practice .*12:04/ }));
+    expect(within(panel).getByText("Selected sessions")).toBeVisible();
+    expect(within(panel).getByRole("heading", {
+      level: 3,
+      name: "Quick practice · 2026-06-21 12:01 UTC"
+    })).toBeVisible();
+    expect(within(panel).getByRole("heading", {
+      level: 3,
+      name: "Sheet practice · 2026-06-21 12:04 UTC"
+    })).toBeVisible();
+    expect(within(panel).getByText("Session type")).toBeVisible();
+    expect(within(panel).getAllByText("Quick metronome").length).toBeGreaterThanOrEqual(2);
+    expect(within(panel).getByText("Alpha Etude")).toBeVisible();
+    expect(within(panel).getByText("Whole sheet / no segment")).toBeVisible();
+    expect(within(panel).getAllByText("Event details not available yet")).toHaveLength(2);
+    expect(within(panel).getByText("Counts as 1 session; adds 2 min; 1 sheet take linked")).toBeVisible();
+
+    await user.click(within(panel).getByRole("checkbox", { name: /Compare Sheet practice .*12:08/ }));
+    expect(within(panel).getByRole("heading", {
+      level: 3,
+      name: "Sheet practice · 2026-06-21 12:08 UTC"
+    })).toBeVisible();
+    expect(within(panel).getByText("Bridge (m5-12)")).toBeVisible();
+    expect(within(panel).getByRole("checkbox", { name: /fourth-session|12:09/i })).toBeDisabled();
+    expect(panel).not.toHaveTextContent(/score|rank|improv|recommend/i);
+  });
+
+  it("shows contained loading and error states for session comparison", () => {
+    const { rerender } = render(
+      <HomeDashboard
+        data={createDashboardData({
+          sessionComparisonStatus: "loading",
+          sessionComparison: createSessionComparisonData()
+        })}
+      />
+    );
+
+    expect(screen.getByText("Loading session comparison.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
+      "href",
+      "/quick-metronome"
+    );
+
+    rerender(
+      <HomeDashboard
+        data={createDashboardData({
+          sessionComparisonStatus: "error",
+          sessionComparisonErrorMessage: "Session comparison could not be loaded."
+        })}
+      />
+    );
+
+    expect(screen.getByText("Session comparison could not be loaded.")).toBeVisible();
+    expect(screen.getByText("Today Practice Summary")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
   });
 
   it("renders populated practice analytics from injected source data", () => {
@@ -972,6 +1154,34 @@ describe("HomeDashboard", () => {
         }
       })
     );
+    serviceMocks.getSessionComparison.mockResolvedValue(
+      createServiceSessionComparisonResult({
+        candidates: [
+          {
+            sessionId: "sheet-session",
+            label: "Alpha Etude - 2026-06-21 12:04 UTC",
+            sourceType: "sheet",
+            startedAt: "2026-06-21T12:02:00.000Z",
+            endedAt: null,
+            updatedAt: "2026-06-21T12:04:00.000Z",
+            sortTimestamp: "2026-06-21T12:04:00.000Z",
+            durationMs: 120_000,
+            bpm: 84,
+            timeSignature: "3/4",
+            recordingCount: 1,
+            linkedRecordingMetadataCount: 1,
+            linkedRecordingDurationMs: 30_000,
+            latestRecordingId: "sheet-take",
+            sheetId: "sheet-alpha",
+            sheetName: "Alpha Etude",
+            segmentId: null,
+            segmentName: null,
+            segmentRangeLabel: null,
+            targetState: "valid"
+          }
+        ]
+      })
+    );
 
     const { unmount } = render(<HomeDashboard />);
 
@@ -981,6 +1191,9 @@ describe("HomeDashboard", () => {
     await waitFor(() => expect(serviceMocks.getHomeRecentActivity).toHaveBeenCalled());
     await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalled());
     await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(serviceMocks.getSessionComparison).toHaveBeenCalledWith({ limit: 8 })
+    );
     expect(await screen.findByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
       "href",
       "/quick-metronome"
@@ -989,6 +1202,8 @@ describe("HomeDashboard", () => {
     expect(screen.getByTestId("today-summary-sessions")).toHaveTextContent("1");
     expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("2 min");
     expect(screen.getByTestId("home-streak-current")).toHaveTextContent("2 days");
+    expect(screen.getByText("Alpha Etude · 2026-06-21 12:04 UTC")).toBeVisible();
+    expect(screen.getByText("2 min · 1 recording")).toBeVisible();
     expect(screen.getByText("Streak is waiting on today's practice.")).toBeVisible();
     unmount();
 
@@ -996,12 +1211,14 @@ describe("HomeDashboard", () => {
     serviceMocks.getHomeRecentActivity.mockRejectedValue(new Error("IndexedDB unavailable"));
     serviceMocks.getHomeDashboardAnalyticsSource.mockRejectedValue(new Error("IndexedDB unavailable"));
     serviceMocks.getHomePracticeStreaks.mockRejectedValue(new Error("IndexedDB unavailable"));
+    serviceMocks.getSessionComparison.mockRejectedValue(new Error("IndexedDB unavailable"));
     render(<HomeDashboard />);
 
     expect(await screen.findByText("Continue Practice targets could not be loaded.")).toBeVisible();
     expect(await screen.findByText("Recent activity could not be loaded.")).toBeVisible();
     expect(await screen.findByText("Practice analytics could not be loaded.")).toBeVisible();
     expect(await screen.findByText("Practice streaks could not be loaded.")).toBeVisible();
+    expect(await screen.findByText("Session comparison could not be loaded.")).toBeVisible();
     expect(screen.queryByTestId("home-streak-current")).not.toBeInTheDocument();
     expect(screen.queryByTestId("home-streak-longest")).not.toBeInTheDocument();
     expect(screen.queryByTestId("home-streak-today-status")).not.toBeInTheDocument();
@@ -1014,6 +1231,7 @@ describe("HomeDashboard", () => {
 
     await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).not.toHaveBeenCalled());
     await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).not.toHaveBeenCalled());
+    await waitFor(() => expect(serviceMocks.getSessionComparison).not.toHaveBeenCalled());
     expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
     expect(screen.getByText("No local practice analytics yet.")).toBeVisible();
     expect(screen.getByRole("region", { name: "Practice Streaks" })).toBeVisible();

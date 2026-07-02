@@ -16,6 +16,8 @@ import type {
   PracticeSessionReferenceEventKind,
   SessionHistoryGroup,
   SessionHistoryGroupingMode,
+  SessionComparisonOptions,
+  SessionComparisonResult,
   SheetRecordingSegmentContext,
   PracticeTimeSignature,
   SheetRecordingMetadata,
@@ -141,6 +143,7 @@ export type PracticeSessionService = {
   evaluateGoalCompletion: (goals: readonly LocalPracticeGoal[]) => Promise<GoalCompletionEvaluation[]>;
   getHomeDashboardAnalyticsSource: () => Promise<HomeDashboardAnalyticsSource>;
   getHomePracticeStreaks: () => Promise<HomePracticeStreaks>;
+  getSessionComparison: (options?: SessionComparisonOptions) => Promise<SessionComparisonResult>;
   listRecordingMetadata: () => Promise<SheetRecordingMetadata[]>;
   clear: () => Promise<void>;
   subscribe: (listener: () => void) => () => void;

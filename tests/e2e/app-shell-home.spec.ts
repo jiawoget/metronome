@@ -459,6 +459,165 @@ async function seedHomeGoalProgressActivity(page: Page) {
   });
 }
 
+async function seedHomeSessionComparisonActivity(
+  page: Page,
+  {
+    sheetId,
+    segmentSheetId,
+    segmentId
+  }: {
+    sheetId: string;
+    segmentSheetId: string;
+    segmentId: string;
+  }
+) {
+  const segmentContext = createE2ESegmentContext({
+    segmentId,
+    segmentName: "Bridge focus"
+  });
+  const sessions = [
+    {
+      id: "comparison-segment-session",
+      sourceType: "sheet",
+      sheetId: segmentSheetId,
+      startedAt: "2026-06-21T10:00:00.000Z",
+      endedAt: "2026-06-21T10:04:00.000Z",
+      durationMs: 240_000,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 1,
+      latestRecordingId: "comparison-segment-take",
+      updatedAt: "2026-06-21T10:04:00.000Z",
+      segmentContext
+    },
+    {
+      id: "comparison-sheet-session",
+      sourceType: "sheet",
+      sheetId,
+      startedAt: "2026-06-21T09:00:00.000Z",
+      endedAt: "2026-06-21T09:03:00.000Z",
+      durationMs: 180_000,
+      bpm: 84,
+      timeSignature: "3/4",
+      recordingCount: 1,
+      latestRecordingId: "comparison-sheet-take",
+      updatedAt: "2026-06-21T09:03:00.000Z",
+      segmentContext: null
+    },
+    {
+      id: "comparison-quick-session",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T08:00:00.000Z",
+      endedAt: "2026-06-21T08:02:00.000Z",
+      durationMs: 120_000,
+      bpm: 120,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T08:02:00.000Z",
+      segmentContext: null
+    },
+    {
+      id: "comparison-older-quick-session",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T07:00:00.000Z",
+      endedAt: "2026-06-21T07:01:00.000Z",
+      durationMs: 60_000,
+      bpm: 100,
+      timeSignature: "2/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T07:01:00.000Z",
+      segmentContext: null
+    }
+  ];
+
+  await page.evaluate(
+    ({
+      databaseName,
+      rows
+    }: {
+      databaseName: string;
+      rows: unknown[];
+    }) =>
+      new Promise<void>((resolve, reject) => {
+        const openRequest = indexedDB.open(databaseName);
+
+        openRequest.onupgradeneeded = () => {
+          const database = openRequest.result;
+
+          if (!database.objectStoreNames.contains("sessions")) {
+            const store = database.createObjectStore("sessions", {
+              keyPath: "id"
+            });
+
+            for (const indexName of ["sourceType", "sheetId", "startedAt", "updatedAt"]) {
+              store.createIndex(indexName, indexName);
+            }
+          }
+        };
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const database = openRequest.result;
+          const transaction = database.transaction(["sessions"], "readwrite");
+          const store = transaction.objectStore("sessions");
+
+          for (const row of rows) {
+            store.put(row);
+          }
+
+          transaction.oncomplete = () => {
+            database.close();
+            window.dispatchEvent(new Event("practice-session-change"));
+            resolve();
+          };
+          transaction.onerror = () => {
+            database.close();
+            reject(transaction.error);
+          };
+        };
+      }),
+    {
+      databaseName: PRACTICE_SESSION_DB_NAME,
+      rows: sessions
+    }
+  );
+
+  await seedRecordingHistory(page, {
+    sessions: [],
+    recordings: [],
+    errorMarkers: [],
+    sheetRecordingMetadata: [
+      {
+        id: "comparison-sheet-take",
+        type: "sheet",
+        sessionId: "comparison-sheet-session",
+        sheetId,
+        sheetName: "Comparison Sheet",
+        createdAt: "2026-06-21T09:03:00.000Z",
+        durationMs: 30_000,
+        bpm: 84,
+        timeSignature: "3/4",
+        segmentContext: null
+      },
+      {
+        id: "comparison-segment-take",
+        type: "sheet",
+        sessionId: "comparison-segment-session",
+        sheetId: segmentSheetId,
+        sheetName: "Comparison Segment Sheet",
+        createdAt: "2026-06-21T10:04:00.000Z",
+        durationMs: 45_000,
+        bpm: 96,
+        timeSignature: "4/4",
+        segmentContext
+      }
+    ]
+  });
+}
+
 async function expectNoHorizontalOverflow(page: Page) {
   await expect
     .poll(() =>
@@ -1184,6 +1343,120 @@ test("home practice goals create edit delete and persist evaluator progress afte
   await expect(panel).toBeVisible();
   await expect(panel.getByText("All-time sessions")).toBeVisible();
   await expect(panel.getByText(/All-time .*takes/i)).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  expect(consoleErrors).toEqual([]);
+});
+
+test("home session comparison selects persisted quick sheet and segment sessions across reload and responsive viewports", async ({
+  page
+}) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await page.goto("/");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [
+    PRACTICE_SESSION_DB_NAME,
+    SHEET_LIBRARY_DB_NAME,
+    MEASURE_GRID_DB_NAME,
+    PRACTICE_SEGMENT_DB_NAME
+  ]);
+  const { sheetId } = await importTestSheet(page, {
+    name: "Comparison Sheet",
+    bpm: "96",
+    timeSignature: "4/4"
+  });
+  const { sheetId: segmentSheetId } = await importTestSheet(page, {
+    name: "Comparison Segment Sheet",
+    bpm: "96",
+    timeSignature: "4/4"
+  });
+
+  await page.goto(`/sheet-practice/${segmentSheetId}`);
+  await saveMeasureGridThroughUi(page);
+  const segmentId = await createPracticeSegmentThroughUi(page);
+  await seedHomeSessionComparisonActivity(page, {
+    sheetId,
+    segmentSheetId,
+    segmentId
+  });
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+
+  let panel = page.getByRole("region", { name: "Session Comparison" });
+  let sessionCandidates = panel.getByRole("checkbox");
+  const segmentSession = sessionCandidates.nth(0);
+  const sheetSession = sessionCandidates.nth(1);
+  const quickSession = sessionCandidates.nth(2);
+
+  await expect(panel).toBeVisible();
+  await expect(sessionCandidates).toHaveCount(4);
+  await expect(quickSession).toBeVisible();
+  await expect(sheetSession).toBeVisible();
+  await expect(segmentSession).toBeVisible();
+
+  await quickSession.check();
+  await expect(panel.getByText("Select another session to compare.")).toBeVisible();
+
+  await sheetSession.check();
+  await expect(panel.getByText("Session type", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Duration", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Recordings", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Sheet", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Segment", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Events", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Event details not available yet", { exact: true })).toHaveCount(2);
+  await expect(panel.getByText(/Quick practice/i).first()).toBeVisible();
+  await expect(panel.getByText(/Sheet practice/i).first()).toBeVisible();
+  await expect(panel.getByText("Comparison Sheet").first()).toBeVisible();
+  await expect(panel.getByText(/2 min|120 sec/i).first()).toBeVisible();
+  await expect(panel.getByText(/3 min|180 sec/i).first()).toBeVisible();
+  await expect(panel.getByText(/1 .*take|1 .*recording|Recordings: 1/i).first()).toBeVisible();
+
+  await segmentSession.check();
+  await expect(panel.getByText("Bridge focus").first()).toBeVisible();
+  await expect(panel.getByText(/m5-12|Measures 5-12/i).first()).toBeVisible();
+  await expect(panel.getByText("Up to 3 sessions can be compared.")).toBeVisible();
+  await expect
+    .poll(() =>
+      panel
+        .getByRole("checkbox")
+        .evaluateAll((checkboxes) =>
+          checkboxes.filter((checkbox) => (checkbox as HTMLInputElement).disabled).length
+        )
+    )
+    .toBeGreaterThan(0);
+  await expectNoHorizontalOverflow(page);
+
+  await page.reload();
+  panel = page.getByRole("region", { name: "Session Comparison" });
+  sessionCandidates = panel.getByRole("checkbox");
+  await expect(panel).toBeVisible();
+  await expect(sessionCandidates).toHaveCount(4);
+  await sessionCandidates.nth(2).check();
+  await sessionCandidates.nth(0).check();
+  await expect(panel.getByText("Session type")).toBeVisible();
+  await expect(panel.getByText("Bridge focus").first()).toBeVisible();
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText("Session type")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId("mobile-bottom-nav")).toBeVisible();
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText("Bridge focus").first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   expect(consoleErrors).toEqual([]);
