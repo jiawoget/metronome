@@ -4,6 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { BarCountInReadyPlan } from "@/domain/practice/bar-count-in";
 import { getMeterBeatDurationMs } from "@/domain/practice/meter-timing";
+import {
+  schedulePreStartCountdown,
+  type PreStartCountdownBeat,
+  type PreStartCountdownPlan,
+  type PreStartCountdownSchedulerOptions
+} from "@/lib/quick-metronome/pre-start-countdown";
 import type { MetronomeSettings } from "@/lib/quick-metronome/types";
 import type { MetronomeService } from "@/services/metronome";
 
@@ -38,10 +44,22 @@ export type BarCountInTransportOptions = {
   onTick?: (tick: BarCountInSchedulerTick) => void;
 };
 
+export type PreStartCountdownScheduler = (
+  options: PreStartCountdownSchedulerOptions
+) => { cancel: () => void };
+
+export type PreStartCountdownTransportOptions = {
+  enabled?: boolean;
+  plan: PreStartCountdownPlan | null;
+  schedule?: PreStartCountdownScheduler;
+  onTick?: (tick: PreStartCountdownBeat) => void;
+};
+
 export type UseMetronomeTransportOptions<StartContext> = {
   settings: MetronomeSettings;
   metronomeService: MetronomeTransportService;
   barCountIn?: BarCountInTransportOptions;
+  preStartCountdown?: PreStartCountdownTransportOptions;
   beforeStart?: () => Promise<StartContext | null> | StartContext | null;
   onCountdownStarted?: (remainingBeats: number) => void;
   onStartBlocked?: () => void;
@@ -54,6 +72,7 @@ export function useMetronomeTransport<StartContext = null>({
   settings,
   metronomeService,
   barCountIn,
+  preStartCountdown,
   beforeStart,
   onCountdownStarted,
   onStartBlocked,
@@ -70,6 +89,7 @@ export function useMetronomeTransport<StartContext = null>({
   const latestOptionsRef = useRef({
     settings,
     barCountIn,
+    preStartCountdown,
     beforeStart,
     onCountdownStarted,
     onStartBlocked,
@@ -87,6 +107,7 @@ export function useMetronomeTransport<StartContext = null>({
     latestOptionsRef.current = {
       settings,
       barCountIn,
+      preStartCountdown,
       beforeStart,
       onCountdownStarted,
       onStartBlocked,
@@ -102,6 +123,7 @@ export function useMetronomeTransport<StartContext = null>({
     onStartFailed,
     onStarted,
     onStopped,
+    preStartCountdown,
     settings
   ]);
 
@@ -230,6 +252,48 @@ export function useMetronomeTransport<StartContext = null>({
     [setTransportStateValue, startPlaybackNow]
   );
 
+  const runPreStartCountdown = useCallback(
+    (options: PreStartCountdownTransportOptions) => {
+      if (options.enabled === false || options.plan === null) {
+        return false;
+      }
+
+      const runId = preStartRunIdRef.current + 1;
+      preStartRunIdRef.current = runId;
+      setTransportStateValue("counting");
+      setCountdownRemaining(options.plan.beatCount);
+      latestOptionsRef.current.onCountdownStarted?.(options.plan.beatCount);
+
+      const scheduled = (options.schedule ?? schedulePreStartCountdown)({
+        plan: options.plan,
+        setTimeout: window.setTimeout,
+        clearTimeout: window.clearTimeout,
+        onTick: (tick) => {
+          if (preStartRunIdRef.current !== runId) {
+            return;
+          }
+
+          setCountdownRemaining(tick.remainingBeats);
+          latestOptionsRef.current.preStartCountdown?.onTick?.(tick);
+        },
+        onComplete: () => {
+          if (preStartRunIdRef.current !== runId || transportStateRef.current !== "counting") {
+            return;
+          }
+
+          preStartRunIdRef.current += 1;
+          barCountInCancelRef.current = null;
+          void startPlaybackNow();
+        }
+      });
+
+      barCountInCancelRef.current = scheduled.cancel;
+
+      return true;
+    },
+    [setTransportStateValue, startPlaybackNow]
+  );
+
   const startMetronome = useCallback(async () => {
     if (transportStateRef.current !== "stopped") {
       return;
@@ -238,6 +302,13 @@ export function useMetronomeTransport<StartContext = null>({
     const latestOptions = latestOptionsRef.current;
 
     if (latestOptions.barCountIn && runBarCountIn(latestOptions.barCountIn)) {
+      return;
+    }
+
+    if (
+      latestOptions.preStartCountdown &&
+      runPreStartCountdown(latestOptions.preStartCountdown)
+    ) {
       return;
     }
 
@@ -251,7 +322,13 @@ export function useMetronomeTransport<StartContext = null>({
     }
 
     await startPlaybackNow();
-  }, [runBarCountIn, runCountdown, setTransportStateValue, startPlaybackNow]);
+  }, [
+    runBarCountIn,
+    runCountdown,
+    runPreStartCountdown,
+    setTransportStateValue,
+    startPlaybackNow
+  ]);
 
   const stopMetronome = useCallback(async () => {
     clearPreStartScheduling();

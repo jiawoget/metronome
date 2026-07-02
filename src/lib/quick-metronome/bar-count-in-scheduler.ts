@@ -1,4 +1,8 @@
 import type { BarCountInPlan, BarCountInReadyPlan } from "@/domain/practice/bar-count-in";
+import {
+  schedulePreStartCountdown,
+  toPreStartCountdownPlan
+} from "@/lib/quick-metronome/pre-start-countdown";
 
 type BarCountInSchedulerTimerId = number;
 type BarCountInSchedulerSetTimeout = (
@@ -50,51 +54,23 @@ export function scheduleBarCountIn({
 }: BarCountInSchedulerOptions): BarCountInSchedulerCancel {
   assertReadyPlan(plan);
 
-  const timerIds: BarCountInSchedulerTimerId[] = [];
-  let cancelled = false;
-  const firstOffsetMs = plan.beats[0].offsetMs;
+  return schedulePreStartCountdown({
+    plan: toPreStartCountdownPlan(plan),
+    setTimeout,
+    clearTimeout,
+    onTick: (tick) => {
+      const beat = plan.beats[tick.count - 1];
 
-  const scheduleTimer = (callback: () => void, delayMs: number) => {
-    const timerId = setTimeout(() => {
-      if (!cancelled) {
-        callback();
-      }
-    }, delayMs);
-
-    timerIds.push(timerId);
-  };
-
-  for (const [index, beat] of plan.beats.entries()) {
-    const scheduledDelayMs = beat.offsetMs - firstOffsetMs;
-
-    scheduleTimer(() => {
       onTick?.({
-        count: beat.count,
-        beatNumber: beat.beatNumber,
-        remainingBeats: plan.beats.length - index - 1,
+        count: tick.count,
+        beatNumber: tick.beatNumber,
+        remainingBeats: tick.remainingBeats,
         sourceMeasureNumber: beat.sourceMeasureNumber,
         isPreRoll: beat.isPreRoll,
-        scheduledOffsetMs: beat.offsetMs,
-        scheduledDelayMs
+        scheduledOffsetMs: tick.scheduledOffsetMs,
+        scheduledDelayMs: tick.scheduledDelayMs
       });
-    }, scheduledDelayMs);
-  }
-
-  scheduleTimer(onComplete, plan.totalDurationMs);
-
-  return {
-    cancel: () => {
-      if (cancelled) {
-        return;
-      }
-
-      cancelled = true;
-
-      for (const timerId of timerIds) {
-        clearTimeout(timerId);
-      }
-
-      timerIds.length = 0;
-    }
-  };
+    },
+    onComplete
+  });
 }
