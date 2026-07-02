@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { EyeOff, RotateCcw } from "lucide-react";
+import * as NextNavigation from "next/navigation";
+import { EyeOff, RotateCcw, Search } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CommandPalette } from "@/components/app-shell/command-palette";
+import { buildHomeCommandPaletteCommands } from "@/components/app-shell/command-palette-commands";
 import { Button } from "@/components/ui/button";
+import { useCommandPaletteContinueTargets } from "@/hooks/use-command-palette-continue-targets";
 import {
   ACTIVE_RECORDING_NAVIGATION_EVENT,
   type ActiveRecordingNavigationEventDetail
@@ -17,8 +20,10 @@ import { cn } from "@/lib/utils";
 type TopLevelNavItem = (typeof topLevelNavItems)[number];
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
+  const pathname = NextNavigation.usePathname();
+  const router = NextNavigation.useRouter?.();
   const [areDiagnosticsHidden, setAreDiagnosticsHidden] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [activeRecordings, setActiveRecordings] = useState<
     Record<string, string>
   >({});
@@ -26,6 +31,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     string | null
   >(null);
   const guardedHrefRef = useRef<string | null>(null);
+  const commandPaletteFocusReturnRef = useRef<HTMLElement | null>(null);
+  const {
+    continueTargets,
+    continueTargetsStatus,
+    continueTargetsErrorMessage,
+    refreshContinueTargets
+  } = useCommandPaletteContinueTargets();
   const activeRecordingLabels = useMemo(
     () => Object.values(activeRecordings),
     [activeRecordings]
@@ -33,6 +45,65 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasActiveRecording = activeRecordingLabels.length > 0;
   const activeRecordingLabel = activeRecordingLabels[0] ?? "a recording";
   const recordingNavigationBlockedMessage = `Navigation blocked while ${activeRecordingLabel} is active. Stop and save the recording before changing pages.`;
+  const commandPaletteCommands = useMemo(
+    () =>
+      buildHomeCommandPaletteCommands({
+        routeItems: topLevelNavItems,
+        continueTargets: continueTargets.targets
+      }),
+    [continueTargets.targets]
+  );
+
+  const restoreCommandPaletteFocus = useCallback(() => {
+    const returnElement = commandPaletteFocusReturnRef.current;
+
+    window.setTimeout(() => {
+      if (returnElement && document.contains(returnElement)) {
+        returnElement.focus();
+      }
+    }, 0);
+  }, []);
+
+  const openCommandPalette = useCallback(() => {
+    commandPaletteFocusReturnRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    void refreshContinueTargets({ clearTargets: true });
+    setIsCommandPaletteOpen(true);
+  }, [refreshContinueTargets]);
+
+  const closeCommandPalette = useCallback(() => {
+    setIsCommandPaletteOpen(false);
+    restoreCommandPaletteFocus();
+  }, [restoreCommandPaletteFocus]);
+
+  const requestNavigation = useCallback(
+    (href: string) => {
+      if (!href || href.startsWith("#")) {
+        return false;
+      }
+
+      if (hasActiveRecording) {
+        setNavigationGuardMessage(recordingNavigationBlockedMessage);
+        return false;
+      }
+
+      if (getCurrentBrowserHref() === normalizeInternalHref(href)) {
+        return true;
+      }
+
+      if (router) {
+        router.push(href);
+      } else {
+        window.history.pushState(null, "", href);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }
+
+      return true;
+    },
+    [hasActiveRecording, recordingNavigationBlockedMessage, router]
+  );
 
   useEffect(() => {
     const handleActiveRecordingChange = (event: Event) => {
@@ -185,6 +256,44 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [hasActiveRecording, recordingNavigationBlockedMessage]);
 
+  useEffect(() => {
+    const handleCommandPaletteShortcut = (event: KeyboardEvent) => {
+      if (
+        !isCommandPaletteShortcut(event) ||
+        (!event.ctrlKey && !event.metaKey) ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      const isPaletteSearch =
+        target instanceof HTMLElement &&
+        target.dataset.commandPaletteSearch === "true";
+
+      if (isEditableTarget(target) && !isPaletteSearch) {
+        return;
+      }
+
+      if (isCommandPaletteOpen) {
+        return;
+      }
+
+      event.preventDefault();
+      openCommandPalette();
+    };
+
+    document.addEventListener("keydown", handleCommandPaletteShortcut, {
+      capture: true
+    });
+
+    return () => {
+      document.removeEventListener("keydown", handleCommandPaletteShortcut, {
+        capture: true
+      });
+    };
+  }, [isCommandPaletteOpen, openCommandPalette]);
+
   function handleNavigationClickCapture(event: MouseEvent<HTMLDivElement>) {
     if (
       !hasActiveRecording ||
@@ -242,6 +351,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             </span>
           </Link>
 
+          <Button
+            type="button"
+            variant="secondary"
+            className="mb-4 w-full justify-start px-3"
+            aria-label="Open command palette"
+            onClick={openCommandPalette}
+          >
+            <Search className="h-4 w-4" aria-hidden="true" />
+            <span className="min-w-0 flex-1 truncate text-left">
+              Command palette
+            </span>
+            <span className="text-muted-foreground text-xs">Ctrl K</span>
+          </Button>
+
           <nav className="flex flex-1 flex-col gap-1">
             {topLevelNavItems.map((item) => (
               <PrimaryNavLink
@@ -249,6 +372,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 item={item}
                 pathname={pathname}
                 variant="desktop"
+                onRequestNavigation={requestNavigation}
               />
             ))}
           </nav>
@@ -271,11 +395,23 @@ export function AppShell({ children }: { children: ReactNode }) {
                   Metronome Practice
                 </span>
               </Link>
-              <MobileDiagnostics
-                hidden={areDiagnosticsHidden}
-                onHide={() => setAreDiagnosticsHidden(true)}
-                onRestore={() => setAreDiagnosticsHidden(false)}
-              />
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  aria-label="Open command palette"
+                  onClick={openCommandPalette}
+                >
+                  <Search className="h-4 w-4" aria-hidden="true" />
+                </Button>
+                <MobileDiagnostics
+                  hidden={areDiagnosticsHidden}
+                  onHide={() => setAreDiagnosticsHidden(true)}
+                  onRestore={() => setAreDiagnosticsHidden(false)}
+                />
+              </div>
             </div>
           </header>
 
@@ -289,10 +425,20 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div
           role="alert"
           data-testid="active-recording-navigation-guard"
-          className="border-destructive/30 bg-destructive/10 text-destructive shadow-soft fixed right-4 bottom-24 left-4 z-40 rounded-md border px-4 py-3 text-sm font-medium lg:right-4 lg:bottom-4 lg:left-auto lg:max-w-md"
+          className="border-destructive/30 bg-destructive/10 text-destructive shadow-soft fixed right-4 bottom-24 left-4 z-[60] rounded-md border px-4 py-3 text-sm font-medium lg:right-4 lg:bottom-4 lg:left-auto lg:max-w-md"
         >
           {navigationGuardMessage}
         </div>
+      ) : null}
+
+      {isCommandPaletteOpen ? (
+        <CommandPalette
+          commands={commandPaletteCommands}
+          continueTargetsStatus={continueTargetsStatus}
+          continueTargetsErrorMessage={continueTargetsErrorMessage}
+          onClose={closeCommandPalette}
+          onExecuteCommand={requestNavigation}
+        />
       ) : null}
 
       <nav
@@ -307,6 +453,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               item={item}
               pathname={pathname}
               variant="mobile"
+              onRequestNavigation={requestNavigation}
             />
           ))}
         </div>
@@ -318,11 +465,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 function PrimaryNavLink({
   item,
   pathname,
-  variant
+  variant,
+  onRequestNavigation
 }: {
   item: TopLevelNavItem;
   pathname: string;
   variant: "desktop" | "mobile";
+  onRequestNavigation: (href: string) => boolean;
 }) {
   const Icon = item.icon;
   const isActive =
@@ -334,6 +483,14 @@ function PrimaryNavLink({
       <Link
         href={item.href}
         aria-current={isActive ? "page" : undefined}
+        onClick={(event) => {
+          if (shouldLetBrowserHandleNavigation(event)) {
+            return;
+          }
+
+          event.preventDefault();
+          onRequestNavigation(item.href);
+        }}
         className={cn(
           "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex min-h-12 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
           isActive &&
@@ -351,6 +508,14 @@ function PrimaryNavLink({
       href={item.href}
       aria-label={item.label}
       aria-current={isActive ? "page" : undefined}
+      onClick={(event) => {
+        if (shouldLetBrowserHandleNavigation(event)) {
+          return;
+        }
+
+        event.preventDefault();
+        onRequestNavigation(item.href);
+      }}
       className={cn(
         "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[11px] leading-none font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
         isActive &&
@@ -361,6 +526,45 @@ function PrimaryNavLink({
       <span className="max-w-full truncate">{item.shortLabel}</span>
     </Link>
   );
+}
+
+function shouldLetBrowserHandleNavigation(
+  event: MouseEvent<HTMLAnchorElement>
+) {
+  return (
+    event.defaultPrevented ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  );
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+}
+
+function isCommandPaletteShortcut(event: KeyboardEvent) {
+  return event.key.toLocaleLowerCase() === "k" || event.code === "KeyK";
+}
+
+function getCurrentBrowserHref() {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
+function normalizeInternalHref(href: string) {
+  const url = new URL(href, window.location.href);
+
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 function DiagnosticsPanel({
