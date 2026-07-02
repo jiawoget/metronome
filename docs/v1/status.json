@@ -564,7 +564,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P4-03 bar-count-in-domain",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P4-04 bar-count-in-scheduler",
