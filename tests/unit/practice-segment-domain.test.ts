@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createPracticeSegmentGridAssociation,
   createSheetRecordingSegmentContext,
+  getSegmentTempoApplyPolicy,
   getMeasureGridVersion,
   getPracticeSegmentGridStatus,
   getPracticeSegmentRangeMs,
@@ -291,5 +292,163 @@ describe("practice segment domain", () => {
       "invalid-association"
     );
     expect(getPracticeSegmentGridStatus(buildSegment(), { ...baseGrid, bpm: 29 } as MeasureGrid)).toBe("invalid-association");
+  });
+
+  describe("segment tempo apply policy", () => {
+    it("returns applied with full context when a segment target BPM changes the current BPM", () => {
+      const segment = buildSegment({
+        id: "segment-apply",
+        name: "Verse push",
+        targetBpm: 132
+      });
+
+      expect(
+        getSegmentTempoApplyPolicy({
+          currentBpm: 96,
+          segment
+        })
+      ).toEqual({
+        status: "applied",
+        segmentId: "segment-apply",
+        segmentName: "Verse push",
+        targetBpm: 132,
+        previousBpm: 96,
+        nextBpm: 132
+      });
+    });
+
+    it("returns already-applied when the normalized target BPM matches the normalized current BPM", () => {
+      expect(
+        getSegmentTempoApplyPolicy({
+          currentBpm: 240,
+          segment: buildSegment({
+            targetBpm: 300
+          })
+        })
+      ).toEqual({
+        status: "already-applied",
+        segmentId: "segment-1",
+        segmentName: "Bridge",
+        targetBpm: 300,
+        previousBpm: 240,
+        nextBpm: 240
+      });
+
+      expect(
+        getSegmentTempoApplyPolicy({
+          currentBpm: 300,
+          segment: buildSegment({
+            targetBpm: 300
+          })
+        })
+      ).toEqual({
+        status: "already-applied",
+        segmentId: "segment-1",
+        segmentName: "Bridge",
+        targetBpm: 300,
+        previousBpm: 240,
+        nextBpm: 240
+      });
+    });
+
+    it("returns no-target-bpm when the selected segment has no target BPM", () => {
+      expect(
+        getSegmentTempoApplyPolicy({
+          currentBpm: 96,
+          segment: buildSegment({
+            targetBpm: null
+          })
+        })
+      ).toEqual({
+        status: "no-target-bpm",
+        segmentId: "segment-1",
+        segmentName: "Bridge",
+        targetBpm: null,
+        previousBpm: 96,
+        nextBpm: 96
+      });
+    });
+
+    it("returns no-segment when no segment is selected", () => {
+      expect(
+        getSegmentTempoApplyPolicy({
+          currentBpm: 96,
+          segment: null
+        })
+      ).toEqual({
+        status: "no-segment",
+        segmentId: null,
+        segmentName: null,
+        targetBpm: null,
+        previousBpm: 96,
+        nextBpm: 96
+      });
+    });
+
+    it("clamps a target BPM of 300 down to 240 for applied results", () => {
+      expect(
+        getSegmentTempoApplyPolicy({
+          currentBpm: 120,
+          segment: buildSegment({
+            targetBpm: 300
+          })
+        })
+      ).toEqual({
+        status: "applied",
+        segmentId: "segment-1",
+        segmentName: "Bridge",
+        targetBpm: 300,
+        previousBpm: 120,
+        nextBpm: 240
+      });
+    });
+
+    it("normalizes out-of-range current BPM values before comparison and output", () => {
+      expect(
+        getSegmentTempoApplyPolicy({
+          currentBpm: 12,
+          segment: buildSegment({
+            targetBpm: 96
+          })
+        })
+      ).toEqual({
+        status: "applied",
+        segmentId: "segment-1",
+        segmentName: "Bridge",
+        targetBpm: 96,
+        previousBpm: 30,
+        nextBpm: 96
+      });
+    });
+
+    it("throws when a non-null segment fails existing validation", () => {
+      const invalidSegment = {
+        ...buildSegment(),
+        targetBpm: 29
+      } as PracticeSegment;
+
+      expect(() =>
+        getSegmentTempoApplyPolicy({
+          currentBpm: 96,
+          segment: invalidSegment
+        })
+      ).toThrow();
+    });
+
+    it("does not mutate the input segment", () => {
+      const segment = buildSegment({
+        id: "segment-stable",
+        name: "Stable bridge",
+        targetBpm: 300
+      });
+      const snapshot = JSON.parse(JSON.stringify(segment));
+
+      getSegmentTempoApplyPolicy({
+        currentBpm: 120,
+        segment
+      });
+
+      expect(segment).toEqual(snapshot);
+    });
   });
 });

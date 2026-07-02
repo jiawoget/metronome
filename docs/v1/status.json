@@ -552,11 +552,11 @@
                                          },
                                          {
                                              "pack":  "pack-4-practice-controls-upgrade",
-                                             "status":  "not_started",
+                                             "status":  "planning_in_progress",
                                              "slices":  [
                                                             {
                                                                 "slice":  "P4-01 segment-tempo-apply-policy",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P4-02 segment-tempo-ui",
