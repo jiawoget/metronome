@@ -14,6 +14,7 @@ type TransportActionsPanelProps = {
   latestSheetRecording: ReviewRecording | null;
   message: string;
   errorMessage: string | null;
+  activeBarCountInTickDetail: string | null;
   transportState: "stopped" | "counting" | "playing";
   isPlaying: boolean;
   isCounting: boolean;
@@ -36,6 +37,7 @@ export function TransportActionsPanel({
   latestSheetRecording,
   message,
   errorMessage,
+  activeBarCountInTickDetail,
   transportState,
   isPlaying,
   isCounting,
@@ -139,7 +141,15 @@ export function TransportActionsPanel({
             className="text-accent mt-0.5 h-4 w-4 shrink-0"
             aria-hidden="true"
           />
-          <p className="font-medium">{message}</p>
+          <div className="min-w-0">
+            <p className="font-medium">{message}</p>
+            <p
+              className="text-muted-foreground mt-1 min-h-5 text-xs"
+              data-testid="sheet-bar-count-in-active-tick"
+            >
+              {activeBarCountInTickDetail ?? ""}
+            </p>
+          </div>
         </div>
         {errorMessage ? (
           <p role="alert" className="text-destructive mt-2 font-medium">

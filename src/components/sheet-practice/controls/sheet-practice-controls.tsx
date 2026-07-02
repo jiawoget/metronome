@@ -33,6 +33,10 @@ import {
   PracticeSegmentSelectorPanel,
   type PracticeSegmentSelection
 } from "@/components/sheet-practice/segments/practice-segment-selector-panel";
+import {
+  BarCountInControl,
+  type BarCountInBars
+} from "@/components/sheet-practice/controls/bar-count-in-control";
 import { MetronomeSettingsPanel } from "@/components/sheet-practice/controls/metronome-settings-panel";
 import { SegmentTempoApplyControl } from "@/components/sheet-practice/controls/segment-tempo-apply-control";
 import {
@@ -85,6 +89,20 @@ type SheetMetronomeStartContext = {
 };
 
 type SheetRecordingStartMode = "normal" | "record-again";
+
+function formatBarCountInTickDetail(tick: BarCountInSchedulerTick | null) {
+  if (!tick) {
+    return null;
+  }
+
+  const sourceLabel = tick.isPreRoll
+    ? "Pre-roll"
+    : tick.sourceMeasureNumber !== null
+      ? `Measure ${tick.sourceMeasureNumber}`
+      : "Pre-roll";
+
+  return `${sourceLabel} beat ${tick.beatNumber}`;
+}
 
 function segmentContextsMatch(
   left: SheetRecordingSegmentContext,
@@ -237,8 +255,13 @@ export function SheetPracticeControls({
   const [measureGridRevision, setMeasureGridRevision] = useState(0);
   const [selectedTempoSegment, setSelectedTempoSegment] =
     useState<PracticeSegment | null>(null);
+  const [isBarCountInEnabled, setIsBarCountInEnabled] = useState(false);
+  const [barCountInMeasures, setBarCountInMeasures] =
+    useState<BarCountInBars>(1);
   const [activeBarCountInPlan, setActiveBarCountInPlan] =
     useState<BarCountInReadyPlan | null>(null);
+  const [activeBarCountInTick, setActiveBarCountInTick] =
+    useState<BarCountInSchedulerTick | null>(null);
   const pendingBarCountInStartRef = useRef(false);
   const barCountInPrepareRunIdRef = useRef(0);
   const isPreparingBarCountInRef = useRef(false);
@@ -582,8 +605,16 @@ export function SheetPracticeControls({
       shouldCreatePracticeAgainSession
     ]);
   const getEffectiveBarCountInOptions = useCallback(() => {
-    return barCountIn ?? getHarnessBarCountInOptions();
-  }, [barCountIn]);
+    const harnessBarCountIn = getHarnessBarCountInOptions();
+
+    return (
+      barCountIn ??
+      harnessBarCountIn ?? {
+        enabled: isBarCountInEnabled,
+        countInMeasures: barCountInMeasures
+      }
+    );
+  }, [barCountIn, barCountInMeasures, isBarCountInEnabled]);
   const invalidateBarCountInPrepare = useCallback(() => {
     barCountInPrepareRunIdRef.current += 1;
     isPreparingBarCountInRef.current = false;
@@ -597,6 +628,7 @@ export function SheetPracticeControls({
     ) => {
       invalidateBarCountInPrepare();
       setActiveBarCountInPlan(null);
+      setActiveBarCountInTick(null);
       setMessage(message);
       options.onPlanBlocked?.({ reason, message });
       dispatchBarCountInHarnessEvent(SHEET_BAR_COUNT_IN_BLOCKED_EVENT, {
@@ -704,14 +736,21 @@ export function SheetPracticeControls({
   );
   const handleBarCountInTick = useCallback(
     (tick: BarCountInSchedulerTick) => {
+      setActiveBarCountInTick(tick);
       getEffectiveBarCountInOptions()?.onTick?.(tick);
       dispatchBarCountInHarnessEvent(SHEET_BAR_COUNT_IN_TICK_EVENT, tick);
     },
     [getEffectiveBarCountInOptions]
   );
   const handleCountdownStarted = useCallback(() => {
+    if (activeBarCountInPlan) {
+      setMessage("Bar count-in running.");
+      return;
+    }
+
+    setActiveBarCountInTick(null);
     setMessage("Countdown running.");
-  }, []);
+  }, [activeBarCountInPlan]);
   const handleStartBlocked = useCallback(() => {
     setMessage("No valid sheet context. Metronome was stopped.");
   }, []);
@@ -719,6 +758,7 @@ export function SheetPracticeControls({
     (context: SheetMetronomeStartContext | null) => {
       invalidateBarCountInPrepare();
       setActiveBarCountInPlan(null);
+      setActiveBarCountInTick(null);
       setSession(context?.session ?? null);
       if (context?.session && shouldCreatePracticeAgainSession) {
         setConsumedSourceRecordingId(sourceRecordingId);
@@ -747,6 +787,7 @@ export function SheetPracticeControls({
     async (error: unknown, context: SheetMetronomeStartContext | null) => {
       invalidateBarCountInPrepare();
       setActiveBarCountInPlan(null);
+      setActiveBarCountInTick(null);
 
       if (context?.rollback.kind === "end-created-session") {
         const endedSession = await sessionService.endPracticeSession(
@@ -774,6 +815,7 @@ export function SheetPracticeControls({
   const handleStopped = useCallback(async () => {
     invalidateBarCountInPrepare();
     setActiveBarCountInPlan(null);
+    setActiveBarCountInTick(null);
 
     if (session) {
       await sessionService.captureSessionEvent({
@@ -826,6 +868,7 @@ export function SheetPracticeControls({
   }, [activeBarCountInPlan, startMetronome]);
   const handleStartMetronome = useCallback(() => {
     setErrorMessage(null);
+    setActiveBarCountInTick(null);
     const barCountInOptions = getEffectiveBarCountInOptions();
 
     if (barCountInOptions?.enabled) {
@@ -841,6 +884,7 @@ export function SheetPracticeControls({
       barCountInPrepareRunIdRef.current = prepareRunId;
       isPreparingBarCountInRef.current = true;
       setActiveBarCountInPlan(null);
+      setActiveBarCountInTick(null);
 
       void prepareBarCountInPlan(barCountInOptions, prepareRunId).then((plan) => {
         if (barCountInPrepareRunIdRef.current !== prepareRunId) {
@@ -862,6 +906,7 @@ export function SheetPracticeControls({
 
     invalidateBarCountInPrepare();
     setActiveBarCountInPlan(null);
+    setActiveBarCountInTick(null);
     void startMetronome();
   }, [
     getEffectiveBarCountInOptions,
@@ -872,9 +917,29 @@ export function SheetPracticeControls({
   const handleStopMetronome = useCallback(() => {
     invalidateBarCountInPrepare();
     setActiveBarCountInPlan(null);
+    setActiveBarCountInTick(null);
     void stopMetronome();
   }, [invalidateBarCountInPrepare, stopMetronome]);
   const arePreRunSettingsLocked = isPlaying || isCounting;
+  const activeBarCountInTickDetail = useMemo(
+    () => formatBarCountInTickDetail(activeBarCountInTick),
+    [activeBarCountInTick]
+  );
+  const handleBarCountInEnabledChange = useCallback((enabled: boolean) => {
+    invalidateBarCountInPrepare();
+    setActiveBarCountInPlan(null);
+    setIsBarCountInEnabled(enabled);
+    setActiveBarCountInTick(null);
+  }, [invalidateBarCountInPrepare]);
+  const handleBarCountInMeasuresChange = useCallback(
+    (measures: BarCountInBars) => {
+      invalidateBarCountInPrepare();
+      setActiveBarCountInPlan(null);
+      setBarCountInMeasures(measures);
+      setActiveBarCountInTick(null);
+    },
+    [invalidateBarCountInPrepare]
+  );
   const showRecordAgain =
     activeRecordingWorkflowSheetId === sheetId &&
     rerecordStatus === "ready" &&
@@ -1197,6 +1262,7 @@ export function SheetPracticeControls({
           isCounting={isCounting}
           isPlaying={isPlaying}
           countdownRemaining={countdownRemaining}
+          activeBarCountInTickDetail={activeBarCountInTickDetail}
           recordingState={recordingState}
           isRecordingActive={isRecordingActive}
         />
@@ -1216,6 +1282,18 @@ export function SheetPracticeControls({
               onApply={handleApplySegmentTempo}
             />
           }
+          barCountInControl={
+            <BarCountInControl
+              enabled={isBarCountInEnabled}
+              bars={barCountInMeasures}
+              disabled={arePreRunSettingsLocked}
+              activeTick={activeBarCountInTick}
+              onEnabledChange={handleBarCountInEnabledChange}
+              onBarsChange={handleBarCountInMeasuresChange}
+            />
+          }
+          isCountdownReplacedByBarCountIn={isBarCountInEnabled}
+          countdownReplacementText="Beat countdown is replaced by bar count-in for Sheet Practice."
         />
 
         <TransportActionsPanel
@@ -1225,6 +1303,7 @@ export function SheetPracticeControls({
           latestSheetRecording={latestSheetRecording}
           message={message}
           errorMessage={errorMessage}
+          activeBarCountInTickDetail={activeBarCountInTickDetail}
           transportState={transportState}
           isPlaying={isPlaying}
           isCounting={isCounting}

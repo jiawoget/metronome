@@ -45,6 +45,9 @@ type MetronomeSettingsPanelProps = {
   className?: string;
   layout?: "sheet" | "stacked";
   bpmAccessory?: ReactNode;
+  barCountInControl?: ReactNode;
+  isCountdownReplacedByBarCountIn?: boolean;
+  countdownReplacementText?: string;
   onTapTempo?: () => void;
   setBpmDraft: (value: string) => void;
   commitBpmInput: () => void;
@@ -61,6 +64,9 @@ export function MetronomeSettingsPanel({
   className,
   layout = "sheet",
   bpmAccessory,
+  barCountInControl,
+  isCountdownReplacedByBarCountIn = false,
+  countdownReplacementText = "Bar count-in replaces beat countdown for Sheet Practice.",
   onTapTempo,
   setBpmDraft,
   commitBpmInput,
@@ -183,13 +189,26 @@ export function MetronomeSettingsPanel({
         <LabeledSelect
           label="Countdown"
           value={String(settings.countdownBeats)}
-          disabled={arePreRunSettingsLocked}
+          disabled={
+            arePreRunSettingsLocked || isCountdownReplacedByBarCountIn
+          }
           onChange={handleCountdownChange}
           options={getCountdownOptions().map((option) => ({
             value: String(option.beats),
             label: option.label
           }))}
         />
+        {isCountdownReplacedByBarCountIn ? (
+          <p
+            role="status"
+            className="text-muted-foreground -mt-1 text-xs leading-5 sm:col-start-3"
+          >
+            {countdownReplacementText}
+          </p>
+        ) : null}
+        {barCountInControl ? (
+          <div className="min-w-0 sm:col-span-3">{barCountInControl}</div>
+        ) : null}
       </div>
 
       {arePreRunSettingsLocked ? (

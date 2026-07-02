@@ -1,4 +1,4 @@
-import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement } from "react";
@@ -235,6 +235,143 @@ function createPracticeSegmentService(segments: PracticeSegment[] = []) {
       segmentsBySheet.get(sheetId)?.delete(segmentId);
     })
   } satisfies PracticeSegmentService;
+}
+
+type SheetPracticeControlsHarnessWindow = Window & {
+  __sheetPracticeControlsTestHarness?: boolean;
+};
+
+type BarCountInPlanHarnessDetail = {
+  beatCount: number;
+  totalDurationMs: number;
+  status: string;
+  scope: string;
+  startMeasure: number;
+  segmentId: string | null;
+};
+
+function createBarCountInHarnessCollector() {
+  const harnessWindow = window as SheetPracticeControlsHarnessWindow;
+  const previousHarnessValue = harnessWindow.__sheetPracticeControlsTestHarness;
+  const plans: BarCountInPlanHarnessDetail[] = [];
+  const handlePlan = (event: Event) => {
+    plans.push((event as CustomEvent<BarCountInPlanHarnessDetail>).detail);
+  };
+
+  harnessWindow.__sheetPracticeControlsTestHarness = true;
+  window.addEventListener("sheet-practice-controls:bar-count-in-plan", handlePlan);
+
+  return {
+    plans,
+    cleanup: () => {
+      window.removeEventListener("sheet-practice-controls:bar-count-in-plan", handlePlan);
+      harnessWindow.__sheetPracticeControlsTestHarness = previousHarnessValue;
+    }
+  };
+}
+
+function getBarCountInToggle() {
+  return screen.getByLabelText("Enable bar count-in");
+}
+
+function queryBarCountInBarsControl() {
+  return screen.queryByLabelText("Bar count-in bars");
+}
+
+function getBarCountInBarsControl() {
+  return screen.getByLabelText("Bar count-in bars");
+}
+
+function isToggleChecked(control: HTMLElement) {
+  if (control instanceof HTMLInputElement && control.type === "checkbox") {
+    return control.checked;
+  }
+
+  const ariaChecked = control.getAttribute("aria-checked");
+
+  if (ariaChecked !== null) {
+    return ariaChecked === "true";
+  }
+
+  return control.getAttribute("aria-pressed") === "true";
+}
+
+function expectBarCountInToggle(control: HTMLElement, checked: boolean) {
+  if (control instanceof HTMLInputElement && control.type === "checkbox") {
+    if (checked) {
+      expect(control).toBeChecked();
+    } else {
+      expect(control).not.toBeChecked();
+    }
+
+    return;
+  }
+
+  expect(isToggleChecked(control)).toBe(checked);
+}
+
+function expectControlUnavailable(control: HTMLElement) {
+  const isNativeDisabled =
+    (control instanceof HTMLButtonElement ||
+      control instanceof HTMLInputElement ||
+      control instanceof HTMLSelectElement) &&
+    control.disabled;
+
+  expect(isNativeDisabled || control.getAttribute("aria-disabled") === "true").toBe(true);
+}
+
+function expectBarCountInBarsValue(control: HTMLElement, value: "1" | "2") {
+  if (control instanceof HTMLSelectElement || control instanceof HTMLInputElement) {
+    expect(control).toHaveValue(value);
+    return;
+  }
+
+  const selectedOption =
+    within(control).queryByRole("radio", { checked: true }) ??
+    within(control).queryByRole("button", { pressed: true });
+
+  expect(selectedOption).toHaveTextContent(value);
+}
+
+async function enableBarCountIn(user: ReturnType<typeof userEvent.setup>) {
+  const toggle = getBarCountInToggle();
+
+  if (!isToggleChecked(toggle)) {
+    await user.click(toggle);
+  }
+
+  await waitFor(() => {
+    const barsControl = getBarCountInBarsControl();
+    expect(barsControl).toBeEnabled();
+  });
+}
+
+async function selectBarCountInBars(
+  user: ReturnType<typeof userEvent.setup>,
+  value: "1" | "2"
+) {
+  const control = getBarCountInBarsControl();
+
+  if (control instanceof HTMLSelectElement) {
+    await user.selectOptions(control, value);
+    return;
+  }
+
+  if (control instanceof HTMLInputElement) {
+    await user.clear(control);
+    await user.type(control, value);
+    return;
+  }
+
+  const option =
+    within(control).queryByRole("radio", { name: new RegExp(`^${value}\\b`) }) ??
+    within(control).queryByRole("button", { name: new RegExp(`^${value}\\b`) });
+
+  if (!option) {
+    throw new Error(`Could not find Bar count-in bars option ${value}.`);
+  }
+
+  await user.click(option);
 }
 
 function createRejectingPracticeSegmentService(message = "Practice segments could not be loaded.") {
@@ -2379,6 +2516,487 @@ describe("SheetPracticeControls failure handling", () => {
     };
   }
 
+  it("renders bar count-in off by default and reveals one-bar selection when enabled", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={120}
+        defaultTimeSignature="4/4"
+        sessionService={createIdleSessionService()}
+        measureGridService={createMeasureGridService(createTestGrid())}
+      />
+    );
+
+    const toggle = getBarCountInToggle();
+
+    expectBarCountInToggle(toggle, false);
+    const hiddenOrDisabledBars = queryBarCountInBarsControl();
+
+    if (hiddenOrDisabledBars) {
+      expectControlUnavailable(hiddenOrDisabledBars);
+      expectBarCountInBarsValue(hiddenOrDisabledBars, "1");
+    }
+
+    await enableBarCountIn(user);
+
+    const barsControl = getBarCountInBarsControl();
+
+    expectBarCountInToggle(toggle, true);
+    expect(barsControl).toBeEnabled();
+    expectBarCountInBarsValue(barsControl, "1");
+  });
+
+  it("keeps bar count-in local to the mount and does not mutate legacy countdown settings", async () => {
+    const user = userEvent.setup();
+    const storageSetItem = vi.spyOn(Storage.prototype, "setItem");
+    const measureGridService = createMeasureGridService(createTestGrid());
+
+    try {
+      const { unmount } = render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={120}
+          defaultTimeSignature="4/4"
+          sessionService={createIdleSessionService()}
+          measureGridService={measureGridService}
+        />
+      );
+
+      const countdown = screen.getByLabelText("Countdown", { exact: true });
+
+      await user.selectOptions(countdown, "4");
+      await enableBarCountIn(user);
+      await selectBarCountInBars(user, "2");
+
+      expect(screen.getByLabelText("Countdown", { exact: true })).toHaveValue("4");
+      expectBarCountInBarsValue(getBarCountInBarsControl(), "2");
+      expect(measureGridService.saveGrid).not.toHaveBeenCalled();
+      expect(measureGridService.clearGrid).not.toHaveBeenCalled();
+      expect(storageSetItem).not.toHaveBeenCalled();
+
+      unmount();
+
+      render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={120}
+          defaultTimeSignature="4/4"
+          sessionService={createIdleSessionService()}
+          measureGridService={createMeasureGridService(createTestGrid())}
+        />
+      );
+
+      expectBarCountInToggle(getBarCountInToggle(), false);
+      const remountedBars = queryBarCountInBarsControl();
+
+      if (remountedBars) {
+        expectControlUnavailable(remountedBars);
+        expectBarCountInBarsValue(remountedBars, "1");
+      }
+    } finally {
+      storageSetItem.mockRestore();
+    }
+  });
+
+  it("uses the visible two-bar selection when preparing a known 4/4 count-in plan", async () => {
+    const user = userEvent.setup();
+    const collector = createBarCountInHarnessCollector();
+    const grid = createTestGrid({
+      bpm: 120,
+      measureOneOffsetMs: 0
+    });
+
+    try {
+      render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={120}
+          defaultTimeSignature="4/4"
+          sessionService={createIdleSessionService()}
+          measureGridService={createMeasureGridService(grid)}
+        />
+      );
+
+      await enableBarCountIn(user);
+      await selectBarCountInBars(user, "2");
+      await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+      await waitFor(() => {
+        expect(collector.plans).toHaveLength(1);
+      });
+      expect(collector.plans[0]).toMatchObject({
+        status: "ready",
+        scope: "whole-sheet",
+        beatCount: 8,
+        totalDurationMs: 4_000
+      });
+    } finally {
+      collector.cleanup();
+    }
+  });
+
+  it("routes enabled bar count-in starts through P4-04 while disabled starts keep legacy simple countdown", async () => {
+    const user = userEvent.setup();
+    const collector = createBarCountInHarnessCollector();
+    const grid = createTestGrid({
+      bpm: 120,
+      measureOneOffsetMs: 0
+    });
+    const disabledMeasureGridService = createMeasureGridService(grid);
+    const disabledMetronome = createInspectableMetronomeService();
+
+    try {
+      const { unmount } = render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={120}
+          defaultTimeSignature="4/4"
+          createMetronomeService={() => disabledMetronome.service}
+          sessionService={createIdleSessionService()}
+          measureGridService={disabledMeasureGridService}
+        />
+      );
+
+      const gridLoadCallsBeforeStart = disabledMeasureGridService.getGrid.mock.calls.length;
+
+      await user.selectOptions(screen.getByLabelText("Countdown", { exact: true }), "4");
+      await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Counting");
+      });
+      expect(disabledMeasureGridService.getGrid).toHaveBeenCalledTimes(gridLoadCallsBeforeStart);
+      expect(collector.plans).toEqual([]);
+      expect(disabledMetronome.service.start).not.toHaveBeenCalled();
+
+      unmount();
+
+      const enabledMeasureGridService = createMeasureGridService(grid);
+      const enabledMetronome = createInspectableMetronomeService();
+
+      render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={120}
+          defaultTimeSignature="4/4"
+          createMetronomeService={() => enabledMetronome.service}
+          sessionService={createIdleSessionService()}
+          measureGridService={enabledMeasureGridService}
+        />
+      );
+
+      await user.selectOptions(screen.getByLabelText("Countdown", { exact: true }), "4");
+      await enableBarCountIn(user);
+      await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+      await waitFor(() => {
+        expect(collector.plans).toHaveLength(1);
+      });
+      expect(enabledMeasureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        /Counting|Pre-roll|Measure/
+      );
+      expect(enabledMetronome.service.start).not.toHaveBeenCalled();
+    } finally {
+      collector.cleanup();
+    }
+  });
+
+  it("ignores a deferred grid result after visible bar count-in is turned off before prepare resolves", async () => {
+    const user = userEvent.setup();
+    const grid = createTestGrid({
+      bpm: 120,
+      measureOneOffsetMs: 0
+    });
+    const gridLoad = createDeferred<MeasureGrid | null>();
+    const measureGridService = {
+      getGrid: vi.fn(() => gridLoad.promise),
+      saveGrid: vi.fn(async (_sheetId: string, nextGrid: MeasureGrid) => nextGrid),
+      clearGrid: vi.fn(async () => undefined)
+    } satisfies MeasureGridService;
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => createSheetSession())
+    };
+    const metronome = createInspectableMetronomeService();
+    const collector = createBarCountInHarnessCollector();
+
+    try {
+      render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={120}
+          defaultTimeSignature="4/4"
+          createMetronomeService={() => metronome.service}
+          sessionService={sessionService}
+          measureGridService={measureGridService}
+        />
+      );
+
+      await enableBarCountIn(user);
+      await selectBarCountInBars(user, "2");
+      await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+      expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
+      expect(collector.plans).toEqual([]);
+      expect(metronome.service.start).not.toHaveBeenCalled();
+
+      await user.click(getBarCountInToggle());
+      await waitFor(() => {
+        expectBarCountInToggle(getBarCountInToggle(), false);
+      });
+
+      const barsControl = getBarCountInBarsControl();
+
+      expectControlUnavailable(barsControl);
+      expectBarCountInBarsValue(barsControl, "2");
+
+      gridLoad.resolve(grid);
+      await act(async () => {
+        await gridLoad.promise;
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expectBarCountInToggle(getBarCountInToggle(), false);
+      });
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+      expect(collector.plans).toEqual([]);
+      expect(metronome.service.start).not.toHaveBeenCalled();
+      expect(sessionService.ensureSheetSession).not.toHaveBeenCalled();
+      expectNoCaptureKind(
+        sessionService.captureSessionEvent,
+        "metronome_started"
+      );
+    } finally {
+      collector.cleanup();
+    }
+  });
+
+  it("shows active bar count-in detail for pre-roll and preceding-measure ticks", async () => {
+    const user = userEvent.setup();
+    const preRollGrid = createTestGrid({
+      bpm: 120,
+      measureOneOffsetMs: 0
+    });
+    const preRollMetronome = createInspectableMetronomeService();
+    const { unmount } = render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={120}
+        defaultTimeSignature="4/4"
+        createMetronomeService={() => preRollMetronome.service}
+        sessionService={createIdleSessionService()}
+        measureGridService={createMeasureGridService(preRollGrid)}
+      />
+    );
+
+    await enableBarCountIn(user);
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/pre-roll beat/i)[0]).toBeVisible();
+    });
+    await user.click(screen.getByRole("button", { name: "Stop metronome" }));
+    unmount();
+
+    const segmentGrid = createTestGrid({
+      bpm: 120,
+      measureOneOffsetMs: 0
+    });
+    const segment = createTestSegment({
+      grid: createPracticeSegmentGridAssociation(segmentGrid)
+    });
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={120}
+        defaultTimeSignature="4/4"
+        sessionService={createIdleSessionService()}
+        measureGridService={createMeasureGridService(segmentGrid)}
+        practiceSegmentService={createPracticeSegmentService([segment])}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+    });
+    await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+    await enableBarCountIn(user);
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/measure 4 beat/i)[0]).toBeVisible();
+    });
+  });
+
+  it("clears visible bar count-in detail and prevents late playback when stopped before playback starts", async () => {
+    vi.useFakeTimers();
+
+    const grid = createTestGrid({
+      bpm: 120,
+      measureOneOffsetMs: 0
+    });
+    const metronome = createInspectableMetronomeService();
+
+    try {
+      render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={120}
+          defaultTimeSignature="4/4"
+          createMetronomeService={() => metronome.service}
+          sessionService={createIdleSessionService()}
+          measureGridService={createMeasureGridService(grid)}
+        />
+      );
+
+      fireEvent.click(getBarCountInToggle());
+      expectBarCountInToggle(getBarCountInToggle(), true);
+
+      fireEvent.click(screen.getByRole("button", { name: "Start metronome" }));
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Counting 4");
+
+      await act(async () => {
+        await vi.advanceTimersToNextTimerAsync();
+        await Promise.resolve();
+      });
+
+      expect(screen.getAllByText(/pre-roll beat/i)[0]).toBeVisible();
+
+      fireEvent.click(screen.getByRole("button", { name: "Stop metronome" }));
+
+      expect(screen.queryByText(/pre-roll beat/i)).not.toBeInTheDocument();
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000);
+        await Promise.resolve();
+      });
+
+      expect(metronome.service.start).not.toHaveBeenCalled();
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("locks bar count-in controls while counting and leaves recording independent", async () => {
+    const user = userEvent.setup();
+    const grid = createTestGrid({
+      bpm: 120,
+      measureOneOffsetMs: 0
+    });
+    const recordingService = createInspectableSheetRecordingService();
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => createSheetSession())
+    };
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={120}
+        defaultTimeSignature="4/4"
+        sessionService={sessionService}
+        createSheetRecordingService={() => recordingService.service}
+        measureGridService={createMeasureGridService(grid)}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Start metronome" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Stop metronome" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Stop recording" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    });
+
+    await enableBarCountIn(user);
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        /Counting|Pre-roll|Measure/
+      );
+    });
+    expectControlUnavailable(getBarCountInToggle());
+    expectControlUnavailable(getBarCountInBarsControl());
+    expect(screen.getByRole("button", { name: "Start metronome" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Stop metronome" })).toBeEnabled();
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+
+    await user.click(screen.getByRole("button", { name: "Stop metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    });
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+  });
+
+  it("keeps bar count-in keyboard accessible without renaming existing transport actions", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={120}
+        defaultTimeSignature="4/4"
+        sessionService={createIdleSessionService()}
+        measureGridService={createMeasureGridService(createTestGrid())}
+      />
+    );
+
+    const toggle = getBarCountInToggle();
+
+    for (let index = 0; index < 20 && document.activeElement !== toggle; index += 1) {
+      await user.tab();
+    }
+
+    expect(document.activeElement).toBe(toggle);
+    await user.keyboard("[Space]");
+
+    await waitFor(() => {
+      expectBarCountInToggle(toggle, true);
+    });
+
+    const barsControl = getBarCountInBarsControl();
+
+    for (let index = 0; index < 20 && document.activeElement !== barsControl; index += 1) {
+      await user.tab();
+    }
+
+    expect(document.activeElement).toBe(barsControl);
+    await selectBarCountInBars(user, "2");
+    expectBarCountInBarsValue(barsControl, "2");
+    expect(screen.getByRole("button", { name: "Start metronome" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Stop metronome" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Start recording" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Stop recording" })).toBeVisible();
+  });
+
   it("prepares a selected-segment bar count-in plan before handing off to transport", async () => {
     const user = userEvent.setup();
     const grid = createTestGrid({
@@ -2434,7 +3052,9 @@ describe("SheetPracticeControls failure handling", () => {
     });
 
     expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
-    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Counting");
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+      /Counting|Pre-roll|Measure/
+    );
     expect(metronome.service.start).not.toHaveBeenCalled();
     expectNoCaptureKind(
       sessionService.captureSessionEvent,
@@ -2499,7 +3119,9 @@ describe("SheetPracticeControls failure handling", () => {
       });
 
       expect(onPlanPrepared).toHaveBeenCalledTimes(1);
-      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Counting");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        /Counting|Pre-roll|Measure/
+      );
       expect(metronome.service.start).not.toHaveBeenCalled();
 
       await act(async () => {
