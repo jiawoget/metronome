@@ -45,6 +45,7 @@ type PracticeSnapshot = {
 type BarCountInEvidence = {
   plans: Array<{
     beatCount: number;
+    totalDurationMs: number;
     scope: string;
     startMeasure: number;
     segmentId: string | null;
@@ -59,6 +60,8 @@ type BarCountInEvidence = {
     observedAt: number;
   }>;
 };
+
+const barCountInDetailPattern = /(?:pre-roll beat|measure \d+ beat)/i;
 
 function average(values: number[]) {
   return values.reduce((total, value) => total + value, 0) / values.length;
@@ -140,7 +143,104 @@ async function expectNoViewerOverlap(page: Page) {
   expect(boxes?.controlsTop).toBeLessThan((boxes?.viewportHeight ?? 0) - 48);
 }
 
-test("sheet practice can run hidden bar-aware count-in before shared metronome playback", async ({
+async function expectBarCountInToggle(page: Page, checked: boolean) {
+  const toggle = page.getByLabel("Enable bar count-in");
+
+  await expect(toggle).toBeVisible();
+  await expect
+    .poll(async () =>
+      toggle.evaluate((element) => {
+        if (element instanceof HTMLInputElement && element.type === "checkbox") {
+          return element.checked;
+        }
+
+        const ariaChecked = element.getAttribute("aria-checked");
+
+        if (ariaChecked !== null) {
+          return ariaChecked === "true";
+        }
+
+        return element.getAttribute("aria-pressed") === "true";
+      })
+    )
+    .toBe(checked);
+}
+
+async function enableBarCountInThroughUi(page: Page) {
+  const toggle = page.getByLabel("Enable bar count-in");
+
+  await expectBarCountInToggle(page, false);
+  await toggle.click();
+  await expectBarCountInToggle(page, true);
+  await expect(page.getByLabel("Bar count-in bars")).toBeVisible();
+  await expect(page.getByLabel("Bar count-in bars")).toBeEnabled();
+}
+
+async function selectBarCountInBars(page: Page, value: "1" | "2") {
+  const bars = page.getByLabel("Bar count-in bars");
+
+  await expect(bars).toBeVisible();
+  const tagName = await bars.evaluate((element) => element.tagName.toLowerCase());
+
+  if (tagName === "select") {
+    await bars.selectOption(value);
+    await expect(bars).toHaveValue(value);
+    return;
+  }
+
+  const option = page
+    .getByRole("radio", { name: new RegExp(`^${value}\\b`) })
+    .or(page.getByRole("button", { name: new RegExp(`^${value}\\b`) }))
+    .first();
+
+  await option.click();
+}
+
+async function expectBarCountInBarsValue(page: Page, value: "1" | "2") {
+  const bars = page.getByLabel("Bar count-in bars");
+  const tagName = await bars.evaluate((element) => element.tagName.toLowerCase());
+
+  if (tagName === "select" || tagName === "input") {
+    await expect(bars).toHaveValue(value);
+    return;
+  }
+
+  await expect(
+    page
+      .getByRole("radio", { name: new RegExp(`^${value}\\b`), checked: true })
+      .or(page.getByRole("button", { name: new RegExp(`^${value}\\b`), pressed: true }))
+      .first()
+  ).toBeVisible();
+}
+
+async function expectLocatorWithinViewport(page: Page, selectorText: RegExp) {
+  const locator = page.getByText(selectorText).first();
+
+  await locator.scrollIntoViewIfNeeded();
+  await expect(locator).toBeVisible();
+
+  const box = await locator.boundingBox();
+  const viewport = page.viewportSize();
+
+  expect(box).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(box?.x).toBeGreaterThanOrEqual(0);
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual((viewport?.width ?? 0) + 1);
+  expect(box?.y).toBeGreaterThanOrEqual(0);
+  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual((viewport?.height ?? 0) + 1);
+}
+
+async function expectVisibleBarCountInResponsiveSurface(page: Page) {
+  await expect(page.getByLabel("Enable bar count-in")).toBeVisible();
+  await expect(page.getByLabel("Bar count-in bars")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start metronome" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop metronome" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start recording" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop recording" })).toBeVisible();
+  await expectNoViewerOverlap(page);
+}
+
+test("sheet practice can run visible bar-aware count-in before shared metronome playback", async ({
   page
 }) => {
   const consoleErrors: string[] = [];
@@ -156,19 +256,11 @@ test("sheet practice can run hidden bar-aware count-in before shared metronome p
 
   await page.addInitScript(() => {
     const e2eWindow = window as Window & {
-      __sheetPracticeControlsBarCountIn?: {
-        enabled: boolean;
-        countInMeasures: number;
-      };
       __sheetPracticeControlsTestHarness?: boolean;
       __sheetBarCountInEvidence?: BarCountInEvidence;
     };
 
     e2eWindow.__sheetPracticeControlsTestHarness = true;
-    e2eWindow.__sheetPracticeControlsBarCountIn = {
-      enabled: true,
-      countInMeasures: 1
-    };
     e2eWindow.__sheetBarCountInEvidence = {
       plans: [],
       ticks: [],
@@ -179,6 +271,7 @@ test("sheet practice can run hidden bar-aware count-in before shared metronome p
 
       e2eWindow.__sheetBarCountInEvidence?.plans.push({
         beatCount: plan.beatCount,
+        totalDurationMs: plan.totalDurationMs,
         scope: plan.scope,
         startMeasure: plan.startMeasure,
         segmentId: plan.segmentId
@@ -223,7 +316,7 @@ test("sheet practice can run hidden bar-aware count-in before shared metronome p
   await link.click();
   await expect(page.getByRole("heading", { name: "Bar Count-In Controls Sheet" })).toBeVisible();
   await saveMeasureGridThroughUi(page, {
-    bpm: 240,
+    bpm: 120,
     timeSignature: "4/4",
     pickupBeats: 0,
     measureOneOffsetMs: 0
@@ -235,10 +328,30 @@ test("sheet practice can run hidden bar-aware count-in before shared metronome p
   });
 
   await page.getByText("Count-in bridge").first().click();
+  await expectBarCountInToggle(page, false);
+  await enableBarCountInThroughUi(page);
+  await selectBarCountInBars(page, "1");
+
+  for (const viewport of [
+    { width: 1280, height: 820 },
+    { width: 1024, height: 768 },
+    { width: 390, height: 844 }
+  ]) {
+    await page.setViewportSize(viewport);
+    await expectVisibleBarCountInResponsiveSurface(page);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 820 });
   const startedAt = await page.evaluate(() => performance.now());
 
   await page.getByRole("button", { name: "Start metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Counting");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    /Counting|Pre-roll|Measure/
+  );
+  await expect(page.getByText(/bar count-in running/i)).toBeVisible();
+  await expect(page.getByText(/measure 1 beat 1/i).first()).toBeVisible();
+  await expectLocatorWithinViewport(page, barCountInDetailPattern);
+
   await page.waitForFunction(() => {
     const e2eWindow = window as Window & { __sheetBarCountInEvidence?: BarCountInEvidence };
 
@@ -266,16 +379,116 @@ test("sheet practice can run hidden bar-aware count-in before shared metronome p
     scope: "selected-segment",
     startMeasure: 2
   });
+  expect(evidence?.plans[0]?.totalDurationMs).toBeGreaterThan(0);
   expect(evidence?.plans[0]?.segmentId).toBeTruthy();
   expect(evidence?.ticks.map((tick) => tick.count)).toEqual([1, 2, 3, 4]);
   expect(evidence?.playback[0]?.bpm).toBe(120);
-  expect(evidence?.ticks[0]?.observedAt).toBeLessThanOrEqual(
-    evidence?.playback[0]?.observedAt ?? Number.POSITIVE_INFINITY
+  const playbackObservedAt =
+    evidence?.playback[0]?.observedAt ?? Number.POSITIVE_INFINITY;
+  const plannedDurationMs = evidence?.plans[0]?.totalDurationMs ?? 0;
+
+  expect(evidence?.ticks.every((tick) => tick.observedAt <= playbackObservedAt)).toBe(true);
+  expect(playbackObservedAt - startedAt).toBeGreaterThanOrEqual(
+    Math.max(0, plannedDurationMs - 250)
   );
-  expect(playingObservedAt - startedAt).toBeGreaterThan(650);
+  expect(playingObservedAt).toBeGreaterThanOrEqual(playbackObservedAt);
 
   await page.getByRole("button", { name: "Stop metronome" }).click();
   await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  expect(consoleErrors).toEqual([]);
+});
+
+test("sheet practice bar count-in is not persisted and blocks visibly without a grid", async ({
+  page
+}) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await page.addInitScript(() => {
+    const e2eWindow = window as Window & {
+      __sheetPracticeControlsTestHarness?: boolean;
+      __sheetBarCountInEvidence?: BarCountInEvidence;
+    };
+
+    e2eWindow.__sheetPracticeControlsTestHarness = true;
+    e2eWindow.__sheetBarCountInEvidence = {
+      plans: [],
+      ticks: [],
+      playback: []
+    };
+    window.addEventListener("sheet-practice-controls:bar-count-in-plan", (event) => {
+      e2eWindow.__sheetBarCountInEvidence?.plans.push(
+        (event as CustomEvent<BarCountInEvidence["plans"][number]>).detail
+      );
+    });
+    window.addEventListener("sheet-practice-controls:bar-count-in-tick", (event) => {
+      const tick = (event as CustomEvent<BarCountInEvidence["ticks"][number]>).detail;
+
+      e2eWindow.__sheetBarCountInEvidence?.ticks.push({
+        count: tick.count,
+        remainingBeats: tick.remainingBeats,
+        observedAt: performance.now()
+      });
+    });
+    window.addEventListener("quick-metronome:scheduled-tick", (event) => {
+      const trace = (event as CustomEvent<MetronomeTrace>).detail;
+
+      e2eWindow.__sheetBarCountInEvidence?.playback.push({
+        bpm: trace.bpm,
+        observedAt: performance.now()
+      });
+    });
+  });
+
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.goto("/sheet-library");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [
+    SHEET_LIBRARY_DB_NAME,
+    PRACTICE_SESSION_DB_NAME,
+    MEASURE_GRID_DB_NAME,
+    PRACTICE_SEGMENT_DB_NAME
+  ]);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  const { link } = await importTestSheet(page, {
+    name: "Bar Count-In Missing Grid Sheet",
+    bpm: "120",
+    timeSignature: "4/4"
+  });
+
+  await link.click();
+  await expect(page.getByRole("heading", { name: "Bar Count-In Missing Grid Sheet" })).toBeVisible();
+  await enableBarCountInThroughUi(page);
+  await selectBarCountInBars(page, "2");
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Bar Count-In Missing Grid Sheet" })).toBeVisible();
+  await expectBarCountInToggle(page, false);
+  await enableBarCountInThroughUi(page);
+  await expectBarCountInBarsValue(page, "1");
+
+  await page.getByRole("button", { name: "Start metronome" }).click();
+
+  await expect(page.getByText("Save a measure grid before starting bar count-in.")).toBeVisible();
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+
+  const evidence = await page.evaluate(() => {
+    const e2eWindow = window as Window & { __sheetBarCountInEvidence?: BarCountInEvidence };
+
+    return e2eWindow.__sheetBarCountInEvidence;
+  });
+
+  expect(evidence?.plans).toEqual([]);
+  expect(evidence?.ticks).toEqual([]);
+  expect(evidence?.playback).toEqual([]);
   expect(consoleErrors).toEqual([]);
 });
 

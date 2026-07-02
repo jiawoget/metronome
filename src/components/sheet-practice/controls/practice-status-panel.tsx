@@ -9,6 +9,7 @@ type PracticeStatusPanelProps = {
   isCounting: boolean;
   isPlaying: boolean;
   countdownRemaining: number;
+  activeBarCountInTickDetail: string | null;
   recordingState: "idle" | "recording" | "saving";
   isRecordingActive: boolean;
 };
@@ -20,6 +21,7 @@ export function PracticeStatusPanel({
   isCounting,
   isPlaying,
   countdownRemaining,
+  activeBarCountInTickDetail,
   recordingState,
   isRecordingActive
 }: PracticeStatusPanelProps) {
@@ -41,7 +43,7 @@ export function PracticeStatusPanel({
           label="Metronome"
           value={
             isCounting
-              ? `Counting ${countdownRemaining}`
+              ? activeBarCountInTickDetail ?? `Counting ${countdownRemaining}`
               : isPlaying
                 ? "Playing"
                 : "Stopped"

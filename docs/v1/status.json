@@ -572,7 +572,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P4-05 bar-count-in-ui",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P4-06 per-sheet-presets-domain-repository",
