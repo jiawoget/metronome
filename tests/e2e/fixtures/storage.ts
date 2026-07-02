@@ -13,6 +13,7 @@ export {
   RECORDING_HISTORY_STORAGE_KEY,
   REFERENCE_DB_NAME,
   SETTINGS_DB_NAME,
+  SHEET_METRONOME_PRESET_DB_NAME,
   SHEET_LIBRARY_DB_NAME
 } from "@/infrastructure/storage/storage-contracts";
 

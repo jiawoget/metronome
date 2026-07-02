@@ -15,10 +15,17 @@ import {
   type MeasureGrid,
   type PracticeSegment,
   type PracticeSession,
+  type SheetMetronomePreset,
+  type SheetMetronomePresetSettings,
   type SheetRecordingMetadata
 } from "@/domain/practice";
 import type { MeasureGridService } from "@/services/measure-grid";
 import type { PracticeSegmentService } from "@/services/practice-segments";
+import type {
+  CreateSheetMetronomePresetInput,
+  RenameSheetMetronomePresetInput,
+  SheetMetronomePresetService
+} from "@/services/sheet-metronome-presets";
 import type {
   PracticeSessionEventCaptureInput,
   PracticeSessionService
@@ -37,7 +44,10 @@ import {
   initialSheetPracticeRecordingWorkflowState,
   useSheetPracticeRecordingWorkflowStore
 } from "@/stores/sheet-practice-recording-workflow-store";
-import type { SheetPracticeRecordingService } from "@/components/sheet-practice/controls/types";
+import type {
+  SheetPracticeControlsProps,
+  SheetPracticeRecordingService
+} from "@/components/sheet-practice/controls/types";
 import type { PracticeSegmentSelectorPanelProps } from "@/components/sheet-practice/segments/practice-segment-selector-panel";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 
@@ -209,6 +219,178 @@ function createTestSegment(
     notes: null,
     grid: createPracticeSegmentGridAssociation(grid),
     ...overrides
+  };
+}
+
+function createTestPreset(
+  overrides: Partial<Omit<SheetMetronomePreset, "settings">> & {
+    settings?: Partial<SheetMetronomePresetSettings> & {
+      barCountIn?: Partial<SheetMetronomePresetSettings["barCountIn"]>;
+    };
+  } = {}
+): SheetMetronomePreset {
+  const { settings: settingsOverride, ...presetOverrides } = overrides;
+  const baseSettings: SheetMetronomePresetSettings = {
+    bpm: 96,
+    timeSignature: "4/4",
+    subdivision: "quarter",
+    accent: "downbeat",
+    countdownBeats: 0,
+    barCountIn: {
+      enabled: false,
+      bars: 1
+    }
+  };
+  const settings = {
+    ...baseSettings,
+    ...settingsOverride,
+    barCountIn: {
+      ...baseSettings.barCountIn,
+      ...settingsOverride?.barCountIn
+    }
+  } satisfies SheetMetronomePresetSettings;
+
+  return {
+    id: "preset-alpha",
+    sheetId: "sheet-alpha",
+    segmentId: null,
+    name: "Warmup",
+    settings,
+    createdAt: "2026-07-02T12:00:00.000Z",
+    updatedAt: "2026-07-02T12:00:00.000Z",
+    ...presetOverrides
+  };
+}
+
+function createFakeSheetMetronomePresetService(
+  initialPresets: SheetMetronomePreset[] = []
+) {
+  let sequence = initialPresets.length + 1;
+  let presets = [...initialPresets];
+  const normalizeSegmentId = (segmentId: string | null | undefined) => {
+    const trimmedSegmentId = segmentId?.trim() ?? "";
+
+    return trimmedSegmentId.length > 0 ? trimmedSegmentId : null;
+  };
+  const hasDuplicateName = (
+    candidate: Pick<SheetMetronomePreset, "id" | "sheetId" | "segmentId" | "name">
+  ) =>
+    presets.some(
+      (preset) =>
+        preset.id !== candidate.id &&
+        preset.sheetId === candidate.sheetId &&
+        preset.segmentId === candidate.segmentId &&
+        preset.name.trim().toLowerCase() === candidate.name.trim().toLowerCase()
+    );
+
+  function createStoredPreset(input: CreateSheetMetronomePresetInput) {
+    const id = input.id ?? `preset-${sequence}`;
+    const existingPreset = presets.find(
+      (preset) => preset.sheetId === input.sheetId && preset.id === id
+    );
+    const segmentId = normalizeSegmentId(input.segmentId);
+    const name = input.name.trim();
+
+    if (!name) {
+      throw new Error("Preset name is required.");
+    }
+
+    const preset = createTestPreset({
+      ...existingPreset,
+      id,
+      sheetId: input.sheetId,
+      segmentId,
+      name,
+      settings: input.settings,
+      createdAt: existingPreset?.createdAt ?? "2026-07-02T12:00:00.000Z",
+      updatedAt: `2026-07-02T12:00:${String(sequence).padStart(2, "0")}.000Z`
+    });
+
+    if (hasDuplicateName(preset)) {
+      throw new Error("Preset name already exists.");
+    }
+
+    sequence += 1;
+    presets = [
+      preset,
+      ...presets.filter(
+        (currentPreset) =>
+          currentPreset.sheetId !== preset.sheetId || currentPreset.id !== preset.id
+      )
+    ];
+
+    return preset;
+  }
+
+  const service: SheetMetronomePresetService = {
+    listPresets: vi.fn(async (sheetId, options) => {
+      let nextPresets = presets.filter((preset) => preset.sheetId === sheetId);
+
+      if (options?.segmentId !== undefined) {
+        nextPresets = nextPresets.filter(
+          (preset) => preset.segmentId === normalizeSegmentId(options.segmentId)
+        );
+      }
+
+      return [...nextPresets];
+    }),
+    getPreset: vi.fn(async (sheetId, presetId) =>
+      presets.find((preset) => preset.sheetId === sheetId && preset.id === presetId) ?? null
+    ),
+    savePreset: vi.fn(async (input) => createStoredPreset(input)),
+    renamePreset: vi.fn(async (input: RenameSheetMetronomePresetInput) => {
+      const existingPreset = presets.find(
+        (preset) => preset.sheetId === input.sheetId && preset.id === input.presetId
+      );
+
+      if (!existingPreset) {
+        throw new Error("Preset was not found.");
+      }
+
+      const renamedPreset = {
+        ...existingPreset,
+        name: input.name.trim(),
+        updatedAt: `2026-07-02T12:00:${String(sequence).padStart(2, "0")}.000Z`
+      };
+
+      if (!renamedPreset.name) {
+        throw new Error("Preset name is required.");
+      }
+
+      if (hasDuplicateName(renamedPreset)) {
+        throw new Error("Preset name already exists.");
+      }
+
+      sequence += 1;
+      presets = presets.map((preset) =>
+        preset.sheetId === renamedPreset.sheetId && preset.id === renamedPreset.id
+          ? renamedPreset
+          : preset
+      );
+
+      return renamedPreset;
+    }),
+    deletePreset: vi.fn(async (sheetId, presetId) => {
+      presets = presets.filter(
+        (preset) => preset.sheetId !== sheetId || preset.id !== presetId
+      );
+    }),
+    loadPreset: vi.fn(async (sheetId, presetId) => {
+      const preset =
+        presets.find((item) => item.sheetId === sheetId && item.id === presetId) ?? null;
+
+      return preset
+        ? { status: "loaded" as const, preset, settings: preset.settings }
+        : { status: "missing" as const };
+    })
+  };
+
+  return {
+    service,
+    getPresets: () => [...presets],
+    setPresets: (nextPresets: SheetMetronomePreset[]) => {
+      presets = [...nextPresets];
+    }
   };
 }
 
@@ -2194,6 +2376,549 @@ describe("sheet practice controls state", () => {
       expect(screen.getByText(/Tick interval 250 ms/i)).toBeVisible();
       expect(blurListener).not.toHaveBeenCalled();
       expect(keyDownListener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("per-sheet presets UI", () => {
+    function createInspectableMetronomeService() {
+      let playing = false;
+
+      return {
+        service: {
+          onTick: vi.fn(() => () => undefined),
+          update: vi.fn(),
+          start: vi.fn(async () => {
+            playing = true;
+          }),
+          stop: vi.fn(() => {
+            playing = false;
+          })
+        },
+        isPlaying: () => playing
+      };
+    }
+
+    function renderPresetControls({
+      defaultBpm = 72,
+      sheetId = "sheet-alpha",
+      presetService = createFakeSheetMetronomePresetService(),
+      practiceSegmentService = createPracticeSegmentService(),
+      sessionService = createIdleSessionService(),
+      measureGridService = createMeasureGridService(createTestGrid()),
+      metronomeService = createInspectableMetronomeService()
+    }: {
+      defaultBpm?: number;
+      sheetId?: string;
+      presetService?: ReturnType<typeof createFakeSheetMetronomePresetService>;
+      practiceSegmentService?: PracticeSegmentService;
+      sessionService?: SheetPracticeControlsProps["sessionService"];
+      measureGridService?: MeasureGridService;
+      metronomeService?: ReturnType<typeof createInspectableMetronomeService>;
+    } = {}) {
+      return render(
+        <SheetPracticeControls
+          sheetId={sheetId}
+          sheetName="Alpha"
+          defaultBpm={defaultBpm}
+          defaultTimeSignature="4/4"
+          createMetronomeService={() => metronomeService.service}
+          sessionService={sessionService}
+          measureGridService={measureGridService}
+          practiceSegmentService={practiceSegmentService}
+          sheetMetronomePresetService={presetService.service}
+        />
+      );
+    }
+
+    async function waitForPresetManager() {
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: "Metronome presets" })).toBeVisible();
+      });
+    }
+
+    it("rejects a blank preset name before saving", async () => {
+      const user = userEvent.setup();
+      const presetService = createFakeSheetMetronomePresetService();
+
+      renderPresetControls({ presetService });
+      await waitForPresetManager();
+
+      await user.click(screen.getByRole("button", { name: "Save preset" }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Preset name is required.")[0]).toBeVisible();
+      });
+      expect(presetService.service.savePreset).not.toHaveBeenCalled();
+    });
+
+    it("surfaces list failures without crashing the preset manager", async () => {
+      const presetService = createFakeSheetMetronomePresetService();
+
+      vi.mocked(presetService.service.listPresets).mockRejectedValueOnce(
+        new Error("List failed.")
+      );
+
+      renderPresetControls({ presetService });
+      await waitForPresetManager();
+
+      await waitFor(() => {
+        expect(screen.getAllByText("List failed.")[0]).toBeVisible();
+      });
+      expect(screen.getByLabelText("Preset name")).toBeVisible();
+    });
+
+    it("renders an empty preset manager and saves a sheet-wide snapshot", async () => {
+      const user = userEvent.setup();
+      const presetService = createFakeSheetMetronomePresetService();
+
+      renderPresetControls({ presetService, defaultBpm: 120 });
+      await waitForPresetManager();
+      expect(screen.getByText("No sheet-wide presets saved.")).toBeVisible();
+
+      const bpmInput = screen.getByRole("spinbutton", { name: "BPM" });
+
+      await user.clear(bpmInput);
+      await user.type(bpmInput, "132");
+      fireEvent.blur(bpmInput);
+      await user.selectOptions(screen.getByLabelText("Time signature"), "3/4");
+      await user.selectOptions(screen.getByLabelText("Subdivision"), "eighth");
+      await user.selectOptions(screen.getByLabelText("Countdown"), "4");
+      await user.click(screen.getByRole("button", { name: "Every beat" }));
+      await user.type(screen.getByLabelText("Preset name"), "Warmup");
+      await user.click(screen.getByRole("button", { name: "Save preset" }));
+
+      await waitFor(() => {
+        expect(presetService.service.savePreset).toHaveBeenCalledOnce();
+      });
+      expect(presetService.service.savePreset).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sheetId: "sheet-alpha",
+          segmentId: null,
+          name: "Warmup",
+          settings: {
+            bpm: 132,
+            timeSignature: "3/4",
+            subdivision: "eighth",
+            accent: "every-beat",
+            countdownBeats: 4,
+            barCountIn: {
+              enabled: false,
+              bars: 1
+            }
+          }
+        })
+      );
+      await waitFor(() => {
+        expect(screen.getByText("Warmup")).toBeVisible();
+      });
+      expect(presetService.service.listPresets).toHaveBeenCalledWith("sheet-alpha");
+    });
+
+    it("saves a selected-segment preset with bar count-in state and scope label", async () => {
+      const user = userEvent.setup();
+      const segment = createTestSegment();
+      const presetService = createFakeSheetMetronomePresetService();
+
+      renderPresetControls({
+        presetService,
+        practiceSegmentService: createPracticeSegmentService([segment])
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+      });
+      await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+      await enableBarCountIn(user);
+      await selectBarCountInBars(user, "2");
+      await user.type(screen.getByLabelText("Preset name"), "Segment focus");
+      await user.click(screen.getByLabelText("Selected segment"));
+      await user.click(screen.getByRole("button", { name: "Save preset" }));
+
+      await waitFor(() => {
+        expect(presetService.service.savePreset).toHaveBeenCalledOnce();
+      });
+      expect(presetService.service.savePreset).toHaveBeenCalledWith(
+        expect.objectContaining({
+          segmentId: "segment-alpha",
+          settings: expect.objectContaining({
+            barCountIn: {
+              enabled: true,
+              bars: 2
+            }
+          })
+        })
+      );
+      await waitFor(() => {
+        expect(screen.getByText("Selected segment presets")).toBeVisible();
+      });
+      expect(screen.getAllByText("Selected segment: Opening phrase")[0]).toBeVisible();
+    });
+
+    it("loads a preset into metronome and bar-count-in controls without side effects", async () => {
+      const user = userEvent.setup();
+      const presetService = createFakeSheetMetronomePresetService([
+        createTestPreset({
+          settings: {
+            bpm: 144,
+            timeSignature: "6/8",
+            subdivision: "sixteenth",
+            accent: "off",
+            countdownBeats: 8,
+            barCountIn: {
+              enabled: true,
+              bars: 2
+            }
+          }
+        })
+      ]);
+      const sessionService = createIdleSessionService();
+      const measureGridService = createMeasureGridService(createTestGrid());
+      const recordingService = createInspectableSheetRecordingService();
+      const metronomeService = createInspectableMetronomeService();
+
+      render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={72}
+          defaultTimeSignature="4/4"
+          createMetronomeService={() => metronomeService.service}
+          createSheetRecordingService={() => recordingService.service}
+          sessionService={sessionService}
+          measureGridService={measureGridService}
+          practiceSegmentService={createPracticeSegmentService()}
+          sheetMetronomePresetService={presetService.service}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Warmup")).toBeVisible();
+      });
+      const gridReadCallsBeforeLoad = measureGridService.getGrid.mock.calls.length;
+
+      await user.click(screen.getByRole("button", { name: "Load preset Warmup" }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(144);
+      });
+      expect(screen.getByLabelText("Time signature")).toHaveValue("6/8");
+      expect(screen.getByLabelText("Subdivision")).toHaveValue("sixteenth");
+      expect(screen.getByLabelText("Countdown")).toHaveValue("8");
+      expect(screen.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true");
+      expectBarCountInToggle(getBarCountInToggle(), true);
+      expectBarCountInBarsValue(getBarCountInBarsControl(), "2");
+      expect(metronomeService.service.start).not.toHaveBeenCalled();
+      expect(metronomeService.service.stop).not.toHaveBeenCalled();
+      expect(sessionService.ensureSheetSession).not.toHaveBeenCalled();
+      expectNoCaptureKind(sessionService.captureSessionEvent, "metronome_started");
+      expect(recordingService.service.startCapture).not.toHaveBeenCalled();
+      expect(recordingService.service.stopAndSave).not.toHaveBeenCalled();
+      expect(measureGridService.getGrid).toHaveBeenCalledTimes(gridReadCallsBeforeLoad);
+    });
+
+    it("surfaces save and load failures without changing the current controls", async () => {
+      const user = userEvent.setup();
+      const presetService = createFakeSheetMetronomePresetService([createTestPreset()]);
+
+      vi.mocked(presetService.service.savePreset).mockRejectedValueOnce(
+        new Error("Save failed.")
+      );
+      vi.mocked(presetService.service.loadPreset).mockRejectedValueOnce(
+        new Error("Load failed.")
+      );
+
+      renderPresetControls({ presetService, defaultBpm: 72 });
+
+      await waitFor(() => {
+        expect(screen.getByText("Warmup")).toBeVisible();
+      });
+
+      const presetNameInput = screen.getByLabelText("Preset name");
+
+      await user.type(presetNameInput, "Broken snapshot");
+      await user.click(screen.getByRole("button", { name: "Save preset" }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Save failed.")[0]).toBeVisible();
+      });
+      expect(presetNameInput).toHaveValue("Broken snapshot");
+      expect(screen.queryByText("Broken snapshot")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Load preset Warmup" }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Load failed.")[0]).toBeVisible();
+      });
+      expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(72);
+    });
+
+    it("disables preset load while the metronome is playing", async () => {
+      const user = userEvent.setup();
+      const presetService = createFakeSheetMetronomePresetService([createTestPreset()]);
+      const sessionService = {
+        ...createIdleSessionService(),
+        ensureSheetSession: vi.fn(async () => createSheetSession())
+      };
+      const metronomeService = createInspectableMetronomeService();
+
+      renderPresetControls({
+        presetService,
+        sessionService,
+        metronomeService
+      });
+      await waitFor(() => {
+        expect(screen.getByText("Warmup")).toBeVisible();
+      });
+
+      await user.click(screen.getByRole("button", { name: "Start metronome" }));
+      await waitFor(() => {
+        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+      });
+
+      const loadButton = screen.getByRole("button", { name: "Load preset Warmup" });
+
+      expect(loadButton).toBeDisabled();
+      expect(presetService.service.loadPreset).not.toHaveBeenCalled();
+    });
+
+    it("ignores a pending preset load after playback starts and stops before resolution", async () => {
+      const user = userEvent.setup();
+      const loadedPreset = createTestPreset({
+        settings: {
+          bpm: 180
+        }
+      });
+      const staleLoad =
+        createDeferred<Awaited<ReturnType<SheetMetronomePresetService["loadPreset"]>>>();
+      const presetService = createFakeSheetMetronomePresetService([loadedPreset]);
+      const sessionService = {
+        ...createIdleSessionService(),
+        ensureSheetSession: vi.fn(async () => createSheetSession())
+      };
+
+      vi.mocked(presetService.service.loadPreset).mockReturnValueOnce(staleLoad.promise);
+
+      renderPresetControls({ presetService, sessionService, defaultBpm: 72 });
+
+      await waitFor(() => {
+        expect(screen.getByText("Warmup")).toBeVisible();
+      });
+
+      await user.click(screen.getByRole("button", { name: "Load preset Warmup" }));
+      await user.selectOptions(screen.getByLabelText("Countdown"), "4");
+      await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Counting");
+      });
+
+      await user.click(screen.getByRole("button", { name: "Stop metronome" }));
+      await waitFor(() => {
+        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+      });
+
+      await act(async () => {
+        staleLoad.resolve({
+          status: "loaded",
+          preset: loadedPreset,
+          settings: loadedPreset.settings
+        });
+        await staleLoad.promise;
+      });
+
+      expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(72);
+      expect(screen.queryByText("Loaded preset Warmup.")).not.toBeInTheDocument();
+    });
+
+    it("renames and deletes presets only after explicit actions", async () => {
+      const user = userEvent.setup();
+      const presetService = createFakeSheetMetronomePresetService([
+        createTestPreset()
+      ]);
+
+      renderPresetControls({ presetService });
+      await waitFor(() => {
+        expect(screen.getByText("Warmup")).toBeVisible();
+      });
+
+      await user.click(screen.getByRole("button", { name: "Rename preset Warmup" }));
+      const renameInput = screen.getByLabelText("Rename preset Warmup name");
+
+      await user.clear(renameInput);
+      await user.type(renameInput, "Renamed warmup");
+      await user.click(screen.getByRole("button", { name: "Save rename" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Renamed warmup")).toBeVisible();
+      });
+      expect(presetService.service.renamePreset).toHaveBeenCalledWith({
+        sheetId: "sheet-alpha",
+        presetId: "preset-alpha",
+        name: "Renamed warmup"
+      });
+
+      await user.click(screen.getByRole("button", { name: "Delete preset Renamed warmup" }));
+      expect(presetService.service.deletePreset).not.toHaveBeenCalled();
+      await user.click(
+        screen.getByRole("button", { name: "Confirm delete preset Renamed warmup" })
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByText("Renamed warmup")).not.toBeInTheDocument();
+      });
+      expect(presetService.service.deletePreset).toHaveBeenCalledWith(
+        "sheet-alpha",
+        "preset-alpha"
+      );
+    });
+
+    it("surfaces delete failures without removing the preset", async () => {
+      const user = userEvent.setup();
+      const presetService = createFakeSheetMetronomePresetService([createTestPreset()]);
+
+      vi.mocked(presetService.service.deletePreset).mockRejectedValueOnce(
+        new Error("Delete failed.")
+      );
+
+      renderPresetControls({ presetService });
+      await waitFor(() => {
+        expect(screen.getByText("Warmup")).toBeVisible();
+      });
+
+      await user.click(screen.getByRole("button", { name: "Delete preset Warmup" }));
+      await user.click(
+        screen.getByRole("button", { name: "Confirm delete preset Warmup" })
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Delete failed.")[0]).toBeVisible();
+      });
+      expect(screen.getByText("Warmup")).toBeVisible();
+      expect(presetService.getPresets()).toHaveLength(1);
+    });
+
+    it("surfaces duplicate-name and missing-load failures without changing controls", async () => {
+      const user = userEvent.setup();
+      const presetService = createFakeSheetMetronomePresetService([
+        createTestPreset({ id: "preset-alpha", name: "Warmup" }),
+        createTestPreset({ id: "preset-beta", name: "Duplicate" })
+      ]);
+
+      renderPresetControls({ presetService, defaultBpm: 72 });
+      await waitFor(() => {
+        expect(screen.getByText("Warmup")).toBeVisible();
+      });
+
+      await user.click(screen.getByRole("button", { name: "Rename preset Warmup" }));
+      const renameInput = screen.getByLabelText("Rename preset Warmup name");
+
+      await user.clear(renameInput);
+      await user.type(renameInput, "Duplicate");
+      await user.click(screen.getByRole("button", { name: "Save rename" }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Preset name already exists.")[0]).toBeVisible();
+      });
+      expect(
+        presetService.getPresets().find((preset) => preset.id === "preset-alpha")?.name
+      ).toBe("Warmup");
+
+      vi.mocked(presetService.service.loadPreset).mockResolvedValueOnce({
+        status: "missing"
+      });
+      await user.click(screen.getByRole("button", { name: "Cancel rename" }));
+      await user.click(screen.getByRole("button", { name: "Load preset Warmup" }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Preset was not found.")[0]).toBeVisible();
+      });
+      expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(72);
+    });
+
+    it("ignores stale preset list and load responses after the sheet changes", async () => {
+      const user = userEvent.setup();
+      const staleList = createDeferred<SheetMetronomePreset[]>();
+      const nextList = createDeferred<SheetMetronomePreset[]>();
+      const staleLoad =
+        createDeferred<Awaited<ReturnType<SheetMetronomePresetService["loadPreset"]>>>();
+      const presetService = createFakeSheetMetronomePresetService([
+        createTestPreset()
+      ]);
+
+      vi.mocked(presetService.service.listPresets).mockImplementation((sheetId) =>
+        sheetId === "sheet-alpha" ? staleList.promise : nextList.promise
+      );
+      const { rerender } = render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={72}
+          defaultTimeSignature="4/4"
+          sessionService={createIdleSessionService()}
+          measureGridService={createMeasureGridService(createTestGrid())}
+          practiceSegmentService={createPracticeSegmentService()}
+          sheetMetronomePresetService={presetService.service}
+        />
+      );
+
+      rerender(
+        <SheetPracticeControls
+          sheetId="sheet-beta"
+          sheetName="Beta"
+          defaultBpm={72}
+          defaultTimeSignature="4/4"
+          sessionService={createIdleSessionService()}
+          measureGridService={createMeasureGridService(createTestGrid())}
+          practiceSegmentService={createPracticeSegmentService()}
+          sheetMetronomePresetService={presetService.service}
+        />
+      );
+
+      await act(async () => {
+        staleList.resolve([
+          createTestPreset({ sheetId: "sheet-alpha", name: "Stale Alpha" })
+        ]);
+        await staleList.promise;
+      });
+      expect(screen.queryByText("Stale Alpha")).not.toBeInTheDocument();
+
+      await act(async () => {
+        nextList.resolve([createTestPreset({ sheetId: "sheet-beta", name: "Beta preset" })]);
+        await nextList.promise;
+      });
+      await waitFor(() => {
+        expect(screen.getByText("Beta preset")).toBeVisible();
+      });
+
+      vi.mocked(presetService.service.loadPreset).mockReturnValueOnce(staleLoad.promise);
+      await user.click(screen.getByRole("button", { name: "Load preset Beta preset" }));
+      rerender(
+        <SheetPracticeControls
+          sheetId="sheet-gamma"
+          sheetName="Gamma"
+          defaultBpm={72}
+          defaultTimeSignature="4/4"
+          sessionService={createIdleSessionService()}
+          measureGridService={createMeasureGridService(createTestGrid())}
+          practiceSegmentService={createPracticeSegmentService()}
+          sheetMetronomePresetService={presetService.service}
+        />
+      );
+
+      await act(async () => {
+        staleLoad.resolve({
+          status: "loaded",
+          preset: createTestPreset({ sheetId: "sheet-beta", name: "Beta preset" }),
+          settings: createTestPreset({
+            settings: {
+              bpm: 180
+            }
+          }).settings
+        });
+        await staleLoad.promise;
+      });
+
+      expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(72);
     });
   });
 

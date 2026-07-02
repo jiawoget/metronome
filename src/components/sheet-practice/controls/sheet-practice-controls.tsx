@@ -15,9 +15,11 @@ import {
 } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import { browserPracticeSegmentService } from "@/infrastructure/db/browser-practice-segment-service";
+import { browserSheetMetronomePresetService } from "@/infrastructure/db/browser-sheet-metronome-preset-service";
 import type { MetronomeTick } from "@/services/metronome";
 import { createBrowserMetronomeService } from "@/services/metronome/browser";
 import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
+import type { MetronomeSettings } from "@/lib/quick-metronome/types";
 import { scheduleBarCountIn } from "@/lib/quick-metronome/bar-count-in-scheduler";
 import {
   useMetronomeTransport,
@@ -39,6 +41,7 @@ import {
 } from "@/components/sheet-practice/controls/bar-count-in-control";
 import { MetronomeSettingsPanel } from "@/components/sheet-practice/controls/metronome-settings-panel";
 import { SegmentTempoApplyControl } from "@/components/sheet-practice/controls/segment-tempo-apply-control";
+import { SheetMetronomePresetControl } from "@/components/sheet-practice/controls/sheet-metronome-preset-control";
 import {
   createSheetPracticeControlInitialState,
   formatUnsupportedTimeSignatureMessage
@@ -211,6 +214,7 @@ export function SheetPracticeControls({
   sessionService = browserPracticeSessionService,
   measureGridService = browserMeasureGridService,
   practiceSegmentService = browserPracticeSegmentService,
+  sheetMetronomePresetService = browserSheetMetronomePresetService,
   currentMeasureGridTimestampMs = null,
   barCountIn = undefined
 }: SheetPracticeControlsProps) {
@@ -940,6 +944,24 @@ export function SheetPracticeControls({
     },
     [invalidateBarCountInPrepare]
   );
+  const handlePresetLoaded = useCallback(
+    (state: {
+      settings: MetronomeSettings;
+      barCountIn: { enabled: boolean; bars: BarCountInBars };
+    }) => {
+      if (arePreRunSettingsLocked) {
+        return;
+      }
+
+      invalidateBarCountInPrepare();
+      setActiveBarCountInPlan(null);
+      setActiveBarCountInTick(null);
+      updateSettings(state.settings);
+      setIsBarCountInEnabled(state.barCountIn.enabled);
+      setBarCountInMeasures(state.barCountIn.bars);
+    },
+    [arePreRunSettingsLocked, invalidateBarCountInPrepare, updateSettings]
+  );
   const showRecordAgain =
     activeRecordingWorkflowSheetId === sheetId &&
     rerecordStatus === "ready" &&
@@ -1290,6 +1312,30 @@ export function SheetPracticeControls({
               activeTick={activeBarCountInTick}
               onEnabledChange={handleBarCountInEnabledChange}
               onBarsChange={handleBarCountInMeasuresChange}
+            />
+          }
+          presetControl={
+            <SheetMetronomePresetControl
+              key={sheetId}
+              sheetId={sheetId}
+              selectedSegment={
+                scopedSelectedTempoSegment
+                  ? {
+                      id: scopedSelectedTempoSegment.id,
+                      name: scopedSelectedTempoSegment.name
+                    }
+                  : null
+              }
+              service={sheetMetronomePresetService}
+              settings={settings}
+              barCountIn={{
+                enabled: isBarCountInEnabled,
+                bars: barCountInMeasures
+              }}
+              disabled={arePreRunSettingsLocked}
+              onPresetLoaded={handlePresetLoaded}
+              onStatusMessage={setMessage}
+              onErrorMessage={setErrorMessage}
             />
           }
           isCountdownReplacedByBarCountIn={isBarCountInEnabled}

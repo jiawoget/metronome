@@ -8,6 +8,7 @@ import {
   PRACTICE_SESSION_DB_NAME,
   PRACTICE_SEGMENT_DB_NAME,
   readPracticeSnapshot,
+  SHEET_METRONOME_PRESET_DB_NAME,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
@@ -239,6 +240,240 @@ async function expectVisibleBarCountInResponsiveSurface(page: Page) {
   await expect(page.getByRole("button", { name: "Stop recording" })).toBeVisible();
   await expectNoViewerOverlap(page);
 }
+
+async function setPracticeBpm(page: Page, bpm: number) {
+  const bpmInput = page.getByRole("spinbutton", { name: "BPM", exact: true });
+
+  await bpmInput.fill(String(bpm));
+  await bpmInput.press("Enter");
+  await expect(bpmInput).toHaveValue(String(bpm));
+}
+
+async function savePresetThroughUi(
+  page: Page,
+  {
+    name,
+    scope
+  }: {
+    name: string;
+    scope: "sheet" | "segment";
+  }
+) {
+  await page.getByLabel("Preset name").fill(name);
+
+  if (scope === "segment") {
+    await page.getByRole("radio", { name: "Selected segment" }).check();
+  } else {
+    await page.getByRole("radio", { name: "Sheet-wide" }).check();
+  }
+
+  await page.getByRole("button", { name: "Save preset" }).click();
+  await expect(page.getByRole("button", { name: `Load preset ${name}` })).toBeVisible();
+}
+
+async function expectPresetResponsiveSurface(page: Page) {
+  await page.getByTestId("sheet-practice-controls").scrollIntoViewIfNeeded();
+  await expect(page.getByRole("heading", { name: "Metronome presets" })).toBeVisible();
+  await expect(page.getByLabel("Preset name")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save preset" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start metronome" })).toBeVisible();
+  await expectNoViewerOverlap(page);
+}
+
+test("sheet practice presets persist, load explicitly, and drive timing after start", async ({
+  page
+}) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await page.addInitScript(() => {
+    const e2eWindow = window as Window & {
+      __sheetPresetMetronomeTraces?: MetronomeTrace[];
+      __sheetPracticeControlsTestHarness?: boolean;
+    };
+
+    e2eWindow.__sheetPracticeControlsTestHarness = true;
+    e2eWindow.__sheetPresetMetronomeTraces = [];
+    window.addEventListener("quick-metronome:scheduled-tick", (event) => {
+      e2eWindow.__sheetPresetMetronomeTraces?.push(
+        (event as CustomEvent<MetronomeTrace>).detail
+      );
+    });
+  });
+
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.goto("/sheet-library");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [
+    SHEET_LIBRARY_DB_NAME,
+    PRACTICE_SESSION_DB_NAME,
+    MEASURE_GRID_DB_NAME,
+    PRACTICE_SEGMENT_DB_NAME,
+    SHEET_METRONOME_PRESET_DB_NAME
+  ]);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  const { link } = await importTestSheet(page, {
+    name: "Preset Controls Sheet",
+    bpm: "100",
+    timeSignature: "4/4"
+  });
+
+  await link.click();
+  await expect(page.getByRole("heading", { name: "Preset Controls Sheet" })).toBeVisible();
+  await setPracticeBpm(page, 88);
+  await page.getByLabel("Time signature", { exact: true }).selectOption("2/4");
+  await page.getByLabel("Subdivision", { exact: true }).selectOption("quarter");
+  await page.getByRole("button", { name: "Downbeat" }).click();
+  await page.getByLabel("Countdown", { exact: true }).selectOption("0");
+  await savePresetThroughUi(page, {
+    name: "Sheet cruise",
+    scope: "sheet"
+  });
+
+  await saveMeasureGridThroughUi(page, {
+    bpm: 120,
+    timeSignature: "4/4",
+    pickupBeats: 0,
+    measureOneOffsetMs: 0
+  });
+  await createPracticeSegmentThroughUi(page, {
+    name: "Bridge preset",
+    startMeasure: 2,
+    endMeasure: 4
+  });
+  await page.getByText("Bridge preset").first().click();
+  await expect(page.getByText("Active").first()).toBeVisible();
+
+  await setPracticeBpm(page, 132);
+  await page.getByLabel("Time signature", { exact: true }).selectOption("3/4");
+  await page.getByLabel("Subdivision", { exact: true }).selectOption("eighth");
+  await page.getByLabel("Countdown", { exact: true }).selectOption("4");
+  await page.getByRole("button", { name: "Every beat" }).click();
+  await enableBarCountInThroughUi(page);
+  await selectBarCountInBars(page, "2");
+  await savePresetThroughUi(page, {
+    name: "Bridge drive",
+    scope: "segment"
+  });
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Preset Controls Sheet" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Load preset Sheet cruise" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Load preset Bridge drive" })).toBeVisible();
+  await expect(page.getByText("Sheet-wide presets")).toBeVisible();
+  await expect(page.getByText("Other segment presets")).toBeVisible();
+  await expect(page.getByText("Unknown segment")).toBeVisible();
+  await expect(page.getByText("Choose a segment")).toBeVisible();
+
+  await page.getByRole("button", { name: "Load preset Sheet cruise" }).click();
+  await expect(page.getByRole("spinbutton", { name: "BPM", exact: true })).toHaveValue("88");
+  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue("2/4");
+  await expect(page.getByLabel("Subdivision", { exact: true })).toHaveValue("quarter");
+  await expect(page.getByLabel("Countdown", { exact: true })).toHaveValue("0");
+  await expectBarCountInToggle(page, false);
+  await expect(page.getByText("Choose a segment")).toBeVisible();
+
+  await page.getByRole("button", { name: "Load preset Bridge drive" }).click();
+  await expect(page.getByRole("spinbutton", { name: "BPM", exact: true })).toHaveValue("132");
+  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue("3/4");
+  await expect(page.getByLabel("Subdivision", { exact: true })).toHaveValue("eighth");
+  await expect(page.getByLabel("Countdown", { exact: true })).toHaveValue("4");
+  await expect(page.getByRole("button", { name: "Every beat" })).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  );
+  await expectBarCountInToggle(page, true);
+  await expectBarCountInBarsValue(page, "2");
+  await expect(page.getByText("Choose a segment")).toBeVisible();
+
+  for (const viewport of [
+    { width: 1280, height: 820 },
+    { width: 1024, height: 768 },
+    { width: 390, height: 844 }
+  ]) {
+    await page.setViewportSize(viewport);
+    await expectPresetResponsiveSurface(page);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 820 });
+  expect(
+    await page.evaluate(() => {
+      const e2eWindow = window as Window & {
+        __sheetPresetMetronomeTraces?: MetronomeTrace[];
+      };
+
+      return e2eWindow.__sheetPresetMetronomeTraces?.length ?? 0;
+    })
+  ).toBe(0);
+
+  await page.getByRole("button", { name: "Start metronome" }).click();
+  await page.waitForFunction(() => {
+    const e2eWindow = window as Window & {
+      __sheetPresetMetronomeTraces?: MetronomeTrace[];
+    };
+
+    return (e2eWindow.__sheetPresetMetronomeTraces ?? []).filter(
+      (trace) =>
+        trace.bpm === 132 &&
+        trace.timeSignature === "3/4" &&
+        trace.subdivision === "eighth"
+    ).length >= 7;
+  });
+
+  const traces = await page.evaluate(() => {
+    const e2eWindow = window as Window & {
+      __sheetPresetMetronomeTraces?: MetronomeTrace[];
+    };
+
+    return (e2eWindow.__sheetPresetMetronomeTraces ?? [])
+      .filter(
+        (trace) =>
+          trace.bpm === 132 &&
+          trace.timeSignature === "3/4" &&
+          trace.subdivision === "eighth"
+      )
+      .slice(-7);
+  });
+
+  expect(traces.map((trace) => trace.accented)).toEqual([
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    true
+  ]);
+  expect(traces.every((trace) => trace.expectedIntervalMs > 220)).toBe(true);
+  expect(traces.every((trace) => trace.expectedIntervalMs < 235)).toBe(true);
+
+  await page.getByRole("button", { name: "Stop metronome" }).click();
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+
+  await page.getByRole("button", { name: "Rename preset Sheet cruise" }).click();
+  await page.getByLabel("Rename preset Sheet cruise name").fill("Sheet cruise renamed");
+  await page.getByRole("button", { name: "Save rename" }).click();
+  await expect(page.getByRole("button", { name: "Load preset Sheet cruise renamed" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Load preset Sheet cruise renamed" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Delete preset Bridge drive" }).click();
+  await expect(page.getByRole("button", { name: "Confirm delete preset Bridge drive" })).toBeVisible();
+  await page.getByRole("button", { name: "Confirm delete preset Bridge drive" }).click();
+  await expect(page.getByRole("button", { name: "Load preset Bridge drive" })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Load preset Bridge drive" })).toHaveCount(0);
+  expect(consoleErrors).toEqual([]);
+});
 
 test("sheet practice can run visible bar-aware count-in before shared metronome playback", async ({
   page
