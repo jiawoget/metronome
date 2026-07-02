@@ -67,3 +67,7 @@ The app can remember meaningful local practice activity, summarize it on Home, a
 ## Scheduling Notes
 
 Pack 3 should start after Pack 1 is accepted and before broad Home analytics.
+
+## Closeout Note
+
+P3 closes the local sessions, Home, Continue Practice, goals, analytics, streaks, command palette, and session comparison foundations. Durable event timeline UI, durable event persistence, cloud scope, and AI analysis remain outside P3 scope.

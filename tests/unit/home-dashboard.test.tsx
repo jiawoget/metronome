@@ -1956,6 +1956,67 @@ describe("HomeDashboard", () => {
       expect(within(panel).getByTestId("practice-goal-row")).toBeVisible();
     });
 
+    it("refreshes goal progress when practice-session subscriptions fire", async () => {
+      vi.stubGlobal("indexedDB", {});
+      const subscription: { refresh: (() => void) | null } = { refresh: null };
+      const goal = createGoal({
+        id: "goal-session-progress",
+        kind: "minutes",
+        period: "today",
+        target: 20
+      });
+
+      serviceMocks.subscribe.mockImplementation((listener: () => void) => {
+        subscription.refresh = listener;
+
+        return () => undefined;
+      });
+      goalServiceMocks.listPracticeGoals.mockResolvedValue([goal]);
+      goalServiceMocks.getPracticeGoalEvaluations
+        .mockResolvedValueOnce([
+          createGoalEvaluation({
+            goalId: "goal-session-progress",
+            status: "in-progress",
+            progress: 12,
+            target: 20,
+            progressRatio: 0.6
+          })
+        ])
+        .mockResolvedValueOnce([
+          createGoalEvaluation({
+            goalId: "goal-session-progress",
+            status: "completed",
+            progress: 20,
+            target: 20,
+            progressRatio: 1,
+            completedAt: "2026-06-21T12:20:00.000Z"
+          })
+        ]);
+
+      render(<HomeDashboard />);
+
+      const panel = await screen.findByRole("region", { name: "Practice Goals" });
+      const refresh = subscription.refresh;
+
+      if (!refresh) {
+        throw new Error("Dashboard subscription was not registered.");
+      }
+
+      await waitFor(() =>
+        expect(goalServiceMocks.getPracticeGoalEvaluations).toHaveBeenCalledTimes(1)
+      );
+      expect(within(panel).getByTestId("practice-goal-row")).toHaveTextContent("In progress");
+      expect(within(panel).getByTestId("practice-goal-progress")).toHaveTextContent("12 / 20 min");
+
+      refresh();
+
+      await waitFor(() =>
+        expect(goalServiceMocks.getPracticeGoalEvaluations).toHaveBeenCalledTimes(2)
+      );
+      expect(within(panel).getByTestId("practice-goal-row")).toHaveTextContent("Completed");
+      expect(within(panel).getByTestId("practice-goal-progress")).toHaveTextContent("20 / 20 min");
+    });
+
     it("subscribes once, unsubscribes on unmount, and ignores stale goal refreshes", async () => {
       vi.stubGlobal("indexedDB", {});
       const initialRead = createDeferred<LocalPracticeGoal[]>();

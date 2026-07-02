@@ -210,6 +210,7 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
   const isMountedRef = useRef(false);
   const latestDashboardRefreshIdRef = useRef(0);
   const latestPracticeGoalRefreshIdRef = useRef(0);
+  const latestPracticeGoalEvaluationRefreshIdRef = useRef(0);
 
   const refreshDashboard = useCallback(async () => {
     if (typeof indexedDB === "undefined") {
@@ -294,9 +295,44 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
     }));
   }, []);
 
+  const refreshPracticeGoalEvaluations = useCallback(async () => {
+    const refreshId = latestPracticeGoalEvaluationRefreshIdRef.current + 1;
+    latestPracticeGoalEvaluationRefreshIdRef.current = refreshId;
+
+    if (isMountedRef.current) {
+      setState((currentState) => ({
+        ...currentState,
+        practiceGoalProgressStatus: "loading",
+        practiceGoalProgressErrorMessage: null
+      }));
+    }
+
+    let evaluations: GoalCompletionEvaluation[] | null = null;
+    let evaluationErrorMessage: string | null = null;
+
+    try {
+      evaluations = await practiceGoalService.getPracticeGoalEvaluations();
+    } catch {
+      evaluationErrorMessage = practiceGoalEvaluationsErrorMessage;
+    }
+
+    if (!isMountedRef.current || refreshId !== latestPracticeGoalEvaluationRefreshIdRef.current) {
+      return;
+    }
+
+    setState((currentState) => ({
+      ...currentState,
+      practiceGoalEvaluations: evaluations ?? currentState.practiceGoalEvaluations,
+      practiceGoalProgressStatus: evaluationErrorMessage ? "error" : "loaded",
+      practiceGoalProgressErrorMessage: evaluationErrorMessage
+    }));
+  }, []);
+
   const refreshPracticeGoals = useCallback(async () => {
     const refreshId = latestPracticeGoalRefreshIdRef.current + 1;
     latestPracticeGoalRefreshIdRef.current = refreshId;
+    const evaluationRefreshId = latestPracticeGoalEvaluationRefreshIdRef.current + 1;
+    latestPracticeGoalEvaluationRefreshIdRef.current = evaluationRefreshId;
 
     if (isMountedRef.current) {
       setState((currentState) => ({
@@ -320,10 +356,15 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
       setState((currentState) => ({
         ...currentState,
         practiceGoalsStatus: "error",
-        practiceGoalProgressStatus: currentState.practiceGoalEvaluations.length > 0
-          ? "loaded"
-          : "idle",
-        practiceGoalsErrorMessage: practiceGoalsErrorMessage
+        practiceGoalProgressStatus: evaluationRefreshId === latestPracticeGoalEvaluationRefreshIdRef.current
+          ? currentState.practiceGoalEvaluations.length > 0
+            ? "loaded"
+            : "idle"
+          : currentState.practiceGoalProgressStatus,
+        practiceGoalsErrorMessage: practiceGoalsErrorMessage,
+        practiceGoalProgressErrorMessage: evaluationRefreshId === latestPracticeGoalEvaluationRefreshIdRef.current
+          ? null
+          : currentState.practiceGoalProgressErrorMessage
       }));
       return;
     }
@@ -341,14 +382,23 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
       return;
     }
 
+    const isLatestEvaluationRefresh =
+      evaluationRefreshId === latestPracticeGoalEvaluationRefreshIdRef.current;
+
     setState((currentState) => ({
       ...currentState,
       practiceGoals: goals,
-      practiceGoalEvaluations: evaluations ?? currentState.practiceGoalEvaluations,
+      practiceGoalEvaluations: isLatestEvaluationRefresh
+        ? evaluations ?? currentState.practiceGoalEvaluations
+        : currentState.practiceGoalEvaluations,
       practiceGoalsStatus: "loaded",
-      practiceGoalProgressStatus: evaluationErrorMessage ? "error" : "loaded",
+      practiceGoalProgressStatus: isLatestEvaluationRefresh
+        ? evaluationErrorMessage ? "error" : "loaded"
+        : currentState.practiceGoalProgressStatus,
       practiceGoalsErrorMessage: null,
-      practiceGoalProgressErrorMessage: evaluationErrorMessage
+      practiceGoalProgressErrorMessage: isLatestEvaluationRefresh
+        ? evaluationErrorMessage
+        : currentState.practiceGoalProgressErrorMessage
     }));
   }, []);
 
@@ -428,6 +478,7 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
 
     const unsubscribePracticeSession = browserPracticeSessionService.subscribe(() => {
       void refreshDashboard();
+      void refreshPracticeGoalEvaluations();
     });
     const unsubscribePracticeGoal = practiceGoalService.subscribe(() => {
       void refreshPracticeGoals();
@@ -438,7 +489,7 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
       unsubscribePracticeSession();
       unsubscribePracticeGoal();
     };
-  }, [refreshDashboard, refreshPracticeGoals]);
+  }, [refreshDashboard, refreshPracticeGoals, refreshPracticeGoalEvaluations]);
 
   return {
     ...state,
