@@ -562,6 +562,52 @@ async function createPracticeSegmentThroughUi(page: Page) {
   return segmentId;
 }
 
+async function openCommandPaletteWithShortcut(page: Page) {
+  const modifier = process.platform === "darwin" ? "Meta" : "Control";
+  const dialog = page.getByRole("dialog", { name: "Command palette" });
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page
+      .getByTestId("desktop-sidebar")
+      .getByRole("button", { name: "Open command palette" })
+      .focus();
+    await page.keyboard.down(modifier);
+    await page.keyboard.press("KeyK");
+    await page.keyboard.up(modifier);
+
+    if (await dialog.isVisible().catch(() => false)) {
+      break;
+    }
+
+    await page.waitForTimeout(100);
+  }
+
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Search commands")).toBeFocused();
+
+  return dialog;
+}
+
+async function openCommandPaletteWithTrigger(page: Page) {
+  await page.getByRole("button", { name: "Open command palette" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Command palette" });
+
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Search commands")).toBeFocused();
+
+  return dialog;
+}
+
+async function searchCommandPalette(page: Page, query: string) {
+  const dialog = page.getByRole("dialog", { name: "Command palette" });
+  const search = dialog.getByLabel("Search commands");
+
+  await search.fill(query);
+
+  return dialog;
+}
+
 test("app shell home navigation works on desktop and mobile without console errors", async ({ page }) => {
   const consoleErrors: string[] = [];
 
@@ -775,6 +821,149 @@ test("home Continue Practice recommendations navigate to quick, sheet, and segme
   await expect(panel).toBeVisible();
   await expect(panel.getByRole("link", { name: "Continue quick practice" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("command palette navigates routes and valid practice targets with guard and responsive coverage", async ({
+  page
+}) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await installFakeMicrophone(page);
+  await page.goto("/");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [
+    PRACTICE_SESSION_DB_NAME,
+    SHEET_LIBRARY_DB_NAME,
+    MEASURE_GRID_DB_NAME,
+    PRACTICE_SEGMENT_DB_NAME
+  ]);
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+
+  let dialog = await openCommandPaletteWithShortcut(page);
+
+  await expect(dialog.getByRole("option", { name: /Home/ })).toBeVisible();
+  await expect(dialog.getByRole("option", { name: /Recordings/ })).toBeVisible();
+  await searchCommandPalette(page, "recordings");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/recordings$/);
+  await expect(page.getByRole("heading", { name: "Recordings" })).toBeVisible();
+
+  await page.goto("/");
+  dialog = await openCommandPaletteWithTrigger(page);
+  await searchCommandPalette(page, "quick metronome");
+  await dialog.getByRole("option", { name: /Quick Metronome/ }).click();
+  await expect(page).toHaveURL(/\/quick-metronome$/);
+  await expect(page.getByRole("heading", { name: "Quick Metronome" })).toBeVisible();
+
+  await page.goto("/quick-metronome");
+  await page.getByRole("button", { name: "Start metronome" }).click();
+  await expect(page.getByText("Metronome playing.")).toBeVisible();
+  await page.getByRole("button", { name: "Stop metronome" }).click();
+  await expect(page.getByText("Metronome stopped.")).toBeVisible();
+
+  const { sheetId } = await importTestSheet(page, {
+    name: "Palette Continue Sheet",
+    bpm: "96",
+    timeSignature: "4/4"
+  });
+
+  await page.goto(`/sheet-practice/${sheetId}`);
+  await expect(page.getByRole("heading", { name: "Palette Continue Sheet" })).toBeVisible();
+  await page.getByRole("button", { name: "Start recording" }).click();
+  await expect(page.getByText("Recording without metronome.")).toBeVisible();
+  await page.waitForTimeout(700);
+  await page.getByRole("button", { name: "Stop recording" }).click();
+  await expect(page.getByText(/^Recording saved/)).toBeVisible();
+
+  await saveMeasureGridThroughUi(page);
+  const segmentId = await createPracticeSegmentThroughUi(page);
+  await page.getByRole("button", { name: "Start recording" }).click();
+  await expect(page.getByText("Recording without metronome.")).toBeVisible();
+  await page.waitForTimeout(700);
+  await page.getByRole("button", { name: "Stop recording" }).click();
+  await expect(page.getByText("Recording saved for Bridge focus.")).toBeVisible();
+
+  await page.goto("/");
+  dialog = await openCommandPaletteWithTrigger(page);
+  await searchCommandPalette(page, "continue quick practice");
+  await dialog.getByRole("option", { name: /Continue quick practice/ }).click();
+  await expect(page).toHaveURL(/\/quick-metronome$/);
+
+  await page.goto("/");
+  dialog = await openCommandPaletteWithTrigger(page);
+  await searchCommandPalette(page, "Palette Continue Sheet");
+  await dialog.getByRole("option", { name: /Palette Continue Sheet/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
+  await expect(page.getByRole("heading", { name: "Palette Continue Sheet" })).toBeVisible();
+
+  await page.goto("/");
+  dialog = await openCommandPaletteWithTrigger(page);
+  await searchCommandPalette(page, "Bridge focus");
+  await dialog.getByRole("option", { name: /Bridge focus/ }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("sheetId")).toBe(sheetId);
+  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBe(segmentId);
+  await expect(page.getByTestId(`practice-segment-row-${segmentId}`)).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  );
+
+  await page.getByRole("button", { name: "Delete Bridge focus" }).click();
+  await page.getByRole("button", { name: "Confirm delete Bridge focus" }).click();
+  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("0 saved");
+
+  const sameShellStaleCheckUrl = page.url();
+  dialog = await openCommandPaletteWithTrigger(page);
+  await searchCommandPalette(page, "Bridge focus");
+  await expect(dialog.getByRole("option", { name: /Bridge focus/ })).toHaveCount(0);
+  await expect(dialog.getByText("No commands found.")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(sameShellStaleCheckUrl);
+
+  await page.goto("/quick-metronome");
+  await page.getByRole("button", { name: "Start recording" }).click();
+  await expect(page.getByText("Recording without metronome.")).toBeVisible();
+  const blockedUrl = page.url();
+
+  dialog = await openCommandPaletteWithShortcut(page);
+  await searchCommandPalette(page, "recordings");
+  await dialog.getByRole("option", { name: /Recordings/ }).click();
+  await expect(page).toHaveURL(blockedUrl);
+  await expect(page.getByTestId("active-recording-navigation-guard")).toContainText(
+    "Navigation blocked while quick recording is active."
+  );
+
+  await expect(dialog).toBeVisible();
+  await searchCommandPalette(page, "settings");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(blockedUrl);
+  await expect(page.getByTestId("active-recording-navigation-guard")).toContainText(
+    "Navigation blocked while quick recording is active."
+  );
+
+  await page.getByRole("button", { name: "Stop recording" }).click();
+  await expect(page.getByText(/^Recording saved/)).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  dialog = await openCommandPaletteWithTrigger(page);
+  await expect(dialog.getByRole("option", { name: /Home/ })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Open command palette" })).toBeFocused();
+
   expect(consoleErrors).toEqual([]);
 });
 
