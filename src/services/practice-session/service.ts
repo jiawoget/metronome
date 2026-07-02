@@ -5,6 +5,7 @@ import {
   getHomeDashboardAnalyticsSource as selectHomeDashboardAnalyticsSource,
   getHomePracticeStreaks as selectHomePracticeStreaks,
   getHomeCompatibleContinuePracticeTarget,
+  getSessionComparison as selectSessionComparison,
   selectContinuePracticeTargets,
   getTodayPracticeSummary,
   groupPracticeSessionsByHistory,
@@ -21,7 +22,9 @@ import {
   type LocalPracticeGoal,
   type PracticeSession,
   type SheetRecordingMetadata,
-  type ContinuePracticeTargetsOptions
+  type ContinuePracticeTargetsOptions,
+  type SessionComparisonOptions,
+  type SessionComparisonTargetResolution
 } from "@/domain/practice";
 import type {
   PracticeSessionEventCaptureInput,
@@ -285,6 +288,18 @@ export function createPracticeSessionService({
     );
 
     return segmentTargets;
+  }
+
+  async function resolveSessionComparisonTargets(
+    sessions: PracticeSession[]
+  ): Promise<SessionComparisonTargetResolution> {
+    const sheets = await resolveSessionHistorySheetTargets(sessions);
+    const segments = await resolveSessionHistorySegmentTargets(sessions, sheets);
+
+    return {
+      sheets,
+      segments
+    };
   }
 
   function getHomeRecentActivityTargetSources(
@@ -843,6 +858,23 @@ export function createPracticeSessionService({
         sessions,
         generatedAt: generatedAt.toISOString(),
         now: generatedAt
+      });
+    },
+
+    async getSessionComparison(options?: SessionComparisonOptions) {
+      const generatedAt = now().toISOString();
+      const [sessions, recordings] = await Promise.all([
+        repository.listSessions(),
+        recordingRepository.listRecordingMetadata()
+      ]);
+      const targets = await resolveSessionComparisonTargets(sessions);
+
+      return selectSessionComparison({
+        sessions,
+        recordings,
+        targets,
+        generatedAt,
+        ...options
       });
     },
 

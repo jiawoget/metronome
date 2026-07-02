@@ -44,10 +44,13 @@ import {
   type PracticeSessionDashboardContinueTargetsStatus,
   type PracticeSessionDashboardReadStatus,
   type PracticeSessionDashboardRecentActivityStatus,
+  type PracticeSessionDashboardSessionComparisonStatus,
   type PracticeSessionDashboardStreaksStatus,
-  type PracticeSessionDashboardState
+  type PracticeSessionDashboardState,
+  type HomeSessionComparisonData
 } from "@/hooks/use-practice-session-dashboard";
 import { getContinuePracticeTargetHref } from "@/components/home/continue-practice-navigation";
+import { SessionComparisonPanel } from "@/components/home/session-comparison-panel";
 
 export type PracticeGoalManagementReadStatus = PracticeSessionDashboardReadStatus;
 export type PracticeGoalManagementMutationStatus = "idle" | "saving" | "deleting" | "error";
@@ -90,6 +93,9 @@ export type HomeDashboardData = HomeGoalManagementData & {
   streaks?: HomePracticeStreaks;
   streaksStatus?: PracticeSessionDashboardStreaksStatus;
   streaksErrorMessage?: string | null;
+  sessionComparison?: HomeSessionComparisonData;
+  sessionComparisonStatus?: PracticeSessionDashboardSessionComparisonStatus;
+  sessionComparisonErrorMessage?: string | null;
   recentSheets: [];
   recentRecordings: [];
 };
@@ -148,6 +154,13 @@ const emptyHomeStreaks: HomePracticeStreaks = {
   }
 };
 
+const emptyHomeSessionComparison: HomeSessionComparisonData = {
+  generatedAt: "",
+  candidates: [],
+  limit: 8,
+  maxSelected: 3
+};
+
 const emptyHomeDashboardData: HomeDashboardData = {
   summary: {
     durationMs: 0,
@@ -169,6 +182,9 @@ const emptyHomeDashboardData: HomeDashboardData = {
   streaks: emptyHomeStreaks,
   streaksStatus: "idle",
   streaksErrorMessage: null,
+  sessionComparison: emptyHomeSessionComparison,
+  sessionComparisonStatus: "idle",
+  sessionComparisonErrorMessage: null,
   practiceGoals: [],
   practiceGoalEvaluations: [],
   practiceGoalsStatus: "loaded",
@@ -196,6 +212,9 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
   const streaks = dashboardData.streaks ?? emptyHomeStreaks;
   const streaksStatus = dashboardData.streaksStatus ?? "idle";
   const streaksErrorMessage = dashboardData.streaksErrorMessage ?? null;
+  const sessionComparison = dashboardData.sessionComparison ?? emptyHomeSessionComparison;
+  const sessionComparisonStatus = dashboardData.sessionComparisonStatus ?? "idle";
+  const sessionComparisonErrorMessage = dashboardData.sessionComparisonErrorMessage ?? null;
   const practiceGoals = dashboardData.practiceGoals ?? [];
   const practiceGoalEvaluations = dashboardData.practiceGoalEvaluations ?? [];
   const practiceGoalsStatus = dashboardData.practiceGoalsStatus ?? "idle";
@@ -307,6 +326,12 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
             onDeletePracticeGoal={dashboardData.onDeletePracticeGoal ?? dashboardData.deletePracticeGoal}
             createPracticeGoalId={dashboardData.createPracticeGoalId}
             getPracticeGoalNow={dashboardData.getPracticeGoalNow}
+          />
+
+          <SessionComparisonPanel
+            comparison={sessionComparison}
+            status={sessionComparisonStatus}
+            errorMessage={sessionComparisonErrorMessage}
           />
 
           <RecentActivityPanel

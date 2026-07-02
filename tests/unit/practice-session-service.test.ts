@@ -960,6 +960,279 @@ describe("practice session service", () => {
     ).rejects.toThrow("recording read failed");
   });
 
+  it("reads session comparison from sessions and recording metadata without writes", async () => {
+    const quickSession = createPracticeSessionFixture({
+      id: "quick-session",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T11:00:00.000Z",
+      updatedAt: "2026-06-21T11:03:00.000Z",
+      durationMs: 180_000,
+      bpm: 100,
+      timeSignature: "3/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      segmentContext: null
+    });
+    const segmentSession = createPracticeSessionFixture({
+      id: "segment-session",
+      startedAt: "2026-06-21T10:00:00.000Z",
+      updatedAt: "2026-06-21T10:02:00.000Z",
+      durationMs: 120_000,
+      recordingCount: 2,
+      latestRecordingId: "recording-two",
+      segmentContext: createSegmentContext()
+    });
+    const recordings = [
+      createSheetRecordingMetadataFixture({
+        id: "recording-one",
+        sessionId: "segment-session",
+        durationMs: 30_000
+      }),
+      createSheetRecordingMetadataFixture({
+        id: "recording-two",
+        sessionId: "segment-session",
+        durationMs: 45_000
+      }),
+      createSheetRecordingMetadataFixture({
+        id: "recording-missing-session",
+        sessionId: "missing-session"
+      })
+    ];
+    const repository: PracticeSessionRepository = {
+      listSessions: vi.fn(async () => [quickSession, segmentSession]),
+      getSession: vi.fn(async () => null),
+      getRecentSession: vi.fn(async () => null),
+      getRecentSheetSession: vi.fn(async () => null),
+      saveSession: vi.fn(async () => undefined),
+      deleteSession: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const recordingRepository: PracticeRecordingMetadataRepository = {
+      listRecordingMetadata: vi.fn(async () => recordings),
+      listRecordingMetadataForSession: vi.fn(async () => []),
+      saveRecordingMetadata: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const getSheetContext = vi.fn(async (sheetId: string) => ({
+      id: sheetId,
+      name: "Alpha Sheet",
+      bpm: 96,
+      timeSignature: "4/4" as const
+    }));
+    const updateLastPracticedAt = vi.fn(async () => undefined);
+    const getSegmentContext = vi.fn(async (_sheetId: string, segmentId: string) => ({
+      id: segmentId,
+      name: "Live Bridge"
+    }));
+    const service = createPracticeSessionService({
+      repository,
+      recordingRepository,
+      sheetGateway: {
+        getSheetContext,
+        updateLastPracticedAt
+      },
+      segmentGateway: {
+        getSegmentContext
+      },
+      now: () => new Date(nowMs)
+    });
+
+    const result = await service.getSessionComparison({
+      selectedSessionIds: ["quick-session", "segment-session"]
+    });
+
+    expect(result).toMatchObject({
+      generatedAt: "2026-06-21T12:00:00.000Z",
+      selectedSessionIds: ["quick-session", "segment-session"],
+      maxSelected: 3
+    });
+    expect(result.candidates.map((candidate) => [candidate.sessionId, candidate.targetState])).toEqual([
+      ["quick-session", "quick"],
+      ["segment-session", "valid"]
+    ]);
+    expect(result.candidates[1]).toMatchObject({
+      sheetName: "Alpha Sheet",
+      segmentName: "Bridge",
+      segmentRangeLabel: "m5-12",
+      linkedRecordingMetadataCount: 2,
+      linkedRecordingDurationMs: 75_000
+    });
+    expect(result.metrics.find((metric) => metric.key === "events")?.values).toEqual([
+      {
+        sessionId: "quick-session",
+        text: "Event details not available yet",
+        tone: "muted"
+      },
+      {
+        sessionId: "segment-session",
+        text: "Event details not available yet",
+        tone: "muted"
+      }
+    ]);
+    expect(result.metrics.find((metric) => metric.key === "goalContribution")?.values[1].text).toBe(
+      "Counts as 1 session; adds 2 min; 2 sheet takes linked"
+    );
+    expect(result.unavailable.map((entry) => entry.key)).toEqual(["events", "audio"]);
+    expect(repository.listSessions).toHaveBeenCalledTimes(1);
+    expect(recordingRepository.listRecordingMetadata).toHaveBeenCalledTimes(1);
+    expect(getSheetContext).toHaveBeenCalledWith("sheet-alpha");
+    expect(getSegmentContext).toHaveBeenCalledWith("sheet-alpha", "segment-alpha");
+    expect(repository.getSession).not.toHaveBeenCalled();
+    expect(repository.getRecentSession).not.toHaveBeenCalled();
+    expect(repository.getRecentSheetSession).not.toHaveBeenCalled();
+    expect(repository.saveSession).not.toHaveBeenCalled();
+    expect(repository.deleteSession).not.toHaveBeenCalled();
+    expect(repository.clear).not.toHaveBeenCalled();
+    expect(recordingRepository.saveRecordingMetadata).not.toHaveBeenCalled();
+    expect(recordingRepository.clear).not.toHaveBeenCalled();
+    expect(recordingRepository.listRecordingMetadataForSession).not.toHaveBeenCalled();
+    expect(updateLastPracticedAt).not.toHaveBeenCalled();
+  });
+
+  it("contains session comparison sheet and segment lookup failures in target states", async () => {
+    const sessions = [
+      createPracticeSessionFixture({
+        id: "deleted-sheet",
+        sheetId: "sheet-deleted"
+      }),
+      createPracticeSessionFixture({
+        id: "failed-sheet",
+        sheetId: "sheet-failed"
+      }),
+      createPracticeSessionFixture({
+        id: "missing-segment",
+        segmentContext: createSegmentContext({
+          segmentId: "segment-missing",
+          segmentName: "Deleted Bridge"
+        })
+      }),
+      createPracticeSessionFixture({
+        id: "failed-segment",
+        segmentContext: createSegmentContext({
+          segmentId: "segment-failed",
+          segmentName: "Failed Bridge"
+        })
+      })
+    ];
+    const repository: PracticeSessionRepository = {
+      listSessions: vi.fn(async () => sessions),
+      getSession: vi.fn(async () => null),
+      getRecentSession: vi.fn(async () => null),
+      getRecentSheetSession: vi.fn(async () => null),
+      saveSession: vi.fn(async () => undefined),
+      deleteSession: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const recordingRepository: PracticeRecordingMetadataRepository = {
+      listRecordingMetadata: vi.fn(async () => []),
+      listRecordingMetadataForSession: vi.fn(async () => []),
+      saveRecordingMetadata: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const getSheetContext = vi.fn(async (sheetId: string) => {
+      if (sheetId === "sheet-failed") {
+        throw new Error("sheet lookup failed");
+      }
+
+      if (sheetId === "sheet-deleted") {
+        return null;
+      }
+
+      return {
+        id: sheetId,
+        name: "Alpha Sheet",
+        bpm: 96,
+        timeSignature: "4/4" as const
+      };
+    });
+    const getSegmentContext = vi.fn(async (_sheetId: string, segmentId: string) => {
+      if (segmentId === "segment-failed") {
+        throw new Error("segment lookup failed");
+      }
+
+      if (segmentId === "segment-missing") {
+        return null;
+      }
+
+      return {
+        id: segmentId,
+        name: "Live Bridge"
+      };
+    });
+    const updateLastPracticedAt = vi.fn(async () => undefined);
+    const service = createPracticeSessionService({
+      repository,
+      recordingRepository,
+      sheetGateway: {
+        getSheetContext,
+        updateLastPracticedAt
+      },
+      segmentGateway: {
+        getSegmentContext
+      },
+      now: () => new Date(nowMs)
+    });
+
+    const result = await service.getSessionComparison({
+      selectedSessionIds: ["deleted-sheet", "missing-segment"]
+    });
+    const statesById = Object.fromEntries(
+      result.candidates.map((candidate) => [candidate.sessionId, candidate.targetState])
+    );
+
+    expect(statesById).toMatchObject({
+      "deleted-sheet": "missing-sheet",
+      "failed-sheet": "lookup-failed",
+      "missing-segment": "missing-segment",
+      "failed-segment": "lookup-failed"
+    });
+    expect(result.metrics.find((metric) => metric.key === "sheet")?.values[0]).toEqual({
+      sessionId: "deleted-sheet",
+      text: "Deleted sheet",
+      tone: "warning"
+    });
+    expect(result.metrics.find((metric) => metric.key === "segment")?.values[1]).toEqual({
+      sessionId: "missing-segment",
+      text: "Deleted Bridge m5-12 (missing)",
+      tone: "warning"
+    });
+    expect(repository.saveSession).not.toHaveBeenCalled();
+    expect(recordingRepository.saveRecordingMetadata).not.toHaveBeenCalled();
+    expect(updateLastPracticedAt).not.toHaveBeenCalled();
+  });
+
+  it("rejects session comparison when required repository reads fail", async () => {
+    const { gateway } = createSheetGateway(new Set(["sheet-alpha"]));
+    const sessionReadFailureRepository = createMemorySessionRepository();
+    const recordingReadFailureRepository = createMemoryRecordingRepository();
+
+    vi.spyOn(sessionReadFailureRepository, "listSessions").mockRejectedValue(
+      new Error("session read failed")
+    );
+    vi.spyOn(recordingReadFailureRepository, "listRecordingMetadata").mockRejectedValue(
+      new Error("recording read failed")
+    );
+
+    await expect(
+      createPracticeSessionService({
+        repository: sessionReadFailureRepository,
+        recordingRepository: createMemoryRecordingRepository(),
+        sheetGateway: gateway,
+        now: () => new Date(nowMs)
+      }).getSessionComparison()
+    ).rejects.toThrow("session read failed");
+
+    await expect(
+      createPracticeSessionService({
+        repository: createMemorySessionRepository(),
+        recordingRepository: recordingReadFailureRepository,
+        sheetGateway: gateway,
+        now: () => new Date(nowMs)
+      }).getSessionComparison()
+    ).rejects.toThrow("recording read failed");
+  });
+
   it("reads Home practice streaks from sessions only with one captured service clock", async () => {
     const todaySession = createPracticeSessionFixture({
       id: "today-practice",

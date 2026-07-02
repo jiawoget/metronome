@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
   DEFAULT_HOME_RECENT_ACTIVITY_LIMIT,
+  DEFAULT_SESSION_COMPARISON_LIMIT,
   type ContinuePracticeTarget,
   type ContinuePracticeTargetsResult,
   type GoalCompletionEvaluation,
@@ -12,7 +13,9 @@ import {
   type HomePracticeStreaks,
   type HomeRecentActivityResult,
   type LocalPracticeGoal,
-  type PracticeSession
+  type PracticeSession,
+  type SessionComparisonCandidate,
+  type SessionComparisonResult
 } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import { practiceGoalService } from "@/services/practice-goals/browser-service";
@@ -22,9 +25,33 @@ export type PracticeSessionDashboardContinueTargetsStatus = PracticeSessionDashb
 export type PracticeSessionDashboardRecentActivityStatus = PracticeSessionDashboardReadStatus;
 export type PracticeSessionDashboardAnalyticsStatus = PracticeSessionDashboardReadStatus;
 export type PracticeSessionDashboardStreaksStatus = PracticeSessionDashboardReadStatus;
+export type PracticeSessionDashboardSessionComparisonStatus = PracticeSessionDashboardReadStatus;
 export type PracticeGoalReadStatus = PracticeSessionDashboardReadStatus;
 export type PracticeGoalEvaluationStatus = PracticeGoalReadStatus;
 export type PracticeGoalMutationStatus = "idle" | "saving" | "deleting" | "error";
+
+export type HomeSessionComparisonCandidate = {
+  sessionId: string;
+  label: string;
+  sourceTypeLabel: string;
+  startedText: string;
+  updatedText: string;
+  durationText: string;
+  bpmText: string;
+  timeSignatureText: string;
+  recordingsText: string;
+  sheetText: string;
+  segmentText: string;
+  goalContributionText: string;
+  eventText: "Event details not available yet";
+};
+
+export type HomeSessionComparisonData = {
+  generatedAt: string;
+  candidates: HomeSessionComparisonCandidate[];
+  limit: number;
+  maxSelected: 3;
+};
 
 export type HomeGoalManagementState = {
   practiceGoals: LocalPracticeGoal[];
@@ -58,6 +85,9 @@ export type PracticeSessionDashboardState = {
   streaks: HomePracticeStreaks;
   streaksStatus: PracticeSessionDashboardStreaksStatus;
   streaksErrorMessage: string | null;
+  sessionComparison: HomeSessionComparisonData;
+  sessionComparisonStatus: PracticeSessionDashboardSessionComparisonStatus;
+  sessionComparisonErrorMessage: string | null;
 } & HomeGoalManagementState;
 
 export type PracticeSessionDashboardActions = {
@@ -120,6 +150,13 @@ const emptyStreaks: HomePracticeStreaks = {
   }
 };
 
+const emptySessionComparison: HomeSessionComparisonData = {
+  generatedAt: "",
+  candidates: [],
+  limit: DEFAULT_SESSION_COMPARISON_LIMIT,
+  maxSelected: 3
+};
+
 const emptyPracticeGoals: HomeGoalManagementState = {
   practiceGoals: [],
   practiceGoalEvaluations: [],
@@ -152,6 +189,9 @@ const emptyState: PracticeSessionDashboardState = {
   streaks: emptyStreaks,
   streaksStatus: "idle",
   streaksErrorMessage: null,
+  sessionComparison: emptySessionComparison,
+  sessionComparisonStatus: "idle",
+  sessionComparisonErrorMessage: null,
   ...emptyPracticeGoals
 };
 
@@ -159,6 +199,7 @@ const continueTargetsErrorMessage = "Continue Practice targets could not be load
 const recentActivityErrorMessage = "Recent activity could not be loaded.";
 const analyticsErrorMessage = "Practice analytics could not be loaded.";
 const streaksErrorMessage = "Practice streaks could not be loaded.";
+const sessionComparisonErrorMessage = "Session comparison could not be loaded.";
 const practiceGoalsErrorMessage = "Practice goals could not be loaded.";
 const practiceGoalEvaluationsErrorMessage = "Goal progress could not be loaded.";
 const practiceGoalSaveErrorMessage = "Practice goal could not be saved.";
@@ -188,11 +229,21 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
         analyticsStatus: "loading",
         analyticsErrorMessage: null,
         streaksStatus: "loading",
-        streaksErrorMessage: null
+        streaksErrorMessage: null,
+        sessionComparisonStatus: "loading",
+        sessionComparisonErrorMessage: null
       }));
     }
 
-    const [recentSession, continueTargetsRead, summary, recentActivityRead, analyticsRead, streaksRead] = await Promise.all([
+    const [
+      recentSession,
+      continueTargetsRead,
+      summary,
+      recentActivityRead,
+      analyticsRead,
+      streaksRead,
+      sessionComparisonRead
+    ] = await Promise.all([
       browserPracticeSessionService.getRecentSession(),
       browserPracticeSessionService
         .getContinuePracticeTargets({ limit: DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT })
@@ -210,7 +261,10 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
       browserPracticeSessionService
         .getHomePracticeStreaks()
         .then((streaks) => ({ streaks, errorMessage: null }))
-        .catch(() => ({ streaks: null, errorMessage: streaksErrorMessage }))
+        .catch(() => ({ streaks: null, errorMessage: streaksErrorMessage })),
+      readHomeSessionComparison()
+        .then((sessionComparison) => ({ sessionComparison, errorMessage: null }))
+        .catch(() => ({ sessionComparison: null, errorMessage: sessionComparisonErrorMessage }))
     ]);
 
     if (!isMountedRef.current || refreshId !== latestDashboardRefreshIdRef.current) {
@@ -233,7 +287,10 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
       analyticsErrorMessage: analyticsRead.errorMessage,
       streaks: streaksRead.streaks ?? currentState.streaks,
       streaksStatus: streaksRead.errorMessage ? "error" : "loaded",
-      streaksErrorMessage: streaksRead.errorMessage
+      streaksErrorMessage: streaksRead.errorMessage,
+      sessionComparison: sessionComparisonRead.sessionComparison ?? currentState.sessionComparison,
+      sessionComparisonStatus: sessionComparisonRead.errorMessage ? "error" : "loaded",
+      sessionComparisonErrorMessage: sessionComparisonRead.errorMessage
     }));
   }, []);
 
@@ -391,4 +448,158 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
     onSavePracticeGoal: savePracticeGoal,
     onDeletePracticeGoal: deletePracticeGoal
   };
+}
+
+async function readHomeSessionComparison(): Promise<HomeSessionComparisonData> {
+  const comparison = await browserPracticeSessionService.getSessionComparison({
+    limit: DEFAULT_SESSION_COMPARISON_LIMIT
+  });
+
+  return createHomeSessionComparisonData(comparison);
+}
+
+function createHomeSessionComparisonData(comparison: SessionComparisonResult): HomeSessionComparisonData {
+  return {
+    generatedAt: comparison.generatedAt,
+    candidates: comparison.candidates.map(createHomeSessionComparisonCandidate),
+    limit: comparison.limit,
+    maxSelected: comparison.maxSelected
+  };
+}
+
+function createHomeSessionComparisonCandidate(
+  candidate: SessionComparisonCandidate
+): HomeSessionComparisonCandidate {
+  const sourceTypeLabel = candidate.sourceType === "quick" ? "Quick practice" : "Sheet practice";
+
+  return {
+    sessionId: candidate.sessionId,
+    label: candidate.label.replace(" - ", " · "),
+    sourceTypeLabel,
+    startedText: formatSessionComparisonTimestamp(candidate.startedAt),
+    updatedText: formatSessionComparisonTimestamp(candidate.updatedAt),
+    durationText: formatSessionComparisonDuration(candidate.durationMs),
+    bpmText: candidate.bpm === null ? "Not set" : `${candidate.bpm} BPM`,
+    timeSignatureText: candidate.timeSignature ?? "Not set",
+    recordingsText: formatSessionComparisonRecordings(
+      candidate.recordingCount,
+      candidate.linkedRecordingMetadataCount
+    ),
+    sheetText: getSessionComparisonSheetText(candidate),
+    segmentText: getSessionComparisonSegmentText(candidate),
+    goalContributionText: formatSessionComparisonGoalContribution(
+      candidate.durationMs,
+      candidate.linkedRecordingMetadataCount
+    ),
+    eventText: "Event details not available yet"
+  };
+}
+
+function getSessionComparisonSheetText(candidate: SessionComparisonCandidate) {
+  if (candidate.sourceType === "quick") {
+    return "Quick metronome";
+  }
+
+  if (candidate.targetState === "missing-sheet") {
+    return "Deleted sheet";
+  }
+
+  if (candidate.targetState === "lookup-failed") {
+    return candidate.sheetId ? `${candidate.sheetId} (lookup failed)` : "Sheet lookup failed";
+  }
+
+  if (candidate.targetState === "no-target") {
+    return "Sheet not set";
+  }
+
+  return candidate.sheetName ?? candidate.sheetId ?? "Sheet practice";
+}
+
+function getSessionComparisonSegmentText(candidate: SessionComparisonCandidate) {
+  if (candidate.sourceType === "quick") {
+    return "Quick metronome";
+  }
+
+  if (!candidate.segmentId) {
+    return "Whole sheet / no segment";
+  }
+
+  const segmentText = [candidate.segmentName ?? "Saved segment", candidate.segmentRangeLabel]
+    .filter(Boolean)
+    .join(" ");
+
+  if (candidate.targetState === "missing-segment") {
+    return `${segmentText} (missing)`;
+  }
+
+  if (candidate.targetState === "lookup-failed") {
+    return `${segmentText} (lookup failed)`;
+  }
+
+  return segmentText;
+}
+
+function formatSessionComparisonRecordings(sessionRecordingCount: number, linkedSheetTakes: number) {
+  const safeSessionRecordingCount = Math.max(0, Math.floor(Number.isFinite(sessionRecordingCount) ? sessionRecordingCount : 0));
+  const recordingLabel = safeSessionRecordingCount === 1 ? "1 recording" : `${safeSessionRecordingCount} recordings`;
+
+  if (linkedSheetTakes <= 0 || linkedSheetTakes === safeSessionRecordingCount) {
+    return recordingLabel;
+  }
+
+  return `${recordingLabel}; ${linkedSheetTakes} linked sheet ${linkedSheetTakes === 1 ? "take" : "takes"}`;
+}
+
+function formatSessionComparisonGoalContribution(durationMs: number, linkedSheetTakes: number) {
+  const minutes = formatSessionComparisonMinutes(durationMs);
+  const takeLabel = linkedSheetTakes === 1 ? "1 sheet take linked" : `${linkedSheetTakes} sheet takes linked`;
+
+  return `Counts as 1 session; adds ${minutes}; ${takeLabel}`;
+}
+
+function formatSessionComparisonDuration(value: number) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "0 min";
+  }
+
+  if (value < 60_000) {
+    return "<1 min";
+  }
+
+  const totalMinutes = Math.floor(value / 60_000);
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return minutes > 0 ? `${hours} hr ${minutes} min` : `${hours} hr`;
+}
+
+function formatSessionComparisonMinutes(value: number) {
+  const durationText = formatSessionComparisonDuration(value);
+
+  return durationText === "<1 min" ? "<1 min" : durationText;
+}
+
+function formatSessionComparisonTimestamp(value: string | null) {
+  if (!value) {
+    return "Unknown time";
+  }
+
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "Unknown time";
+  }
+
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
 }
