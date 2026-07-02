@@ -478,7 +478,7 @@
                                          },
                                          {
                                              "pack":  "pack-3-sessions-continue-practice",
-                                             "status":  "in_progress",
+                                             "status":  "verified",
                                              "slices":  [
                                                             {
                                                                 "slice":  "P3-01 session-event-model",
