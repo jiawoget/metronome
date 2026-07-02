@@ -552,7 +552,7 @@
                                          },
                                          {
                                              "pack":  "pack-4-practice-controls-upgrade",
-                                             "status":  "planning_in_progress",
+                                             "status":  "verified",
                                              "slices":  [
                                                             {
                                                                 "slice":  "P4-01 segment-tempo-apply-policy",
@@ -584,7 +584,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P4-08 advanced-countdown-shared-infrastructure",
-                                                                "status":  "review_done"
+                                                                "status":  "verified"
                                                             }
                                                         ]
                                          },
