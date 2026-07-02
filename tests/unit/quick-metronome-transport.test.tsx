@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { BarCountInReadyPlan } from "@/domain/practice/bar-count-in";
 import { DEFAULT_METRONOME_SETTINGS } from "@/lib/quick-metronome/types";
+import type { PreStartCountdownSchedulerOptions } from "@/lib/quick-metronome/pre-start-countdown";
 import {
   type BarCountInSchedulerOptions,
   useMetronomeTransport
@@ -55,6 +56,25 @@ function createBarCountInPlan(overrides: Partial<BarCountInReadyPlan> = {}): Bar
   };
 }
 
+function createPreStartCountdownPlan() {
+  return {
+    beatCount: 2,
+    totalDurationMs: 1_000,
+    beats: [
+      {
+        count: 1,
+        beatNumber: 1,
+        offsetMs: -1_000
+      },
+      {
+        count: 2,
+        beatNumber: 2,
+        offsetMs: -500
+      }
+    ]
+  };
+}
+
 function createDeferredBarCountInScheduler() {
   let scheduledOptions: BarCountInSchedulerOptions | null = null;
   const cancel = vi.fn();
@@ -69,6 +89,27 @@ function createDeferredBarCountInScheduler() {
     get options() {
       if (scheduledOptions === null) {
         throw new Error("Bar count-in was not scheduled");
+      }
+
+      return scheduledOptions;
+    }
+  };
+}
+
+function createDeferredPreStartCountdownScheduler() {
+  let scheduledOptions: PreStartCountdownSchedulerOptions | null = null;
+  const cancel = vi.fn();
+  const schedule = vi.fn((options: PreStartCountdownSchedulerOptions) => {
+    scheduledOptions = options;
+    return { cancel };
+  });
+
+  return {
+    schedule,
+    cancel,
+    get options() {
+      if (scheduledOptions === null) {
+        throw new Error("Pre-start countdown was not scheduled");
       }
 
       return scheduledOptions;
@@ -352,6 +393,282 @@ describe("useMetronomeTransport", () => {
 
     expect(service.start).not.toHaveBeenCalled();
     expect(result.current.transportState).toBe("counting");
+  });
+
+  it("runs a generic pre-start countdown before starting playback", async () => {
+    const service = createTransportService();
+    const plan = createPreStartCountdownPlan();
+    const scheduler = createDeferredPreStartCountdownScheduler();
+    const onCountdownStarted = vi.fn();
+    const onTick = vi.fn();
+    const { result } = renderHook(() =>
+      useMetronomeTransport({
+        settings: DEFAULT_METRONOME_SETTINGS,
+        metronomeService: service,
+        preStartCountdown: {
+          enabled: true,
+          plan,
+          schedule: scheduler.schedule,
+          onTick
+        },
+        onCountdownStarted
+      })
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+    });
+
+    expect(scheduler.schedule).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plan,
+        setTimeout: window.setTimeout,
+        clearTimeout: window.clearTimeout
+      })
+    );
+    expect(onCountdownStarted).toHaveBeenCalledWith(plan.beatCount);
+    expect(result.current.transportState).toBe("counting");
+    expect(result.current.countdownRemaining).toBe(plan.beatCount);
+    expect(service.start).not.toHaveBeenCalled();
+
+    act(() => {
+      scheduler.options.onTick?.({
+        count: 1,
+        beatNumber: 1,
+        remainingBeats: 1,
+        scheduledOffsetMs: -1_000,
+        scheduledDelayMs: 0
+      });
+    });
+
+    expect(onTick).toHaveBeenCalledWith(expect.objectContaining({ remainingBeats: 1 }));
+    expect(result.current.countdownRemaining).toBe(1);
+
+    await act(async () => {
+      scheduler.options.onComplete();
+      await Promise.resolve();
+    });
+
+    expect(service.start).toHaveBeenCalledWith(DEFAULT_METRONOME_SETTINGS);
+    expect(result.current.transportState).toBe("playing");
+    expect(result.current.countdownRemaining).toBe(0);
+  });
+
+  it("uses latest settings when generic pre-start countdown completes", async () => {
+    const service = createTransportService();
+    const scheduler = createDeferredPreStartCountdownScheduler();
+    const initialSettings = {
+      ...DEFAULT_METRONOME_SETTINGS,
+      bpm: 96
+    };
+    const editedSettings = {
+      ...initialSettings,
+      bpm: 144
+    };
+    const { result, rerender } = renderHook(
+      ({ settings }) =>
+        useMetronomeTransport({
+          settings,
+          metronomeService: service,
+          preStartCountdown: {
+            enabled: true,
+            plan: createPreStartCountdownPlan(),
+            schedule: scheduler.schedule
+          }
+        }),
+      {
+        initialProps: {
+          settings: initialSettings
+        }
+      }
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+    });
+
+    rerender({ settings: editedSettings });
+
+    await act(async () => {
+      scheduler.options.onComplete();
+      await Promise.resolve();
+    });
+
+    expect(service.start).toHaveBeenCalledWith(editedSettings);
+    expect(result.current.transportState).toBe("playing");
+  });
+
+  it("cancels generic pre-start countdown without starting playback when stopped", async () => {
+    const service = createTransportService();
+    const scheduler = createDeferredPreStartCountdownScheduler();
+    const { result } = renderHook(() =>
+      useMetronomeTransport({
+        settings: DEFAULT_METRONOME_SETTINGS,
+        metronomeService: service,
+        preStartCountdown: {
+          enabled: true,
+          plan: createPreStartCountdownPlan(),
+          schedule: scheduler.schedule
+        }
+      })
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+    });
+
+    await act(async () => {
+      await result.current.stopMetronome();
+    });
+
+    expect(scheduler.cancel).toHaveBeenCalledTimes(1);
+    expect(result.current.transportState).toBe("stopped");
+
+    await act(async () => {
+      scheduler.options.onComplete();
+      await Promise.resolve();
+    });
+
+    expect(service.start).not.toHaveBeenCalled();
+  });
+
+  it("does not create duplicate generic pre-start countdown schedulers from repeated starts while counting", async () => {
+    const service = createTransportService();
+    const scheduler = createDeferredPreStartCountdownScheduler();
+    const { result } = renderHook(() =>
+      useMetronomeTransport({
+        settings: DEFAULT_METRONOME_SETTINGS,
+        metronomeService: service,
+        preStartCountdown: {
+          enabled: true,
+          plan: createPreStartCountdownPlan(),
+          schedule: scheduler.schedule
+        }
+      })
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+      await result.current.startMetronome();
+    });
+
+    expect(scheduler.schedule).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      scheduler.options.onComplete();
+      await Promise.resolve();
+    });
+
+    expect(service.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets bar count-in win when both pre-start modes are provided", async () => {
+    const service = createTransportService();
+    const barScheduler = createDeferredBarCountInScheduler();
+    const genericScheduler = createDeferredPreStartCountdownScheduler();
+    const { result } = renderHook(() =>
+      useMetronomeTransport({
+        settings: DEFAULT_METRONOME_SETTINGS,
+        metronomeService: service,
+        barCountIn: {
+          enabled: true,
+          plan: createBarCountInPlan(),
+          schedule: barScheduler.schedule
+        },
+        preStartCountdown: {
+          enabled: true,
+          plan: createPreStartCountdownPlan(),
+          schedule: genericScheduler.schedule
+        }
+      })
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+    });
+
+    expect(barScheduler.schedule).toHaveBeenCalledTimes(1);
+    expect(genericScheduler.schedule).not.toHaveBeenCalled();
+    expect(result.current.transportState).toBe("counting");
+  });
+
+  it("falls back to fixed countdown when generic pre-start countdown is disabled", async () => {
+    vi.useFakeTimers();
+
+    const service = createTransportService();
+    const scheduler = createDeferredPreStartCountdownScheduler();
+    const { result } = renderHook(() =>
+      useMetronomeTransport({
+        settings: {
+          ...DEFAULT_METRONOME_SETTINGS,
+          bpm: 120,
+          countdownBeats: 2
+        },
+        metronomeService: service,
+        preStartCountdown: {
+          enabled: false,
+          plan: createPreStartCountdownPlan(),
+          schedule: scheduler.schedule
+        }
+      })
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+    });
+
+    expect(scheduler.schedule).not.toHaveBeenCalled();
+    expect(result.current.transportState).toBe("counting");
+    expect(result.current.countdownRemaining).toBe(2);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+
+    expect(service.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        countdownBeats: 2
+      })
+    );
+  });
+
+  it("falls back to fixed countdown when generic pre-start countdown plan is null", async () => {
+    vi.useFakeTimers();
+
+    const service = createTransportService();
+    const scheduler = createDeferredPreStartCountdownScheduler();
+    const { result } = renderHook(() =>
+      useMetronomeTransport({
+        settings: {
+          ...DEFAULT_METRONOME_SETTINGS,
+          bpm: 120,
+          countdownBeats: 2
+        },
+        metronomeService: service,
+        preStartCountdown: {
+          plan: null,
+          schedule: scheduler.schedule
+        }
+      })
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+    });
+
+    expect(scheduler.schedule).not.toHaveBeenCalled();
+    expect(result.current.transportState).toBe("counting");
+    expect(result.current.countdownRemaining).toBe(2);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+
+    expect(service.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        countdownBeats: 2
+      })
+    );
   });
 
   it("cancels bar count-in without starting playback when stopped", async () => {

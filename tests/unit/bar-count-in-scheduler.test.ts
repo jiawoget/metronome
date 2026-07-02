@@ -160,6 +160,58 @@ describe("bar count-in scheduler", () => {
     scheduled.cancel();
   });
 
+  it("preserves bar count-in presentation metadata on wrapper ticks", async () => {
+    vi.useFakeTimers();
+
+    const onTick = vi.fn();
+
+    scheduleBarCountIn({
+      plan: buildReadyPlan({
+        beats: [
+          {
+            count: 1,
+            sourceMeasureNumber: 4,
+            isPreRoll: false,
+            beatNumber: 1,
+            offsetMs: -1_000,
+            durationMs: 500,
+            startsAtMs: 7_000
+          },
+          {
+            count: 2,
+            sourceMeasureNumber: null,
+            isPreRoll: true,
+            beatNumber: 2,
+            offsetMs: -500,
+            durationMs: 500,
+            startsAtMs: -500
+          }
+        ],
+        beatCount: 2,
+        totalDurationMs: 1_000
+      }),
+      onTick,
+      onComplete: vi.fn()
+    });
+
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(onTick).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        sourceMeasureNumber: 4,
+        isPreRoll: false
+      })
+    );
+    expect(onTick).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        sourceMeasureNumber: null,
+        isPreRoll: true
+      })
+    );
+  });
+
   it("cancel clears pending timers and prevents future ticks and completion", async () => {
     vi.useFakeTimers();
 
