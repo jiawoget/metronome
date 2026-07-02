@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createSheetRecordingSegmentContext,
+  getSegmentTempoApplyPolicy,
+  type PracticeSegment,
   type PracticeSession,
   type SheetRecordingMetadata,
   type SheetRecordingSegmentContext
@@ -20,8 +22,12 @@ import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { createBrowserSheetRecordingService } from "@/services/recording/browser";
 import { browserMeasureGridService } from "@/infrastructure/db/browser-measure-grid-service";
 import { MeasureGridCalibrationPanel } from "@/components/sheet-practice/measure-grid/measure-grid-calibration-panel";
-import { PracticeSegmentSelectorPanel } from "@/components/sheet-practice/segments/practice-segment-selector-panel";
+import {
+  PracticeSegmentSelectorPanel,
+  type PracticeSegmentSelection
+} from "@/components/sheet-practice/segments/practice-segment-selector-panel";
 import { MetronomeSettingsPanel } from "@/components/sheet-practice/controls/metronome-settings-panel";
+import { SegmentTempoApplyControl } from "@/components/sheet-practice/controls/segment-tempo-apply-control";
 import {
   createSheetPracticeControlInitialState,
   formatUnsupportedTimeSignatureMessage
@@ -171,6 +177,8 @@ export function SheetPracticeControls({
   const [latestSheetRecording, setLatestSheetRecording] =
     useState<ReviewRecording | null>(null);
   const [measureGridRevision, setMeasureGridRevision] = useState(0);
+  const [selectedTempoSegment, setSelectedTempoSegment] =
+    useState<PracticeSegment | null>(null);
   const [message, setMessage] = useState(
     "Ready. Viewing the sheet has not started practice."
   );
@@ -232,6 +240,44 @@ export function SheetPracticeControls({
         initialState.unsupportedTimeSignature
       )
     : null;
+  const scopedSelectedTempoSegment =
+    selectedTempoSegment?.sheetId === sheetId ? selectedTempoSegment : null;
+  const segmentTempoPolicy = useMemo(
+    () =>
+      getSegmentTempoApplyPolicy({
+        currentBpm: settings.bpm,
+        segment: scopedSelectedTempoSegment
+      }),
+    [scopedSelectedTempoSegment, settings.bpm]
+  );
+
+  const handleSelectedSegmentChange = useCallback(
+    (selection: PracticeSegmentSelection) => {
+      if (
+        selection.sheetId !== sheetId ||
+        (selection.segment !== null && selection.segment.sheetId !== sheetId)
+      ) {
+        setSelectedTempoSegment(null);
+        return;
+      }
+
+      setSelectedTempoSegment(selection.segment);
+    },
+    [sheetId]
+  );
+
+  const handleApplySegmentTempo = useCallback(() => {
+    const policy = getSegmentTempoApplyPolicy({
+      currentBpm: settings.bpm,
+      segment: scopedSelectedTempoSegment
+    });
+
+    if (policy.status !== "applied") {
+      return;
+    }
+
+    updateSettings({ bpm: policy.nextBpm });
+  }, [scopedSelectedTempoSegment, settings.bpm, updateSettings]);
 
   const refreshSession = useCallback(async () => {
     const recentSession = await sessionService.getRecentSheetSession(sheetId);
@@ -909,6 +955,12 @@ export function SheetPracticeControls({
           commitBpmInput={commitBpmInput}
           stepBpmInput={stepBpmInput}
           updateSettings={updateSettings}
+          bpmAccessory={
+            <SegmentTempoApplyControl
+              policy={segmentTempoPolicy}
+              onApply={handleApplySegmentTempo}
+            />
+          }
         />
 
         <TransportActionsPanel
@@ -940,6 +992,7 @@ export function SheetPracticeControls({
           practiceSegmentService={practiceSegmentService}
           measureGridService={measureGridService}
           measureGridRevision={measureGridRevision}
+          onSelectedSegmentChange={handleSelectedSegmentChange}
         />
         <MeasureGridCalibrationPanel
           sheetId={sheetId}

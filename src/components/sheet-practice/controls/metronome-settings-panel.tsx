@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Activity, ChevronDown, ChevronUp, Circle } from "lucide-react";
 
 import {
@@ -43,6 +44,7 @@ type MetronomeSettingsPanelProps = {
   bpmInputId?: string;
   className?: string;
   layout?: "sheet" | "stacked";
+  bpmAccessory?: ReactNode;
   onTapTempo?: () => void;
   setBpmDraft: (value: string) => void;
   commitBpmInput: () => void;
@@ -58,6 +60,7 @@ export function MetronomeSettingsPanel({
   bpmInputId = "sheet-bpm",
   className,
   layout = "sheet",
+  bpmAccessory,
   onTapTempo,
   setBpmDraft,
   commitBpmInput,
@@ -139,6 +142,7 @@ export function MetronomeSettingsPanel({
             Tick interval {Math.round(getTickIntervalMs(settings))} ms.
           </p>
         </div>
+        {bpmAccessory}
       </div>
 
       {unsupportedTimeSignatureMessage ? (

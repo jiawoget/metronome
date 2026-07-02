@@ -49,7 +49,7 @@ async function createPracticeSegmentThroughUi(page: Page, name: string) {
   await page.getByLabel("Segment name").fill(name);
   await page.getByLabel("Start measure").fill("5");
   await page.getByLabel("End measure").fill("12");
-  await page.getByLabel("Target BPM").fill("96");
+  await page.getByRole("spinbutton", { name: "Target BPM" }).fill("96");
   await page.getByLabel("Segment notes").fill("Return target.");
   await page.getByRole("button", { name: "Save segment" }).click();
   await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");

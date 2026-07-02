@@ -17,12 +17,18 @@ import type { MeasureGridService } from "@/services/measure-grid";
 import { useSheetPracticeRecordingWorkflowStore } from "@/stores/sheet-practice-recording-workflow-store";
 import { Button } from "@/components/ui/button";
 
+export type PracticeSegmentSelection = {
+  sheetId: string;
+  segment: PracticeSegment | null;
+};
+
 export type PracticeSegmentSelectorPanelProps = {
   sheetId: string;
   initialSegmentId?: string | null;
   practiceSegmentService?: PracticeSegmentService;
   measureGridService?: MeasureGridService;
   measureGridRevision?: number;
+  onSelectedSegmentChange?: (selection: PracticeSegmentSelection) => void;
 };
 
 type LoadState = "loading" | "ready" | "error";
@@ -250,7 +256,8 @@ export function PracticeSegmentSelectorPanel({
   initialSegmentId = null,
   practiceSegmentService = browserPracticeSegmentService,
   measureGridService = browserMeasureGridService,
-  measureGridRevision = 0
+  measureGridRevision = 0,
+  onSelectedSegmentChange
 }: PracticeSegmentSelectorPanelProps) {
   const idPrefix = useId();
   const resetRecordingWorkflowForSheet = useSheetPracticeRecordingWorkflowStore(
@@ -427,6 +434,10 @@ export function PracticeSegmentSelectorPanel({
     () => effectiveSegments.find((segment) => segment.id === selectedSegmentId) ?? null,
     [effectiveSegments, selectedSegmentId]
   );
+  const selectedSegmentForNotification =
+    effectiveLoadState === "ready" && selectedSegment?.sheetId === sheetId
+      ? selectedSegment
+      : null;
   const hasCurrentGrid = effectiveLoadState === "ready" && effectiveGridLoadState === "ready" && effectiveGrid !== null;
   const isMutating = mutationState !== "idle";
   const canOpenCreate = effectiveLoadState === "ready" && hasCurrentGrid && !isMutating;
@@ -446,6 +457,24 @@ export function PracticeSegmentSelectorPanel({
     mutationState === "idle" &&
     hasCurrentGrid &&
     editorValidation?.segmentFields !== null;
+
+  useEffect(() => {
+    if (!onSelectedSegmentChange || currentSheetIdRef.current !== sheetId) {
+      return;
+    }
+
+    onSelectedSegmentChange({
+      sheetId,
+      segment: selectedSegmentForNotification
+    });
+  }, [
+    effectiveLoadState,
+    effectiveSegments.length,
+    isLoadedSheet,
+    onSelectedSegmentChange,
+    selectedSegmentForNotification,
+    sheetId
+  ]);
 
   async function refreshSegmentListAfterMutation(targetSheetId: string) {
     const nextSegments = await practiceSegmentService.listSegments(targetSheetId);

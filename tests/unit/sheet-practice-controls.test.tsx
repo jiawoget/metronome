@@ -1,6 +1,7 @@
-import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactElement } from "react";
 
 import {
   createSheetPracticeControlInitialState,
@@ -37,7 +38,34 @@ import {
   useSheetPracticeRecordingWorkflowStore
 } from "@/stores/sheet-practice-recording-workflow-store";
 import type { SheetPracticeRecordingService } from "@/components/sheet-practice/controls/types";
+import type { PracticeSegmentSelectorPanelProps } from "@/components/sheet-practice/segments/practice-segment-selector-panel";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
+
+const practiceSegmentSelectorPanelMock = vi.hoisted(() => ({
+  implementation: null as
+    | ((props: PracticeSegmentSelectorPanelProps) => ReactElement)
+    | null
+}));
+
+vi.mock("@/components/sheet-practice/segments/practice-segment-selector-panel", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/components/sheet-practice/segments/practice-segment-selector-panel")>();
+
+  return {
+    ...actual,
+    PracticeSegmentSelectorPanel: (props: PracticeSegmentSelectorPanelProps) => {
+      const MockImplementation = practiceSegmentSelectorPanelMock.implementation;
+
+      if (MockImplementation) {
+        return <MockImplementation {...props} />;
+      }
+
+      const ActualPracticeSegmentSelectorPanel = actual.PracticeSegmentSelectorPanel;
+
+      return <ActualPracticeSegmentSelectorPanel {...props} />;
+    }
+  };
+});
 
 function expectNoCaptureKind(
   captureSessionEvent: { mock: { calls: unknown[][] } },
@@ -197,6 +225,17 @@ function createPracticeSegmentService(segments: PracticeSegment[] = []) {
     deleteSegment: vi.fn(async (sheetId, segmentId) => {
       segmentsBySheet.get(sheetId)?.delete(segmentId);
     })
+  } satisfies PracticeSegmentService;
+}
+
+function createRejectingPracticeSegmentService(message = "Practice segments could not be loaded.") {
+  return {
+    listSegments: vi.fn(async () => {
+      throw new Error(message);
+    }),
+    getSegment: vi.fn(async () => null),
+    saveSegment: vi.fn(async (segment: PracticeSegment) => segment),
+    deleteSegment: vi.fn(async () => undefined)
   } satisfies PracticeSegmentService;
 }
 
@@ -1339,6 +1378,12 @@ describe("sheet practice controls segment recording context", () => {
       pickupBeats: 0,
       measureOneOffsetMs: 1_000
     };
+    const validSegment = createTestSegment({
+      id: "segment-invalid",
+      name: "Invalid timing",
+      targetBpm: 96,
+      grid: createPracticeSegmentGridAssociation(grid)
+    });
     const invalidSegment = {
       id: "segment-invalid",
       sheetId: "sheet-alpha",
@@ -1360,7 +1405,10 @@ describe("sheet practice controls segment recording context", () => {
       ensureSheetSession: vi.fn(async () => session),
       getRecentSheetSession: vi.fn(async () => session)
     };
-    const segmentService = createPracticeSegmentService([invalidSegment]);
+    const segmentService = {
+      ...createPracticeSegmentService([validSegment]),
+      getSegment: vi.fn(async () => invalidSegment)
+    };
     const recordingService = createInspectableSheetRecordingService();
 
     render(
@@ -1579,7 +1627,428 @@ describe("sheet practice controls segment recording context", () => {
 
 describe("sheet practice controls state", () => {
   beforeEach(() => {
+    practiceSegmentSelectorPanelMock.implementation = null;
     resetRecordingWorkflowStore();
+  });
+
+  describe("segment tempo apply UI", () => {
+    function renderControls({
+      defaultBpm = 72,
+      practiceSegmentService = createPracticeSegmentService(),
+      sessionService = createIdleSessionService(),
+      returnSegmentId = null,
+      sheetId = "sheet-alpha"
+    }: {
+      defaultBpm?: number;
+      practiceSegmentService?: PracticeSegmentService;
+      sessionService?: ReturnType<typeof createIdleSessionService>;
+      returnSegmentId?: string | null;
+      sheetId?: string;
+    } = {}) {
+      return render(
+        <SheetPracticeControls
+          sheetId={sheetId}
+          sheetName="Alpha"
+          defaultBpm={defaultBpm}
+          defaultTimeSignature="4/4"
+          returnSegmentId={returnSegmentId}
+          sessionService={sessionService}
+          measureGridService={createMeasureGridService(createTestGrid())}
+          practiceSegmentService={practiceSegmentService}
+        />
+      );
+    }
+
+    async function selectSegment(segmentId: string) {
+      await waitFor(() => {
+        expect(screen.getByTestId(`practice-segment-row-${segmentId}`)).toBeVisible();
+      });
+      await userEvent.click(screen.getByTestId(`practice-segment-row-${segmentId}`));
+    }
+
+    function expectApplyTargetBpmUnavailable() {
+      const applyButton = screen.queryByRole("button", {
+        name: /Apply target BPM/i
+      });
+
+      if (applyButton) {
+        expect(applyButton).toBeDisabled();
+      } else {
+        expect(applyButton).not.toBeInTheDocument();
+      }
+    }
+
+    it("applies a selected target BPM through the existing settings path without creating a session", async () => {
+      const user = userEvent.setup();
+      const sessionService = createIdleSessionService();
+      const segment = createTestSegment({
+        id: "segment-target",
+        name: "Target tempo",
+        targetBpm: 96
+      });
+
+      renderControls({
+        defaultBpm: 72,
+        practiceSegmentService: createPracticeSegmentService([segment]),
+        sessionService
+      });
+
+      await selectSegment("segment-target");
+      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+
+      await user.click(screen.getByRole("button", { name: /Apply target BPM/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(96);
+      });
+      expect(screen.getByText(/Tick interval 625 ms/i)).toBeVisible();
+      expect(screen.getByText(/Target already applied/i)).toBeVisible();
+      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeDisabled();
+      expect(sessionService.ensureSheetSession).not.toHaveBeenCalled();
+      expect(sessionService.captureSessionEvent).not.toHaveBeenCalled();
+    });
+
+    it("keeps no-segment, no-target, and already-applied states neutral or disabled", async () => {
+      const noTargetSegment = createTestSegment({
+        id: "segment-no-target",
+        name: "No target",
+        targetBpm: null
+      });
+      const alreadyAppliedSegment = createTestSegment({
+        id: "segment-already",
+        name: "Already applied",
+        targetBpm: 96
+      });
+
+      renderControls({
+        defaultBpm: 96,
+        practiceSegmentService: createPracticeSegmentService([
+          noTargetSegment,
+          alreadyAppliedSegment
+        ])
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+      });
+      expectApplyTargetBpmUnavailable();
+
+      await selectSegment("segment-no-target");
+      expect(screen.getAllByText(/No target BPM/i)[0]).toBeVisible();
+      expectApplyTargetBpmUnavailable();
+      expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(96);
+
+      await selectSegment("segment-already");
+      expect(screen.getByText(/Target already applied/i)).toBeVisible();
+      expectApplyTargetBpmUnavailable();
+      expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(96);
+    });
+
+    it("uses the P4-01 clamp result for 300 BPM targets and treats 240 as already applied", async () => {
+      const user = userEvent.setup();
+      const highTargetSegment = createTestSegment({
+        id: "segment-300",
+        name: "Fast target",
+        targetBpm: 300
+      });
+
+      renderControls({
+        defaultBpm: 120,
+        practiceSegmentService: createPracticeSegmentService([highTargetSegment])
+      });
+
+      await selectSegment("segment-300");
+      await user.click(screen.getByRole("button", { name: /Apply target BPM/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(240);
+      });
+      expect(screen.getByText(/Target already applied/i)).toBeVisible();
+      expect(screen.getByText(/Tick interval 250 ms/i)).toBeVisible();
+    });
+
+    it("does not enable apply for a 300 BPM target when committed BPM is already 240", async () => {
+      const highTargetSegment = createTestSegment({
+        id: "segment-300",
+        name: "Fast target",
+        targetBpm: 300
+      });
+
+      renderControls({
+        defaultBpm: 240,
+        practiceSegmentService: createPracticeSegmentService([highTargetSegment])
+      });
+
+      await selectSegment("segment-300");
+
+      expect(screen.getByText(/Target already applied/i)).toBeVisible();
+      expectApplyTargetBpmUnavailable();
+      expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(240);
+    });
+
+    it("updates target state when selection changes", async () => {
+      const user = userEvent.setup();
+      const opening = createTestSegment({
+        id: "segment-opening",
+        name: "Opening",
+        targetBpm: 96
+      });
+      const bridge = createTestSegment({
+        id: "segment-bridge",
+        name: "Bridge",
+        targetBpm: 108
+      });
+
+      renderControls({
+        defaultBpm: 72,
+        practiceSegmentService: createPracticeSegmentService([opening, bridge])
+      });
+
+      await selectSegment("segment-opening");
+      expect(screen.getAllByText(/Target 96 BPM/i)[0]).toBeVisible();
+      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+
+      await selectSegment("segment-bridge");
+      expect(screen.getAllByText(/Target 108 BPM/i)[0]).toBeVisible();
+      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+
+      await user.click(screen.getByRole("button", { name: /Apply target BPM/i }));
+      await waitFor(() => {
+        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(108);
+      });
+    });
+
+    it("clears the apply state when the selected segment is deleted", async () => {
+      const user = userEvent.setup();
+      const segment = createTestSegment({
+        id: "segment-delete",
+        name: "Delete me",
+        targetBpm: 96
+      });
+
+      renderControls({
+        defaultBpm: 72,
+        practiceSegmentService: createPracticeSegmentService([segment])
+      });
+
+      await selectSegment("segment-delete");
+      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+
+      await user.click(screen.getByRole("button", { name: "Delete Delete me" }));
+      await user.click(screen.getByRole("button", { name: "Confirm delete Delete me" }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("practice-segment-empty-state")).toBeVisible();
+      });
+      expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+      expectApplyTargetBpmUnavailable();
+      expect(screen.queryByText(/Target 96 BPM/i)).not.toBeInTheDocument();
+    });
+
+    it("refreshes selected target BPM after editing without a reload", async () => {
+      const user = userEvent.setup();
+      const segment = createTestSegment({
+        id: "segment-edit",
+        name: "Editable target",
+        targetBpm: 96
+      });
+
+      renderControls({
+        defaultBpm: 72,
+        practiceSegmentService: createPracticeSegmentService([segment])
+      });
+
+      await selectSegment("segment-edit");
+      expect(screen.getAllByText(/Target 96 BPM/i)[0]).toBeVisible();
+
+      await user.click(screen.getByRole("button", { name: "Edit Editable target" }));
+      await user.clear(screen.getByLabelText("Target BPM"));
+      await user.type(screen.getByLabelText("Target BPM"), "108");
+      await user.click(screen.getByRole("button", { name: "Save segment" }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Target 108 BPM/i)[0]).toBeVisible();
+      });
+      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+
+      await user.click(screen.getByRole("button", { name: /Apply target BPM/i }));
+      await waitFor(() => {
+        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(108);
+      });
+    });
+
+    it("ignores stale or mismatched sheet selection and keeps the selector state honest", async () => {
+      const foreignSegment = createTestSegment({
+        id: "segment-foreign",
+        sheetId: "sheet-beta",
+        name: "Foreign segment",
+        targetBpm: 96
+      });
+
+      renderControls({
+        defaultBpm: 72,
+        returnSegmentId: "segment-foreign",
+        practiceSegmentService: createPracticeSegmentService([foreignSegment])
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("practice-segment-return-status")).toHaveTextContent(
+          "Saved segment is no longer available"
+        );
+      });
+      expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+      expectApplyTargetBpmUnavailable();
+      expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(72);
+    });
+
+    it("clears parent tempo state when the selector emits a stale previous-sheet callback", async () => {
+      const user = userEvent.setup();
+      const currentSheetSegment = createTestSegment({
+        id: "segment-current",
+        name: "Current selection",
+        targetBpm: 96
+      });
+      const staleCallbackSegment = createTestSegment({
+        id: "segment-stale",
+        name: "Stale callback",
+        targetBpm: 108
+      });
+
+      practiceSegmentSelectorPanelMock.implementation = ({
+        sheetId,
+        onSelectedSegmentChange
+      }) => (
+        <section data-testid="mock-practice-segment-selector">
+          <button
+            type="button"
+            onClick={() =>
+              onSelectedSegmentChange?.({
+                sheetId,
+                segment: currentSheetSegment
+              })
+            }
+          >
+            Emit current selection
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              onSelectedSegmentChange?.({
+                sheetId: "sheet-previous",
+                segment: staleCallbackSegment
+              })
+            }
+          >
+            Emit stale sheet selection
+          </button>
+        </section>
+      );
+
+      renderControls({
+        defaultBpm: 72,
+        practiceSegmentService: createPracticeSegmentService([currentSheetSegment])
+      });
+
+      await user.click(screen.getByRole("button", { name: "Emit current selection" }));
+      expect(screen.getByText(/Target 96 BPM/i)).toBeVisible();
+      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+
+      await user.click(screen.getByRole("button", { name: "Emit stale sheet selection" }));
+
+      expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+      expectApplyTargetBpmUnavailable();
+      expect(screen.queryByText(/Target 108 BPM/i)).not.toBeInTheDocument();
+      expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(72);
+    });
+
+    it("clears parent tempo state on segment load failure and empty reload while preserving selector UI", async () => {
+      const segment = createTestSegment({
+        id: "segment-clear",
+        name: "Clearable target",
+        targetBpm: 96
+      });
+      const { rerender } = renderControls({
+        defaultBpm: 72,
+        practiceSegmentService: createPracticeSegmentService([segment])
+      });
+
+      await selectSegment("segment-clear");
+      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+
+      rerender(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={72}
+          defaultTimeSignature="4/4"
+          sessionService={createIdleSessionService()}
+          measureGridService={createMeasureGridService(createTestGrid())}
+          practiceSegmentService={createRejectingPracticeSegmentService("Segments unavailable")}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("Unavailable");
+      });
+      expect(screen.getByRole("alert")).toHaveTextContent("Segments unavailable");
+      expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+      expectApplyTargetBpmUnavailable();
+
+      rerender(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={72}
+          defaultTimeSignature="4/4"
+          sessionService={createIdleSessionService()}
+          measureGridService={createMeasureGridService(createTestGrid())}
+          practiceSegmentService={createPracticeSegmentService()}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("practice-segment-empty-state")).toBeVisible();
+      });
+      expect(screen.getByTestId("practice-segment-selector-panel")).toBeVisible();
+      expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+      expectApplyTargetBpmUnavailable();
+    });
+
+    it("applies from committed BPM settings instead of an uncommitted BPM draft", async () => {
+      const targetSegment = createTestSegment({
+        id: "segment-draft",
+        name: "Draft target",
+        targetBpm: 240
+      });
+
+      renderControls({
+        defaultBpm: 120,
+        practiceSegmentService: createPracticeSegmentService([targetSegment])
+      });
+
+      await selectSegment("segment-draft");
+      const bpmInput = screen.getByRole("spinbutton", { name: "BPM" });
+      const blurListener = vi.fn();
+      const keyDownListener = vi.fn();
+
+      bpmInput.addEventListener("blur", blurListener);
+      bpmInput.addEventListener("keydown", keyDownListener);
+
+      fireEvent.change(bpmInput, { target: { value: "240" } });
+
+      expect(bpmInput).toHaveValue(240);
+      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+
+      fireEvent.click(screen.getByRole("button", { name: /Apply target BPM/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(240);
+      });
+      expect(screen.getByText(/Target already applied/i)).toBeVisible();
+      expect(screen.getByText(/Tick interval 250 ms/i)).toBeVisible();
+      expect(blurListener).not.toHaveBeenCalled();
+      expect(keyDownListener).not.toHaveBeenCalled();
+    });
   });
 
   it("initializes metronome settings from sheet defaults", () => {

@@ -97,7 +97,7 @@ async function createSelectedSegment(page: Page) {
   await page.getByLabel("Segment name").fill("Opening focus");
   await page.getByLabel("Start measure").fill("5");
   await page.getByLabel("End measure").fill("12");
-  await page.getByLabel("Target BPM").fill("96");
+  await page.getByRole("spinbutton", { name: "Target BPM" }).fill("96");
   await page.getByLabel("Segment notes").fill("Keep it even.");
   await page.getByRole("button", { name: "Save segment" }).click();
   await expect(
@@ -110,7 +110,7 @@ async function renameSelectedSegmentBeforeRecording(page: Page) {
   await page.getByLabel("Segment name").fill("Renamed focus");
   await page.getByLabel("Start measure").fill("6");
   await page.getByLabel("End measure").fill("10");
-  await page.getByLabel("Target BPM").fill("104");
+  await page.getByRole("spinbutton", { name: "Target BPM" }).fill("104");
   await page.getByLabel("Segment notes").fill("Edited before recording.");
   await page.getByRole("button", { name: "Save segment" }).click();
   await expect(
