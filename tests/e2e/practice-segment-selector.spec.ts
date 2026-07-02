@@ -5,6 +5,7 @@ import {
   MEASURE_GRID_DB_NAME,
   PRACTICE_SEGMENT_DB_NAME,
   PRACTICE_SESSION_DB_NAME,
+  readPracticeSnapshot,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
@@ -52,7 +53,7 @@ async function fillSegmentEditor(
   await page.getByLabel("Segment name").fill(name);
   await page.getByLabel("Start measure").fill(String(startMeasure));
   await page.getByLabel("End measure").fill(String(endMeasure));
-  await page.getByLabel("Target BPM").fill(targetBpm === null ? "" : String(targetBpm));
+  await page.getByRole("spinbutton", { name: "Target BPM" }).fill(targetBpm === null ? "" : String(targetBpm));
   await page.getByLabel("Segment notes").fill(notes);
 }
 
@@ -87,6 +88,30 @@ async function expectPracticeWorkspaceUsable(page: Page) {
   expect(boxes?.controlsTop).toBeLessThan((boxes?.viewportHeight ?? 0) - 48);
   expect(boxes?.selectorLeft).toBeGreaterThanOrEqual(0);
   expect(boxes?.selectorRight).toBeLessThanOrEqual((boxes?.viewportWidth ?? 0) + 1);
+}
+
+async function expectSegmentTempoApplyUiUsable(page: Page) {
+  await expectPracticeWorkspaceUsable(page);
+  await page.getByRole("spinbutton", { name: "BPM", exact: true }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole("spinbutton", { name: "BPM", exact: true })).toBeVisible();
+  const bpmBox = await page.getByRole("spinbutton", { name: "BPM", exact: true }).boundingBox();
+
+  expect(bpmBox).not.toBeNull();
+  expect(bpmBox?.x).toBeGreaterThanOrEqual(0);
+  expect((bpmBox?.x ?? 0) + (bpmBox?.width ?? 0)).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+  expect(bpmBox?.y).toBeGreaterThanOrEqual(0);
+  expect((bpmBox?.y ?? 0) + (bpmBox?.height ?? 0)).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+
+  await page.getByRole("button", { name: /Apply target BPM/i }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole("button", { name: /Apply target BPM/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+  const applyBox = await page.getByRole("button", { name: /Apply target BPM/i }).boundingBox();
+
+  expect(applyBox).not.toBeNull();
+  expect(applyBox?.x).toBeGreaterThanOrEqual(0);
+  expect((applyBox?.x ?? 0) + (applyBox?.width ?? 0)).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+  expect(applyBox?.y).toBeGreaterThanOrEqual(0);
+  expect((applyBox?.y ?? 0) + (applyBox?.height ?? 0)).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
 }
 
 test("practice segment selector creates, edits, deletes, reloads, scopes by sheet, and stays responsive", async ({ page }) => {
@@ -230,5 +255,83 @@ test("practice segment selector creates, edits, deletes, reloads, scopes by shee
     await expectPracticeWorkspaceUsable(page);
   }
 
+  expect(consoleErrors).toEqual([]);
+});
+
+test("segment target BPM apply updates sheet BPM without stale reload state or session creation", async ({ page }) => {
+  const consoleErrors: string[] = [];
+  const currentGrid: SeedMeasureGrid = {
+    bpm: 96,
+    timeSignature: "4/4",
+    pickupBeats: 0,
+    measureOneOffsetMs: 1_000
+  };
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await clearState(page);
+  const sheet = await importTestSheet(page, {
+    name: "Segment Tempo Apply Sheet",
+    bpm: 72
+  });
+
+  await page.goto(`/sheet-practice/${sheet.sheetId}`);
+  await expect(page.getByRole("heading", { name: "Segment Tempo Apply Sheet" })).toBeVisible();
+  await saveMeasureGridThroughUi(page, currentGrid);
+
+  await page.getByRole("button", { name: "New segment" }).click();
+  await fillSegmentEditor(page, {
+    name: "Tempo target",
+    startMeasure: 1,
+    endMeasure: 4,
+    targetBpm: 96,
+    notes: "Apply target before starting practice."
+  });
+  await page.getByRole("button", { name: "Save segment" }).click();
+
+  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Tempo target");
+  await expect(page.getByRole("spinbutton", { name: "BPM", exact: true })).toHaveValue("72");
+  await expect(page.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+
+  for (const viewport of [
+    { width: 1280, height: 820 },
+    { width: 1024, height: 768 },
+    { width: 390, height: 844 }
+  ]) {
+    await page.setViewportSize(viewport);
+    await expectSegmentTempoApplyUiUsable(page);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.getByRole("button", { name: /Apply target BPM/i }).click();
+  await expect(page.getByRole("spinbutton", { name: "BPM", exact: true })).toHaveValue("96");
+  await expect(page.getByText(/Target already applied/i)).toBeVisible();
+
+  let snapshot = await readPracticeSnapshot(page);
+
+  expect(snapshot.sessions).toEqual([]);
+
+  await page.reload();
+  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");
+  await expect(page.getByText("Tempo target").first()).toBeVisible();
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Choose a segment");
+  await expect(page.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Apply target BPM/i })).toBeDisabled();
+
+  await page.getByRole("button", { name: /Tempo target.*Measures 1-4/ }).click();
+  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Tempo target");
+  await expect(page.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+
+  snapshot = await readPracticeSnapshot(page);
+  expect(snapshot.sessions).toEqual([]);
   expect(consoleErrors).toEqual([]);
 });
