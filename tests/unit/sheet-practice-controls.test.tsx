@@ -173,6 +173,15 @@ function createMeasureGridService(grid: MeasureGrid | null = null) {
   } satisfies MeasureGridService;
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolver) => {
+    resolve = resolver;
+  });
+
+  return { promise, resolve };
+}
+
 function createTestGrid(overrides: Partial<MeasureGrid> = {}): MeasureGrid {
   return {
     bpm: 96,
@@ -2320,6 +2329,7 @@ describe("sheet practice controls metronome reuse", () => {
 
 describe("SheetPracticeControls failure handling", () => {
   beforeEach(() => {
+    practiceSegmentSelectorPanelMock.implementation = null;
     resetRecordingWorkflowStore();
   });
 
@@ -2368,6 +2378,245 @@ describe("SheetPracticeControls failure handling", () => {
       isPlaying: () => playing
     };
   }
+
+  it("prepares a selected-segment bar count-in plan before handing off to transport", async () => {
+    const user = userEvent.setup();
+    const grid = createTestGrid({
+      bpm: 120,
+      measureOneOffsetMs: 0
+    });
+    const segment = createTestSegment({
+      grid: createPracticeSegmentGridAssociation(grid)
+    });
+    const measureGridService = createMeasureGridService(grid);
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => createSheetSession())
+    };
+    const metronome = createInspectableMetronomeService();
+    const onPlanPrepared = vi.fn();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={120}
+        defaultTimeSignature="4/4"
+        createMetronomeService={() => metronome.service}
+        sessionService={sessionService}
+        measureGridService={measureGridService}
+        practiceSegmentService={createPracticeSegmentService([segment])}
+        barCountIn={{
+          enabled: true,
+          countInMeasures: 1,
+          onPlanPrepared
+        }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+    });
+    await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+    await waitFor(() => {
+      expect(onPlanPrepared).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "ready",
+          scope: "selected-segment",
+          startMeasure: 5,
+          segmentId: "segment-alpha",
+          beatCount: 4,
+          totalDurationMs: 2_000
+        })
+      );
+    });
+
+    expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Counting");
+    expect(metronome.service.start).not.toHaveBeenCalled();
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "metronome_started"
+    );
+  });
+
+  it("ignores repeated bar count-in starts while measure-grid loading is pending", async () => {
+    vi.useFakeTimers();
+
+    const grid = createTestGrid({
+      bpm: 120,
+      measureOneOffsetMs: 0
+    });
+    const gridLoad = createDeferred<MeasureGrid | null>();
+    const measureGridService = {
+      getGrid: vi.fn(() => gridLoad.promise),
+      saveGrid: vi.fn(async (_sheetId: string, nextGrid: MeasureGrid) => nextGrid),
+      clearGrid: vi.fn(async () => undefined)
+    } satisfies MeasureGridService;
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => createSheetSession())
+    };
+    const metronome = createInspectableMetronomeService();
+    const onPlanPrepared = vi.fn();
+
+    try {
+      render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={120}
+          defaultTimeSignature="4/4"
+          createMetronomeService={() => metronome.service}
+          sessionService={sessionService}
+          measureGridService={measureGridService}
+          barCountIn={{
+            enabled: true,
+            countInMeasures: 1,
+            onPlanPrepared
+          }}
+        />
+      );
+
+      const gridLoadCallsBeforeStart = measureGridService.getGrid.mock.calls.length;
+
+      fireEvent.click(screen.getByRole("button", { name: "Start metronome" }));
+      fireEvent.click(screen.getByRole("button", { name: "Start metronome" }));
+
+      expect(measureGridService.getGrid).toHaveBeenCalledTimes(
+        gridLoadCallsBeforeStart + 1
+      );
+      expect(onPlanPrepared).not.toHaveBeenCalled();
+
+      await act(async () => {
+        gridLoad.resolve(grid);
+        await gridLoad.promise;
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(onPlanPrepared).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Counting");
+      expect(metronome.service.start).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_000);
+        await Promise.resolve();
+      });
+
+      expect(metronome.service.start).toHaveBeenCalledTimes(1);
+      expect(sessionService.ensureSheetSession).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("blocks bar count-in starts when the current measure grid is missing", async () => {
+    const user = userEvent.setup();
+    const measureGridService = createMeasureGridService(null);
+    const sessionService = createIdleSessionService();
+    const metronome = createInspectableMetronomeService();
+    const onPlanBlocked = vi.fn();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={120}
+        defaultTimeSignature="4/4"
+        createMetronomeService={() => metronome.service}
+        sessionService={sessionService}
+        measureGridService={measureGridService}
+        barCountIn={{
+          enabled: true,
+          countInMeasures: 1,
+          onPlanBlocked
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+    await waitFor(() => {
+      expect(onPlanBlocked).toHaveBeenCalledWith({
+        reason: "no-measure-grid",
+        message: "Save a measure grid before starting bar count-in."
+      });
+    });
+
+    expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
+    expect(metronome.service.start).not.toHaveBeenCalled();
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "metronome_started"
+    );
+  });
+
+  it("blocks stale selected-segment bar count-in plans without falling back to playback", async () => {
+    const user = userEvent.setup();
+    const currentGrid = createTestGrid({
+      bpm: 120,
+      measureOneOffsetMs: 0
+    });
+    const staleSegment = createTestSegment({
+      grid: createPracticeSegmentGridAssociation(
+        createTestGrid({
+          bpm: 96,
+          measureOneOffsetMs: 0
+        })
+      )
+    });
+    const sessionService = {
+      ...createIdleSessionService(),
+      ensureSheetSession: vi.fn(async () => createSheetSession())
+    };
+    const metronome = createInspectableMetronomeService();
+    const onPlanBlocked = vi.fn();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={120}
+        defaultTimeSignature="4/4"
+        createMetronomeService={() => metronome.service}
+        sessionService={sessionService}
+        measureGridService={createMeasureGridService(currentGrid)}
+        practiceSegmentService={createPracticeSegmentService([staleSegment])}
+        barCountIn={{
+          enabled: true,
+          countInMeasures: 1,
+          onPlanBlocked
+        }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+    });
+    await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+
+    await waitFor(() => {
+      expect(onPlanBlocked).toHaveBeenCalledWith({
+        reason: "segment-grid-stale",
+        message: "Selected segment grid changed. Metronome was stopped."
+      });
+    });
+
+    expect(metronome.service.start).not.toHaveBeenCalled();
+    expect(sessionService.ensureSheetSession).not.toHaveBeenCalled();
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "metronome_started"
+    );
+  });
 
   it("does not leave metronome playback running when session creation rejects", async () => {
     const user = userEvent.setup();

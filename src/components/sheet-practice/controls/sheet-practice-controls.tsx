@@ -5,7 +5,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createSheetRecordingSegmentContext,
+  getBarCountInPlan,
   getSegmentTempoApplyPolicy,
+  type BarCountInReadyPlan,
   type PracticeSegment,
   type PracticeSession,
   type SheetRecordingMetadata,
@@ -16,7 +18,12 @@ import { browserPracticeSegmentService } from "@/infrastructure/db/browser-pract
 import type { MetronomeTick } from "@/services/metronome";
 import { createBrowserMetronomeService } from "@/services/metronome/browser";
 import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
-import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
+import { scheduleBarCountIn } from "@/lib/quick-metronome/bar-count-in-scheduler";
+import {
+  useMetronomeTransport,
+  type BarCountInSchedulerOptions,
+  type BarCountInSchedulerTick
+} from "@/lib/quick-metronome/use-metronome-transport";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { createBrowserSheetRecordingService } from "@/services/recording/browser";
@@ -34,7 +41,11 @@ import {
 } from "@/components/sheet-practice/controls/practice-control-state";
 import { PracticeStatusPanel } from "@/components/sheet-practice/controls/practice-status-panel";
 import { TransportActionsPanel } from "@/components/sheet-practice/controls/transport-actions-panel";
-import type { SheetPracticeControlsProps } from "@/components/sheet-practice/controls/types";
+import type {
+  SheetPracticeBarCountInBlockReason,
+  SheetPracticeBarCountInOptions,
+  SheetPracticeControlsProps
+} from "@/components/sheet-practice/controls/types";
 import {
   type SheetPracticeRerecordSource,
   type SheetPracticeRerecordUnavailableReason,
@@ -43,6 +54,20 @@ import {
 
 const SHEET_RECORDING_HARNESS_EVENT =
   "sheet-practice-controls:set-recording-harness-active";
+const SHEET_BAR_COUNT_IN_PLAN_EVENT =
+  "sheet-practice-controls:bar-count-in-plan";
+const SHEET_BAR_COUNT_IN_BLOCKED_EVENT =
+  "sheet-practice-controls:bar-count-in-blocked";
+const SHEET_BAR_COUNT_IN_TICK_EVENT =
+  "sheet-practice-controls:bar-count-in-tick";
+
+type SheetPracticeControlsWindow = Window & {
+  __sheetPracticeControlsTestHarness?: boolean;
+  __sheetPracticeControlsBarCountIn?: {
+    enabled?: boolean;
+    countInMeasures?: number;
+  };
+};
 
 type SheetMetronomeStartContext = {
   session: PracticeSession;
@@ -93,6 +118,38 @@ function formatRerecordUnavailableMessage(
   }
 }
 
+function getHarnessBarCountInOptions(): SheetPracticeBarCountInOptions | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const harnessWindow = window as SheetPracticeControlsWindow;
+  const harnessOptions = harnessWindow.__sheetPracticeControlsBarCountIn;
+
+  if (!harnessOptions) {
+    return null;
+  }
+
+  return {
+    enabled: Boolean(harnessOptions.enabled),
+    countInMeasures: harnessOptions.countInMeasures
+  };
+}
+
+function dispatchBarCountInHarnessEvent(name: string, detail: unknown) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const harnessWindow = window as SheetPracticeControlsWindow;
+
+  if (harnessWindow.__sheetPracticeControlsTestHarness !== true) {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent(name, { detail }));
+}
+
 function getRerecordSourceInvalidReason({
   recording,
   sheetId,
@@ -136,7 +193,8 @@ export function SheetPracticeControls({
   sessionService = browserPracticeSessionService,
   measureGridService = browserMeasureGridService,
   practiceSegmentService = browserPracticeSegmentService,
-  currentMeasureGridTimestampMs = null
+  currentMeasureGridTimestampMs = null,
+  barCountIn = undefined
 }: SheetPracticeControlsProps) {
   const initialState = useMemo(
     () =>
@@ -179,6 +237,11 @@ export function SheetPracticeControls({
   const [measureGridRevision, setMeasureGridRevision] = useState(0);
   const [selectedTempoSegment, setSelectedTempoSegment] =
     useState<PracticeSegment | null>(null);
+  const [activeBarCountInPlan, setActiveBarCountInPlan] =
+    useState<BarCountInReadyPlan | null>(null);
+  const pendingBarCountInStartRef = useRef(false);
+  const barCountInPrepareRunIdRef = useRef(0);
+  const isPreparingBarCountInRef = useRef(false);
   const [message, setMessage] = useState(
     "Ready. Viewing the sheet has not started practice."
   );
@@ -518,6 +581,134 @@ export function SheetPracticeControls({
       sheetId,
       shouldCreatePracticeAgainSession
     ]);
+  const getEffectiveBarCountInOptions = useCallback(() => {
+    return barCountIn ?? getHarnessBarCountInOptions();
+  }, [barCountIn]);
+  const invalidateBarCountInPrepare = useCallback(() => {
+    barCountInPrepareRunIdRef.current += 1;
+    isPreparingBarCountInRef.current = false;
+    pendingBarCountInStartRef.current = false;
+  }, []);
+  const blockBarCountInStart = useCallback(
+    (
+      options: SheetPracticeBarCountInOptions,
+      reason: SheetPracticeBarCountInBlockReason,
+      message: string
+    ) => {
+      invalidateBarCountInPrepare();
+      setActiveBarCountInPlan(null);
+      setMessage(message);
+      options.onPlanBlocked?.({ reason, message });
+      dispatchBarCountInHarnessEvent(SHEET_BAR_COUNT_IN_BLOCKED_EVENT, {
+        reason,
+        message
+      });
+    },
+    [invalidateBarCountInPrepare]
+  );
+  const prepareBarCountInPlan = useCallback(
+    async (
+      options: SheetPracticeBarCountInOptions,
+      prepareRunId: number
+    ): Promise<BarCountInReadyPlan | null> => {
+      let measureGrid: Awaited<ReturnType<typeof measureGridService.getGrid>>;
+
+      try {
+        measureGrid = await measureGridService.getGrid(sheetId);
+      } catch (error) {
+        if (barCountInPrepareRunIdRef.current !== prepareRunId) {
+          return null;
+        }
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Measure grid could not be loaded. Metronome was stopped.";
+
+        setErrorMessage(message);
+        blockBarCountInStart(options, "invalid-plan", message);
+
+        return null;
+      }
+
+      if (barCountInPrepareRunIdRef.current !== prepareRunId) {
+        return null;
+      }
+
+      if (measureGrid === null) {
+        blockBarCountInStart(
+          options,
+          "no-measure-grid",
+          "Save a measure grid before starting bar count-in."
+        );
+
+        return null;
+      }
+
+      try {
+        const plan = getBarCountInPlan({
+          measureGrid,
+          selectedSegment: scopedSelectedTempoSegment,
+          countInMeasures: options.countInMeasures
+        });
+
+        if (barCountInPrepareRunIdRef.current !== prepareRunId) {
+          return null;
+        }
+
+        if (plan.status !== "ready") {
+          blockBarCountInStart(
+            options,
+            "segment-grid-stale",
+            "Selected segment grid changed. Metronome was stopped."
+          );
+
+          return null;
+        }
+
+        options.onPlanPrepared?.(plan);
+        dispatchBarCountInHarnessEvent(SHEET_BAR_COUNT_IN_PLAN_EVENT, plan);
+
+        return plan;
+      } catch (error) {
+        if (barCountInPrepareRunIdRef.current !== prepareRunId) {
+          return null;
+        }
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Bar count-in could not be prepared. Metronome was stopped.";
+
+        setErrorMessage(message);
+        blockBarCountInStart(options, "invalid-plan", message);
+
+        return null;
+      }
+    },
+    [
+      blockBarCountInStart,
+      measureGridService,
+      scopedSelectedTempoSegment,
+      sheetId
+    ]
+  );
+  useEffect(() => {
+    return () => {
+      invalidateBarCountInPrepare();
+    };
+  }, [invalidateBarCountInPrepare]);
+  const scheduleSheetBarCountIn = useCallback(
+    (options: BarCountInSchedulerOptions) => scheduleBarCountIn(options).cancel,
+    []
+  );
+  const handleBarCountInTick = useCallback(
+    (tick: BarCountInSchedulerTick) => {
+      getEffectiveBarCountInOptions()?.onTick?.(tick);
+      dispatchBarCountInHarnessEvent(SHEET_BAR_COUNT_IN_TICK_EVENT, tick);
+    },
+    [getEffectiveBarCountInOptions]
+  );
   const handleCountdownStarted = useCallback(() => {
     setMessage("Countdown running.");
   }, []);
@@ -526,6 +717,8 @@ export function SheetPracticeControls({
   }, []);
   const handleStarted = useCallback(
     (context: SheetMetronomeStartContext | null) => {
+      invalidateBarCountInPrepare();
+      setActiveBarCountInPlan(null);
       setSession(context?.session ?? null);
       if (context?.session && shouldCreatePracticeAgainSession) {
         setConsumedSourceRecordingId(sourceRecordingId);
@@ -544,6 +737,7 @@ export function SheetPracticeControls({
     },
     [
       isRecordingActive,
+      invalidateBarCountInPrepare,
       sessionService,
       shouldCreatePracticeAgainSession,
       sourceRecordingId
@@ -551,6 +745,9 @@ export function SheetPracticeControls({
   );
   const handleStartFailed = useCallback(
     async (error: unknown, context: SheetMetronomeStartContext | null) => {
+      invalidateBarCountInPrepare();
+      setActiveBarCountInPlan(null);
+
       if (context?.rollback.kind === "end-created-session") {
         const endedSession = await sessionService.endPracticeSession(
           context.session.id
@@ -572,9 +769,12 @@ export function SheetPracticeControls({
         error instanceof Error ? error.message : "Metronome playback failed."
       );
     },
-    [sessionService]
+    [invalidateBarCountInPrepare, sessionService]
   );
   const handleStopped = useCallback(async () => {
+    invalidateBarCountInPrepare();
+    setActiveBarCountInPlan(null);
+
     if (session) {
       await sessionService.captureSessionEvent({
         sessionId: session.id,
@@ -592,7 +792,7 @@ export function SheetPracticeControls({
         ? "Metronome stopped; recording stays active."
         : "Metronome stopped."
     );
-  }, [isRecordingActive, session, sessionService]);
+  }, [invalidateBarCountInPrepare, isRecordingActive, session, sessionService]);
   const {
     transportState,
     countdownRemaining,
@@ -603,6 +803,12 @@ export function SheetPracticeControls({
   } = useMetronomeTransport({
     settings,
     metronomeService,
+    barCountIn: {
+      enabled: activeBarCountInPlan !== null,
+      plan: activeBarCountInPlan,
+      schedule: scheduleSheetBarCountIn,
+      onTick: handleBarCountInTick
+    },
     beforeStart: ensureMetronomeSession,
     onCountdownStarted: handleCountdownStarted,
     onStartBlocked: handleStartBlocked,
@@ -610,13 +816,64 @@ export function SheetPracticeControls({
     onStartFailed: handleStartFailed,
     onStopped: handleStopped
   });
+  useEffect(() => {
+    if (!pendingBarCountInStartRef.current || activeBarCountInPlan === null) {
+      return;
+    }
+
+    pendingBarCountInStartRef.current = false;
+    void startMetronome();
+  }, [activeBarCountInPlan, startMetronome]);
   const handleStartMetronome = useCallback(() => {
     setErrorMessage(null);
+    const barCountInOptions = getEffectiveBarCountInOptions();
+
+    if (barCountInOptions?.enabled) {
+      if (
+        isPreparingBarCountInRef.current ||
+        pendingBarCountInStartRef.current
+      ) {
+        return;
+      }
+
+      const prepareRunId = barCountInPrepareRunIdRef.current + 1;
+
+      barCountInPrepareRunIdRef.current = prepareRunId;
+      isPreparingBarCountInRef.current = true;
+      setActiveBarCountInPlan(null);
+
+      void prepareBarCountInPlan(barCountInOptions, prepareRunId).then((plan) => {
+        if (barCountInPrepareRunIdRef.current !== prepareRunId) {
+          return;
+        }
+
+        isPreparingBarCountInRef.current = false;
+
+        if (plan === null) {
+          return;
+        }
+
+        pendingBarCountInStartRef.current = true;
+        setActiveBarCountInPlan(plan);
+      });
+
+      return;
+    }
+
+    invalidateBarCountInPrepare();
+    setActiveBarCountInPlan(null);
     void startMetronome();
-  }, [startMetronome]);
+  }, [
+    getEffectiveBarCountInOptions,
+    invalidateBarCountInPrepare,
+    prepareBarCountInPlan,
+    startMetronome
+  ]);
   const handleStopMetronome = useCallback(() => {
+    invalidateBarCountInPrepare();
+    setActiveBarCountInPlan(null);
     void stopMetronome();
-  }, [stopMetronome]);
+  }, [invalidateBarCountInPrepare, stopMetronome]);
   const arePreRunSettingsLocked = isPlaying || isCounting;
   const showRecordAgain =
     activeRecordingWorkflowSheetId === sheetId &&
@@ -877,9 +1134,7 @@ export function SheetPracticeControls({
   }
 
   useEffect(() => {
-    const harnessWindow = window as Window & {
-      __sheetPracticeControlsTestHarness?: boolean;
-    };
+    const harnessWindow = window as SheetPracticeControlsWindow;
 
     if (harnessWindow.__sheetPracticeControlsTestHarness !== true) {
       return;
