@@ -9,6 +9,7 @@ export * from "@/domain/practice/session-comparison";
 export * from "@/domain/practice/session-history-groups";
 export * from "@/domain/practice/session-events";
 export * from "@/domain/practice/segment-tempo-apply-policy";
+export * from "@/domain/practice/sheet-metronome-presets";
 export * from "@/domain/practice/segments";
 export * from "@/domain/practice/types";
 export * from "@/domain/practice/validation";
