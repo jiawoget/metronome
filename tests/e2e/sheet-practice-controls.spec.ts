@@ -4,7 +4,9 @@ import { importTestSheet } from "./fixtures/sheets";
 import {
   clearDatabases,
   clearRecordingHistory,
+  MEASURE_GRID_DB_NAME,
   PRACTICE_SESSION_DB_NAME,
+  PRACTICE_SEGMENT_DB_NAME,
   readPracticeSnapshot,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
@@ -40,6 +42,24 @@ type PracticeSnapshot = {
   }>;
 };
 
+type BarCountInEvidence = {
+  plans: Array<{
+    beatCount: number;
+    scope: string;
+    startMeasure: number;
+    segmentId: string | null;
+  }>;
+  ticks: Array<{
+    count: number;
+    remainingBeats: number;
+    observedAt: number;
+  }>;
+  playback: Array<{
+    bpm: number;
+    observedAt: number;
+  }>;
+};
+
 function average(values: number[]) {
   return values.reduce((total, value) => total + value, 0) / values.length;
 }
@@ -50,6 +70,48 @@ function intervalsFromAudioTime(traces: MetronomeTrace[]) {
 
 async function getPracticeSnapshot(page: Page) {
   return readPracticeSnapshot<PracticeSnapshot>(page);
+}
+
+async function saveMeasureGridThroughUi(
+  page: Page,
+  {
+    bpm,
+    timeSignature,
+    pickupBeats,
+    measureOneOffsetMs
+  }: {
+    bpm: number;
+    timeSignature: string;
+    pickupBeats: number;
+    measureOneOffsetMs: number;
+  }
+) {
+  await page.getByRole("spinbutton", { name: "Grid BPM" }).fill(String(bpm));
+  await page.getByLabel("Grid time signature").selectOption(timeSignature);
+  await page.getByRole("spinbutton", { name: "Pickup beats" }).fill(String(pickupBeats));
+  await page.getByRole("spinbutton", { name: "Measure 1 offset" }).fill(String(measureOneOffsetMs));
+  await page.getByRole("button", { name: "Save grid" }).click();
+  await expect(page.getByTestId("measure-grid-status")).toContainText("Calibrated");
+}
+
+async function createPracticeSegmentThroughUi(
+  page: Page,
+  {
+    name,
+    startMeasure,
+    endMeasure
+  }: {
+    name: string;
+    startMeasure: number;
+    endMeasure: number;
+  }
+) {
+  await page.getByRole("button", { name: "New segment" }).click();
+  await page.getByLabel("Segment name").fill(name);
+  await page.getByLabel("Start measure").fill(String(startMeasure));
+  await page.getByLabel("End measure").fill(String(endMeasure));
+  await page.getByRole("button", { name: "Save segment" }).click();
+  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");
 }
 
 async function expectNoViewerOverlap(page: Page) {
@@ -77,6 +139,145 @@ async function expectNoViewerOverlap(page: Page) {
   expect(boxes?.controlsTop).toBeGreaterThanOrEqual((boxes?.viewerBottom ?? 0) - 1);
   expect(boxes?.controlsTop).toBeLessThan((boxes?.viewportHeight ?? 0) - 48);
 }
+
+test("sheet practice can run hidden bar-aware count-in before shared metronome playback", async ({
+  page
+}) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await page.addInitScript(() => {
+    const e2eWindow = window as Window & {
+      __sheetPracticeControlsBarCountIn?: {
+        enabled: boolean;
+        countInMeasures: number;
+      };
+      __sheetPracticeControlsTestHarness?: boolean;
+      __sheetBarCountInEvidence?: BarCountInEvidence;
+    };
+
+    e2eWindow.__sheetPracticeControlsTestHarness = true;
+    e2eWindow.__sheetPracticeControlsBarCountIn = {
+      enabled: true,
+      countInMeasures: 1
+    };
+    e2eWindow.__sheetBarCountInEvidence = {
+      plans: [],
+      ticks: [],
+      playback: []
+    };
+    window.addEventListener("sheet-practice-controls:bar-count-in-plan", (event) => {
+      const plan = (event as CustomEvent<BarCountInEvidence["plans"][number]>).detail;
+
+      e2eWindow.__sheetBarCountInEvidence?.plans.push({
+        beatCount: plan.beatCount,
+        scope: plan.scope,
+        startMeasure: plan.startMeasure,
+        segmentId: plan.segmentId
+      });
+    });
+    window.addEventListener("sheet-practice-controls:bar-count-in-tick", (event) => {
+      const tick = (event as CustomEvent<BarCountInEvidence["ticks"][number]>).detail;
+
+      e2eWindow.__sheetBarCountInEvidence?.ticks.push({
+        count: tick.count,
+        remainingBeats: tick.remainingBeats,
+        observedAt: performance.now()
+      });
+    });
+    window.addEventListener("quick-metronome:scheduled-tick", (event) => {
+      const trace = (event as CustomEvent<MetronomeTrace>).detail;
+
+      e2eWindow.__sheetBarCountInEvidence?.playback.push({
+        bpm: trace.bpm,
+        observedAt: performance.now()
+      });
+    });
+  });
+
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.goto("/sheet-library");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [
+    SHEET_LIBRARY_DB_NAME,
+    PRACTICE_SESSION_DB_NAME,
+    MEASURE_GRID_DB_NAME,
+    PRACTICE_SEGMENT_DB_NAME
+  ]);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  const { link } = await importTestSheet(page, {
+    name: "Bar Count-In Controls Sheet",
+    bpm: "120",
+    timeSignature: "4/4"
+  });
+
+  await link.click();
+  await expect(page.getByRole("heading", { name: "Bar Count-In Controls Sheet" })).toBeVisible();
+  await saveMeasureGridThroughUi(page, {
+    bpm: 240,
+    timeSignature: "4/4",
+    pickupBeats: 0,
+    measureOneOffsetMs: 0
+  });
+  await createPracticeSegmentThroughUi(page, {
+    name: "Count-in bridge",
+    startMeasure: 2,
+    endMeasure: 4
+  });
+
+  await page.getByText("Count-in bridge").first().click();
+  const startedAt = await page.evaluate(() => performance.now());
+
+  await page.getByRole("button", { name: "Start metronome" }).click();
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Counting");
+  await page.waitForFunction(() => {
+    const e2eWindow = window as Window & { __sheetBarCountInEvidence?: BarCountInEvidence };
+
+    return (e2eWindow.__sheetBarCountInEvidence?.ticks.length ?? 0) >= 4;
+  });
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing", {
+    timeout: 5_000
+  });
+  await page.waitForFunction(() => {
+    const e2eWindow = window as Window & { __sheetBarCountInEvidence?: BarCountInEvidence };
+
+    return (e2eWindow.__sheetBarCountInEvidence?.playback.length ?? 0) >= 1;
+  });
+
+  const evidence = await page.evaluate(() => {
+    const e2eWindow = window as Window & { __sheetBarCountInEvidence?: BarCountInEvidence };
+
+    return e2eWindow.__sheetBarCountInEvidence;
+  });
+  const playingObservedAt = await page.evaluate(() => performance.now());
+
+  expect(evidence?.plans).toHaveLength(1);
+  expect(evidence?.plans[0]).toMatchObject({
+    beatCount: 4,
+    scope: "selected-segment",
+    startMeasure: 2
+  });
+  expect(evidence?.plans[0]?.segmentId).toBeTruthy();
+  expect(evidence?.ticks.map((tick) => tick.count)).toEqual([1, 2, 3, 4]);
+  expect(evidence?.playback[0]?.bpm).toBe(120);
+  expect(evidence?.ticks[0]?.observedAt).toBeLessThanOrEqual(
+    evidence?.playback[0]?.observedAt ?? Number.POSITIVE_INFINITY
+  );
+  expect(playingObservedAt - startedAt).toBeGreaterThan(650);
+
+  await page.getByRole("button", { name: "Stop metronome" }).click();
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  expect(consoleErrors).toEqual([]);
+});
 
 test("sheet practice controls drive shared metronome timing, session activity, and recording independence", async ({
   page

@@ -568,7 +568,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P4-04 bar-count-in-scheduler",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P4-05 bar-count-in-ui",

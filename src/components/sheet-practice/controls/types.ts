@@ -3,6 +3,8 @@ import type { MeasureGridService } from "@/services/measure-grid";
 import type { PracticeSegmentService } from "@/services/practice-segments";
 import type { MetronomeService } from "@/services/metronome";
 import type { SheetRecordingService } from "@/services/recording";
+import type { BarCountInReadyPlan } from "@/domain/practice/bar-count-in";
+import type { BarCountInSchedulerTick } from "@/lib/quick-metronome/use-metronome-transport";
 
 type SheetPracticeMetronomeService = Pick<MetronomeService, "onTick" | "update" | "start" | "stop">;
 
@@ -34,6 +36,24 @@ export type SheetPracticeRecordingService = Pick<
   | "subscribe"
 >;
 
+export type SheetPracticeBarCountInBlockReason =
+  | "no-measure-grid"
+  | "segment-grid-stale"
+  | "invalid-plan";
+
+export type SheetPracticeBarCountInBlock = {
+  reason: SheetPracticeBarCountInBlockReason;
+  message: string;
+};
+
+export type SheetPracticeBarCountInOptions = {
+  enabled: boolean;
+  countInMeasures?: number;
+  onPlanPrepared?: (plan: BarCountInReadyPlan) => void;
+  onPlanBlocked?: (block: SheetPracticeBarCountInBlock) => void;
+  onTick?: (tick: BarCountInSchedulerTick) => void;
+};
+
 export type SheetPracticeControlsProps = {
   sheetId: string;
   sheetName: string;
@@ -47,4 +67,5 @@ export type SheetPracticeControlsProps = {
   measureGridService?: MeasureGridService;
   practiceSegmentService?: PracticeSegmentService;
   currentMeasureGridTimestampMs?: number | null;
+  barCountIn?: SheetPracticeBarCountInOptions;
 };
