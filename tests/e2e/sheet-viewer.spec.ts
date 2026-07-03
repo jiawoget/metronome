@@ -476,6 +476,35 @@ async function expectViewerControlsDoNotOverlap(page: Page) {
   expect(scrollBox.y + scrollBox.height).toBeLessThanOrEqual(controlsBox.y);
 }
 
+function boxesOverlap(
+  first: { x: number; y: number; width: number; height: number },
+  second: { x: number; y: number; width: number; height: number }
+) {
+  return (
+    first.x < second.x + second.width &&
+    first.x + first.width > second.x &&
+    first.y < second.y + second.height &&
+    first.y + first.height > second.y
+  );
+}
+
+async function expectAssistedControlsDoNotOverlap(page: Page) {
+  const toggleBox = await page.getByRole("checkbox", { name: "Assisted page turning" }).boundingBox();
+  const armButtonBox = await page.getByRole("button", { name: "Arm assisted page turn" }).boundingBox();
+  const statusBox = await page.getByText("Ready: 1s.").boundingBox();
+
+  expect(toggleBox).not.toBeNull();
+  expect(armButtonBox).not.toBeNull();
+  expect(statusBox).not.toBeNull();
+
+  if (!toggleBox || !armButtonBox || !statusBox) {
+    return;
+  }
+
+  expect(boxesOverlap(toggleBox, armButtonBox)).toBe(false);
+  expect(boxesOverlap(armButtonBox, statusBox)).toBe(false);
+}
+
 async function getTransformContentTranslate(page: Page) {
   return page.getByTestId("sheet-viewer-transform-content").evaluate((element) => {
     const transform = getComputedStyle(element).transform;
@@ -621,6 +650,8 @@ test("sheet viewer assisted page turning is opt-in, manually armed, and cancelab
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
   await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByLabel("Zoom level")).toHaveText("100%");
+  await expect(armButton).toBeDisabled();
+  await expect(page.getByText("Already on the last page.")).toBeVisible();
 
   await page.getByRole("button", { name: "Previous page" }).click();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
@@ -636,6 +667,14 @@ test("sheet viewer assisted page turning is opt-in, manually armed, and cancelab
   expect(await runAssistedPageTurnTimer(page)).toBe(false);
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
   await expect(assistedToggle).not.toBeChecked();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(assistedToggle).toBeVisible();
+  await assistedToggle.check();
+  await expect(armButton).toBeVisible();
+  await expect(armButton).toBeEnabled();
+  await expect(page.getByText("Ready: 1s.")).toBeVisible();
+  await expectAssistedControlsDoNotOverlap(page);
 
   expect(consoleErrors).toEqual([]);
 });

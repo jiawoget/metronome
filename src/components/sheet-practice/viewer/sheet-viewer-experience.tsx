@@ -312,6 +312,7 @@ function SheetViewerReady({
   const transformContentRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const assistedPageTurnTimeoutRef = useRef<number | null>(null);
+  const assistedPageTurnArmTokenRef = useRef(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [transform, setTransform] = useState(() => resetSheetViewerTransform());
   const [canPan, setCanPan] = useState(false);
@@ -331,11 +332,19 @@ function SheetViewerReady({
   const contentBaseWidth = state.sheet.kind === "pdf" ? PDF_BASE_WIDTH : imageBaseWidth;
   const selectedAssistedPageTurnSegment =
     assistedPageTurnSegment?.sheetId === state.sheet.id ? assistedPageTurnSegment : null;
+  const selectedAssistedPageTurnSegmentId = selectedAssistedPageTurnSegment?.id ?? null;
   const assistedPageTurnDelayMs = useMemo(
     () => getSheetViewerAssistedPageTurnDelayMs(selectedAssistedPageTurnSegment),
     [selectedAssistedPageTurnSegment]
   );
   const isAssistedPageTurnArmed = armedAssistedPageTurnSegmentId !== null;
+  const assistedPageTurnStateRef = useRef({
+    armedSegmentId: null as string | null,
+    enabled: false,
+    selectedSegmentId: null as string | null,
+    currentPage: 1,
+    totalPages
+  });
 
   const pageUrl = useMemo(() => {
     if (!objectUrls) {
@@ -408,6 +417,22 @@ function SheetViewerReady({
     dragRef.current = null;
   }, []);
 
+  useEffect(() => {
+    assistedPageTurnStateRef.current = {
+      armedSegmentId: armedAssistedPageTurnSegmentId,
+      enabled: assistedPageTurnEnabled,
+      selectedSegmentId: selectedAssistedPageTurnSegmentId,
+      currentPage,
+      totalPages
+    };
+  }, [
+    armedAssistedPageTurnSegmentId,
+    assistedPageTurnEnabled,
+    currentPage,
+    selectedAssistedPageTurnSegmentId,
+    totalPages
+  ]);
+
   useEffect(() => () => {
     if (assistedPageTurnTimeoutRef.current !== null) {
       window.clearTimeout(assistedPageTurnTimeoutRef.current);
@@ -416,6 +441,8 @@ function SheetViewerReady({
   }, []);
 
   const clearAssistedPageTurn = useCallback(() => {
+    assistedPageTurnArmTokenRef.current += 1;
+
     if (assistedPageTurnTimeoutRef.current !== null) {
       window.clearTimeout(assistedPageTurnTimeoutRef.current);
       assistedPageTurnTimeoutRef.current = null;
@@ -485,11 +512,37 @@ function SheetViewerReady({
     }
 
     clearAssistedPageTurn();
+    const armToken = assistedPageTurnArmTokenRef.current + 1;
+
+    assistedPageTurnArmTokenRef.current = armToken;
+    assistedPageTurnStateRef.current = {
+      armedSegmentId: selectedAssistedPageTurnSegment.id,
+      enabled: assistedPageTurnEnabled,
+      selectedSegmentId: selectedAssistedPageTurnSegment.id,
+      currentPage,
+      totalPages
+    };
     setArmedAssistedPageTurnSegmentId(selectedAssistedPageTurnSegment.id);
     assistedPageTurnTimeoutRef.current = window.setTimeout(() => {
+      const latest = assistedPageTurnStateRef.current;
+
+      if (assistedPageTurnArmTokenRef.current !== armToken) {
+        return;
+      }
+
       assistedPageTurnTimeoutRef.current = null;
       setArmedAssistedPageTurnSegmentId(null);
-      goToPage(Math.min(totalPages, currentPage + 1));
+
+      if (
+        !latest.enabled ||
+        latest.armedSegmentId !== selectedAssistedPageTurnSegment.id ||
+        latest.selectedSegmentId !== selectedAssistedPageTurnSegment.id ||
+        latest.currentPage >= latest.totalPages
+      ) {
+        return;
+      }
+
+      goToPage(Math.min(latest.totalPages, latest.currentPage + 1));
     }, assistedPageTurnDelayMs);
   }
 
