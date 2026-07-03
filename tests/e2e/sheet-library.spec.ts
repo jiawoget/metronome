@@ -33,6 +33,8 @@ async function getSheetPersistence(page: Page, sheetId: string) {
         sheetCategory: string | null;
         bpm: number | null;
         timeSignature: string | null;
+        tags: string[];
+        favorite: boolean;
         artifactExists: boolean;
         artifactBlobSizes: number[];
       }>((resolve, reject) => {
@@ -60,6 +62,8 @@ async function getSheetPersistence(page: Page, sheetId: string) {
               sheetCategory: sheetRequest.result?.category ?? null,
               bpm: sheetRequest.result?.bpm ?? null,
               timeSignature: sheetRequest.result?.timeSignature ?? null,
+              tags: sheetRequest.result?.tags ?? [],
+              favorite: sheetRequest.result?.favorite ?? false,
               artifactExists: !!artifact,
               artifactBlobSizes:
                 artifact?.files?.map((file) => file.blob?.size ?? 0) ?? []
@@ -70,6 +74,12 @@ async function getSheetPersistence(page: Page, sheetId: string) {
       }),
     { databaseName: dbName, id: sheetId }
   );
+}
+
+function getSheetCard(page: Page, name: string) {
+  return page
+    .getByRole("heading", { name, exact: true })
+    .locator("xpath=ancestor::div[contains(@class, 'bg-card')][1]");
 }
 
 test("sheet library imports real PDF and image fixtures, persists, filters, opens, and deletes", async ({
@@ -109,15 +119,18 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
   await expect(
     page.getByRole("heading", { name: "Autumn Etude" })
   ).toBeVisible();
-  const autumnSheet = page
-    .getByRole("heading", { name: "Autumn Etude" })
-    .locator("../..");
+  const autumnSheet = getSheetCard(page, "Autumn Etude");
   await expect(
     autumnSheet.getByText("Exercise", { exact: true })
   ).toBeVisible();
   await expect(autumnSheet.getByText("1 page", { exact: true })).toBeVisible();
   await expect(page.getByText("PDF artifact parsed: 1 page")).toBeVisible();
   await expect(page.getByText("Not practiced yet")).toBeVisible();
+  await expect(autumnSheet.getByText("No tags")).toBeVisible();
+  const autumnFavoriteButton = autumnSheet.getByRole("button", {
+    name: "Favorite Autumn Etude"
+  });
+  await expect(autumnFavoriteButton).toHaveAttribute("aria-pressed", "false");
   const practiceHref = await page
     .getByRole("link", { name: "Open Sheet Practice" })
     .getAttribute("href");
@@ -130,7 +143,28 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
     .poll(() => getSheetPersistence(page, pdfSheetId ?? ""))
     .toMatchObject({
       sheetExists: true,
+      tags: [],
+      favorite: false,
       artifactExists: true
+    });
+
+  await autumnFavoriteButton.click();
+  await expect(page.getByText("Favorited Autumn Etude.")).toBeVisible();
+  await expect(
+    autumnSheet.getByRole("button", { name: "Unfavorite Autumn Etude" })
+  ).toHaveAttribute("aria-pressed", "true");
+  await autumnSheet
+    .getByLabel("Edit tags for Autumn Etude")
+    .fill("Warm Up, Focus");
+  await autumnSheet.getByRole("button", { name: "Save tags" }).click();
+  await expect(page.getByText("Updated tags for Autumn Etude.")).toBeVisible();
+  await expect(autumnSheet.getByText("Warm Up", { exact: true })).toBeVisible();
+  await expect(autumnSheet.getByText("Focus", { exact: true })).toBeVisible();
+  await expect
+    .poll(() => getSheetPersistence(page, pdfSheetId ?? ""))
+    .toMatchObject({
+      tags: ["Warm Up", "Focus"],
+      favorite: true
     });
 
   await page.reload();
@@ -138,6 +172,78 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
     page.getByRole("heading", { name: "Autumn Etude" })
   ).toBeVisible();
   await expect(page.getByText("PDF artifact parsed: 1 page")).toBeVisible();
+  const reloadedAutumnSheet = getSheetCard(page, "Autumn Etude");
+  await expect(
+    reloadedAutumnSheet.getByRole("button", { name: "Unfavorite Autumn Etude" })
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    reloadedAutumnSheet.getByText("Warm Up", { exact: true })
+  ).toBeVisible();
+  await expect(
+    reloadedAutumnSheet.getByText("Focus", { exact: true })
+  ).toBeVisible();
+
+  await reloadedAutumnSheet
+    .getByLabel("Edit tags for Autumn Etude")
+    .fill("this-tag-is-definitely-too-long");
+  await reloadedAutumnSheet.getByRole("button", { name: "Save tags" }).click();
+  await expect(
+    page.getByText("Tags must be 24 characters or fewer.")
+  ).toBeVisible();
+  await expect(
+    reloadedAutumnSheet.getByText("Warm Up", { exact: true })
+  ).toBeVisible();
+  await expect(
+    reloadedAutumnSheet.getByText("Focus", { exact: true })
+  ).toBeVisible();
+
+  await page
+    .getByLabel("File")
+    .setInputFiles(path.join(sheetFixturesDir, "real-sheet.pdf"));
+  await expect(page.getByText("Ready: PDF with 1 page.")).toBeVisible();
+  await page.getByLabel("Name").fill("Plain Song");
+  await page
+    .getByLabel("Sheet category", { exact: true })
+    .selectOption("song");
+  await page.getByLabel("BPM").fill("110");
+  await page.getByLabel("Time signature").fill("4/4");
+  await page.getByRole("button", { name: "Save Imported Sheet" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Plain Song" })
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Show favorites only" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Autumn Etude" })
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Plain Song" })).toHaveCount(
+    0
+  );
+  await page.getByLabel("Tag filter").fill("focus");
+  await expect(
+    page.getByRole("heading", { name: "Autumn Etude" })
+  ).toBeVisible();
+  await page.getByLabel("Sheet category filter").selectOption("song");
+  await expect(page.getByRole("heading", { name: "Autumn Etude" })).toHaveCount(
+    0
+  );
+  await page.getByLabel("Sheet category filter").selectOption("exercise");
+  await page.getByLabel("Search").fill("warm up");
+  await expect(
+    page.getByRole("heading", { name: "Autumn Etude" })
+  ).toBeVisible();
+  await page.getByLabel("Search").fill("");
+  await page.getByLabel("Tag filter").fill("");
+  await page.getByRole("button", { name: "Show favorites only" }).click();
+  await page.getByLabel("Sheet category filter").selectOption("all");
+  await page
+    .getByRole("heading", { name: "Plain Song", exact: true })
+    .locator("xpath=ancestor::div[contains(@class, 'bg-card')][1]")
+    .getByRole("button", { name: "Delete" })
+    .click();
+  await expect(page.getByRole("heading", { name: "Plain Song" })).toHaveCount(
+    0
+  );
 
   await page.getByRole("button", { name: "Edit Metadata" }).click();
   await page.getByLabel("Edit sheet name").fill("");
@@ -158,9 +264,7 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
   await expect(page.getByRole("heading", { name: "Autumn Etude" })).toHaveCount(
     0
   );
-  const winterSheet = page
-    .getByRole("heading", { name: "Winter Etude" })
-    .locator("../..");
+  const winterSheet = getSheetCard(page, "Winter Etude");
 
   await expect(
     winterSheet.locator("span").filter({ hasText: /^Scale$/ })
@@ -175,6 +279,8 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
       sheetCategory: "scale",
       bpm: 144,
       timeSignature: "7/8",
+      tags: ["Warm Up", "Focus"],
+      favorite: true,
       artifactExists: true
     });
 
@@ -222,6 +328,8 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
       sheetCategory: null,
       bpm: null,
       timeSignature: null,
+      tags: [],
+      favorite: false,
       artifactExists: false,
       artifactBlobSizes: []
     });

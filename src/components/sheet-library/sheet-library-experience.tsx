@@ -8,6 +8,7 @@ import {
   LibraryBig,
   Pencil,
   Search,
+  Star,
   Trash2,
   Upload,
   Wand2
@@ -69,6 +70,8 @@ export function SheetLibraryExperience() {
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] =
     useState<SheetCategoryFilter>("all");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [tagFilter, setTagFilter] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [preview, setPreview] = useState<SheetImportPreview | null>(null);
   const [metadata, setMetadata] = useState(defaultMetadata);
@@ -80,6 +83,11 @@ export function SheetLibraryExperience() {
   const [editingSheetId, setEditingSheetId] = useState<string | null>(null);
   const [editMetadata, setEditMetadata] =
     useState<MetadataDraft>(defaultMetadata);
+  const [favoriteUpdatingId, setFavoriteUpdatingId] = useState<string | null>(
+    null
+  );
+  const [tagSavingId, setTagSavingId] = useState<string | null>(null);
+  const [tagDrafts, setTagDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let isActive = true;
@@ -99,8 +107,14 @@ export function SheetLibraryExperience() {
   }, []);
 
   const visibleSheets = useMemo(
-    () => filterSheets(sheets, { query, category: categoryFilter }),
-    [sheets, query, categoryFilter]
+    () =>
+      filterSheets(sheets, {
+        query,
+        category: categoryFilter,
+        favorite: favoritesOnly ? "favorites" : "all",
+        tag: tagFilter
+      }),
+    [sheets, query, categoryFilter, favoritesOnly, tagFilter]
   );
 
   async function handleFileChange(files: FileList | null) {
@@ -167,6 +181,10 @@ export function SheetLibraryExperience() {
       result.sheet,
       ...current.filter((sheet) => sheet.id !== result.sheet.id)
     ]);
+    setTagDrafts((current) => ({
+      ...current,
+      [result.sheet.id]: (result.sheet.tags ?? []).join(", ")
+    }));
     setSelectedFiles([]);
     setPreview(null);
     setMetadata(defaultMetadata);
@@ -183,6 +201,12 @@ export function SheetLibraryExperience() {
     setDeletingId(sheet.id);
     await browserSheetLibraryService.deleteSheet(sheet.id);
     setSheets((current) => current.filter((item) => item.id !== sheet.id));
+    setTagDrafts((current) => {
+      const remaining = { ...current };
+
+      delete remaining[sheet.id];
+      return remaining;
+    });
     setDeletingId(null);
     setMessage(`Deleted ${sheet.name}.`);
     setMessageKind("status");
@@ -232,6 +256,66 @@ export function SheetLibraryExperience() {
     setEditMetadata(defaultMetadata);
     setMessage(`Updated ${result.sheet.name}.`);
     setMessageKind("status");
+  }
+
+  async function toggleFavorite(sheet: SheetListItem) {
+    setFavoriteUpdatingId(sheet.id);
+    setMessage(null);
+
+    const result = await browserSheetLibraryService.setSheetFavorite({
+      sheetId: sheet.id,
+      favorite: !sheet.favorite
+    });
+
+    if (!result.ok) {
+      setMessage(result.message);
+      setMessageKind("error");
+      setFavoriteUpdatingId(null);
+      return;
+    }
+
+    setSheets((current) =>
+      current.map((item) => (item.id === result.sheet.id ? result.sheet : item))
+    );
+    setMessage(
+      result.sheet.favorite
+        ? `Favorited ${result.sheet.name}.`
+        : `Unfavorited ${result.sheet.name}.`
+    );
+    setMessageKind("status");
+    setFavoriteUpdatingId(null);
+  }
+
+  async function saveTags(sheet: SheetListItem) {
+    const draft = tagDrafts[sheet.id] ?? (sheet.tags ?? []).join(", ");
+    const draftTags = draft.split(",");
+    const tags = draftTags.every((tag) => !tag.trim()) ? [] : draftTags;
+
+    setTagSavingId(sheet.id);
+    setMessage(null);
+
+    const result = await browserSheetLibraryService.setSheetTags({
+      sheetId: sheet.id,
+      tags
+    });
+
+    if (!result.ok) {
+      setMessage(result.message);
+      setMessageKind("error");
+      setTagSavingId(null);
+      return;
+    }
+
+    setSheets((current) =>
+      current.map((item) => (item.id === result.sheet.id ? result.sheet : item))
+    );
+    setTagDrafts((current) => ({
+      ...current,
+      [result.sheet.id]: (result.sheet.tags ?? []).join(", ")
+    }));
+    setMessage(`Updated tags for ${result.sheet.name}.`);
+    setMessageKind("status");
+    setTagSavingId(null);
   }
 
   return (
@@ -418,7 +502,7 @@ export function SheetLibraryExperience() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px_180px_200px]">
         <label className="relative grid gap-2 text-sm font-medium">
           Search
           <Search
@@ -456,6 +540,28 @@ export function SheetLibraryExperience() {
             </select>
           </span>
         </label>
+        <label className="grid content-end gap-2 text-sm font-medium">
+          Favorites
+          <button
+            type="button"
+            aria-pressed={favoritesOnly}
+            aria-label="Show favorites only"
+            onClick={() => setFavoritesOnly((current) => !current)}
+            className="border-border bg-background hover:bg-muted focus-visible:ring-ring aria-pressed:border-primary aria-pressed:bg-primary/10 flex h-10 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <Star className="h-4 w-4" aria-hidden="true" />
+            Favorites only
+          </button>
+        </label>
+        <label className="grid gap-2 text-sm font-medium">
+          Tag filter
+          <input
+            value={tagFilter}
+            onChange={(event) => setTagFilter(event.target.value)}
+            placeholder="Filter by tag"
+            className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+          />
+        </label>
       </div>
 
       <div aria-live="polite" className="grid gap-3">
@@ -485,6 +591,8 @@ export function SheetLibraryExperience() {
         ) : (
           visibleSheets.map((sheet) => {
             const isEditing = editingSheetId === sheet.id;
+            const sheetTags = sheet.tags ?? [];
+            const isFavorite = sheet.favorite === true;
 
             return (
               <Card key={sheet.id}>
@@ -535,6 +643,51 @@ export function SheetLibraryExperience() {
                           <dd>{sheet.originalFileNames.join(", ")}</dd>
                         </div>
                       </dl>
+                      <div className="mt-4 grid gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {sheetTags.length > 0 ? (
+                            sheetTags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="bg-muted rounded-md px-2 py-1 text-xs font-medium"
+                              >
+                                {tag}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground text-sm">
+                              No tags
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                          <label className="grid gap-2 text-sm font-medium">
+                            Edit tags for {sheet.name}
+                            <input
+                              aria-label={`Edit tags for ${sheet.name}`}
+                              value={
+                                tagDrafts[sheet.id] ?? sheetTags.join(", ")
+                              }
+                              onChange={(event) =>
+                                setTagDrafts((current) => ({
+                                  ...current,
+                                  [sheet.id]: event.target.value
+                                }))
+                              }
+                              className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+                            />
+                          </label>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={tagSavingId === sheet.id}
+                            onClick={() => void saveTags(sheet)}
+                            className="self-end"
+                          >
+                            Save tags
+                          </Button>
+                        </div>
+                      </div>
                       {isEditing ? (
                         <div className="border-border bg-background mt-4 grid gap-3 rounded-md border p-3">
                           <div className="grid gap-3 sm:grid-cols-2">
@@ -622,6 +775,17 @@ export function SheetLibraryExperience() {
                       ) : null}
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
+                      <Button
+                        type="button"
+                        variant={isFavorite ? "default" : "secondary"}
+                        aria-pressed={isFavorite}
+                        aria-label={`${isFavorite ? "Unfavorite" : "Favorite"} ${sheet.name}`}
+                        disabled={favoriteUpdatingId === sheet.id}
+                        onClick={() => void toggleFavorite(sheet)}
+                      >
+                        <Star className="h-4 w-4" aria-hidden="true" />
+                        {isFavorite ? "Favorited" : "Favorite"}
+                      </Button>
                       <Button asChild>
                         <Link href={getSheetPracticeHref(sheet.id)}>
                           Open Sheet Practice
