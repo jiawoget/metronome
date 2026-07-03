@@ -5,6 +5,7 @@ import type { MetronomeService } from "@/services/metronome";
 import type { SheetRecordingService } from "@/services/recording";
 import type { SheetMetronomePresetService } from "@/services/sheet-metronome-presets";
 import type { BarCountInReadyPlan } from "@/domain/practice/bar-count-in";
+import type { PracticeSegment } from "@/domain/practice";
 import type { BarCountInSchedulerTick } from "@/lib/quick-metronome/use-metronome-transport";
 
 type SheetPracticeMetronomeService = Pick<MetronomeService, "onTick" | "update" | "start" | "stop">;
@@ -69,5 +70,6 @@ export type SheetPracticeControlsProps = {
   practiceSegmentService?: PracticeSegmentService;
   sheetMetronomePresetService?: SheetMetronomePresetService;
   currentMeasureGridTimestampMs?: number | null;
+  onSelectedSegmentChange?: (segment: PracticeSegment | null) => void;
   barCountIn?: SheetPracticeBarCountInOptions;
 };

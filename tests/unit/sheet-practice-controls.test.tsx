@@ -1965,13 +1965,15 @@ describe("sheet practice controls state", () => {
       practiceSegmentService = createPracticeSegmentService(),
       sessionService = createIdleSessionService(),
       returnSegmentId = null,
-      sheetId = "sheet-alpha"
+      sheetId = "sheet-alpha",
+      onSelectedSegmentChange
     }: {
       defaultBpm?: number;
       practiceSegmentService?: PracticeSegmentService;
       sessionService?: ReturnType<typeof createIdleSessionService>;
       returnSegmentId?: string | null;
       sheetId?: string;
+      onSelectedSegmentChange?: SheetPracticeControlsProps["onSelectedSegmentChange"];
     } = {}) {
       return render(
         <SheetPracticeControls
@@ -1983,6 +1985,7 @@ describe("sheet practice controls state", () => {
           sessionService={sessionService}
           measureGridService={createMeasureGridService(createTestGrid())}
           practiceSegmentService={practiceSegmentService}
+          onSelectedSegmentChange={onSelectedSegmentChange}
         />
       );
     }
@@ -2287,6 +2290,58 @@ describe("sheet practice controls state", () => {
       expectApplyTargetBpmUnavailable();
       expect(screen.queryByText(/Target 108 BPM/i)).not.toBeInTheDocument();
       expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(72);
+    });
+
+    it("reports selected segments to an optional parent callback", async () => {
+      const onSelectedSegmentChange = vi.fn();
+      const segment = createTestSegment({
+        id: "segment-assisted",
+        name: "Assisted turn",
+        targetBpm: 96
+      });
+
+      renderControls({
+        practiceSegmentService: createPracticeSegmentService([segment]),
+        onSelectedSegmentChange
+      });
+
+      await selectSegment("segment-assisted");
+
+      await waitFor(() => {
+        expect(onSelectedSegmentChange).toHaveBeenLastCalledWith(segment);
+      });
+    });
+
+    it("reports null to the optional parent callback for stale selector emissions", async () => {
+      const user = userEvent.setup();
+      const onSelectedSegmentChange = vi.fn();
+      const staleCallbackSegment = createTestSegment({
+        id: "segment-stale",
+        name: "Stale callback",
+        targetBpm: 108
+      });
+
+      practiceSegmentSelectorPanelMock.implementation = ({ onSelectedSegmentChange: notify }) => (
+        <section data-testid="mock-practice-segment-selector">
+          <button
+            type="button"
+            onClick={() =>
+              notify?.({
+                sheetId: "sheet-previous",
+                segment: staleCallbackSegment
+              })
+            }
+          >
+            Emit stale sheet selection
+          </button>
+        </section>
+      );
+
+      renderControls({ onSelectedSegmentChange });
+
+      await user.click(screen.getByRole("button", { name: "Emit stale sheet selection" }));
+
+      expect(onSelectedSegmentChange).toHaveBeenLastCalledWith(null);
     });
 
     it("clears parent tempo state on segment load failure and empty reload while preserving selector UI", async () => {
