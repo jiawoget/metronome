@@ -6,7 +6,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Metronome Practice",
-  description: "Local-first guitar practice app shell"
+  description: "Local-first guitar practice app shell",
+  icons: {
+    icon: "/icon.svg"
+  }
 };
 
 export default function RootLayout({
