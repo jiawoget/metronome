@@ -190,6 +190,9 @@ describe("SheetLibraryExperience practice summaries", () => {
     expect(
       within(betaCard).getByText("No local practice summary yet.")
     ).toBeVisible();
+    expect(
+      within(betaCard).getByRole("link", { name: "Review recordings" })
+    ).toHaveAttribute("href", "/recordings?sheetId=sheet-beta");
     expect(screen.queryByText(/99 sessions/)).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Search"), {
@@ -256,6 +259,9 @@ describe("SheetLibraryExperience practice summaries", () => {
     expect(
       within(alphaCard).getByRole("link", { name: "Open Sheet Practice" })
     ).toHaveAttribute("href", "/sheet-practice/sheet-alpha");
+    expect(
+      within(alphaCard).getByRole("link", { name: "Review recordings" })
+    ).toHaveAttribute("href", "/recordings?sheetId=sheet-alpha");
     expect(
       within(alphaCard).queryByText("No local practice summary yet.")
     ).not.toBeInTheDocument();

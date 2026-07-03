@@ -13,6 +13,7 @@ import {
   MEASURE_GRID_DB_NAME,
   PRACTICE_SEGMENT_DB_NAME,
   PRACTICE_SESSION_DB_NAME,
+  RECORDING_ARTIFACT_DB_NAME,
   readRecordingHistory,
   seedRecordingHistory,
   SHEET_LIBRARY_DB_NAME
@@ -1601,6 +1602,207 @@ test("recordings review returns to sheet practice with segment validation and st
     })
     .click();
   await expect(page).toHaveURL(/\/quick-metronome\?recordingId=return-quick/);
+});
+
+test("sheet library review link opens recordings filtered to that sheet", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.goto("/sheet-library");
+  await clearRecordingHistory(page);
+  await clearDatabases(page, [
+    SHEET_LIBRARY_DB_NAME,
+    PRACTICE_SESSION_DB_NAME,
+    MEASURE_GRID_DB_NAME,
+    PRACTICE_SEGMENT_DB_NAME,
+    RECORDING_ARTIFACT_DB_NAME
+  ]);
+  await page.reload();
+
+  const alphaSheet = await importTestSheet(page, {
+    name: "Alpha Review Sheet",
+    bpm: "96",
+    timeSignature: "4/4"
+  });
+  const betaSheet = await importTestSheet(page, {
+    name: "Beta Review Sheet",
+    bpm: "84",
+    timeSignature: "3/4"
+  });
+  const artifact = await createWavDataUrl(page, 330, 0.8);
+  const reviewSnapshot = {
+    sessions: [
+      {
+        id: "session-review-alpha",
+        sourceType: "sheet",
+        sheetId: alphaSheet.sheetId
+      },
+      {
+        id: "session-review-beta",
+        sourceType: "sheet",
+        sheetId: betaSheet.sheetId
+      },
+      { id: "session-review-quick", sourceType: "quick" }
+    ],
+    recordings: [
+      createE2ESheetRecording({
+        id: "review-alpha-segment",
+        name: "Alpha linked segment",
+        sessionId: "session-review-alpha",
+        sheetId: alphaSheet.sheetId,
+        sheetName: "Alpha Review Sheet",
+        createdAt: "2026-06-21T10:00:00.000Z",
+        artifact,
+        trustedPeaks: [0.1, 0.5, 0.7, 0.2],
+        segmentContext: createSegmentContext({
+          segmentId: "segment-alpha",
+          segmentName: "Alpha bridge"
+        })
+      }),
+      createE2ESheetRecording({
+        id: "review-alpha-whole",
+        name: "Alpha linked whole",
+        sessionId: "session-review-alpha",
+        sheetId: alphaSheet.sheetId,
+        sheetName: "Alpha Review Sheet",
+        createdAt: "2026-06-21T11:00:00.000Z",
+        artifact,
+        trustedPeaks: [0.1, 0.4, 0.8, 0.3],
+        segmentContext: null
+      }),
+      createE2ESheetRecording({
+        id: "review-alpha-archived",
+        name: "Alpha archived take",
+        sessionId: "session-review-alpha",
+        sheetId: alphaSheet.sheetId,
+        sheetName: "Alpha Review Sheet",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        artifact,
+        trustedPeaks: [0.1, 0.4, 0.8, 0.3],
+        segmentContext: null
+      }),
+      createE2ESheetRecording({
+        id: "review-beta-whole",
+        name: "Beta other sheet",
+        sessionId: "session-review-beta",
+        sheetId: betaSheet.sheetId,
+        sheetName: "Beta Review Sheet",
+        createdAt: "2026-06-21T13:00:00.000Z",
+        artifact,
+        trustedPeaks: [0.2, 0.4, 0.6, 0.2],
+        segmentContext: null
+      }),
+      createE2EQuickRecording({
+        id: "review-quick",
+        name: "Review quick take",
+        sessionId: "session-review-quick",
+        createdAt: "2026-06-21T14:00:00.000Z",
+        artifact
+      })
+    ],
+    errorMarkers: [],
+    recordingOrganization: [
+      createE2ERecordingOrganizationItem({
+        recordingId: "review-alpha-archived",
+        archived: true,
+        updatedAt: "2026-06-21T14:00:00.000Z"
+      })
+    ]
+  };
+  await seedRecordingHistory(page, reviewSnapshot);
+  await seedE2ERecordingArtifacts(page, reviewSnapshot.recordings);
+
+  await page.goto("/sheet-library");
+  const alphaCard = page.locator(".bg-card").filter({
+    has: page.getByRole("heading", { name: "Alpha Review Sheet" })
+  });
+
+  await alphaCard.getByRole("link", { name: "Review recordings" }).click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/recordings");
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("sheetId"))
+    .toBe(alphaSheet.sheetId);
+  await expect(page.getByTestId("active-sheet-filter")).toContainText(
+    `Sheet filter: ${alphaSheet.sheetId}`
+  );
+  await expect(
+    page.getByTestId("recording-row-review-alpha-segment")
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("recording-row-review-alpha-whole")
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("recording-row-review-alpha-archived")
+  ).toHaveCount(0);
+  await expect(page.getByTestId("recording-row-review-beta-whole")).toHaveCount(
+    0
+  );
+  await expect(page.getByTestId("recording-row-review-quick")).toHaveCount(0);
+
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("whole");
+  await expect(
+    page.getByTestId("recording-row-review-alpha-whole")
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("recording-row-review-alpha-segment")
+  ).toBeHidden();
+  await page.getByRole("textbox", { name: "Search recordings" }).fill("");
+  await page.getByLabel("Type filter").selectOption("quick");
+  await expect(page.getByTestId("recordings-filter-empty-state")).toContainText(
+    "No recordings match this sheet filter and the current filters."
+  );
+  await page.getByLabel("Type filter").selectOption("sheet");
+  await expect(
+    page.getByTestId("recording-row-review-alpha-segment")
+  ).toBeVisible();
+  await page.getByLabel("Archive filter").selectOption("archived");
+  await expect(
+    page.getByTestId("recording-row-review-alpha-archived")
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("recording-row-review-alpha-whole")
+  ).toBeHidden();
+  await page.getByLabel("Archive filter").selectOption("all");
+  await page.getByLabel("Type filter").selectOption("all");
+
+  await page.reload();
+  await expect(page.getByTestId("active-sheet-filter")).toContainText(
+    alphaSheet.sheetId
+  );
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("sheetId"))
+    .toBe(alphaSheet.sheetId);
+
+  await page.getByRole("link", { name: "Clear sheet filter" }).click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/recordings");
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("sheetId"))
+    .toBeNull();
+  await expect(
+    page.getByTestId("recording-row-review-beta-whole")
+  ).toBeVisible();
+  await expect(page.getByTestId("recording-row-review-quick")).toBeVisible();
+
+  await page.goBack();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("sheetId"))
+    .toBe(alphaSheet.sheetId);
+  await expect(
+    page.getByTestId("recording-row-review-alpha-whole")
+  ).toBeVisible();
+  await expect(page.getByTestId("recording-row-review-beta-whole")).toHaveCount(
+    0
+  );
+  await expect(page.getByTestId("recording-row-review-quick")).toHaveCount(0);
+
+  await clearRecordingHistory(page);
+  await page.goto(
+    `/recordings?sheetId=${encodeURIComponent(alphaSheet.sheetId)}`
+  );
+  await expect(page.getByTestId("active-sheet-filter")).toContainText(
+    alphaSheet.sheetId
+  );
+  await expect(page.getByTestId("recordings-empty-state")).toBeVisible();
 });
 
 test("recordings review keeps summary chips readable at a narrow viewport", async ({
