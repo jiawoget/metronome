@@ -598,7 +598,7 @@
                                                             },
                                                             {
                                                                 "slice":  "P5-02 library-tags-favorites-ui",
-                                                                "status":  "verified"
+                                                                "status":  "not_started"
                                                             },
                                                             {
                                                                 "slice":  "P5-03 library-batch-import-orchestrator",
