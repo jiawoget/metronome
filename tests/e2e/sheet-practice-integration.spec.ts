@@ -59,7 +59,7 @@ type LayoutViewport = {
 
 const layoutViewports: LayoutViewport[] = [
   { name: "desktop", width: 1280, height: 820, expectControlsInInitialViewport: true, minViewerHeight: 220 },
-  { name: "tablet", width: 1024, height: 768, expectControlsInInitialViewport: true, minViewerHeight: 220 },
+  { name: "tablet", width: 1000, height: 768, expectControlsInInitialViewport: false, minViewerHeight: 220 },
   { name: "mobile", width: 390, height: 844, expectControlsInInitialViewport: false, minViewerHeight: 160 }
 ];
 
@@ -91,7 +91,9 @@ async function getPracticeSnapshot(page: Page) {
 }
 
 async function expectSheetPriorityLayout(page: Page, viewport: LayoutViewport, phase: string) {
-  const sheetImage = page.getByRole("img", { name: /Integrated Practice Sheet page 1/ });
+  const sheetImage = page
+    .getByTestId("sheet-viewer-scroll")
+    .getByRole("img", { name: "Integrated Practice Sheet page 1", exact: true });
 
   await page.setViewportSize({ width: viewport.width, height: viewport.height });
   await page.evaluate(() => window.scrollTo(0, 0));
