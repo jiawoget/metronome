@@ -22,6 +22,11 @@ export type SheetViewerInspection =
 
 export type SheetViewerAdapter = {
   inspectArtifact: (sheet: ImportedSheet, artifact: SheetArtifact) => Promise<SheetViewerInspection>;
+  generatePageThumbnails: (
+    sheet: ImportedSheet,
+    artifact: SheetArtifact,
+    options?: { maxWidth?: number }
+  ) => Promise<SheetViewerThumbnailGeneration>;
   createFileUrl: (blob: Blob) => string;
   revokeFileUrl: (url: string) => void;
 };
@@ -52,3 +57,38 @@ export type SheetViewerObjectUrls = {
   sheetId: string;
   urls: string[];
 };
+
+export type SheetPageThumbnailBlob = {
+  pageNumber: number;
+  blob: Blob;
+  width: number;
+  height: number;
+};
+
+export type SheetViewerThumbnailGeneration =
+  | {
+      ok: true;
+      thumbnails: SheetPageThumbnailBlob[];
+    }
+  | {
+      ok: false;
+      code: Extract<SheetViewerErrorCode, "bad-pdf" | "bad-image" | "missing-artifact" | "artifact-mismatch">;
+      message: string;
+    };
+
+export type SheetPageThumbnail = {
+  sheetId: string;
+  pageNumber: number;
+  width: number;
+  height: number;
+  url: string;
+};
+
+export type SheetPageThumbnailSet =
+  | {
+      status: "ready";
+      sheetId: string;
+      pageCount: number;
+      thumbnails: SheetPageThumbnail[];
+    }
+  | SheetViewerErrorState;

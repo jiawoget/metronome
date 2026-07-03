@@ -45,7 +45,11 @@ function killChildTree(child, signal) {
 
 async function runNext(args) {
   const child = spawn(process.execPath, [nextBin, ...args], {
-    stdio: "inherit"
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_METRONOME_E2E: "1"
+    }
   });
   activeChild = child;
 
