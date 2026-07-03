@@ -279,6 +279,82 @@ async function expectViewerControlsDoNotOverlap(page: Page) {
   expect(scrollBox.y + scrollBox.height).toBeLessThanOrEqual(controlsBox.y);
 }
 
+async function getTransformContentTranslate(page: Page) {
+  return page.getByTestId("sheet-viewer-transform-content").evaluate((element) => {
+    const transform = getComputedStyle(element).transform;
+
+    if (transform === "none") {
+      return { x: 0, y: 0 };
+    }
+
+    const matrix = new DOMMatrixReadOnly(transform);
+
+    return {
+      x: matrix.m41,
+      y: matrix.m42
+    };
+  });
+}
+
+async function expectTransformContentDefault(page: Page) {
+  await expect.poll(async () => {
+    const translate = await getTransformContentTranslate(page);
+
+    return Math.abs(translate.x) + Math.abs(translate.y);
+  }).toBe(0);
+}
+
+async function dragTransformContent(page: Page, deltaX: number, deltaY: number) {
+  const contentBox = await page.getByTestId("sheet-viewer-transform-content").boundingBox();
+  const viewportBox = await page.getByTestId("sheet-viewer-scroll").boundingBox();
+
+  expect(contentBox).not.toBeNull();
+  expect(viewportBox).not.toBeNull();
+
+  if (!contentBox || !viewportBox) {
+    return;
+  }
+
+  const x = Math.max(
+    viewportBox.x + 20,
+    Math.min(contentBox.x + contentBox.width / 2, viewportBox.x + viewportBox.width - 20)
+  );
+  const y = Math.max(
+    viewportBox.y + 20,
+    Math.min(contentBox.y + Math.min(100, contentBox.height / 2), viewportBox.y + viewportBox.height - 20)
+  );
+
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + deltaX, y + deltaY, { steps: 6 });
+  await page.mouse.up();
+}
+
+async function getTransformPanStats(page: Page) {
+  return page.evaluate(() => {
+    const viewport = document.querySelector<HTMLElement>("[data-testid='sheet-viewer-scroll']");
+    const content = document.querySelector<HTMLElement>("[data-testid='sheet-viewer-transform-content']");
+
+    if (!viewport || !content) {
+      throw new Error("Sheet viewer transform elements are unavailable.");
+    }
+
+    const contentRect = content.getBoundingClientRect();
+    const transform = getComputedStyle(content).transform;
+    const matrix = transform === "none" ? new DOMMatrixReadOnly() : new DOMMatrixReadOnly(transform);
+    const maxX = Math.max(0, (contentRect.width - viewport.clientWidth) / 2);
+    const maxY = Math.max(0, (contentRect.height - viewport.clientHeight) / 2);
+
+    return {
+      x: matrix.m41,
+      y: matrix.m42,
+      maxX,
+      maxY,
+      hasOverflow: maxX > 0 || maxY > 0
+    };
+  });
+}
+
 async function submitPageJump(page: Page, value: string, submitWithEnter = false) {
   const input = page.getByRole("textbox", { name: "Page number" });
 
@@ -330,6 +406,8 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   await expect(page.getByRole("navigation", { name: "Page thumbnails" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("button", { name: "Go to page 2" })).toBeVisible();
+  await expect(page.getByLabel("Zoom level")).toHaveText("100%");
+  await expectTransformContentDefault(page);
   let canvas = await expectPdfCanvasRendered(page);
   const initialWidth = await canvas.evaluate((node) => (node as HTMLCanvasElement).width);
 
@@ -366,9 +444,34 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
 
   await page.getByRole("button", { name: "Zoom in" }).click();
-  await expect(page.getByLabel("Zoom level")).toHaveText("125%");
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  await expect(page.getByLabel("Zoom level")).toHaveText("150%");
   canvas = await expectPdfCanvasRendered(page);
   await expect.poll(() => canvas.evaluate((node) => (node as HTMLCanvasElement).width)).toBeGreaterThan(initialWidth);
+  await dragTransformContent(page, 90, 60);
+  await expect.poll(async () => (await getTransformContentTranslate(page)).x).toBeGreaterThan(0);
+  await expect.poll(async () => (await getTransformContentTranslate(page)).y).toBeGreaterThan(0);
+  const panStats = await getTransformPanStats(page);
+  expect(Math.abs(panStats.x)).toBeLessThanOrEqual(panStats.maxX + 1);
+  expect(Math.abs(panStats.y)).toBeLessThanOrEqual(panStats.maxY + 1);
+
+  await page.getByRole("button", { name: "Reset zoom" }).click();
+  await expect(page.getByLabel("Zoom level")).toHaveText("100%");
+  await expectTransformContentDefault(page);
+  await dragTransformContent(page, 90, 60);
+  await expectTransformContentDefault(page);
+
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  await expect(page.getByLabel("Zoom level")).toHaveText("125%");
+  await submitPageJump(page, "2");
+  await expect(page.getByText("Page 2 of 2")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByLabel("Zoom level")).toHaveText("100%");
+  await expectTransformContentDefault(page);
+  await page.getByRole("button", { name: "Previous page" }).click();
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+  await expect(page.getByLabel("Zoom level")).toHaveText("100%");
+  await expectTransformContentDefault(page);
 
   const scrollArea = page.getByTestId("sheet-viewer-scroll");
   await scrollArea.evaluate((element) => {
@@ -379,6 +482,11 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  await expect(page.getByLabel("Zoom level")).toHaveText("125%");
+  await page.getByRole("button", { name: "Reset zoom" }).click();
+  await expect(page.getByLabel("Zoom level")).toHaveText("100%");
+  await expectTransformContentDefault(page);
   await expect(page.getByRole("button", { name: "Page thumbnails" })).toBeVisible();
   await page.getByRole("button", { name: "Page thumbnails" }).click();
   await expect(page.getByRole("button", { name: "Page thumbnails" })).toHaveAttribute("aria-expanded", "true");
@@ -554,6 +662,18 @@ test("sheet viewer renders imported image artifact with zoom, resize, and reload
   await expect.poll(() => image.evaluate((node) => (node as HTMLImageElement).clientWidth)).toBeGreaterThan(
     initialDimensions.clientWidth
   );
+  const imagePanBefore = await getTransformPanStats(page);
+  await dragTransformContent(page, 80, 40);
+  const imagePanAfter = await getTransformPanStats(page);
+
+  if (imagePanBefore.hasOverflow) {
+    expect(Math.abs(imagePanAfter.x) + Math.abs(imagePanAfter.y)).toBeGreaterThan(0);
+  } else {
+    expect(Math.abs(imagePanAfter.x) + Math.abs(imagePanAfter.y)).toBe(0);
+  }
+  await page.getByRole("button", { name: "Reset zoom" }).click();
+  await expect(page.getByLabel("Zoom level")).toHaveText("100%");
+  await expectTransformContentDefault(page);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(image).toBeVisible();

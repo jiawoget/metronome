@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { AlertTriangle, ChevronLeft, ChevronRight, FileImage, FileText, Images, Minus, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ChevronLeft, ChevronRight, FileImage, FileText, Images, Minus, Plus, RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { SheetArtifactFile } from "@/domain/sheet";
+import type { PointerEvent } from "react";
 import { SheetPracticeControls } from "@/components/sheet-practice/controls/sheet-practice-controls";
 import { ReferencePanel } from "@/components/sheet-practice/reference/reference-panel";
 import { SheetPageJump } from "@/components/sheet-practice/viewer/sheet-page-jump";
@@ -14,9 +15,16 @@ import { browserSheetViewerService } from "@/infrastructure/sheet-viewer/browser
 import { useBrowserSheetViewerObjectUrls } from "@/infrastructure/sheet-viewer/use-browser-sheet-viewer-object-urls";
 import { useBrowserSheetViewerPageThumbnails } from "@/infrastructure/sheet-viewer/use-browser-sheet-viewer-page-thumbnails";
 import {
+  clampSheetViewerTransform,
   formatSheetViewerPageLabel,
+  panSheetViewerTransform,
+  resetSheetViewerTransform,
+  resetSheetViewerTransformForPageChange,
+  setSheetViewerTransformScale,
   stepSheetViewerZoom,
-  type SheetViewerLoadState
+  type SheetViewerLoadState,
+  type SheetViewerTransform,
+  type SheetViewerTransformBounds
 } from "@/services/sheet-viewer";
 import { Button } from "@/components/ui/button";
 
@@ -33,6 +41,8 @@ type SheetViewerExperienceProps = {
   sourceRecordingId?: string | null;
   returnSegmentId?: string | null;
 };
+
+const PDF_BASE_WIDTH = 760;
 
 function useSheetViewer(sheetId: string | null) {
   const [state, setState] = useState<{
@@ -68,6 +78,25 @@ function getPageFile(files: SheetArtifactFile[], pageNumber: number) {
   return files.find((file) => file.pageNumber === pageNumber) ?? files[pageNumber - 1] ?? files[0] ?? null;
 }
 
+function isSameTransform(first: SheetViewerTransform, second: SheetViewerTransform) {
+  return (
+    first.scale === second.scale &&
+    first.translateX === second.translateX &&
+    first.translateY === second.translateY
+  );
+}
+
+function hasMeasuredPanOverflow(bounds: SheetViewerTransformBounds | undefined, scale: number) {
+  if (!bounds || scale <= 1) {
+    return false;
+  }
+
+  return (
+    bounds.content.width * scale > bounds.viewport.width ||
+    bounds.content.height * scale > bounds.viewport.height
+  );
+}
+
 function SheetViewerError({ title, message }: { title: string; message: string }) {
   return (
     <section
@@ -101,6 +130,7 @@ function SheetViewerToolbar({
   onJumpToPage,
   onZoomOut,
   onZoomIn,
+  onResetZoom,
   thumbnailsOpen,
   onToggleThumbnails
 }: {
@@ -114,6 +144,7 @@ function SheetViewerToolbar({
   onJumpToPage: (pageNumber: number) => void;
   onZoomOut: () => void;
   onZoomIn: () => void;
+  onResetZoom: () => void;
   thumbnailsOpen: boolean;
   onToggleThumbnails: () => void;
 }) {
@@ -173,6 +204,9 @@ function SheetViewerToolbar({
         <Button type="button" variant="secondary" size="icon" aria-label="Zoom in" onClick={onZoomIn}>
           <Plus className="h-4 w-4" aria-hidden="true" />
         </Button>
+        <Button type="button" variant="secondary" size="icon" aria-label="Reset zoom" onClick={onResetZoom}>
+          <RotateCcw className="h-4 w-4" aria-hidden="true" />
+        </Button>
         <Button asChild variant="ghost">
           <Link href="/sheet-library">Library</Link>
         </Button>
@@ -192,12 +226,21 @@ function SheetViewerReady({
 }) {
   const objectUrls = useBrowserSheetViewerObjectUrls(state);
   const thumbnailState = useBrowserSheetViewerPageThumbnails(state.sheet.id);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const transformContentRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [zoom, setZoom] = useState(1);
+  const [transform, setTransform] = useState(() => resetSheetViewerTransform());
+  const [canPan, setCanPan] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [thumbnailsOpen, setThumbnailsOpen] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [referencePlaybackTimestampMs, setReferencePlaybackTimestampMs] =
     useState<number | null>(null);
+  const totalPages = state.pageCount;
+  const activeImageFile = getPageFile(state.artifact.files, currentPage);
+  const imageBaseWidth = Math.max(activeImageFile?.width ?? 0, 360);
+  const contentBaseWidth = state.sheet.kind === "pdf" ? PDF_BASE_WIDTH : imageBaseWidth;
 
   const pageUrl = useMemo(() => {
     if (!objectUrls) {
@@ -211,6 +254,134 @@ function SheetViewerReady({
     return objectUrls.urls[currentPage - 1] ?? objectUrls.urls[0] ?? null;
   }, [currentPage, objectUrls, state]);
 
+  const getTransformBounds = useCallback((scale = transform.scale): SheetViewerTransformBounds | undefined => {
+    const viewportElement = viewportRef.current;
+    const contentElement = transformContentRef.current;
+
+    if (!viewportElement || !contentElement) {
+      return undefined;
+    }
+
+    const contentRect = contentElement.getBoundingClientRect();
+    const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+
+    return {
+      viewport: {
+        width: viewportElement.clientWidth,
+        height: viewportElement.clientHeight
+      },
+      content: {
+        width: contentBaseWidth,
+        height: contentRect.height / safeScale
+      }
+    };
+  }, [contentBaseWidth, transform.scale]);
+
+  const clampToMeasuredBounds = useCallback(() => {
+    const bounds = getTransformBounds();
+
+    setCanPan(hasMeasuredPanOverflow(bounds, transform.scale));
+    setTransform((current) => {
+      const next = clampSheetViewerTransform(current, bounds);
+
+      return isSameTransform(current, next) ? current : next;
+    });
+  }, [getTransformBounds, transform.scale]);
+
+  useEffect(() => {
+    const viewportElement = viewportRef.current;
+    const contentElement = transformContentRef.current;
+
+    const frameId = requestAnimationFrame(() => clampToMeasuredBounds());
+
+    if (!viewportElement || !contentElement || typeof ResizeObserver === "undefined") {
+      return () => cancelAnimationFrame(frameId);
+    }
+
+    const observer = new ResizeObserver(() => clampToMeasuredBounds());
+
+    observer.observe(viewportElement);
+    observer.observe(contentElement);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      observer.disconnect();
+    };
+  }, [clampToMeasuredBounds]);
+
+  useEffect(() => () => {
+    dragRef.current = null;
+  }, []);
+
+  const goToPage = useCallback((pageNumber: number) => {
+    setCurrentPage(pageNumber);
+    setTransform(resetSheetViewerTransformForPageChange());
+    setIsDragging(false);
+    dragRef.current = null;
+  }, []);
+
+  function updateScale(direction: "in" | "out") {
+    setTransform((current) => setSheetViewerTransformScale(
+      current,
+      stepSheetViewerZoom(current.scale, direction),
+      getTransformBounds(current.scale)
+    ));
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== "mouse" || event.button !== 0) {
+      return;
+    }
+
+    const bounds = getTransformBounds(transform.scale);
+
+    if (!hasMeasuredPanOverflow(bounds, transform.scale)) {
+      return;
+    }
+
+    dragRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const delta = {
+      x: event.clientX - drag.x,
+      y: event.clientY - drag.y
+    };
+
+    dragRef.current = {
+      pointerId: drag.pointerId,
+      x: event.clientX,
+      y: event.clientY
+    };
+    event.preventDefault();
+    setTransform((current) => panSheetViewerTransform(current, delta, getTransformBounds(current.scale)));
+  }
+
+  function endPointerDrag(event: PointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId !== event.pointerId) {
+      return;
+    }
+
+    dragRef.current = null;
+    setIsDragging(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
   if (!pageUrl) {
     return (
       <SheetViewerError
@@ -220,11 +391,8 @@ function SheetViewerReady({
     );
   }
 
-  const totalPages = state.pageCount;
-  const activeImageFile = getPageFile(state.artifact.files, currentPage);
-  const imageBaseWidth = Math.max(activeImageFile?.width ?? 0, 360);
-  const pdfWidth = Math.round(760 * zoom);
-  const imageWidth = Math.round(imageBaseWidth * zoom);
+  const pdfWidth = Math.round(PDF_BASE_WIDTH * transform.scale);
+  const imageWidth = Math.round(imageBaseWidth * transform.scale);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
@@ -241,12 +409,13 @@ function SheetViewerReady({
             sheetName={state.sheet.name}
             currentPage={currentPage}
             totalPages={totalPages}
-            zoom={zoom}
-            onPrevious={() => setCurrentPage((page) => Math.max(1, page - 1))}
-            onNext={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-            onJumpToPage={setCurrentPage}
-            onZoomOut={() => setZoom((current) => stepSheetViewerZoom(current, "out"))}
-            onZoomIn={() => setZoom((current) => stepSheetViewerZoom(current, "in"))}
+            zoom={transform.scale}
+            onPrevious={() => goToPage(Math.max(1, currentPage - 1))}
+            onNext={() => goToPage(Math.min(totalPages, currentPage + 1))}
+            onJumpToPage={goToPage}
+            onZoomOut={() => updateScale("out")}
+            onZoomIn={() => updateScale("in")}
+            onResetZoom={() => setTransform(resetSheetViewerTransform())}
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
           />
@@ -260,7 +429,7 @@ function SheetViewerReady({
               orientation="horizontal"
               className="border-b lg:hidden"
               onSelectPage={(pageNumber) => {
-                setCurrentPage(pageNumber);
+                goToPage(pageNumber);
                 setThumbnailsOpen(false);
               }}
             />
@@ -273,38 +442,57 @@ function SheetViewerReady({
               currentPage={currentPage}
               totalPages={totalPages}
               className="hidden border-r lg:flex lg:flex-col"
-              onSelectPage={setCurrentPage}
+              onSelectPage={goToPage}
             />
             <div
+              ref={viewportRef}
               data-testid="sheet-viewer-scroll"
               className="min-h-0 overflow-auto bg-muted p-4 md:p-6"
             >
               <div className="mx-auto flex min-h-full w-fit min-w-full items-start justify-center">
-                {state.sheet.kind === "pdf" ? (
-                  <PdfSheetRenderer
-                    file={state.artifact.files[0]?.blob ?? pageUrl}
-                    pageNumber={currentPage}
-                    width={pdfWidth}
-                    renderError={renderError}
-                    onRenderReady={(numPages) => {
-                      setRenderError(null);
-                      if (numPages > 0 && currentPage > numPages) {
-                        setCurrentPage(numPages);
-                      }
-                    }}
-                    onRenderError={(error) => setRenderError(`PDF cannot be rendered: ${error.message}`)}
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={pageUrl}
-                    alt={`${state.sheet.name} page ${currentPage}`}
-                    width={imageWidth}
-                    className="max-w-none rounded-md bg-white shadow-soft [image-rendering:auto]"
-                    onError={() => setRenderError("Image cannot be rendered")}
-                    onLoad={() => setRenderError(null)}
-                  />
-                )}
+                <div
+                  ref={transformContentRef}
+                  data-testid="sheet-viewer-transform-content"
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={endPointerDrag}
+                  onPointerCancel={endPointerDrag}
+                  onLostPointerCapture={endPointerDrag}
+                  style={{
+                    cursor: canPan ? (isDragging ? "grabbing" : "grab") : undefined,
+                    transform: `translate3d(${transform.translateX}px, ${transform.translateY}px, 0)`
+                  }}
+                >
+                  {state.sheet.kind === "pdf" ? (
+                    <PdfSheetRenderer
+                      file={state.artifact.files[0]?.blob ?? pageUrl}
+                      pageNumber={currentPage}
+                      width={pdfWidth}
+                      renderError={renderError}
+                      onRenderReady={(numPages) => {
+                        setRenderError(null);
+                        clampToMeasuredBounds();
+                        if (numPages > 0 && currentPage > numPages) {
+                          goToPage(numPages);
+                        }
+                      }}
+                      onRenderError={(error) => setRenderError(`PDF cannot be rendered: ${error.message}`)}
+                    />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={pageUrl}
+                      alt={`${state.sheet.name} page ${currentPage}`}
+                      width={imageWidth}
+                      className="max-w-none rounded-md bg-white shadow-soft [image-rendering:auto]"
+                      onError={() => setRenderError("Image cannot be rendered")}
+                      onLoad={() => {
+                        setRenderError(null);
+                        clampToMeasuredBounds();
+                      }}
+                    />
+                  )}
+                </div>
               </div>
               {renderError ? (
                 <p role="alert" className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
