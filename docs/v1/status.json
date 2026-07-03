@@ -590,11 +590,11 @@
                                          },
                                          {
                                              "pack":  "pack-5-library-viewer-upgrade",
-                                             "status":  "not_started",
+                                             "status":  "planning_in_progress",
                                              "slices":  [
                                                             {
                                                                 "slice":  "P5-01 library-tags-favorites-domain",
-                                                                "status":  "not_started"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "P5-02 library-tags-favorites-ui",
