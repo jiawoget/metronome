@@ -1,4 +1,8 @@
 import {
+  resolveSheetOrganization,
+  normalizeSheetTag
+} from "@/domain/sheet/validation";
+import {
   sheetCategoryLabels,
   type ImportedSheet,
   type SheetCategory,
@@ -6,6 +10,13 @@ import {
 } from "@/domain/sheet/types";
 
 export type SheetCategoryFilter = "all" | SheetCategory;
+export type SheetFavoriteFilter = "all" | "favorites";
+export type SheetFilterOptions = {
+  query: string;
+  category: SheetCategoryFilter;
+  favorite?: SheetFavoriteFilter;
+  tag?: string | null;
+};
 
 export function formatPageCount(sheet: Pick<ImportedSheet, "kind" | "pageCount" | "imageCount">) {
   if (sheet.kind === "pdf") {
@@ -22,6 +33,7 @@ function matchesSheetSearch(sheet: ImportedSheet, query: string) {
     return true;
   }
 
+  const organization = resolveSheetOrganization(sheet);
   const haystack = [
     sheet.name,
     sheet.category,
@@ -29,7 +41,8 @@ function matchesSheetSearch(sheet: ImportedSheet, query: string) {
     String(sheet.bpm),
     sheet.timeSignature,
     sheet.kind,
-    ...sheet.originalFileNames
+    ...sheet.originalFileNames,
+    ...organization.tags
   ]
     .join(" ")
     .toLowerCase();
@@ -37,13 +50,36 @@ function matchesSheetSearch(sheet: ImportedSheet, query: string) {
   return haystack.includes(normalizedQuery);
 }
 
+function matchesOrganizationFilters(sheet: ImportedSheet, options: SheetFilterOptions) {
+  const organization = resolveSheetOrganization(sheet);
+
+  if ((options.favorite ?? "all") === "favorites" && !organization.favorite) {
+    return false;
+  }
+
+  const requestedTag = options.tag?.trim() ?? "";
+
+  if (!requestedTag) {
+    return true;
+  }
+
+  const normalizedTag = normalizeSheetTag(requestedTag);
+
+  if (!normalizedTag) {
+    return false;
+  }
+
+  return organization.tags.some((tag) => tag.toLowerCase() === normalizedTag.toLowerCase());
+}
+
 export function filterSheets(
   sheets: SheetListItem[],
-  options: { query: string; category: SheetCategoryFilter }
+  options: SheetFilterOptions
 ) {
   return sheets.filter(
     (sheet) =>
       (options.category === "all" || sheet.category === options.category) &&
-      matchesSheetSearch(sheet, options.query)
+      matchesSheetSearch(sheet, options.query) &&
+      matchesOrganizationFilters(sheet, options)
   );
 }

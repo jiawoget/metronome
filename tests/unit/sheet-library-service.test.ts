@@ -43,6 +43,23 @@ function createMemoryRepository(): SheetLibraryRepository {
 
       return updatedSheet;
     },
+    async updateSheetOrganization(sheetId, organization, updatedAt) {
+      const sheet = sheets.get(sheetId);
+
+      if (!sheet) {
+        return null;
+      }
+
+      const updatedSheet = {
+        ...sheet,
+        ...organization,
+        updatedAt
+      };
+
+      sheets.set(sheetId, updatedSheet);
+
+      return updatedSheet;
+    },
     async updateLastPracticedAt(sheetId, practicedAt) {
       const sheet = sheets.get(sheetId);
 
@@ -142,6 +159,8 @@ describe("sheet library service", () => {
       name: "Autumn Etude",
       category: "exercise",
       pageCount: 1,
+      tags: [],
+      favorite: false,
       artifactStatus: {
         readable: true,
         label: "PDF artifact parsed: 1 page"
@@ -349,6 +368,358 @@ describe("sheet library service", () => {
     expect(await service.getArtifact("sheet-edit")).toMatchObject({
       sheetId: "sheet-edit",
       kind: "pdf"
+    });
+  });
+
+  it("updates sheet tags with normalized organization metadata and preserves the artifact", async () => {
+    const repository = createMemoryRepository();
+    let currentTime = "2026-06-21T10:00:00.000Z";
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: createAdapter({
+        ok: true,
+        preview: {
+          kind: "pdf",
+          pageCount: 1,
+          imageCount: 0,
+          imageDimensions: [],
+          mimeTypes: ["application/pdf"],
+          sizeBytes: pdfFile.size,
+          originalFileNames: [pdfFile.name],
+          files: [
+            {
+              name: pdfFile.name,
+              mimeType: pdfFile.type,
+              sizeBytes: pdfFile.size,
+              pageNumber: 1,
+              blob: pdfFile,
+              width: null,
+              height: null
+            }
+          ]
+        }
+      }),
+      now: () => new Date(currentTime),
+      createId: () => "sheet-tags"
+    });
+
+    await service.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Tagged",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    currentTime = "2026-06-21T10:05:00.000Z";
+
+    await expect(
+      service.setSheetTags({
+        sheetId: "sheet-tags",
+        tags: [" Warm   Up ", "Focus", "warm up"]
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      sheet: {
+        id: "sheet-tags",
+        tags: ["Warm Up", "Focus"],
+        favorite: false,
+        updatedAt: "2026-06-21T10:05:00.000Z"
+      }
+    });
+    expect(await service.getArtifact("sheet-tags")).toMatchObject({
+      sheetId: "sheet-tags",
+      kind: "pdf"
+    });
+  });
+
+  it("rejects invalid tag updates without changing the saved organization metadata", async () => {
+    const repository = createMemoryRepository();
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: createAdapter({
+        ok: true,
+        preview: {
+          kind: "image",
+          pageCount: 1,
+          imageCount: 1,
+          imageDimensions: [{ width: 2, height: 2 }],
+          mimeTypes: ["image/png"],
+          sizeBytes: imageFile.size,
+          originalFileNames: [imageFile.name],
+          files: [
+            {
+              name: imageFile.name,
+              mimeType: imageFile.type,
+              sizeBytes: imageFile.size,
+              pageNumber: 1,
+              blob: imageFile,
+              width: 2,
+              height: 2
+            }
+          ]
+        }
+      }),
+      createId: () => "sheet-invalid-tags"
+    });
+
+    await service.importSheet({
+      files: [imageFile],
+      metadata: {
+        name: "Valid Tags",
+        category: "song",
+        bpm: 100,
+        timeSignature: "4/4"
+      }
+    });
+
+    await expect(
+      service.setSheetTags({
+        sheetId: "sheet-invalid-tags",
+        tags: ["bad,tag"]
+      })
+    ).resolves.toEqual({
+      ok: false,
+      message: "Tags cannot contain commas, line breaks, or control characters."
+    });
+    expect(await service.getSheet("sheet-invalid-tags")).toMatchObject({
+      tags: [],
+      favorite: false
+    });
+  });
+
+  it("rejects empty or malformed organization updates without persisting changes", async () => {
+    const repository = createMemoryRepository();
+    let currentTime = "2026-06-21T10:00:00.000Z";
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: createAdapter({
+        ok: true,
+        preview: {
+          kind: "pdf",
+          pageCount: 1,
+          imageCount: 0,
+          imageDimensions: [],
+          mimeTypes: ["application/pdf"],
+          sizeBytes: pdfFile.size,
+          originalFileNames: [pdfFile.name],
+          files: [
+            {
+              name: pdfFile.name,
+              mimeType: pdfFile.type,
+              sizeBytes: pdfFile.size,
+              pageNumber: 1,
+              blob: pdfFile,
+              width: null,
+              height: null
+            }
+          ]
+        }
+      }),
+      now: () => new Date(currentTime),
+      createId: () => "sheet-empty-org"
+    });
+
+    await service.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Organization Guard",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    currentTime = "2026-06-21T10:10:00.000Z";
+
+    await expect(
+      service.updateSheetOrganization({ sheetId: "sheet-empty-org" } as never)
+    ).resolves.toEqual({
+      ok: false,
+      message: "Sheet organization update requires tags or favorite."
+    });
+    await expect(
+      service.updateSheetOrganization({
+        sheetId: "sheet-empty-org",
+        tags: "Warm Up"
+      } as never)
+    ).resolves.toEqual({
+      ok: false,
+      message: "Tags must be an array."
+    });
+    await expect(
+      service.updateSheetOrganization({
+        sheetId: "sheet-empty-org",
+        favorite: "yes"
+      } as never)
+    ).resolves.toEqual({
+      ok: false,
+      message: "Favorite must be true or false."
+    });
+    expect(await service.getSheet("sheet-empty-org")).toMatchObject({
+      tags: [],
+      favorite: false,
+      updatedAt: "2026-06-21T10:00:00.000Z"
+    });
+  });
+
+  it("toggles favorite state and returns not-found errors for missing organization updates", async () => {
+    const repository = createMemoryRepository();
+    let currentTime = "2026-06-21T10:00:00.000Z";
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: createAdapter({
+        ok: true,
+        preview: {
+          kind: "pdf",
+          pageCount: 1,
+          imageCount: 0,
+          imageDimensions: [],
+          mimeTypes: ["application/pdf"],
+          sizeBytes: pdfFile.size,
+          originalFileNames: [pdfFile.name],
+          files: [
+            {
+              name: pdfFile.name,
+              mimeType: pdfFile.type,
+              sizeBytes: pdfFile.size,
+              pageNumber: 1,
+              blob: pdfFile,
+              width: null,
+              height: null
+            }
+          ]
+        }
+      }),
+      now: () => new Date(currentTime),
+      createId: () => "sheet-favorite"
+    });
+
+    await service.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Favorite Me",
+        category: "exercise",
+        bpm: 96,
+        timeSignature: "6/8"
+      }
+    });
+
+    currentTime = "2026-06-21T10:03:00.000Z";
+    await expect(
+      service.setSheetFavorite({
+        sheetId: "sheet-favorite",
+        favorite: true
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      sheet: {
+        favorite: true,
+        updatedAt: "2026-06-21T10:03:00.000Z"
+      }
+    });
+
+    currentTime = "2026-06-21T10:04:00.000Z";
+    await expect(
+      service.setSheetFavorite({
+        sheetId: "sheet-favorite",
+        favorite: false
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      sheet: {
+        favorite: false,
+        updatedAt: "2026-06-21T10:04:00.000Z"
+      }
+    });
+
+    await expect(
+      service.setSheetFavorite({
+        sheetId: "sheet-missing",
+        favorite: true
+      })
+    ).resolves.toEqual({
+      ok: false,
+      message: "Sheet organization could not be updated because the sheet was not found."
+    });
+  });
+
+  it("preserves organization metadata when editing sheet metadata or last practiced time", async () => {
+    const repository = createMemoryRepository();
+    let currentTime = "2026-06-21T10:00:00.000Z";
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: createAdapter({
+        ok: true,
+        preview: {
+          kind: "pdf",
+          pageCount: 1,
+          imageCount: 0,
+          imageDimensions: [],
+          mimeTypes: ["application/pdf"],
+          sizeBytes: pdfFile.size,
+          originalFileNames: [pdfFile.name],
+          files: [
+            {
+              name: pdfFile.name,
+              mimeType: pdfFile.type,
+              sizeBytes: pdfFile.size,
+              pageNumber: 1,
+              blob: pdfFile,
+              width: null,
+              height: null
+            }
+          ]
+        }
+      }),
+      now: () => new Date(currentTime),
+      createId: () => "sheet-preserve-org"
+    });
+
+    await service.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Original",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    currentTime = "2026-06-21T10:02:00.000Z";
+    await service.updateSheetOrganization({
+      sheetId: "sheet-preserve-org",
+      tags: ["Focus"],
+      favorite: true
+    });
+
+    currentTime = "2026-06-21T10:03:00.000Z";
+    await service.updateSheetMetadata({
+      sheetId: "sheet-preserve-org",
+      metadata: {
+        name: "Edited",
+        category: "scale",
+        bpm: 144,
+        timeSignature: "7/8"
+      }
+    });
+
+    await service.updateLastPracticedAt(
+      "sheet-preserve-org",
+      "2026-06-21T10:04:00.000Z"
+    );
+
+    expect(await service.getSheet("sheet-preserve-org")).toMatchObject({
+      name: "Edited",
+      category: "scale",
+      bpm: 144,
+      timeSignature: "7/8",
+      tags: ["Focus"],
+      favorite: true,
+      lastPracticedAt: "2026-06-21T10:04:00.000Z",
+      updatedAt: "2026-06-21T10:04:00.000Z"
     });
   });
 
