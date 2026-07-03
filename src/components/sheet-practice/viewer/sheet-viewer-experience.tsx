@@ -499,7 +499,7 @@ function SheetViewerReady({
     }
 
     if (assistedPageTurnDelayMs === null) {
-      return "Reference timestamp must be at or before the selected segment end.";
+      return "Reference timestamp must be before the selected segment end.";
     }
 
     return null;

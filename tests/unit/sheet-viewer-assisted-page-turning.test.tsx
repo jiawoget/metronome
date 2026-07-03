@@ -217,7 +217,7 @@ describe("SheetViewerExperience assisted page turning", () => {
     expect(screen.getByText("Select a segment to arm a timed page turn.")).toBeVisible();
     selectAssistedSegment();
     expect(
-      screen.getByText("Reference timestamp must be at or before the selected segment end.")
+      screen.getByText("Reference timestamp must be before the selected segment end.")
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Arm assisted page turn" })).toBeDisabled();
 
@@ -302,7 +302,7 @@ describe("SheetViewerExperience assisted page turning", () => {
     fireEvent.click(screen.getByRole("button", { name: "Report expired reference timestamp" }));
 
     expect(
-      screen.getByText("Reference timestamp must be at or before the selected segment end.")
+      screen.getByText("Reference timestamp must be before the selected segment end.")
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Arm assisted page turn" })).toBeDisabled();
   });
