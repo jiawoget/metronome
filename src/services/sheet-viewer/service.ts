@@ -1,4 +1,5 @@
 import type { SheetArtifact } from "@/domain/sheet";
+import { createSheetRecordingSegmentContext, type PracticeSegment } from "@/domain/practice";
 import type {
   SheetPageThumbnailSet,
   SheetPageThumbnailBlob,
@@ -344,6 +345,21 @@ export function panSheetViewerTransform(
     },
     bounds
   );
+}
+
+export function getSheetViewerAssistedPageTurnDelayMs(segment: PracticeSegment | null | undefined) {
+  if (!segment) {
+    return null;
+  }
+
+  try {
+    const { measureRangeMs } = createSheetRecordingSegmentContext(segment);
+    const delayMs = measureRangeMs.endMs - measureRangeMs.startMs;
+
+    return Number.isFinite(delayMs) && delayMs > 0 ? delayMs : null;
+  } catch {
+    return null;
+  }
 }
 
 export function formatSheetViewerPageLabel(currentPage: number, totalPages: number) {

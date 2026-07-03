@@ -216,6 +216,7 @@ export function SheetPracticeControls({
   practiceSegmentService = browserPracticeSegmentService,
   sheetMetronomePresetService = browserSheetMetronomePresetService,
   currentMeasureGridTimestampMs = null,
+  onSelectedSegmentChange,
   barCountIn = undefined
 }: SheetPracticeControlsProps) {
   const initialState = useMemo(
@@ -348,12 +349,14 @@ export function SheetPracticeControls({
         (selection.segment !== null && selection.segment.sheetId !== sheetId)
       ) {
         setSelectedTempoSegment(null);
+        onSelectedSegmentChange?.(null);
         return;
       }
 
       setSelectedTempoSegment(selection.segment);
+      onSelectedSegmentChange?.(selection.segment);
     },
-    [sheetId]
+    [onSelectedSegmentChange, sheetId]
   );
 
   const handleApplySegmentTempo = useCallback(() => {

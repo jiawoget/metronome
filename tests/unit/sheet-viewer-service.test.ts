@@ -8,6 +8,7 @@ import {
   createSheetViewerTransform,
   createSheetViewerService,
   formatSheetViewerPageLabel,
+  getSheetViewerAssistedPageTurnDelayMs,
   panSheetViewerTransform,
   resetSheetViewerTransform,
   resetSheetViewerTransformForPageChange,
@@ -19,6 +20,7 @@ import {
   type SheetViewerThumbnailGeneration,
   type SheetViewerLibraryReader
 } from "@/services/sheet-viewer";
+import { buildMeasureGrid, buildPracticeSegment } from "./factories/practice";
 
 const baseSheet: SheetListItem = {
   id: "sheet-pdf",
@@ -719,5 +721,42 @@ describe("sheet viewer service", () => {
       translateX: 0,
       translateY: 0
     });
+  });
+
+  it("derives assisted page turn delay from selected segment measure timing", () => {
+    const segment = buildPracticeSegment({
+      range: {
+        startMeasure: 2,
+        endMeasure: 3
+      }
+    });
+
+    expect(getSheetViewerAssistedPageTurnDelayMs(segment)).toBe(5_000);
+    expect(getSheetViewerAssistedPageTurnDelayMs(null)).toBeNull();
+    expect(getSheetViewerAssistedPageTurnDelayMs(undefined)).toBeNull();
+  });
+
+  it("returns null for assisted page turn segments without usable timing", () => {
+    expect(
+      getSheetViewerAssistedPageTurnDelayMs({
+        ...buildPracticeSegment(),
+        grid: {
+          measureGridVersion: "bad-grid",
+          measureGridSnapshot: {
+            ...buildMeasureGrid(),
+            bpm: Number.NaN
+          }
+        }
+      })
+    ).toBeNull();
+    expect(
+      getSheetViewerAssistedPageTurnDelayMs({
+        ...buildPracticeSegment(),
+        range: {
+          startMeasure: 3,
+          endMeasure: 2
+        }
+      })
+    ).toBeNull();
   });
 });

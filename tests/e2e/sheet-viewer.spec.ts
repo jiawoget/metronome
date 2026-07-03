@@ -4,11 +4,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { importTestSheet } from "./fixtures/sheets";
-import { SHEET_LIBRARY_DB_NAME } from "./fixtures/storage";
+import {
+  MEASURE_GRID_DB_NAME,
+  PRACTICE_SEGMENT_DB_NAME,
+  SHEET_LIBRARY_DB_NAME
+} from "./fixtures/storage";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
 const dbName = SHEET_LIBRARY_DB_NAME;
+const viewerDbNames = [SHEET_LIBRARY_DB_NAME, MEASURE_GRID_DB_NAME, PRACTICE_SEGMENT_DB_NAME];
 
 type SeedSheetOptions = {
   id: string;
@@ -43,17 +48,19 @@ type BrowserThumbnailSet =
 
 async function clearSheetDatabase(page: Page) {
   await page.goto("/sheet-library");
-  await page.evaluate(
-    (databaseName: string) =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(databaseName);
+  for (const databaseName of viewerDbNames) {
+    await page.evaluate(
+      (name: string) =>
+        new Promise<void>((resolve, reject) => {
+          const request = indexedDB.deleteDatabase(name);
 
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => resolve();
-      }),
-    dbName
-  );
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+          request.onblocked = () => resolve();
+        }),
+      databaseName
+    );
+  }
   await page.reload();
   await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
 }
@@ -152,6 +159,196 @@ async function seedSheets(page: Page, optionsList: SeedSheetOptions[]) {
       seeds
     }
   );
+}
+
+async function seedAssistedPageTurnSegment(page: Page, sheetId: string) {
+  await page.evaluate(
+    ({
+      gridDatabaseName,
+      segmentDatabaseName,
+      targetSheetId
+    }: {
+      gridDatabaseName: string;
+      segmentDatabaseName: string;
+      targetSheetId: string;
+    }) =>
+      new Promise<void>((resolve, reject) => {
+        const updatedAt = "2026-07-03T12:00:00.000Z";
+        const grid = {
+          bpm: 240,
+          timeSignature: "4/4",
+          pickupBeats: 0,
+          measureOneOffsetMs: 0
+        };
+        const segment = {
+          id: "segment-assisted-turn",
+          sheetId: targetSheetId,
+          name: "Assisted turn",
+          range: {
+            startMeasure: 1,
+            endMeasure: 1
+          },
+          targetBpm: null,
+          notes: null,
+          grid: {
+            measureGridVersion: "bpm:240|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:0",
+            measureGridSnapshot: grid
+          }
+        };
+
+        function seedGrid() {
+          return new Promise<void>((seedResolve, seedReject) => {
+            const request = indexedDB.open(gridDatabaseName, 10);
+
+            request.onupgradeneeded = () => {
+              const database = request.result;
+
+              if (!database.objectStoreNames.contains("grids")) {
+                const store = database.createObjectStore("grids", { keyPath: "sheetId" });
+                store.createIndex("updatedAt", "updatedAt");
+              }
+            };
+            request.onerror = () => seedReject(request.error);
+            request.onsuccess = () => {
+              const database = request.result;
+              const transaction = database.transaction(["grids"], "readwrite");
+
+              transaction.objectStore("grids").put({
+                sheetId: targetSheetId,
+                grid,
+                updatedAt
+              });
+              transaction.oncomplete = () => {
+                database.close();
+                seedResolve();
+              };
+              transaction.onerror = () => seedReject(transaction.error);
+            };
+          });
+        }
+
+        function seedSegment() {
+          return new Promise<void>((seedResolve, seedReject) => {
+            const request = indexedDB.open(segmentDatabaseName, 30);
+
+            request.onupgradeneeded = () => {
+              const database = request.result;
+
+              if (!database.objectStoreNames.contains("segments")) {
+                const store = database.createObjectStore("segments", {
+                  keyPath: ["sheetId", "segmentId"]
+                });
+
+                store.createIndex("sheetId", "sheetId");
+                store.createIndex("segmentId", "segmentId");
+                store.createIndex("updatedAt", "updatedAt");
+              }
+            };
+            request.onerror = () => seedReject(request.error);
+            request.onsuccess = () => {
+              const database = request.result;
+              const transaction = database.transaction(["segments"], "readwrite");
+
+              transaction.objectStore("segments").put({
+                sheetId: targetSheetId,
+                segmentId: segment.id,
+                segment,
+                updatedAt
+              });
+              transaction.oncomplete = () => {
+                database.close();
+                seedResolve();
+              };
+              transaction.onerror = () => seedReject(transaction.error);
+            };
+          });
+        }
+
+        seedGrid().then(seedSegment).then(resolve, reject);
+      }),
+    {
+      gridDatabaseName: MEASURE_GRID_DB_NAME,
+      segmentDatabaseName: PRACTICE_SEGMENT_DB_NAME,
+      targetSheetId: sheetId
+    }
+  );
+}
+
+async function installAssistedPageTurnTimerHarness(page: Page) {
+  await page.evaluate(() => {
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    const nativeClearTimeout = window.clearTimeout.bind(window);
+    const assistedTimerId = 912_120;
+    let assistedTimer: (() => void) | null = null;
+    let assistedDelay: number | null = null;
+    const targetWindow = window as Window & {
+      __metronomeAssistedPageTurnTimer?: {
+        getDelay: () => number | null;
+        run: () => boolean;
+      };
+    };
+
+    targetWindow.__metronomeAssistedPageTurnTimer = {
+      getDelay: () => assistedDelay,
+      run: () => {
+        const timer = assistedTimer;
+
+        assistedTimer = null;
+
+        if (!timer) {
+          return false;
+        }
+
+        timer();
+
+        return true;
+      }
+    };
+
+    window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      if (typeof handler === "function" && timeout === 1_000) {
+        assistedDelay = timeout;
+        assistedTimer = () => handler(...args);
+
+        return assistedTimerId;
+      }
+
+      return nativeSetTimeout(handler, timeout, ...(args as []));
+    }) as typeof window.setTimeout;
+
+    window.clearTimeout = ((timerId?: number) => {
+      if (timerId === assistedTimerId) {
+        assistedTimer = null;
+        return;
+      }
+
+      nativeClearTimeout(timerId);
+    }) as typeof window.clearTimeout;
+  });
+}
+
+async function getAssistedPageTurnTimerDelay(page: Page) {
+  return page.evaluate(() => {
+    const harness = (window as Window & {
+      __metronomeAssistedPageTurnTimer?: {
+        getDelay: () => number | null;
+      };
+    }).__metronomeAssistedPageTurnTimer;
+
+    return harness?.getDelay() ?? null;
+  });
+}
+
+async function runAssistedPageTurnTimer(page: Page) {
+  return page.evaluate(() => {
+    const harness = (window as Window & {
+      __metronomeAssistedPageTurnTimer?: {
+        run: () => boolean;
+      };
+    }).__metronomeAssistedPageTurnTimer;
+
+    return harness?.run() ?? false;
+  });
 }
 
 async function loadPageThumbnailsInBrowser(page: Page, sheetId: string) {
@@ -279,6 +476,35 @@ async function expectViewerControlsDoNotOverlap(page: Page) {
   expect(scrollBox.y + scrollBox.height).toBeLessThanOrEqual(controlsBox.y);
 }
 
+function boxesOverlap(
+  first: { x: number; y: number; width: number; height: number },
+  second: { x: number; y: number; width: number; height: number }
+) {
+  return (
+    first.x < second.x + second.width &&
+    first.x + first.width > second.x &&
+    first.y < second.y + second.height &&
+    first.y + first.height > second.y
+  );
+}
+
+async function expectAssistedControlsDoNotOverlap(page: Page) {
+  const toggleBox = await page.getByRole("checkbox", { name: "Assisted page turning" }).boundingBox();
+  const armButtonBox = await page.getByRole("button", { name: "Arm assisted page turn" }).boundingBox();
+  const statusBox = await page.getByText("Ready: 1s.").boundingBox();
+
+  expect(toggleBox).not.toBeNull();
+  expect(armButtonBox).not.toBeNull();
+  expect(statusBox).not.toBeNull();
+
+  if (!toggleBox || !armButtonBox || !statusBox) {
+    return;
+  }
+
+  expect(boxesOverlap(toggleBox, armButtonBox)).toBe(false);
+  expect(boxesOverlap(armButtonBox, statusBox)).toBe(false);
+}
+
 async function getTransformContentTranslate(page: Page) {
   return page.getByTestId("sheet-viewer-transform-content").evaluate((element) => {
     const transform = getComputedStyle(element).transform;
@@ -375,6 +601,83 @@ async function expectPageJumpError(page: Page, value: string, message: string) {
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
   await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
 }
+
+test("sheet viewer assisted page turning is opt-in, manually armed, and cancelable", async ({
+  page
+}) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await clearSheetDatabase(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const { link, sheetId } = await importTestSheet(page, {
+    fixture: "two-page-sheet.pdf",
+    name: "Assisted Page Turn PDF",
+    bpm: "72",
+    timeSignature: "4/4"
+  });
+
+  await seedAssistedPageTurnSegment(page, sheetId);
+  await link.click();
+  await expect(page.getByRole("heading", { name: "Assisted Page Turn PDF" })).toBeVisible();
+  await expectPdfCanvasRendered(page);
+
+  const assistedToggle = page.getByRole("checkbox", { name: "Assisted page turning" });
+  const armButton = page.getByRole("button", { name: "Arm assisted page turn" });
+
+  await expect(assistedToggle).not.toBeChecked();
+  await expect(armButton).toBeDisabled();
+  await assistedToggle.check();
+  await expect(page.getByText("Select a segment to arm a timed page turn.")).toBeVisible();
+  await page.getByTestId("practice-segment-row-segment-assisted-turn").click();
+  await expect(armButton).toBeEnabled();
+  await expect(page.getByText("Ready: 1s.")).toBeVisible();
+
+  await installAssistedPageTurnTimerHarness(page);
+  await armButton.click();
+  await expect(page.getByText("Assisted page turn armed.")).toBeVisible();
+  await expect.poll(() => getAssistedPageTurnTimerDelay(page)).toBe(1_000);
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+  expect(await runAssistedPageTurnTimer(page)).toBe(true);
+  await expect(page.getByText("Page 2 of 2")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByLabel("Zoom level")).toHaveText("100%");
+  await expect(armButton).toBeDisabled();
+  await expect(page.getByText("Already on the last page.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Previous page" }).click();
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+  await armButton.click();
+  await expect(page.getByText("Assisted page turn armed.")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel assisted page turn" }).click();
+  expect(await runAssistedPageTurnTimer(page)).toBe(false);
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+
+  await armButton.click();
+  await expect(page.getByText("Assisted page turn armed.")).toBeVisible();
+  await assistedToggle.uncheck();
+  expect(await runAssistedPageTurnTimer(page)).toBe(false);
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+  await expect(assistedToggle).not.toBeChecked();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(assistedToggle).toBeVisible();
+  await assistedToggle.check();
+  await expect(armButton).toBeVisible();
+  await expect(armButton).toBeEnabled();
+  await expect(page.getByText("Ready: 1s.")).toBeVisible();
+  await expectAssistedControlsDoNotOverlap(page);
+
+  expect(consoleErrors).toEqual([]);
+});
 
 test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, reload, and library return", async ({
   page

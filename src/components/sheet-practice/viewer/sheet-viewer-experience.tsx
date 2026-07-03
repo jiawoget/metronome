@@ -2,10 +2,23 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { AlertTriangle, ChevronLeft, ChevronRight, FileImage, FileText, Images, Minus, Plus, RotateCcw } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  FileImage,
+  FileText,
+  Images,
+  Minus,
+  Plus,
+  RotateCcw,
+  TimerReset,
+  X
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { SheetArtifactFile } from "@/domain/sheet";
+import type { PracticeSegment } from "@/domain/practice";
 import type { PointerEvent } from "react";
 import { SheetPracticeControls } from "@/components/sheet-practice/controls/sheet-practice-controls";
 import { ReferencePanel } from "@/components/sheet-practice/reference/reference-panel";
@@ -17,6 +30,7 @@ import { useBrowserSheetViewerPageThumbnails } from "@/infrastructure/sheet-view
 import {
   clampSheetViewerTransform,
   formatSheetViewerPageLabel,
+  getSheetViewerAssistedPageTurnDelayMs,
   panSheetViewerTransform,
   resetSheetViewerTransform,
   resetSheetViewerTransformForPageChange,
@@ -215,6 +229,74 @@ function SheetViewerToolbar({
   );
 }
 
+function formatAssistedPageTurnDelay(delayMs: number | null) {
+  if (delayMs === null) {
+    return null;
+  }
+
+  return delayMs >= 1000
+    ? `${Math.round(delayMs / 1000)}s`
+    : `${Math.round(delayMs)}ms`;
+}
+
+function SheetAssistedPageTurnControl({
+  enabled,
+  armed,
+  delayMs,
+  unavailableMessage,
+  onEnabledChange,
+  onArm,
+  onCancel
+}: {
+  enabled: boolean;
+  armed: boolean;
+  delayMs: number | null;
+  unavailableMessage: string | null;
+  onEnabledChange: (enabled: boolean) => void;
+  onArm: () => void;
+  onCancel: () => void;
+}) {
+  const delayLabel = formatAssistedPageTurnDelay(delayMs);
+  const statusMessage = armed
+    ? "Assisted page turn armed."
+    : enabled
+      ? unavailableMessage ?? (delayLabel ? `Ready: ${delayLabel}.` : "Ready.")
+      : "Manual segment timer";
+
+  return (
+    <div className="border-b border-border bg-card px-4 py-2">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 font-medium">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-primary"
+            checked={enabled}
+            onChange={(event) => onEnabledChange(event.currentTarget.checked)}
+          />
+          Assisted page turning
+        </label>
+        <Button
+          type="button"
+          variant={armed ? "ghost" : "secondary"}
+          className="h-8 px-3 text-xs"
+          disabled={!armed && (!enabled || unavailableMessage !== null)}
+          onClick={armed ? onCancel : onArm}
+        >
+          {armed ? (
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          ) : (
+            <TimerReset className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
+          {armed ? "Cancel assisted page turn" : "Arm assisted page turn"}
+        </Button>
+        <span role="status" className="text-muted-foreground text-xs">
+          {statusMessage}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function SheetViewerReady({
   state,
   sourceRecordingId,
@@ -229,18 +311,40 @@ function SheetViewerReady({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const transformContentRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const assistedPageTurnTimeoutRef = useRef<number | null>(null);
+  const assistedPageTurnArmTokenRef = useRef(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [transform, setTransform] = useState(() => resetSheetViewerTransform());
   const [canPan, setCanPan] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [thumbnailsOpen, setThumbnailsOpen] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [assistedPageTurnEnabled, setAssistedPageTurnEnabled] = useState(false);
+  const [assistedPageTurnSegment, setAssistedPageTurnSegment] =
+    useState<PracticeSegment | null>(null);
+  const [armedAssistedPageTurnSegmentId, setArmedAssistedPageTurnSegmentId] =
+    useState<string | null>(null);
   const [referencePlaybackTimestampMs, setReferencePlaybackTimestampMs] =
     useState<number | null>(null);
   const totalPages = state.pageCount;
   const activeImageFile = getPageFile(state.artifact.files, currentPage);
   const imageBaseWidth = Math.max(activeImageFile?.width ?? 0, 360);
   const contentBaseWidth = state.sheet.kind === "pdf" ? PDF_BASE_WIDTH : imageBaseWidth;
+  const selectedAssistedPageTurnSegment =
+    assistedPageTurnSegment?.sheetId === state.sheet.id ? assistedPageTurnSegment : null;
+  const selectedAssistedPageTurnSegmentId = selectedAssistedPageTurnSegment?.id ?? null;
+  const assistedPageTurnDelayMs = useMemo(
+    () => getSheetViewerAssistedPageTurnDelayMs(selectedAssistedPageTurnSegment),
+    [selectedAssistedPageTurnSegment]
+  );
+  const isAssistedPageTurnArmed = armedAssistedPageTurnSegmentId !== null;
+  const assistedPageTurnStateRef = useRef({
+    armedSegmentId: null as string | null,
+    enabled: false,
+    selectedSegmentId: null as string | null,
+    currentPage: 1,
+    totalPages
+  });
 
   const pageUrl = useMemo(() => {
     if (!objectUrls) {
@@ -313,12 +417,134 @@ function SheetViewerReady({
     dragRef.current = null;
   }, []);
 
+  useEffect(() => {
+    assistedPageTurnStateRef.current = {
+      armedSegmentId: armedAssistedPageTurnSegmentId,
+      enabled: assistedPageTurnEnabled,
+      selectedSegmentId: selectedAssistedPageTurnSegmentId,
+      currentPage,
+      totalPages
+    };
+  }, [
+    armedAssistedPageTurnSegmentId,
+    assistedPageTurnEnabled,
+    currentPage,
+    selectedAssistedPageTurnSegmentId,
+    totalPages
+  ]);
+
+  useEffect(() => () => {
+    if (assistedPageTurnTimeoutRef.current !== null) {
+      window.clearTimeout(assistedPageTurnTimeoutRef.current);
+      assistedPageTurnTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearAssistedPageTurn = useCallback(() => {
+    assistedPageTurnArmTokenRef.current += 1;
+
+    if (assistedPageTurnTimeoutRef.current !== null) {
+      window.clearTimeout(assistedPageTurnTimeoutRef.current);
+      assistedPageTurnTimeoutRef.current = null;
+    }
+
+    setArmedAssistedPageTurnSegmentId(null);
+  }, []);
+
   const goToPage = useCallback((pageNumber: number) => {
+    clearAssistedPageTurn();
     setCurrentPage(pageNumber);
     setTransform(resetSheetViewerTransformForPageChange());
     setIsDragging(false);
     dragRef.current = null;
-  }, []);
+  }, [clearAssistedPageTurn]);
+
+  const assistedPageTurnUnavailableMessage = useMemo(() => {
+    if (!assistedPageTurnEnabled) {
+      return "Enable assisted page turning to arm a manual timer.";
+    }
+
+    if (totalPages <= 1) {
+      return "Assisted page turning needs a multi-page sheet.";
+    }
+
+    if (currentPage >= totalPages) {
+      return "Already on the last page.";
+    }
+
+    if (!selectedAssistedPageTurnSegment) {
+      return "Select a segment to arm a timed page turn.";
+    }
+
+    if (assistedPageTurnDelayMs === null) {
+      return "Selected segment needs timing before assisted turning.";
+    }
+
+    return null;
+  }, [
+    assistedPageTurnDelayMs,
+    assistedPageTurnEnabled,
+    currentPage,
+    selectedAssistedPageTurnSegment,
+    totalPages
+  ]);
+
+  const handleAssistedPageTurnEnabledChange = useCallback((enabled: boolean) => {
+    setAssistedPageTurnEnabled(enabled);
+
+    if (!enabled) {
+      clearAssistedPageTurn();
+    }
+  }, [clearAssistedPageTurn]);
+
+  const handleAssistedSegmentChange = useCallback((segment: PracticeSegment | null) => {
+    clearAssistedPageTurn();
+    setAssistedPageTurnSegment(segment);
+  }, [clearAssistedPageTurn]);
+
+  function armAssistedPageTurn() {
+    if (
+      assistedPageTurnUnavailableMessage !== null ||
+      !selectedAssistedPageTurnSegment ||
+      assistedPageTurnDelayMs === null
+    ) {
+      return;
+    }
+
+    clearAssistedPageTurn();
+    const armToken = assistedPageTurnArmTokenRef.current + 1;
+
+    assistedPageTurnArmTokenRef.current = armToken;
+    assistedPageTurnStateRef.current = {
+      armedSegmentId: selectedAssistedPageTurnSegment.id,
+      enabled: assistedPageTurnEnabled,
+      selectedSegmentId: selectedAssistedPageTurnSegment.id,
+      currentPage,
+      totalPages
+    };
+    setArmedAssistedPageTurnSegmentId(selectedAssistedPageTurnSegment.id);
+    assistedPageTurnTimeoutRef.current = window.setTimeout(() => {
+      const latest = assistedPageTurnStateRef.current;
+
+      if (assistedPageTurnArmTokenRef.current !== armToken) {
+        return;
+      }
+
+      assistedPageTurnTimeoutRef.current = null;
+      setArmedAssistedPageTurnSegmentId(null);
+
+      if (
+        !latest.enabled ||
+        latest.armedSegmentId !== selectedAssistedPageTurnSegment.id ||
+        latest.selectedSegmentId !== selectedAssistedPageTurnSegment.id ||
+        latest.currentPage >= latest.totalPages
+      ) {
+        return;
+      }
+
+      goToPage(Math.min(latest.totalPages, latest.currentPage + 1));
+    }, assistedPageTurnDelayMs);
+  }
 
   function updateScale(direction: "in" | "out") {
     setTransform((current) => setSheetViewerTransformScale(
@@ -419,6 +645,15 @@ function SheetViewerReady({
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
           />
+          <SheetAssistedPageTurnControl
+            enabled={assistedPageTurnEnabled}
+            armed={isAssistedPageTurnArmed}
+            delayMs={assistedPageTurnDelayMs}
+            unavailableMessage={assistedPageTurnUnavailableMessage}
+            onEnabledChange={handleAssistedPageTurnEnabledChange}
+            onArm={armAssistedPageTurn}
+            onCancel={clearAssistedPageTurn}
+          />
 
           {thumbnailsOpen ? (
             <SheetPageThumbnails
@@ -515,6 +750,7 @@ function SheetViewerReady({
         sourceRecordingId={sourceRecordingId}
         returnSegmentId={returnSegmentId}
         currentMeasureGridTimestampMs={referencePlaybackTimestampMs}
+        onSelectedSegmentChange={handleAssistedSegmentChange}
       />
     </div>
   );
