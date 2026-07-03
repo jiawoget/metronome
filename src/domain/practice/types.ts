@@ -107,6 +107,27 @@ export type HomePracticeStreaks = {
   };
 };
 
+export type LibraryRecentPracticeSummaryBySheetOptions = {
+  limit?: number;
+};
+
+export type LibraryRecentPracticeSummaryBySheetItem = {
+  sheetId: string;
+  lastPracticedAt: string;
+  lastSessionId: string | null;
+  latestRecordingId: string | null;
+  sessionCount: number;
+  recordingCount: number;
+  durationMs: number;
+  segmentPracticeCount: number;
+};
+
+export type LibraryRecentPracticeSummaryBySheetSource = {
+  generatedAt: string;
+  limit: number;
+  items: LibraryRecentPracticeSummaryBySheetItem[];
+};
+
 export type ContinuePracticeTarget =
   | {
       sourceType: "quick";
