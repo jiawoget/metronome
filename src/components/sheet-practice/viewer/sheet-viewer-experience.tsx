@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { AlertTriangle, ChevronLeft, ChevronRight, FileImage, FileText, Minus, Plus } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, FileImage, FileText, Images, Minus, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { SheetArtifactFile } from "@/domain/sheet";
 import { SheetPracticeControls } from "@/components/sheet-practice/controls/sheet-practice-controls";
 import { ReferencePanel } from "@/components/sheet-practice/reference/reference-panel";
+import { SheetPageThumbnails } from "@/components/sheet-practice/viewer/sheet-page-thumbnails";
 import { browserSheetViewerService } from "@/infrastructure/sheet-viewer/browser-sheet-viewer-service";
 import { useBrowserSheetViewerObjectUrls } from "@/infrastructure/sheet-viewer/use-browser-sheet-viewer-object-urls";
+import { useBrowserSheetViewerPageThumbnails } from "@/infrastructure/sheet-viewer/use-browser-sheet-viewer-page-thumbnails";
 import {
   formatSheetViewerPageLabel,
   stepSheetViewerZoom,
@@ -96,7 +98,9 @@ function SheetViewerToolbar({
   onPrevious,
   onNext,
   onZoomOut,
-  onZoomIn
+  onZoomIn,
+  thumbnailsOpen,
+  onToggleThumbnails
 }: {
   kind: "pdf" | "image";
   sheetName: string;
@@ -107,6 +111,8 @@ function SheetViewerToolbar({
   onNext: () => void;
   onZoomOut: () => void;
   onZoomIn: () => void;
+  thumbnailsOpen: boolean;
+  onToggleThumbnails: () => void;
 }) {
   const Icon = kind === "pdf" ? FileText : FileImage;
 
@@ -123,6 +129,17 @@ function SheetViewerToolbar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          className="lg:hidden"
+          aria-label="Page thumbnails"
+          aria-expanded={thumbnailsOpen}
+          onClick={onToggleThumbnails}
+        >
+          <Images className="h-4 w-4" aria-hidden="true" />
+          Pages
+        </Button>
         <Button
           type="button"
           variant="secondary"
@@ -170,8 +187,10 @@ function SheetViewerReady({
   returnSegmentId: string | null;
 }) {
   const objectUrls = useBrowserSheetViewerObjectUrls(state);
+  const thumbnailState = useBrowserSheetViewerPageThumbnails(state.sheet.id);
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(1);
+  const [thumbnailsOpen, setThumbnailsOpen] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [referencePlaybackTimestampMs, setReferencePlaybackTimestampMs] =
     useState<number | null>(null);
@@ -223,44 +242,71 @@ function SheetViewerReady({
             onNext={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
             onZoomOut={() => setZoom((current) => stepSheetViewerZoom(current, "out"))}
             onZoomIn={() => setZoom((current) => stepSheetViewerZoom(current, "in"))}
+            thumbnailsOpen={thumbnailsOpen}
+            onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
           />
 
-          <div
-            data-testid="sheet-viewer-scroll"
-            className="min-h-0 flex-1 overflow-auto bg-muted p-4 md:p-6"
-          >
-            <div className="mx-auto flex min-h-full w-fit min-w-full items-start justify-center">
-              {state.sheet.kind === "pdf" ? (
-                <PdfSheetRenderer
-                  file={state.artifact.files[0]?.blob ?? pageUrl}
-                  pageNumber={currentPage}
-                  width={pdfWidth}
-                  renderError={renderError}
-                  onRenderReady={(numPages) => {
-                    setRenderError(null);
-                    if (numPages > 0 && currentPage > numPages) {
-                      setCurrentPage(numPages);
-                    }
-                  }}
-                  onRenderError={(error) => setRenderError(`PDF cannot be rendered: ${error.message}`)}
-                />
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={pageUrl}
-                  alt={`${state.sheet.name} page ${currentPage}`}
-                  width={imageWidth}
-                  className="max-w-none rounded-md bg-white shadow-soft [image-rendering:auto]"
-                  onError={() => setRenderError("Image cannot be rendered")}
-                  onLoad={() => setRenderError(null)}
-                />
-              )}
+          {thumbnailsOpen ? (
+            <SheetPageThumbnails
+              state={thumbnailState}
+              sheetName={state.sheet.name}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              orientation="horizontal"
+              className="border-b lg:hidden"
+              onSelectPage={(pageNumber) => {
+                setCurrentPage(pageNumber);
+                setThumbnailsOpen(false);
+              }}
+            />
+          ) : null}
+
+          <div className="grid min-h-0 flex-1 lg:grid-cols-[9rem_minmax(0,1fr)]">
+            <SheetPageThumbnails
+              state={thumbnailState}
+              sheetName={state.sheet.name}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              className="hidden border-r lg:flex lg:flex-col"
+              onSelectPage={setCurrentPage}
+            />
+            <div
+              data-testid="sheet-viewer-scroll"
+              className="min-h-0 overflow-auto bg-muted p-4 md:p-6"
+            >
+              <div className="mx-auto flex min-h-full w-fit min-w-full items-start justify-center">
+                {state.sheet.kind === "pdf" ? (
+                  <PdfSheetRenderer
+                    file={state.artifact.files[0]?.blob ?? pageUrl}
+                    pageNumber={currentPage}
+                    width={pdfWidth}
+                    renderError={renderError}
+                    onRenderReady={(numPages) => {
+                      setRenderError(null);
+                      if (numPages > 0 && currentPage > numPages) {
+                        setCurrentPage(numPages);
+                      }
+                    }}
+                    onRenderError={(error) => setRenderError(`PDF cannot be rendered: ${error.message}`)}
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={pageUrl}
+                    alt={`${state.sheet.name} page ${currentPage}`}
+                    width={imageWidth}
+                    className="max-w-none rounded-md bg-white shadow-soft [image-rendering:auto]"
+                    onError={() => setRenderError("Image cannot be rendered")}
+                    onLoad={() => setRenderError(null)}
+                  />
+                )}
+              </div>
+              {renderError ? (
+                <p role="alert" className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                  {renderError}. Reimport the sheet from Sheet Library.
+                </p>
+              ) : null}
             </div>
-            {renderError ? (
-              <p role="alert" className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {renderError}. Reimport the sheet from Sheet Library.
-              </p>
-            ) : null}
           </div>
         </section>
         <ReferencePanel

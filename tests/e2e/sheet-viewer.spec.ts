@@ -265,6 +265,20 @@ async function expectPdfCanvasRendered(page: Page) {
   return canvas;
 }
 
+async function expectViewerControlsDoNotOverlap(page: Page) {
+  const scrollBox = await page.getByTestId("sheet-viewer-scroll").boundingBox();
+  const controlsBox = await page.getByTestId("sheet-practice-controls").boundingBox();
+
+  expect(scrollBox).not.toBeNull();
+  expect(controlsBox).not.toBeNull();
+
+  if (!scrollBox || !controlsBox) {
+    return;
+  }
+
+  expect(scrollBox.y + scrollBox.height).toBeLessThanOrEqual(controlsBox.y);
+}
+
 test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, reload, and library return", async ({
   page
 }) => {
@@ -280,6 +294,7 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   });
 
   await clearSheetDatabase(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
   const { link, sheetId } = await importTestSheet(page, {
     fixture: "two-page-sheet.pdf",
     name: "Viewer Two Page PDF",
@@ -291,11 +306,15 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   await expect(page).toHaveURL(/\/sheet-practice\/sheet_/);
   await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Page thumbnails" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("button", { name: "Go to page 2" })).toBeVisible();
   let canvas = await expectPdfCanvasRendered(page);
   const initialWidth = await canvas.evaluate((node) => (node as HTMLCanvasElement).width);
 
   await page.getByRole("button", { name: "Next page" }).click();
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
   await expectPdfCanvasRendered(page);
   await page.getByRole("button", { name: "Previous page" }).click();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
@@ -314,8 +333,26 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Page thumbnails" })).toBeVisible();
+  await page.getByRole("button", { name: "Page thumbnails" }).click();
+  await expect(page.getByRole("button", { name: "Page thumbnails" })).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("button", { name: "Go to page 2" }).click();
+  await expect(page.getByRole("button", { name: "Page thumbnails" })).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByText("Page 2 of 2")).toBeVisible();
   await expectPdfCanvasRendered(page);
+  await expectViewerControlsDoNotOverlap(page);
+  await page.setViewportSize({ width: 900, height: 800 });
+  await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Page thumbnails" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Page thumbnails" })).toBeHidden();
+  await page.getByRole("button", { name: "Page thumbnails" }).click();
+  await expect(page.getByRole("button", { name: "Page thumbnails" })).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("button", { name: "Go to page 1" }).click();
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+  await expectViewerControlsDoNotOverlap(page);
   await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(page.getByRole("navigation", { name: "Page thumbnails" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
   await expectPdfCanvasRendered(page);
 
   await page.reload();
@@ -435,8 +472,12 @@ test("sheet viewer renders imported image artifact with zoom, resize, and reload
   await link.click();
   await expect(page.getByRole("heading", { name: "Viewer Pixel Scale" })).toBeVisible();
   await expect(page.getByText("Page 1 of 1")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Page thumbnails" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
 
-  const image = page.getByRole("img", { name: "Viewer Pixel Scale page 1" });
+  const image = page
+    .getByTestId("sheet-viewer-scroll")
+    .getByRole("img", { name: "Viewer Pixel Scale page 1", exact: true });
 
   await expect(image).toBeVisible();
   const initialDimensions = await image.evaluate((node) => {

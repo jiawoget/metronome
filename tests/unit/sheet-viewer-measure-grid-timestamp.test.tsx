@@ -7,7 +7,9 @@ import type { SheetViewerLoadState } from "@/services/sheet-viewer";
 
 const viewerMocks = vi.hoisted(() => ({
   controlsProps: [] as Array<{ currentMeasureGridTimestampMs?: number | null }>,
-  loadSheet: vi.fn()
+  loadSheet: vi.fn(),
+  loadPageThumbnails: vi.fn(),
+  revokePageThumbnails: vi.fn()
 }));
 
 vi.mock("next/dynamic", () => ({
@@ -31,7 +33,9 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/infrastructure/sheet-viewer/browser-sheet-viewer-service", () => ({
   browserSheetViewerService: {
-    loadSheet: viewerMocks.loadSheet
+    loadSheet: viewerMocks.loadSheet,
+    loadPageThumbnails: viewerMocks.loadPageThumbnails,
+    revokePageThumbnails: viewerMocks.revokePageThumbnails
   }
 }));
 
@@ -134,6 +138,14 @@ describe("SheetViewerExperience measure-grid timestamp wiring", () => {
     viewerMocks.controlsProps.length = 0;
     viewerMocks.loadSheet.mockReset();
     viewerMocks.loadSheet.mockResolvedValue(createReadyState());
+    viewerMocks.loadPageThumbnails.mockReset();
+    viewerMocks.loadPageThumbnails.mockResolvedValue({
+      status: "ready",
+      sheetId: "sheet-alpha",
+      pageCount: 1,
+      thumbnails: []
+    });
+    viewerMocks.revokePageThumbnails.mockReset();
   });
 
   it("passes the reference playback timestamp through to sheet practice controls", async () => {
