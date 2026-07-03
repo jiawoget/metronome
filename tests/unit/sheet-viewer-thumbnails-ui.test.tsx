@@ -20,15 +20,18 @@ import { useBrowserSheetViewerPageThumbnails } from "@/infrastructure/sheet-view
 type Deferred<T> = {
   promise: Promise<T>;
   resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
 };
 
 function createDeferred<T>(): Deferred<T> {
   let resolve: (value: T) => void = () => {};
-  const promise = new Promise<T>((promiseResolve) => {
+  let reject: (reason?: unknown) => void = () => {};
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
     resolve = promiseResolve;
+    reject = promiseReject;
   });
 
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 function readySet(sheetId: string, urlPrefix = sheetId): SheetPageThumbnailSet {
@@ -201,6 +204,45 @@ describe("useBrowserSheetViewerPageThumbnails", () => {
     });
     expect(viewerMocks.revokePageThumbnails).not.toHaveBeenCalled();
     expect(viewerMocks.revokeArtifactObjectUrls).not.toHaveBeenCalled();
+  });
+
+  it("maps active thumbnail load rejections to an error state", async () => {
+    viewerMocks.loadPageThumbnails.mockRejectedValueOnce(
+      new Error("thumbnail load failed")
+    );
+
+    const { result } = renderHook(() => useBrowserSheetViewerPageThumbnails("sheet-1"));
+
+    await waitFor(() => {
+      expect(result.current).toMatchObject({
+        status: "error",
+        code: "load-failed",
+        title: "Thumbnails unavailable"
+      });
+    });
+    expect(viewerMocks.revokePageThumbnails).not.toHaveBeenCalled();
+  });
+
+  it("ignores stale thumbnail load rejections after a sheet change", async () => {
+    const firstLoad = createDeferred<SheetPageThumbnailSet>();
+    const second = readySet("sheet-2");
+
+    viewerMocks.loadPageThumbnails
+      .mockReturnValueOnce(firstLoad.promise)
+      .mockResolvedValueOnce(second);
+
+    const { result, rerender } = renderHook(
+      ({ sheetId }) => useBrowserSheetViewerPageThumbnails(sheetId),
+      { initialProps: { sheetId: "sheet-1" } }
+    );
+
+    rerender({ sheetId: "sheet-2" });
+    firstLoad.reject(new Error("stale thumbnail load failed"));
+
+    await waitFor(() => {
+      expect(result.current).toEqual(second);
+    });
+    expect(viewerMocks.revokePageThumbnails).not.toHaveBeenCalled();
   });
 });
 

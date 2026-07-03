@@ -7,7 +7,6 @@ import { importTestSheet } from "./fixtures/sheets";
 import {
   MEASURE_GRID_DB_NAME,
   PRACTICE_SEGMENT_DB_NAME,
-  REFERENCE_DB_NAME,
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
@@ -17,8 +16,7 @@ const dbName = SHEET_LIBRARY_DB_NAME;
 const viewerDbNames = [
   SHEET_LIBRARY_DB_NAME,
   MEASURE_GRID_DB_NAME,
-  PRACTICE_SEGMENT_DB_NAME,
-  REFERENCE_DB_NAME
+  PRACTICE_SEGMENT_DB_NAME
 ];
 
 type SeedSheetOptions = {
@@ -51,38 +49,6 @@ type BrowserThumbnailSet =
       title: string;
       message: string;
     };
-
-function createReferenceWavBuffer() {
-  const sampleRate = 44_100;
-  const durationSeconds = 1.2;
-  const sampleCount = Math.floor(sampleRate * durationSeconds);
-  const dataSize = sampleCount * 2;
-  const buffer = Buffer.alloc(44 + dataSize);
-
-  buffer.write("RIFF", 0);
-  buffer.writeUInt32LE(36 + dataSize, 4);
-  buffer.write("WAVE", 8);
-  buffer.write("fmt ", 12);
-  buffer.writeUInt32LE(16, 16);
-  buffer.writeUInt16LE(1, 20);
-  buffer.writeUInt16LE(1, 22);
-  buffer.writeUInt32LE(sampleRate, 24);
-  buffer.writeUInt32LE(sampleRate * 2, 28);
-  buffer.writeUInt16LE(2, 32);
-  buffer.writeUInt16LE(16, 34);
-  buffer.write("data", 36);
-  buffer.writeUInt32LE(dataSize, 40);
-
-  for (let index = 0; index < sampleCount; index += 1) {
-    const sample = Math.round(
-      Math.sin((2 * Math.PI * 440 * index) / sampleRate) * 0.35 * 32767
-    );
-
-    buffer.writeInt16LE(sample, 44 + index * 2);
-  }
-
-  return buffer;
-}
 
 async function clearSheetDatabase(page: Page) {
   await page.goto("/sheet-library");
@@ -312,56 +278,6 @@ async function seedAssistedPageTurnSegment(page: Page, sheetId: string) {
   );
 }
 
-async function reportActiveReferencePlaybackTimestamp(
-  page: Page,
-  currentTimeSeconds: number
-) {
-  await page.evaluate(
-    ({ databaseName, currentTime }) =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open(databaseName);
-
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-          const database = request.result;
-          const transaction = database.transaction(["references"], "readonly");
-          const referencesRequest = transaction
-            .objectStore("references")
-            .getAll();
-
-          transaction.oncomplete = () => {
-            const activeReference = referencesRequest.result.find(
-              (reference) => reference.isActive
-            );
-
-            database.close();
-
-            if (!activeReference) {
-              reject(new Error("No active reference found."));
-              return;
-            }
-
-            window.dispatchEvent(
-              new CustomEvent("reference-audio:state-change", {
-                detail: {
-                  referenceId: activeReference.id,
-                  state: "playing",
-                  currentTime,
-                  volume: 1,
-                  duration: 1.2,
-                  message: null
-                }
-              })
-            );
-            resolve();
-          };
-          transaction.onerror = () => reject(transaction.error);
-        };
-      }),
-    { databaseName: REFERENCE_DB_NAME, currentTime: currentTimeSeconds }
-  );
-}
-
 async function installAssistedPageTurnTimerHarness(page: Page, expectedDelayMs: number) {
   await page.evaluate((targetDelayMs) => {
     const nativeSetTimeout = window.setTimeout.bind(window);
@@ -578,7 +494,7 @@ function boxesOverlap(
 
 async function expectAssistedControlsDoNotOverlap(
   page: Page,
-  statusText = "Ready: 600ms."
+  statusText = "Ready: 1s."
 ) {
   const toggleBox = await page.getByRole("checkbox", { name: "Assisted page turning" }).boundingBox();
   const armButtonBox = await page.getByRole("button", { name: "Arm assisted page turn" }).boundingBox();
@@ -720,16 +636,6 @@ test("sheet viewer assisted page turning is opt-in, manually armed, and cancelab
   await link.click();
   await expect(page.getByRole("heading", { name: "Assisted Page Turn PDF" })).toBeVisible();
   await expectPdfCanvasRendered(page);
-  await page.getByLabel("Local title").fill("Assisted Reference");
-  await page.getByLabel("Local audio file").setInputFiles({
-    name: "assisted-reference.wav",
-    mimeType: "audio/wav",
-    buffer: createReferenceWavBuffer()
-  });
-  await page.getByRole("button", { name: "Save local reference" }).click();
-  await expect(page.getByTestId("active-reference-title")).toHaveText(
-    "Assisted Reference"
-  );
 
   const assistedToggle = page.getByRole("checkbox", { name: "Assisted page turning" });
   const armButton = page.getByRole("button", { name: "Arm assisted page turn" });
@@ -741,14 +647,11 @@ test("sheet viewer assisted page turning is opt-in, manually armed, and cancelab
   await page.getByTestId("practice-segment-row-segment-assisted-turn").click();
   await expect(armButton).toBeEnabled();
   await expect(page.getByText("Ready: 1s.")).toBeVisible();
-  await reportActiveReferencePlaybackTimestamp(page, 0.4);
-  await expect(armButton).toBeEnabled();
-  await expect(page.getByText("Ready: 600ms.")).toBeVisible();
 
-  await installAssistedPageTurnTimerHarness(page, 600);
+  await installAssistedPageTurnTimerHarness(page, 1_000);
   await armButton.click();
   await expect(page.getByText("Assisted page turn armed.")).toBeVisible();
-  await expect.poll(() => getAssistedPageTurnTimerDelay(page)).toBe(600);
+  await expect.poll(() => getAssistedPageTurnTimerDelay(page)).toBe(1_000);
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
   expect(await runAssistedPageTurnTimer(page)).toBe(true);
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
@@ -777,7 +680,7 @@ test("sheet viewer assisted page turning is opt-in, manually armed, and cancelab
   await assistedToggle.check();
   await expect(armButton).toBeVisible();
   await expect(armButton).toBeEnabled();
-  await expect(page.getByText("Ready: 600ms.")).toBeVisible();
+  await expect(page.getByText("Ready: 1s.")).toBeVisible();
   await expectAssistedControlsDoNotOverlap(page);
 
   expect(consoleErrors).toEqual([]);
