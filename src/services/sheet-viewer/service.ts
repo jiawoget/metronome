@@ -239,20 +239,22 @@ function normalizeTranslation(value: number | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function hasUsableTransformBounds(
-  bounds: SheetViewerTransformBounds | undefined
-): bounds is SheetViewerTransformBounds {
-  return Boolean(
-    bounds &&
-      Number.isFinite(bounds.viewport.width) &&
-      Number.isFinite(bounds.viewport.height) &&
-      Number.isFinite(bounds.content.width) &&
-      Number.isFinite(bounds.content.height) &&
-      bounds.viewport.width > 0 &&
-      bounds.viewport.height > 0 &&
-      bounds.content.width > 0 &&
-      bounds.content.height > 0
+function hasPositiveFiniteSize(size: { width?: unknown; height?: unknown } | null | undefined) {
+  const width = size?.width;
+  const height = size?.height;
+
+  return (
+    typeof width === "number" &&
+    typeof height === "number" &&
+    Number.isFinite(width) &&
+    Number.isFinite(height) &&
+    width > 0 &&
+    height > 0
   );
+}
+
+function hasUsableTransformBounds(bounds: SheetViewerTransformBounds | undefined): bounds is SheetViewerTransformBounds {
+  return hasPositiveFiniteSize(bounds?.viewport) && hasPositiveFiniteSize(bounds?.content);
 }
 
 function roundScale(value: number) {

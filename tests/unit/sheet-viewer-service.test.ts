@@ -15,6 +15,7 @@ import {
   SHEET_VIEWER_TRANSFORM_LIMITS,
   stepSheetViewerZoom,
   type SheetViewerAdapter,
+  type SheetViewerTransformBounds,
   type SheetViewerThumbnailGeneration,
   type SheetViewerLibraryReader
 } from "@/services/sheet-viewer";
@@ -649,6 +650,21 @@ describe("sheet viewer service", () => {
       translateX: 0,
       translateY: 0
     });
+
+    const malformedBounds = [
+      { viewport: { width: 100, height: 100 } },
+      { content: { width: 100, height: 100 } },
+      { viewport: undefined, content: { width: 100, height: 100 } },
+      { viewport: { width: 100, height: 100 }, content: undefined }
+    ] as unknown as SheetViewerTransformBounds[];
+
+    for (const bounds of malformedBounds) {
+      expect(clampSheetViewerTransform(transform, bounds)).toEqual({
+        scale: 2,
+        translateX: 0,
+        translateY: 0
+      });
+    }
   });
 
   it("normalizes non-finite translation and pan deltas", () => {
