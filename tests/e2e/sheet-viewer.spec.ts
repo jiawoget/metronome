@@ -21,6 +21,26 @@ type SeedSheetOptions = {
   imageDimensions?: Array<{ width: number; height: number }>;
 };
 
+type BrowserThumbnailSet =
+  | {
+      status: "ready";
+      sheetId: string;
+      pageCount: number;
+      thumbnails: Array<{
+        sheetId: string;
+        pageNumber: number;
+        width: number;
+        height: number;
+        url: string;
+      }>;
+    }
+  | {
+      status: "error";
+      code: string;
+      title: string;
+      message: string;
+    };
+
 async function clearSheetDatabase(page: Page) {
   await page.goto("/sheet-library");
   await page.evaluate(
@@ -132,6 +152,72 @@ async function seedSheets(page: Page, optionsList: SeedSheetOptions[]) {
       seeds
     }
   );
+}
+
+async function loadPageThumbnailsInBrowser(page: Page, sheetId: string) {
+  return page.evaluate(async (targetSheetId): Promise<BrowserThumbnailSet> => {
+    const service = (window as Window & {
+      __metronomeSheetViewerService?: {
+        loadPageThumbnails: (sheetId: string) => Promise<BrowserThumbnailSet>;
+      };
+    }).__metronomeSheetViewerService;
+
+    if (!service) {
+      throw new Error("Sheet viewer E2E service is unavailable.");
+    }
+
+    return service.loadPageThumbnails(targetSheetId);
+  }, sheetId);
+}
+
+async function revokePageThumbnailsInBrowser(page: Page, thumbnails: BrowserThumbnailSet) {
+  await page.evaluate((thumbnailSet) => {
+    const service = (window as Window & {
+      __metronomeSheetViewerService?: {
+        revokePageThumbnails: (thumbnails: BrowserThumbnailSet) => void;
+      };
+    }).__metronomeSheetViewerService;
+
+    if (!service) {
+      throw new Error("Sheet viewer E2E service is unavailable.");
+    }
+
+    service.revokePageThumbnails(thumbnailSet);
+  }, thumbnails);
+}
+
+async function expectThumbnailUrlsDecodable(page: Page, urls: string[]) {
+  const dimensions = await page.evaluate(async (thumbnailUrls) => Promise.all(
+    thumbnailUrls.map((url) => new Promise<{ width: number; height: number }>((resolve, reject) => {
+      const image = new Image();
+
+      image.onload = () => resolve({
+        width: image.naturalWidth,
+        height: image.naturalHeight
+      });
+      image.onerror = () => reject(new Error(`Thumbnail did not decode: ${url}`));
+      image.src = url;
+    }))
+  ), urls);
+
+  for (const dimension of dimensions) {
+    expect(dimension.width).toBeGreaterThan(0);
+    expect(dimension.height).toBeGreaterThan(0);
+  }
+
+  return dimensions;
+}
+
+async function expectThumbnailUrlRevoked(page: Page, url: string) {
+  await expect(
+    page.evaluate((thumbnailUrl) => new Promise((resolve, reject) => {
+      const image = new Image();
+
+      image.onload = () => resolve("loaded");
+      image.onerror = () => reject(new Error("revoked"));
+      image.src = thumbnailUrl;
+    }), url)
+  ).rejects.toThrow("revoked");
 }
 
 async function expectPdfCanvasRendered(page: Page) {
@@ -250,6 +336,82 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   expect(consoleErrors).toEqual([]);
 });
 
+test("sheet viewer thumbnail service returns decodable blob thumbnails for imported PDF and image artifacts", async ({
+  page
+}) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await clearSheetDatabase(page);
+  const pdfSheet = await importTestSheet(page, {
+    fixture: "two-page-sheet.pdf",
+    name: "Thumbnail Two Page PDF",
+    bpm: "72",
+    timeSignature: "4/4"
+  });
+
+  await page.goto(getSheetPracticePath(pdfSheet.sheetId));
+  await expect(page.getByRole("heading", { name: "Thumbnail Two Page PDF" })).toBeVisible();
+
+  const pdfThumbnails = await loadPageThumbnailsInBrowser(page, pdfSheet.sheetId);
+
+  expect(pdfThumbnails).toMatchObject({
+    status: "ready",
+    sheetId: pdfSheet.sheetId,
+    pageCount: 2
+  });
+
+  if (pdfThumbnails.status !== "ready") {
+    throw new Error(`PDF thumbnail service failed: ${pdfThumbnails.code}`);
+  }
+
+  expect(pdfThumbnails.thumbnails.map((thumbnail) => thumbnail.pageNumber)).toEqual([1, 2]);
+  expect(pdfThumbnails.thumbnails.every((thumbnail) => thumbnail.url.startsWith("blob:"))).toBe(true);
+  expect(pdfThumbnails.thumbnails.every((thumbnail) => thumbnail.width > 0 && thumbnail.height > 0)).toBe(true);
+  await expectThumbnailUrlsDecodable(page, pdfThumbnails.thumbnails.map((thumbnail) => thumbnail.url));
+  await revokePageThumbnailsInBrowser(page, pdfThumbnails);
+  await expectThumbnailUrlRevoked(page, pdfThumbnails.thumbnails[0].url);
+
+  const imageSheet = await importTestSheet(page, {
+    fixture: "real-sheet.png",
+    name: "Thumbnail Pixel Scale",
+    bpm: "72",
+    timeSignature: "4/4"
+  });
+
+  await page.goto(getSheetPracticePath(imageSheet.sheetId));
+  await expect(page.getByRole("heading", { name: "Thumbnail Pixel Scale" })).toBeVisible();
+
+  const imageThumbnails = await loadPageThumbnailsInBrowser(page, imageSheet.sheetId);
+
+  expect(imageThumbnails).toMatchObject({
+    status: "ready",
+    sheetId: imageSheet.sheetId,
+    pageCount: 1
+  });
+
+  if (imageThumbnails.status !== "ready") {
+    throw new Error(`Image thumbnail service failed: ${imageThumbnails.code}`);
+  }
+
+  expect(imageThumbnails.thumbnails.map((thumbnail) => thumbnail.pageNumber)).toEqual([1]);
+  expect(imageThumbnails.thumbnails[0].url).toMatch(/^blob:/);
+  expect(imageThumbnails.thumbnails[0].width).toBeGreaterThan(0);
+  expect(imageThumbnails.thumbnails[0].height).toBeGreaterThan(0);
+  await expectThumbnailUrlsDecodable(page, [imageThumbnails.thumbnails[0].url]);
+  await revokePageThumbnailsInBrowser(page, imageThumbnails);
+
+  expect(consoleErrors.filter((error) => !error.includes("ERR_FILE_NOT_FOUND"))).toEqual([]);
+});
+
 test("sheet viewer renders imported image artifact with zoom, resize, and reload", async ({ page }) => {
   const consoleErrors: string[] = [];
 
@@ -366,6 +528,15 @@ test("sheet viewer shows clear states for missing id, unknown sheet, missing art
 
   await page.goto("/sheet-practice?sheetId=sheet-bad-image");
   await expect(page.getByRole("heading", { name: "Image cannot be rendered" })).toBeVisible();
+
+  await expect(loadPageThumbnailsInBrowser(page, "sheet-bad-pdf")).resolves.toMatchObject({
+    status: "error",
+    code: "bad-pdf"
+  });
+  await expect(loadPageThumbnailsInBrowser(page, "sheet-bad-image")).resolves.toMatchObject({
+    status: "error",
+    code: "bad-image"
+  });
 
   expect(consoleErrors).toEqual([]);
 });

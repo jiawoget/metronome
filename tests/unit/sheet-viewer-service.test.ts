@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import type { SheetArtifact, SheetListItem } from "@/domain/sheet";
+import { browserSheetViewerAdapter } from "@/infrastructure/sheet-viewer/browser-sheet-viewer-adapter";
 import {
   clampSheetViewerZoom,
   createSheetViewerService,
   formatSheetViewerPageLabel,
   stepSheetViewerZoom,
   type SheetViewerAdapter,
+  type SheetViewerThumbnailGeneration,
   type SheetViewerLibraryReader
 } from "@/services/sheet-viewer";
 
@@ -71,11 +73,31 @@ function createAdapter(
     ok: true,
     pageCount: 2,
     imageDimensions: []
+  },
+  thumbnailResult: SheetViewerThumbnailGeneration = {
+    ok: true,
+    thumbnails: [
+      {
+        pageNumber: 1,
+        blob: new Blob(["thumbnail-1"], { type: "image/png" }),
+        width: 120,
+        height: 160
+      },
+      {
+        pageNumber: 2,
+        blob: new Blob(["thumbnail-2"], { type: "image/png" }),
+        width: 120,
+        height: 160
+      }
+    ]
   }
 ): SheetViewerAdapter {
   return {
     async inspectArtifact() {
       return result;
+    },
+    async generatePageThumbnails() {
+      return thumbnailResult;
     },
     createFileUrl() {
       return "blob:sheet";
@@ -168,6 +190,120 @@ describe("sheet viewer service", () => {
     expect(revokedUrls).toEqual(["blob:sheet-1"]);
   });
 
+  it("loads page thumbnails as fresh blob URLs from cached thumbnail blobs", async () => {
+    const createdBlobText: string[] = [];
+    let generateCalls = 0;
+    const service = createSheetViewerService({
+      sheetLibrary: createReader(),
+      viewerAdapter: {
+        ...createAdapter(),
+        async generatePageThumbnails() {
+          generateCalls += 1;
+
+          return {
+            ok: true,
+            thumbnails: [
+              {
+                pageNumber: 1,
+                blob: new Blob(["thumbnail-1"], { type: "image/png" }),
+                width: 120,
+                height: 160
+              },
+              {
+                pageNumber: 2,
+                blob: new Blob(["thumbnail-2"], { type: "image/png" }),
+                width: 120,
+                height: 160
+              }
+            ]
+          };
+        },
+        createFileUrl(blob) {
+          createdBlobText.push(String(blob.size));
+
+          return `blob:thumbnail-${createdBlobText.length}`;
+        }
+      }
+    });
+
+    await expect(service.loadPageThumbnails("sheet-pdf")).resolves.toEqual({
+      status: "ready",
+      sheetId: "sheet-pdf",
+      pageCount: 2,
+      thumbnails: [
+        {
+          sheetId: "sheet-pdf",
+          pageNumber: 1,
+          width: 120,
+          height: 160,
+          url: "blob:thumbnail-1"
+        },
+        {
+          sheetId: "sheet-pdf",
+          pageNumber: 2,
+          width: 120,
+          height: 160,
+          url: "blob:thumbnail-2"
+        }
+      ]
+    });
+    await expect(service.loadPageThumbnails("sheet-pdf")).resolves.toMatchObject({
+      status: "ready",
+      thumbnails: [
+        { url: "blob:thumbnail-3" },
+        { url: "blob:thumbnail-4" }
+      ]
+    });
+    expect(generateCalls).toBe(1);
+    expect(createdBlobText).toEqual(["11", "11", "11", "11"]);
+  });
+
+  it("reuses sheet loading errors for thumbnail loading", async () => {
+    await expect(
+      createSheetViewerService({
+        sheetLibrary: createReader(),
+        viewerAdapter: createAdapter()
+      }).loadPageThumbnails(" ")
+    ).resolves.toMatchObject({
+      status: "error",
+      code: "missing-sheet-id"
+    });
+
+    await expect(
+      createSheetViewerService({
+        sheetLibrary: createReader({ artifact: null }),
+        viewerAdapter: createAdapter()
+      }).loadPageThumbnails("sheet-pdf")
+    ).resolves.toMatchObject({
+      status: "error",
+      code: "missing-artifact"
+    });
+  });
+
+  it("revokes only thumbnail URLs returned by the thumbnail call", async () => {
+    const revokedUrls: string[] = [];
+    let createdCount = 0;
+    const service = createSheetViewerService({
+      sheetLibrary: createReader(),
+      viewerAdapter: {
+        ...createAdapter(),
+        createFileUrl() {
+          createdCount += 1;
+
+          return `blob:thumbnail-${createdCount}`;
+        },
+        revokeFileUrl(url) {
+          revokedUrls.push(url);
+        }
+      }
+    });
+    const result = await service.loadPageThumbnails("sheet-pdf");
+
+    service.revokePageThumbnails(result);
+
+    expect(revokedUrls).toEqual(["blob:thumbnail-1", "blob:thumbnail-2"]);
+  });
+
   it("rejects artifact mismatches and bad PDF or image adapter results", async () => {
     const mismatchArtifact: SheetArtifact = {
       ...pdfArtifact,
@@ -234,6 +370,135 @@ describe("sheet viewer service", () => {
     ).resolves.toMatchObject({
       status: "error",
       code: "bad-image"
+    });
+  });
+
+  it("maps thumbnail generation failures to viewer errors", async () => {
+    await expect(
+      createSheetViewerService({
+        sheetLibrary: createReader(),
+        viewerAdapter: createAdapter(
+          {
+            ok: true,
+            pageCount: 2,
+            imageDimensions: []
+          },
+          {
+            ok: false,
+            code: "bad-pdf",
+            message: "The saved PDF artifact could not be rendered."
+          }
+        )
+      }).loadPageThumbnails("sheet-pdf")
+    ).resolves.toMatchObject({
+      status: "error",
+      code: "bad-pdf",
+      title: "PDF cannot be rendered"
+    });
+  });
+
+  it("fails thumbnail loading for partial multi-image artifacts instead of returning a subset", async () => {
+    const imageSheet: SheetListItem = {
+      ...baseSheet,
+      id: "sheet-image-partial",
+      kind: "image",
+      pageCount: 2,
+      imageCount: 2,
+      imageDimensions: [
+        { width: 2, height: 2 },
+        { width: 2, height: 2 }
+      ],
+      originalFileNames: ["page-1.png", "page-2.png"]
+    };
+    const partialArtifact: SheetArtifact = {
+      sheetId: imageSheet.id,
+      kind: "image",
+      createdAt: "2026-06-21T10:00:00.000Z",
+      files: [
+        {
+          name: "page-1.png",
+          mimeType: "image/png",
+          sizeBytes: 8,
+          pageNumber: 1,
+          blob: new Blob(["not-empty"], { type: "image/png" }),
+          width: 2,
+          height: 2
+        },
+        {
+          name: "page-2.png",
+          mimeType: "image/png",
+          sizeBytes: 0,
+          pageNumber: 2,
+          blob: new Blob([], { type: "image/png" }),
+          width: 2,
+          height: 2
+        }
+      ]
+    };
+
+    await expect(
+      createSheetViewerService({
+        sheetLibrary: createReader({ sheet: imageSheet, artifact: partialArtifact }),
+        viewerAdapter: {
+          ...createAdapter({
+            ok: true,
+            pageCount: 2,
+            imageDimensions: imageSheet.imageDimensions
+          }),
+          generatePageThumbnails: browserSheetViewerAdapter.generatePageThumbnails
+        }
+      }).loadPageThumbnails(imageSheet.id)
+    ).resolves.toMatchObject({
+      status: "error",
+      code: "missing-artifact"
+    });
+  });
+
+  it("fails thumbnail loading when a multi-image artifact is missing an expected file", async () => {
+    const imageSheet: SheetListItem = {
+      ...baseSheet,
+      id: "sheet-image-missing-page",
+      kind: "image",
+      pageCount: 2,
+      imageCount: 2,
+      imageDimensions: [
+        { width: 2, height: 2 },
+        { width: 2, height: 2 }
+      ],
+      originalFileNames: ["page-1.png", "page-2.png"]
+    };
+    const missingPageArtifact: SheetArtifact = {
+      sheetId: imageSheet.id,
+      kind: "image",
+      createdAt: "2026-06-21T10:00:00.000Z",
+      files: [
+        {
+          name: "page-1.png",
+          mimeType: "image/png",
+          sizeBytes: 8,
+          pageNumber: 1,
+          blob: new Blob(["not-empty"], { type: "image/png" }),
+          width: 2,
+          height: 2
+        }
+      ]
+    };
+
+    await expect(
+      createSheetViewerService({
+        sheetLibrary: createReader({ sheet: imageSheet, artifact: missingPageArtifact }),
+        viewerAdapter: {
+          ...createAdapter({
+            ok: true,
+            pageCount: 1,
+            imageDimensions: [imageSheet.imageDimensions[0]]
+          }),
+          generatePageThumbnails: browserSheetViewerAdapter.generatePageThumbnails
+        }
+      }).loadPageThumbnails(imageSheet.id)
+    ).resolves.toMatchObject({
+      status: "error",
+      code: "missing-artifact"
     });
   });
 
