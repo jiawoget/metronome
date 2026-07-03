@@ -449,11 +449,8 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   canvas = await expectPdfCanvasRendered(page);
   await expect.poll(() => canvas.evaluate((node) => (node as HTMLCanvasElement).width)).toBeGreaterThan(initialWidth);
   await dragTransformContent(page, 90, 60);
-  await expect.poll(async () => {
-    const translate = await getTransformContentTranslate(page);
-
-    return Math.abs(translate.x) + Math.abs(translate.y);
-  }).toBeGreaterThan(0);
+  await expect.poll(async () => (await getTransformContentTranslate(page)).x).toBeGreaterThan(0);
+  await expect.poll(async () => (await getTransformContentTranslate(page)).y).toBeGreaterThan(0);
   const panStats = await getTransformPanStats(page);
   expect(Math.abs(panStats.x)).toBeLessThanOrEqual(panStats.maxX + 1);
   expect(Math.abs(panStats.y)).toBeLessThanOrEqual(panStats.maxY + 1);

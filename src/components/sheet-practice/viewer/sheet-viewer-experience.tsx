@@ -3,9 +3,10 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { AlertTriangle, ChevronLeft, ChevronRight, FileImage, FileText, Images, Minus, Plus, RotateCcw } from "lucide-react";
-import { PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { SheetArtifactFile } from "@/domain/sheet";
+import type { PointerEvent } from "react";
 import { SheetPracticeControls } from "@/components/sheet-practice/controls/sheet-practice-controls";
 import { ReferencePanel } from "@/components/sheet-practice/reference/reference-panel";
 import { SheetPageJump } from "@/components/sheet-practice/viewer/sheet-page-jump";
