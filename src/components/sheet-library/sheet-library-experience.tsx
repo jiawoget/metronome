@@ -26,7 +26,9 @@ import {
   type SheetMetadataInput,
   type SheetListItem
 } from "@/domain/sheet";
+import type { LibraryRecentPracticeSummaryBySheetItem } from "@/domain/practice";
 import { browserSheetLibraryService } from "@/infrastructure/files/sheet-library-service";
+import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import type {
   SheetBatchImportResult,
   SheetImportPreview
@@ -73,6 +75,58 @@ function formatLastPracticed(value: string | null) {
   );
 }
 
+function formatPracticeDate(value: string) {
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "Unknown date";
+  }
+
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
+    date
+  );
+}
+
+function formatPracticeDuration(durationMs: number) {
+  const totalMinutes = Math.max(1, Math.round(durationMs / 60_000));
+
+  if (!Number.isFinite(durationMs) || durationMs <= 0) {
+    return "<1 min";
+  }
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return minutes > 0 ? `${hours} hr ${minutes} min` : `${hours} hr`;
+}
+
+function formatCount(count: number, singular: string, plural: string) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function formatPracticeMetrics(
+  summary: LibraryRecentPracticeSummaryBySheetItem
+) {
+  return [
+    formatPracticeDuration(summary.durationMs),
+    formatCount(summary.sessionCount, "session", "sessions"),
+    formatCount(summary.recordingCount, "recording", "recordings"),
+    summary.segmentPracticeCount > 0
+      ? formatCount(
+          summary.segmentPracticeCount,
+          "segment practice",
+          "segment practices"
+        )
+      : null
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function formatBatchSummary(result: SheetBatchImportResult) {
   if (!result.ok) {
     return result.message;
@@ -112,6 +166,13 @@ export function SheetLibraryExperience() {
   );
   const [tagSavingId, setTagSavingId] = useState<string | null>(null);
   const [tagDrafts, setTagDrafts] = useState<Record<string, string>>({});
+  const [practiceSummariesBySheetId, setPracticeSummariesBySheetId] = useState<
+    Record<string, LibraryRecentPracticeSummaryBySheetItem>
+  >({});
+  const [practiceSummaryLoading, setPracticeSummaryLoading] = useState(true);
+  const [practiceSummaryError, setPracticeSummaryError] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     let isActive = true;
@@ -124,6 +185,39 @@ export function SheetLibraryExperience() {
       setSheets(nextSheets);
       setLoading(false);
     });
+
+    void browserPracticeSessionService
+      .getLibraryRecentPracticeSummaryBySheet({
+        limit: Number.MAX_SAFE_INTEGER
+      })
+      .then((source) => {
+        if (!isActive) {
+          return;
+        }
+
+        setPracticeSummariesBySheetId(
+          Object.fromEntries(
+            source.items.map((summary) => [summary.sheetId, summary])
+          )
+        );
+        setPracticeSummaryError(null);
+      })
+      .catch(() => {
+        if (!isActive) {
+          return;
+        }
+
+        setPracticeSummaryError(
+          "Recent practice summaries could not be loaded."
+        );
+      })
+      .finally(() => {
+        if (!isActive) {
+          return;
+        }
+
+        setPracticeSummaryLoading(false);
+      });
 
     return () => {
       isActive = false;
@@ -694,6 +788,14 @@ export function SheetLibraryExperience() {
       </div>
 
       <div aria-live="polite" className="grid gap-3">
+        {!loading && visibleSheets.length > 0 && practiceSummaryError ? (
+          <p
+            role="alert"
+            className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm"
+          >
+            {practiceSummaryError}
+          </p>
+        ) : null}
         {loading ? (
           <Card>
             <CardContent className="pt-5">
@@ -722,6 +824,7 @@ export function SheetLibraryExperience() {
             const isEditing = editingSheetId === sheet.id;
             const sheetTags = sheet.tags ?? [];
             const isFavorite = sheet.favorite === true;
+            const practiceSummary = practiceSummariesBySheetId[sheet.id];
 
             return (
               <Card key={sheet.id}>
@@ -772,6 +875,38 @@ export function SheetLibraryExperience() {
                           <dd>{sheet.originalFileNames.join(", ")}</dd>
                         </div>
                       </dl>
+                      {!practiceSummaryError ? (
+                        <div
+                          aria-label={`Recent practice for ${sheet.name}`}
+                          className="border-border bg-muted/50 mt-3 rounded-md border px-3 py-2 text-sm"
+                        >
+                          <p className="text-foreground font-medium">
+                            Recent practice
+                          </p>
+                          {practiceSummaryLoading ? (
+                            <p
+                              aria-busy="true"
+                              className="text-muted-foreground mt-1"
+                            >
+                              Loading practice summary...
+                            </p>
+                          ) : practiceSummary ? (
+                            <div className="text-muted-foreground mt-1 grid gap-1">
+                              <p>
+                                Last practiced{" "}
+                                {formatPracticeDate(
+                                  practiceSummary.lastPracticedAt
+                                )}
+                              </p>
+                              <p>{formatPracticeMetrics(practiceSummary)}</p>
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground mt-1">
+                              No local practice summary yet.
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
                       <div className="mt-4 grid gap-3">
                         <div className="flex flex-wrap items-center gap-2">
                           {sheetTags.length > 0 ? (

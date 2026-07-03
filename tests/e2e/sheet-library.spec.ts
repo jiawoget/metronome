@@ -3,26 +3,19 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { SHEET_LIBRARY_DB_NAME } from "./fixtures/storage";
+import {
+  clearSheetLibraryTestState,
+  PRACTICE_SESSION_DB_NAME,
+  SHEET_LIBRARY_DB_NAME,
+  seedRecordingHistory
+} from "./fixtures/storage";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sheetFixturesDir = path.resolve(currentDir, "../../test-fixtures/sheets");
 const dbName = SHEET_LIBRARY_DB_NAME;
 
 async function clearSheetDatabase(page: Page) {
-  await page.goto("/sheet-library");
-  await page.evaluate(
-    (databaseName: string) =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(databaseName);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => resolve();
-      }),
-    dbName
-  );
-  await page.reload();
+  await clearSheetLibraryTestState(page, [dbName, PRACTICE_SESSION_DB_NAME]);
 }
 
 async function getSheetPersistence(page: Page, sheetId: string) {
@@ -93,6 +86,107 @@ async function sheetFixturePayload(
     mimeType,
     buffer: await fs.readFile(path.join(sheetFixturesDir, fixtureName))
   };
+}
+
+async function seedRecentPracticeSummary(page: Page, sheetId: string) {
+  await page.evaluate(
+    ({
+      databaseName,
+      sessions
+    }: {
+      databaseName: string;
+      sessions: unknown[];
+    }) =>
+      new Promise<void>((resolve, reject) => {
+        const openRequest = indexedDB.open(databaseName);
+
+        openRequest.onupgradeneeded = () => {
+          const database = openRequest.result;
+
+          if (!database.objectStoreNames.contains("sessions")) {
+            const store = database.createObjectStore("sessions", {
+              keyPath: "id"
+            });
+
+            for (const indexName of ["sourceType", "sheetId", "startedAt", "updatedAt"]) {
+              store.createIndex(indexName, indexName);
+            }
+          }
+        };
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const database = openRequest.result;
+          const transaction = database.transaction(["sessions"], "readwrite");
+          const store = transaction.objectStore("sessions");
+
+          for (const session of sessions) {
+            store.put(session);
+          }
+
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () => {
+            database.close();
+            reject(transaction.error);
+          };
+        };
+      }),
+    {
+      databaseName: PRACTICE_SESSION_DB_NAME,
+      sessions: [
+        {
+          id: "library-recent-session-one",
+          sourceType: "sheet",
+          sheetId,
+          startedAt: "2026-06-21T09:00:00.000Z",
+          endedAt: "2026-06-21T09:02:00.000Z",
+          durationMs: 120_000,
+          bpm: 96,
+          timeSignature: "6/8",
+          recordingCount: 0,
+          latestRecordingId: null,
+          updatedAt: "2026-06-21T09:02:00.000Z",
+          segmentContext: null
+        },
+        {
+          id: "library-recent-session-two",
+          sourceType: "sheet",
+          sheetId,
+          startedAt: "2026-06-21T10:00:00.000Z",
+          endedAt: "2026-06-21T10:03:00.000Z",
+          durationMs: 180_000,
+          bpm: 96,
+          timeSignature: "6/8",
+          recordingCount: 1,
+          latestRecordingId: "library-recent-take",
+          updatedAt: "2026-06-21T10:03:00.000Z",
+          segmentContext: null
+        }
+      ]
+    }
+  );
+
+  await seedRecordingHistory(page, {
+    sessions: [],
+    recordings: [],
+    errorMarkers: [],
+    sheetRecordingMetadata: [
+      {
+        id: "library-recent-take",
+        type: "sheet",
+        sessionId: "library-recent-session-two",
+        sheetId,
+        sheetName: "Autumn Etude",
+        createdAt: "2026-06-21T10:03:00.000Z",
+        durationMs: 30_000,
+        bpm: 96,
+        timeSignature: "6/8",
+        segmentContext: null
+      }
+    ]
+  });
 }
 
 test("sheet library imports real PDF and image fixtures, persists, filters, opens, and deletes", async ({
@@ -224,6 +318,45 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
   await expect(
     page.getByRole("heading", { name: "Plain Song" })
   ).toBeVisible();
+
+  await seedRecentPracticeSummary(page, pdfSheetId);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Autumn Etude" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Plain Song" })
+  ).toBeVisible();
+  const practicedAutumnSheet = getSheetCard(page, "Autumn Etude");
+  const plainSongSheet = getSheetCard(page, "Plain Song");
+  const autumnPracticeSummary = practicedAutumnSheet.getByLabel(
+    "Recent practice for Autumn Etude"
+  );
+
+  await expect(
+    autumnPracticeSummary.getByText("Recent practice", { exact: true })
+  ).toBeVisible();
+  await expect(autumnPracticeSummary.getByText(/Last practiced/)).toBeVisible();
+  await expect(
+    autumnPracticeSummary.getByText("5 min · 2 sessions · 1 recording")
+  ).toBeVisible();
+  await expect(
+    plainSongSheet.getByText("No local practice summary yet.")
+  ).toBeVisible();
+
+  await page.getByLabel("Search").fill("autumn");
+  await expect(
+    page.getByRole("heading", { name: "Autumn Etude" })
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Plain Song" })).toHaveCount(
+    0
+  );
+  await expect(
+    getSheetCard(page, "Autumn Etude").getByText(
+      "5 min · 2 sessions · 1 recording"
+    )
+  ).toBeVisible();
+  await page.getByLabel("Search").fill("");
 
   await page.getByRole("button", { name: "Show favorites only" }).click();
   await expect(
