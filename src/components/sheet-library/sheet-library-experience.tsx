@@ -27,7 +27,10 @@ import {
   type SheetListItem
 } from "@/domain/sheet";
 import { browserSheetLibraryService } from "@/infrastructure/files/sheet-library-service";
-import type { SheetImportPreview } from "@/services/sheet-library";
+import type {
+  SheetBatchImportResult,
+  SheetImportPreview
+} from "@/services/sheet-library";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -39,7 +42,13 @@ const defaultMetadata = {
   timeSignature: "4/4"
 };
 
-type ImportState = "idle" | "checking" | "ready" | "saving" | "error";
+type ImportState =
+  | "idle"
+  | "checking"
+  | "ready"
+  | "saving"
+  | "batching"
+  | "error";
 type MetadataDraft = typeof defaultMetadata;
 
 function formatBytes(sizeBytes: number) {
@@ -64,6 +73,19 @@ function formatLastPracticed(value: string | null) {
   );
 }
 
+function formatBatchSummary(result: SheetBatchImportResult) {
+  if (!result.ok) {
+    return result.message;
+  }
+
+  const failedText =
+    result.failedCount === 1
+      ? "1 failed."
+      : `${result.failedCount} failed.`;
+
+  return `Imported ${result.importedCount} of ${result.total} files. ${failedText}`;
+}
+
 export function SheetLibraryExperience() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [sheets, setSheets] = useState<SheetListItem[]>([]);
@@ -74,6 +96,8 @@ export function SheetLibraryExperience() {
   const [tagFilter, setTagFilter] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [preview, setPreview] = useState<SheetImportPreview | null>(null);
+  const [batchResult, setBatchResult] =
+    useState<SheetBatchImportResult | null>(null);
   const [metadata, setMetadata] = useState(defaultMetadata);
   const [importState, setImportState] = useState<ImportState>("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -122,6 +146,7 @@ export function SheetLibraryExperience() {
 
     setSelectedFiles(nextFiles);
     setPreview(null);
+    setBatchResult(null);
     setMessage(null);
     setMessageKind("status");
 
@@ -158,6 +183,7 @@ export function SheetLibraryExperience() {
 
   async function handleSave() {
     setImportState("saving");
+    setBatchResult(null);
     setMessage(null);
 
     const result = await browserSheetLibraryService.importSheet({
@@ -191,6 +217,61 @@ export function SheetLibraryExperience() {
     setImportState("idle");
     setMessage(`Imported ${result.sheet.name}.`);
     setMessageKind("status");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleBatchImport() {
+    setImportState("batching");
+    setBatchResult(null);
+    setMessage(null);
+    setMessageKind("status");
+
+    const result = await browserSheetLibraryService.importSheetsBatch({
+      files: selectedFiles,
+      metadataDefaults: {
+        category: metadata.category,
+        bpm: Number(metadata.bpm),
+        timeSignature: metadata.timeSignature
+      }
+    });
+
+    setBatchResult(result);
+
+    if (!result.ok) {
+      setImportState("error");
+      return;
+    }
+
+    const importedSheets = result.items.flatMap((item) =>
+      item.ok ? [item.sheet] : []
+    );
+
+    if (importedSheets.length > 0) {
+      setSheets((current) => [
+        ...importedSheets,
+        ...current.filter(
+          (sheet) =>
+            !importedSheets.some((importedSheet) => importedSheet.id === sheet.id)
+        )
+      ]);
+      setTagDrafts((current) => ({
+        ...current,
+        ...Object.fromEntries(
+          importedSheets.map((sheet) => [
+            sheet.id,
+            (sheet.tags ?? []).join(", ")
+          ])
+        )
+      }));
+    }
+
+    setSelectedFiles([]);
+    setPreview(null);
+    setMetadata(defaultMetadata);
+    setImportState("idle");
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -441,6 +522,38 @@ export function SheetLibraryExperience() {
                   {message}
                 </p>
               ) : null}
+
+              {batchResult ? (
+                <div
+                  role={
+                    !batchResult.ok ||
+                    (batchResult.total > 0 && batchResult.importedCount === 0)
+                      ? "alert"
+                      : "status"
+                  }
+                  className={cn(
+                    "rounded-md border px-3 py-2 text-sm",
+                    !batchResult.ok ||
+                      (batchResult.total > 0 &&
+                        batchResult.importedCount === 0)
+                      ? "border-destructive/30 bg-destructive/10 text-destructive"
+                      : "border-border bg-muted text-foreground"
+                  )}
+                >
+                  <p className="font-medium">{formatBatchSummary(batchResult)}</p>
+                  {batchResult.items.length > 0 ? (
+                    <ul className="mt-2 grid gap-1">
+                      {batchResult.items.map((item, index) => (
+                        <li key={`${item.fileName}-${index}`}>
+                          {item.ok
+                            ? `${item.fileName}: Imported ${item.sheet.name}.`
+                            : `${item.fileName}: ${item.message}`}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
             <div className="border-border bg-muted rounded-md border p-4 text-sm">
@@ -497,6 +610,22 @@ export function SheetLibraryExperience() {
                 <Upload className="h-4 w-4" aria-hidden="true" />
                 Save Imported Sheet
               </Button>
+              {selectedFiles.length > 1 ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="mt-2 w-full"
+                  disabled={
+                    importState === "checking" ||
+                    importState === "saving" ||
+                    importState === "batching"
+                  }
+                  onClick={() => void handleBatchImport()}
+                >
+                  <Upload className="h-4 w-4" aria-hidden="true" />
+                  Import files separately
+                </Button>
+              ) : null}
             </div>
           </div>
         </CardContent>

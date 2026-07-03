@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -80,6 +81,18 @@ function getSheetCard(page: Page, name: string) {
   return page
     .getByRole("heading", { name, exact: true })
     .locator("xpath=ancestor::div[contains(@class, 'bg-card')][1]");
+}
+
+async function sheetFixturePayload(
+  fixtureName: string,
+  mimeType: string,
+  name = fixtureName
+) {
+  return {
+    name,
+    mimeType,
+    buffer: await fs.readFile(path.join(sheetFixturesDir, fixtureName))
+  };
 }
 
 test("sheet library imports real PDF and image fixtures, persists, filters, opens, and deletes", async ({
@@ -375,6 +388,156 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
     .getByLabel("File")
     .setInputFiles(path.join(sheetFixturesDir, "bad-sheet.png"));
   await expect(page.getByText(/image could not be decoded/)).toBeVisible();
+
+  expect(consoleErrors).toEqual([]);
+});
+
+test("sheet library batch imports mixed files and preserves multi-image single import", async ({
+  page
+}) => {
+  const consoleErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+  });
+
+  await clearSheetDatabase(page);
+  await page.getByLabel("File").setInputFiles([
+    await sheetFixturePayload("real-sheet.pdf", "application/pdf", "batch-pdf.pdf"),
+    await sheetFixturePayload("real-sheet.png", "image/png", "batch-image.png"),
+    await sheetFixturePayload("unsupported-sheet.txt", "text/plain"),
+    await sheetFixturePayload("bad-sheet.pdf", "application/pdf"),
+    await sheetFixturePayload("bad-sheet.png", "image/png")
+  ]);
+  await expect(page.getByText(/Unsupported file type/)).toBeVisible();
+  await page.getByRole("button", { name: "Import files separately" }).click();
+
+  await expect(
+    page.getByText("Imported 2 of 5 files. 3 failed.")
+  ).toBeVisible();
+  await expect(
+    page.getByText("batch-pdf.pdf: Imported batch-pdf.")
+  ).toBeVisible();
+  await expect(
+    page.getByText("batch-image.png: Imported batch-image.")
+  ).toBeVisible();
+  await expect(page.getByText(/unsupported-sheet\.txt: Unsupported file type/)).toBeVisible();
+  await expect(page.getByText(/bad-sheet\.pdf: The uploaded PDF could not be read/)).toBeVisible();
+  await expect(page.getByText(/bad-sheet\.png: The uploaded image could not be decoded/)).toBeVisible();
+
+  const batchPdfCard = getSheetCard(page, "batch-pdf");
+  const batchImageCard = getSheetCard(page, "batch-image");
+
+  await expect(batchPdfCard).toBeVisible();
+  await expect(batchImageCard).toBeVisible();
+  await expect(batchPdfCard.getByText("PDF artifact parsed: 1 page")).toBeVisible();
+  await expect(batchImageCard.getByText("Image artifact decoded: 2 x 2")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "unsupported-sheet" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "bad-sheet" })).toHaveCount(0);
+
+  const batchPdfHref = await batchPdfCard
+    .getByRole("link", { name: "Open Sheet Practice" })
+    .getAttribute("href");
+  const batchImageHref = await batchImageCard
+    .getByRole("link", { name: "Open Sheet Practice" })
+    .getAttribute("href");
+  const batchPdfId =
+    new URL(batchPdfHref ?? "", "http://127.0.0.1").pathname.split("/").pop() ??
+    "";
+  const batchImageId =
+    new URL(batchImageHref ?? "", "http://127.0.0.1").pathname
+      .split("/")
+      .pop() ?? "";
+
+  await expect.poll(() => getSheetPersistence(page, batchPdfId)).toMatchObject({
+    sheetExists: true,
+    sheetName: "batch-pdf",
+    tags: [],
+    favorite: false,
+    artifactExists: true
+  });
+  await expect.poll(() => getSheetPersistence(page, batchImageId)).toMatchObject({
+    sheetExists: true,
+    sheetName: "batch-image",
+    tags: [],
+    favorite: false,
+    artifactExists: true
+  });
+  await expect
+    .poll(async () =>
+      (await getSheetPersistence(page, batchPdfId)).artifactBlobSizes.every(
+        (size) => size > 0
+      )
+    )
+    .toBe(true);
+  await expect
+    .poll(async () =>
+      (await getSheetPersistence(page, batchImageId)).artifactBlobSizes.every(
+        (size) => size > 0
+      )
+    )
+    .toBe(true);
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "batch-pdf" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "batch-image" })).toBeVisible();
+  await expect(page.getByText("PDF artifact parsed: 1 page")).toBeVisible();
+  await expect(page.getByText("Image artifact decoded: 2 x 2")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "unsupported-sheet" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "bad-sheet" })).toHaveCount(0);
+
+  await clearSheetDatabase(page);
+  await page.getByLabel("File").setInputFiles([
+    await sheetFixturePayload("real-sheet.png", "image/png", "multi-a.png"),
+    await sheetFixturePayload("real-sheet.png", "image/png", "multi-b.png")
+  ]);
+  await expect(page.getByText("Ready: 2 images.")).toBeVisible();
+  await page.getByLabel("Name").fill("Two Image Sheet");
+  await page.getByRole("button", { name: "Save Imported Sheet" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Two Image Sheet" })
+  ).toHaveCount(1);
+  const multiImageCard = getSheetCard(page, "Two Image Sheet");
+
+  await expect(multiImageCard.getByText("2 images")).toBeVisible();
+  await expect(
+    multiImageCard.getByText("Image artifact decoded: 2 x 2")
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "multi-a" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "multi-b" })).toHaveCount(0);
+
+  const multiImageHref = await multiImageCard
+    .getByRole("link", { name: "Open Sheet Practice" })
+    .getAttribute("href");
+  const multiImageId =
+    new URL(multiImageHref ?? "", "http://127.0.0.1").pathname
+      .split("/")
+      .pop() ?? "";
+  const multiImagePersistence = await getSheetPersistence(page, multiImageId);
+
+  expect(multiImagePersistence).toMatchObject({
+    sheetExists: true,
+    sheetName: "Two Image Sheet",
+    tags: [],
+    favorite: false,
+    artifactExists: true
+  });
+  expect(multiImagePersistence.artifactBlobSizes).toHaveLength(2);
+  expect(multiImagePersistence.artifactBlobSizes.every((size) => size > 0)).toBe(
+    true
+  );
+
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Two Image Sheet" })
+  ).toBeVisible();
+  await expect(page.getByText("Image artifact decoded: 2 x 2")).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 });
