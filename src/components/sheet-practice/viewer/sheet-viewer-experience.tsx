@@ -353,11 +353,8 @@ function SheetViewerReady({
     assistedPageTurnSegment?.sheetId === state.sheet.id ? assistedPageTurnSegment : null;
   const selectedAssistedPageTurnSegmentId = selectedAssistedPageTurnSegment?.id ?? null;
   const assistedPageTurnDelayMs = useMemo(
-    () => getSheetViewerAssistedPageTurnDelayMs(
-      selectedAssistedPageTurnSegment,
-      referencePlaybackTimestampMs
-    ),
-    [referencePlaybackTimestampMs, selectedAssistedPageTurnSegment]
+    () => getSheetViewerAssistedPageTurnDelayMs(selectedAssistedPageTurnSegment),
+    [selectedAssistedPageTurnSegment]
   );
   const isAssistedPageTurnArmed = armedAssistedPageTurnSegmentId !== null;
   const assistedPageTurnStateRef = useRef({
@@ -499,7 +496,7 @@ function SheetViewerReady({
     }
 
     if (assistedPageTurnDelayMs === null) {
-      return "Reference timestamp must be before the selected segment end.";
+      return "Selected segment needs timing before assisted turning.";
     }
 
     return null;

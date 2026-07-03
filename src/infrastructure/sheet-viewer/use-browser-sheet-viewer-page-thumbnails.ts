@@ -12,6 +12,15 @@ export type SheetViewerPageThumbnailState =
 
 type ReadyThumbnailSet = Extract<SheetPageThumbnailSet, { status: "ready" }>;
 
+function thumbnailLoadFailedState(): SheetPageThumbnailSet {
+  return {
+    status: "error",
+    code: "load-failed",
+    title: "Thumbnails unavailable",
+    message: "Sheet thumbnails could not be loaded."
+  };
+}
+
 export function useBrowserSheetViewerPageThumbnails(sheetId: string | null): SheetViewerPageThumbnailState {
   const [state, setState] = useState<{
     sheetId: string | null;
@@ -57,26 +66,39 @@ export function useBrowserSheetViewerPageThumbnails(sheetId: string | null): She
       }
     });
 
-    void browserSheetViewerService.loadPageThumbnails(sheetId).then((nextState) => {
-      if (!isActive) {
-        if (nextState.status === "ready") {
-          browserSheetViewerService.revokePageThumbnails(nextState);
+    void browserSheetViewerService
+      .loadPageThumbnails(sheetId)
+      .then((nextState) => {
+        if (!isActive) {
+          if (nextState.status === "ready") {
+            browserSheetViewerService.revokePageThumbnails(nextState);
+          }
+
+          return;
         }
 
-        return;
-      }
+        revokeCurrentReadySet();
 
-      revokeCurrentReadySet();
+        if (nextState.status === "ready") {
+          readySetRef.current = nextState;
+        }
 
-      if (nextState.status === "ready") {
-        readySetRef.current = nextState;
-      }
+        setState({
+          sheetId,
+          value: nextState
+        });
+      })
+      .catch(() => {
+        if (!isActive) {
+          return;
+        }
 
-      setState({
-        sheetId,
-        value: nextState
+        revokeCurrentReadySet();
+        setState({
+          sheetId,
+          value: thumbnailLoadFailedState()
+        });
       });
-    });
 
     return () => {
       isActive = false;

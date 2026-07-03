@@ -347,22 +347,14 @@ export function panSheetViewerTransform(
   );
 }
 
-export function getSheetViewerAssistedPageTurnDelayMs(
-  segment: PracticeSegment | null | undefined,
-  currentTimestampMs: number | null | undefined
-) {
-  if (
-    !segment ||
-    typeof currentTimestampMs !== "number" ||
-    !Number.isFinite(currentTimestampMs) ||
-    currentTimestampMs < 0
-  ) {
+export function getSheetViewerAssistedPageTurnDelayMs(segment: PracticeSegment | null | undefined) {
+  if (!segment) {
     return null;
   }
 
   try {
     const { measureRangeMs } = createSheetRecordingSegmentContext(segment);
-    const delayMs = measureRangeMs.endMs - currentTimestampMs;
+    const delayMs = measureRangeMs.endMs - measureRangeMs.startMs;
 
     return Number.isFinite(delayMs) && delayMs > 0 ? delayMs : null;
   } catch {
