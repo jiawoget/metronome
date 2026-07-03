@@ -92,3 +92,24 @@ export type SheetPageThumbnailSet =
       thumbnails: SheetPageThumbnail[];
     }
   | SheetViewerErrorState;
+
+export type SheetViewerTransform = {
+  scale: number;
+  translateX: number;
+  translateY: number;
+};
+
+export type SheetViewerViewportSize = {
+  width: number;
+  height: number;
+};
+
+export type SheetViewerContentSize = {
+  width: number;
+  height: number;
+};
+
+export type SheetViewerTransformBounds = {
+  viewport: SheetViewerViewportSize;
+  content: SheetViewerContentSize;
+};
