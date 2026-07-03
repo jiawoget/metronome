@@ -960,6 +960,108 @@ describe("practice session service", () => {
     ).rejects.toThrow("recording read failed");
   });
 
+  it("reads library recent practice summaries from sessions and recording metadata without writes or gateway lookups", async () => {
+    const session = createPracticeSessionFixture({
+      id: "summary-session",
+      durationMs: 60_000,
+      recordingCount: 99,
+      segmentContext: createSegmentContext()
+    });
+    const recording = createSheetRecordingMetadataFixture({
+      id: "summary-recording",
+      sessionId: session.id,
+      createdAt: "2026-06-21T12:04:00.000Z"
+    });
+    const repository: PracticeSessionRepository = {
+      listSessions: vi.fn(async () => [session]),
+      getSession: vi.fn(async () => null),
+      getRecentSession: vi.fn(async () => null),
+      getRecentSheetSession: vi.fn(async () => null),
+      saveSession: vi.fn(async () => undefined),
+      deleteSession: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const recordingRepository: PracticeRecordingMetadataRepository = {
+      listRecordingMetadata: vi.fn(async () => [recording]),
+      listRecordingMetadataForSession: vi.fn(async () => []),
+      saveRecordingMetadata: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined)
+    };
+    const getSheetContext = vi.fn(async () => null);
+    const updateLastPracticedAt = vi.fn(async () => undefined);
+    const getSegmentContext = vi.fn(async () => null);
+    const service = createPracticeSessionService({
+      repository,
+      recordingRepository,
+      sheetGateway: {
+        getSheetContext,
+        updateLastPracticedAt
+      },
+      segmentGateway: {
+        getSegmentContext
+      },
+      now: () => new Date(nowMs)
+    });
+
+    await expect(service.getLibraryRecentPracticeSummaryBySheet({ limit: 5 })).resolves.toEqual({
+      generatedAt: "2026-06-21T12:00:00.000Z",
+      limit: 5,
+      items: [
+        {
+          sheetId: "sheet-alpha",
+          lastPracticedAt: "2026-06-21T12:04:00.000Z",
+          lastSessionId: "summary-session",
+          latestRecordingId: "summary-recording",
+          sessionCount: 1,
+          recordingCount: 1,
+          durationMs: 60_000,
+          segmentPracticeCount: 1
+        }
+      ]
+    });
+    expect(repository.listSessions).toHaveBeenCalledTimes(1);
+    expect(recordingRepository.listRecordingMetadata).toHaveBeenCalledTimes(1);
+    expect(repository.saveSession).not.toHaveBeenCalled();
+    expect(repository.deleteSession).not.toHaveBeenCalled();
+    expect(repository.clear).not.toHaveBeenCalled();
+    expect(recordingRepository.saveRecordingMetadata).not.toHaveBeenCalled();
+    expect(recordingRepository.clear).not.toHaveBeenCalled();
+    expect(getSheetContext).not.toHaveBeenCalled();
+    expect(updateLastPracticedAt).not.toHaveBeenCalled();
+    expect(getSegmentContext).not.toHaveBeenCalled();
+  });
+
+  it("rejects library recent practice summaries when required reads fail", async () => {
+    const { gateway } = createSheetGateway(new Set(["sheet-alpha"]));
+    const sessionReadFailureRepository = createMemorySessionRepository();
+    const recordingReadFailureRepository = createMemoryRecordingRepository();
+
+    vi.spyOn(sessionReadFailureRepository, "listSessions").mockRejectedValue(
+      new Error("session read failed")
+    );
+    vi.spyOn(recordingReadFailureRepository, "listRecordingMetadata").mockRejectedValue(
+      new Error("recording read failed")
+    );
+
+    await expect(
+      createPracticeSessionService({
+        repository: sessionReadFailureRepository,
+        recordingRepository: createMemoryRecordingRepository(),
+        sheetGateway: gateway,
+        now: () => new Date(nowMs)
+      }).getLibraryRecentPracticeSummaryBySheet()
+    ).rejects.toThrow("session read failed");
+
+    await expect(
+      createPracticeSessionService({
+        repository: createMemorySessionRepository(),
+        recordingRepository: recordingReadFailureRepository,
+        sheetGateway: gateway,
+        now: () => new Date(nowMs)
+      }).getLibraryRecentPracticeSummaryBySheet()
+    ).rejects.toThrow("recording read failed");
+  });
+
   it("reads session comparison from sessions and recording metadata without writes", async () => {
     const quickSession = createPracticeSessionFixture({
       id: "quick-session",

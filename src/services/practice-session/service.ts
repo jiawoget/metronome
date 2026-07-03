@@ -4,6 +4,7 @@ import {
   evaluatePracticeGoalCompletion,
   getHomeDashboardAnalyticsSource as selectHomeDashboardAnalyticsSource,
   getHomePracticeStreaks as selectHomePracticeStreaks,
+  getLibraryRecentPracticeSummaryBySheet as selectLibraryRecentPracticeSummaryBySheet,
   getHomeCompatibleContinuePracticeTarget,
   getSessionComparison as selectSessionComparison,
   selectContinuePracticeTargets,
@@ -858,6 +859,21 @@ export function createPracticeSessionService({
         sessions,
         generatedAt: generatedAt.toISOString(),
         now: generatedAt
+      });
+    },
+
+    async getLibraryRecentPracticeSummaryBySheet(options) {
+      const generatedAt = now().toISOString();
+      const [sessions, recordings] = await Promise.all([
+        repository.listSessions(),
+        recordingRepository.listRecordingMetadata()
+      ]);
+
+      return selectLibraryRecentPracticeSummaryBySheet({
+        sessions,
+        recordings,
+        generatedAt,
+        limit: options?.limit
       });
     },
 

@@ -5,6 +5,7 @@ import {
   evaluatePracticeGoalCompletion,
   getHomeDashboardAnalyticsSource,
   getHomePracticeStreaks,
+  getLibraryRecentPracticeSummaryBySheet,
   getTodayPracticeSummary,
   groupPracticeSessionsByHistory,
   withUpdatedPracticeSessionDuration,
@@ -365,6 +366,172 @@ describe("practice session duration rules", () => {
         hasRecordings: false,
         hasGoals: false
       }
+    });
+  });
+
+  it("derives recent library practice summaries by sheet from sessions and metadata", () => {
+    const summaries = getLibraryRecentPracticeSummaryBySheet({
+      generatedAt: "2026-06-21T15:00:00.000Z",
+      limit: 10,
+      sessions: [
+        createSession({
+          id: "quick-session",
+          sourceType: "quick",
+          sheetId: null,
+          updatedAt: "2026-06-21T12:10:00.000Z",
+          durationMs: 999_999
+        }),
+        createSession({
+          id: "alpha-session",
+          sourceType: "sheet",
+          sheetId: " sheet-alpha ",
+          updatedAt: "2026-06-21T12:01:00.000Z",
+          durationMs: 60_000,
+          latestRecordingId: "alpha-session-recording",
+          segmentContext: createSegmentContext()
+        }),
+        createSession({
+          id: "alpha-bad-duration",
+          sourceType: "sheet",
+          sheetId: "sheet-alpha",
+          updatedAt: "not-a-date",
+          durationMs: Number.NaN,
+          latestRecordingId: "ignored-invalid-time-recording"
+        }),
+        createSession({
+          id: "beta-session",
+          sourceType: "sheet",
+          sheetId: "sheet-beta",
+          startedAt: "2026-06-21T11:50:00.000Z",
+          updatedAt: "not-a-date",
+          durationMs: -1,
+          latestRecordingId: "beta-session-recording"
+        }),
+        createSession({
+          id: "blank-sheet",
+          sourceType: "sheet",
+          sheetId: " "
+        } as PracticeSession)
+      ],
+      recordings: [
+        createRecording({
+          id: "alpha-recording",
+          sheetId: "sheet-alpha",
+          createdAt: "2026-06-21T12:03:00.000Z",
+          segmentContext: createSegmentContext({ segmentId: "segment-recording" })
+        }),
+        createRecording({
+          id: "alpha-invalid-time-recording",
+          sheetId: "sheet-alpha",
+          createdAt: "not-a-date"
+        }),
+        createRecording({
+          id: "gamma-recording",
+          sheetId: "sheet-gamma",
+          createdAt: "2026-06-21T12:04:00.000Z"
+        }),
+        createRecording({
+          id: "blank-sheet-recording",
+          sheetId: " "
+        } as SheetRecordingMetadata)
+      ]
+    });
+
+    expect(summaries).toEqual({
+      generatedAt: "2026-06-21T15:00:00.000Z",
+      limit: 10,
+      items: [
+        {
+          sheetId: "sheet-gamma",
+          lastPracticedAt: "2026-06-21T12:04:00.000Z",
+          lastSessionId: null,
+          latestRecordingId: "gamma-recording",
+          sessionCount: 0,
+          recordingCount: 1,
+          durationMs: 0,
+          segmentPracticeCount: 0
+        },
+        {
+          sheetId: "sheet-alpha",
+          lastPracticedAt: "2026-06-21T12:03:00.000Z",
+          lastSessionId: "alpha-session",
+          latestRecordingId: "alpha-recording",
+          sessionCount: 2,
+          recordingCount: 2,
+          durationMs: 60_000,
+          segmentPracticeCount: 2
+        },
+        {
+          sheetId: "sheet-beta",
+          lastPracticedAt: "2026-06-21T11:50:00.000Z",
+          lastSessionId: "beta-session",
+          latestRecordingId: "beta-session-recording",
+          sessionCount: 1,
+          recordingCount: 0,
+          durationMs: 0,
+          segmentPracticeCount: 0
+        }
+      ]
+    });
+  });
+
+  it("keeps library summary limits deterministic and does not mutate inputs", () => {
+    const sessions = [
+      createSession({
+        id: "bravo",
+        sourceType: "sheet",
+        sheetId: "sheet-bravo",
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      }),
+      createSession({
+        id: "alpha",
+        sourceType: "sheet",
+        sheetId: "sheet-alpha",
+        updatedAt: "2026-06-21T12:00:00.000Z"
+      })
+    ];
+    const originalSessions = structuredClone(sessions);
+
+    expect(
+      getLibraryRecentPracticeSummaryBySheet({
+        generatedAt: "2026-06-21T15:00:00.000Z",
+        sessions,
+        recordings: [],
+        limit: 1
+      })
+    ).toMatchObject({
+      limit: 1,
+      items: [
+        {
+          sheetId: "sheet-alpha"
+        }
+      ]
+    });
+    expect(
+      getLibraryRecentPracticeSummaryBySheet({
+        generatedAt: "2026-06-21T15:00:00.000Z",
+        sessions,
+        recordings: [],
+        limit: 0
+      })
+    ).toMatchObject({
+      limit: 0,
+      items: []
+    });
+    expect(sessions).toEqual(originalSessions);
+  });
+
+  it("returns an empty library summary source with the default limit", () => {
+    expect(
+      getLibraryRecentPracticeSummaryBySheet({
+        generatedAt: "2026-06-21T15:00:00.000Z",
+        sessions: [],
+        recordings: []
+      })
+    ).toEqual({
+      generatedAt: "2026-06-21T15:00:00.000Z",
+      limit: 20,
+      items: []
     });
   });
 

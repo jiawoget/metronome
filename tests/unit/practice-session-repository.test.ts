@@ -773,6 +773,97 @@ describe("practice session browser repository", () => {
     });
   });
 
+  it("derives the same library recent practice summaries after reopening persisted storage", async () => {
+    const sheetSession = createSheetSession({
+      id: "sheet-session",
+      durationMs: 90_000,
+      recordingCount: 1,
+      latestRecordingId: "sheet-session-recording",
+      updatedAt: "2026-06-21T12:02:00.000Z",
+      segmentContext: createSegmentContext()
+    });
+    const deletedSheetSession = createSheetSession({
+      id: "deleted-sheet-session",
+      sheetId: "sheet-deleted",
+      durationMs: 30_000,
+      updatedAt: "2026-06-21T12:03:00.000Z"
+    });
+    const metadataOnlySession = createSheetSession({
+      id: "metadata-only-session",
+      sheetId: "sheet-gamma",
+      updatedAt: "2026-06-21T12:05:00.000Z"
+    });
+
+    await practiceSessionRepository.saveSession(sheetSession);
+    await practiceSessionRepository.saveSession(deletedSheetSession);
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecordingMetadata({
+        id: "sheet-recording",
+        sessionId: sheetSession.id,
+        createdAt: "2026-06-21T12:04:00.000Z",
+        segmentContext: createSegmentContext()
+      }),
+      sheetSession
+    );
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      createSheetRecordingMetadata({
+        id: "metadata-only-recording",
+        sessionId: metadataOnlySession.id,
+        sheetId: metadataOnlySession.sheetId ?? "",
+        createdAt: "2026-06-21T12:05:00.000Z"
+      }),
+      metadataOnlySession
+    );
+
+    const beforeReload = await createRepositoryBackedRecentActivityService(
+      "2026-06-21T12:30:00.000Z"
+    ).getLibraryRecentPracticeSummaryBySheet({ limit: 10 });
+
+    resetPracticeSessionDatabaseConnectionForTests();
+
+    const afterReload = await createRepositoryBackedRecentActivityService(
+      "2026-06-21T12:31:00.000Z"
+    ).getLibraryRecentPracticeSummaryBySheet({ limit: 10 });
+
+    expect({
+      ...afterReload,
+      generatedAt: beforeReload.generatedAt
+    }).toEqual(beforeReload);
+    expect(afterReload.generatedAt).not.toBe(beforeReload.generatedAt);
+    expect(afterReload.items).toEqual([
+      {
+        sheetId: "sheet-gamma",
+        lastPracticedAt: "2026-06-21T12:05:00.000Z",
+        lastSessionId: null,
+        latestRecordingId: "metadata-only-recording",
+        sessionCount: 0,
+        recordingCount: 1,
+        durationMs: 0,
+        segmentPracticeCount: 0
+      },
+      {
+        sheetId: "sheet-alpha",
+        lastPracticedAt: "2026-06-21T12:04:00.000Z",
+        lastSessionId: "sheet-session",
+        latestRecordingId: "sheet-recording",
+        sessionCount: 1,
+        recordingCount: 1,
+        durationMs: 90_000,
+        segmentPracticeCount: 2
+      },
+      {
+        sheetId: "sheet-deleted",
+        lastPracticedAt: "2026-06-21T12:03:00.000Z",
+        lastSessionId: "deleted-sheet-session",
+        latestRecordingId: null,
+        sessionCount: 1,
+        recordingCount: 0,
+        durationMs: 30_000,
+        segmentPracticeCount: 0
+      }
+    ]);
+  });
+
   it("derives the same Home practice streaks after reopening persisted storage and clearing history", async () => {
     const todaySession = createQuickSession({
       id: "today-session",

@@ -5,6 +5,8 @@ import type {
   GoalCompletionEvaluation,
   HomeDashboardAnalyticsSource,
   HomePracticeStreaks,
+  LibraryRecentPracticeSummaryBySheetOptions,
+  LibraryRecentPracticeSummaryBySheetSource,
   HomeRecentActivityOptions,
   HomeRecentActivityResult,
   LocalPracticeGoal,
@@ -143,6 +145,9 @@ export type PracticeSessionService = {
   evaluateGoalCompletion: (goals: readonly LocalPracticeGoal[]) => Promise<GoalCompletionEvaluation[]>;
   getHomeDashboardAnalyticsSource: () => Promise<HomeDashboardAnalyticsSource>;
   getHomePracticeStreaks: () => Promise<HomePracticeStreaks>;
+  getLibraryRecentPracticeSummaryBySheet: (
+    options?: LibraryRecentPracticeSummaryBySheetOptions
+  ) => Promise<LibraryRecentPracticeSummaryBySheetSource>;
   getSessionComparison: (options?: SessionComparisonOptions) => Promise<SessionComparisonResult>;
   listRecordingMetadata: () => Promise<SheetRecordingMetadata[]>;
   clear: () => Promise<void>;

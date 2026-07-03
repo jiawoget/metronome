@@ -3,6 +3,8 @@ import type {
   GoalCompletionEvaluation,
   HomeDashboardAnalyticsSource,
   HomePracticeStreaks,
+  LibraryRecentPracticeSummaryBySheetItem,
+  LibraryRecentPracticeSummaryBySheetSource,
   LocalPracticeGoal,
   LocalPracticeGoalKind,
   LocalPracticeGoalPeriod,
@@ -313,6 +315,181 @@ function normalizeAnalyticsId(value: string | null | undefined) {
 
 function validDurationMs(value: number) {
   return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+export type LibraryRecentPracticeSummaryBySheetInput = {
+  sessions: readonly PracticeSession[];
+  recordings: readonly SheetRecordingMetadata[];
+  generatedAt: string;
+  limit?: number;
+};
+
+type LibraryRecentPracticeSummaryDraft = LibraryRecentPracticeSummaryBySheetItem & {
+  lastPracticedAtMs: number | null;
+  lastSessionAtMs: number | null;
+  latestRecordingAtMs: number | null;
+  sessionLatestRecordingId: string | null;
+};
+
+const DEFAULT_LIBRARY_RECENT_PRACTICE_SUMMARY_LIMIT = 20;
+
+function normalizeLibrarySummaryLimit(value: number | undefined) {
+  if (value === undefined || !Number.isFinite(value)) {
+    return DEFAULT_LIBRARY_RECENT_PRACTICE_SUMMARY_LIMIT;
+  }
+
+  return Math.max(0, Math.trunc(value));
+}
+
+function getValidIsoTimestampMs(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = Date.parse(value);
+
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function getSessionActivityTimestampMs(session: PracticeSession) {
+  return getValidIsoTimestampMs(session.updatedAt) ?? getValidIsoTimestampMs(session.startedAt);
+}
+
+function getOrCreateLibrarySummaryDraft(
+  drafts: Map<string, LibraryRecentPracticeSummaryDraft>,
+  sheetId: string
+) {
+  const existing = drafts.get(sheetId);
+
+  if (existing) {
+    return existing;
+  }
+
+  const draft: LibraryRecentPracticeSummaryDraft = {
+    sheetId,
+    lastPracticedAt: "",
+    lastSessionId: null,
+    latestRecordingId: null,
+    sessionCount: 0,
+    recordingCount: 0,
+    durationMs: 0,
+    segmentPracticeCount: 0,
+    lastPracticedAtMs: null,
+    lastSessionAtMs: null,
+    latestRecordingAtMs: null,
+    sessionLatestRecordingId: null
+  };
+
+  drafts.set(sheetId, draft);
+
+  return draft;
+}
+
+function applyLibrarySummaryActivityTimestamp(
+  draft: LibraryRecentPracticeSummaryDraft,
+  timestampMs: number | null
+) {
+  if (timestampMs === null) {
+    return;
+  }
+
+  if (draft.lastPracticedAtMs === null || timestampMs > draft.lastPracticedAtMs) {
+    draft.lastPracticedAtMs = timestampMs;
+    draft.lastPracticedAt = new Date(timestampMs).toISOString();
+  }
+}
+
+export function getLibraryRecentPracticeSummaryBySheet({
+  sessions,
+  recordings,
+  generatedAt,
+  limit
+}: LibraryRecentPracticeSummaryBySheetInput): LibraryRecentPracticeSummaryBySheetSource {
+  const normalizedLimit = normalizeLibrarySummaryLimit(limit);
+  const drafts = new Map<string, LibraryRecentPracticeSummaryDraft>();
+
+  for (const session of sessions) {
+    if (session.sourceType !== "sheet") {
+      continue;
+    }
+
+    const sheetId = normalizeAnalyticsId(session.sheetId);
+
+    if (!sheetId) {
+      continue;
+    }
+
+    const draft = getOrCreateLibrarySummaryDraft(drafts, sheetId);
+    const timestampMs = getSessionActivityTimestampMs(session);
+
+    draft.sessionCount += 1;
+    draft.durationMs += validDurationMs(session.durationMs);
+
+    if (normalizeAnalyticsId(session.segmentContext?.segmentId)) {
+      draft.segmentPracticeCount += 1;
+    }
+
+    applyLibrarySummaryActivityTimestamp(draft, timestampMs);
+
+    if (timestampMs !== null && (draft.lastSessionAtMs === null || timestampMs > draft.lastSessionAtMs)) {
+      draft.lastSessionAtMs = timestampMs;
+      draft.lastSessionId = session.id;
+      draft.sessionLatestRecordingId = normalizeAnalyticsId(session.latestRecordingId);
+    }
+  }
+
+  for (const recording of recordings) {
+    if (recording.type !== "sheet") {
+      continue;
+    }
+
+    const sheetId = normalizeAnalyticsId(recording.sheetId);
+
+    if (!sheetId) {
+      continue;
+    }
+
+    const draft = getOrCreateLibrarySummaryDraft(drafts, sheetId);
+    const timestampMs = getValidIsoTimestampMs(recording.createdAt);
+
+    draft.recordingCount += 1;
+
+    if (normalizeAnalyticsId(recording.segmentContext?.segmentId)) {
+      draft.segmentPracticeCount += 1;
+    }
+
+    applyLibrarySummaryActivityTimestamp(draft, timestampMs);
+
+    if (timestampMs !== null && (draft.latestRecordingAtMs === null || timestampMs > draft.latestRecordingAtMs)) {
+      draft.latestRecordingAtMs = timestampMs;
+      draft.latestRecordingId = recording.id;
+    }
+  }
+
+  const items = Array.from(drafts.values())
+    .filter((draft) => draft.lastPracticedAtMs !== null)
+    .sort((first, second) => {
+      const recentOrder = (second.lastPracticedAtMs ?? 0) - (first.lastPracticedAtMs ?? 0);
+
+      return recentOrder || first.sheetId.localeCompare(second.sheetId);
+    })
+    .slice(0, normalizedLimit)
+    .map((draft) => ({
+      sheetId: draft.sheetId,
+      lastPracticedAt: draft.lastPracticedAt,
+      lastSessionId: draft.lastSessionId,
+      latestRecordingId: draft.latestRecordingId ?? draft.sessionLatestRecordingId,
+      sessionCount: draft.sessionCount,
+      recordingCount: draft.recordingCount,
+      durationMs: draft.durationMs,
+      segmentPracticeCount: draft.segmentPracticeCount
+    }));
+
+  return {
+    generatedAt,
+    limit: normalizedLimit,
+    items
+  };
 }
 
 export type PracticeGoalEvaluationInput = {
