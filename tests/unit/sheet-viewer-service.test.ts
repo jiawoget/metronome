@@ -723,7 +723,7 @@ describe("sheet viewer service", () => {
     });
   });
 
-  it("derives assisted page turn delay from selected segment measure timing", () => {
+  it("derives assisted page turn delay from current timestamp to selected segment end", () => {
     const segment = buildPracticeSegment({
       range: {
         startMeasure: 2,
@@ -731,32 +731,42 @@ describe("sheet viewer service", () => {
       }
     });
 
-    expect(getSheetViewerAssistedPageTurnDelayMs(segment)).toBe(5_000);
-    expect(getSheetViewerAssistedPageTurnDelayMs(null)).toBeNull();
-    expect(getSheetViewerAssistedPageTurnDelayMs(undefined)).toBeNull();
+    expect(getSheetViewerAssistedPageTurnDelayMs(segment, 1_000)).toBe(7_000);
+    expect(getSheetViewerAssistedPageTurnDelayMs(segment, 3_000)).toBe(5_000);
+    expect(getSheetViewerAssistedPageTurnDelayMs(segment, 7_000)).toBe(1_000);
+    expect(getSheetViewerAssistedPageTurnDelayMs(segment, 8_000)).toBeNull();
+    expect(getSheetViewerAssistedPageTurnDelayMs(segment, null)).toBeNull();
+    expect(getSheetViewerAssistedPageTurnDelayMs(null, 3_000)).toBeNull();
+    expect(getSheetViewerAssistedPageTurnDelayMs(undefined, 3_000)).toBeNull();
   });
 
   it("returns null for assisted page turn segments without usable timing", () => {
     expect(
-      getSheetViewerAssistedPageTurnDelayMs({
-        ...buildPracticeSegment(),
-        grid: {
-          measureGridVersion: "bad-grid",
-          measureGridSnapshot: {
-            ...buildMeasureGrid(),
-            bpm: Number.NaN
+      getSheetViewerAssistedPageTurnDelayMs(
+        {
+          ...buildPracticeSegment(),
+          grid: {
+            measureGridVersion: "bad-grid",
+            measureGridSnapshot: {
+              ...buildMeasureGrid(),
+              bpm: Number.NaN
+            }
           }
-        }
-      })
+        },
+        0
+      )
     ).toBeNull();
     expect(
-      getSheetViewerAssistedPageTurnDelayMs({
-        ...buildPracticeSegment(),
-        range: {
-          startMeasure: 3,
-          endMeasure: 2
-        }
-      })
+      getSheetViewerAssistedPageTurnDelayMs(
+        {
+          ...buildPracticeSegment(),
+          range: {
+            startMeasure: 3,
+            endMeasure: 2
+          }
+        },
+        0
+      )
     ).toBeNull();
   });
 });

@@ -143,6 +143,7 @@ function formatBatchSummary(result: SheetBatchImportResult) {
 
 export function SheetLibraryExperience() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const previewRequestIdRef = useRef(0);
   const [sheets, setSheets] = useState<SheetListItem[]>([]);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] =
@@ -178,14 +179,30 @@ export function SheetLibraryExperience() {
   useEffect(() => {
     let isActive = true;
 
-    void browserSheetLibraryService.listSheets().then((nextSheets) => {
-      if (!isActive) {
-        return;
-      }
+    void browserSheetLibraryService
+      .listSheets()
+      .then((nextSheets) => {
+        if (!isActive) {
+          return;
+        }
 
-      setSheets(nextSheets);
-      setLoading(false);
-    });
+        setSheets(nextSheets);
+      })
+      .catch(() => {
+        if (!isActive) {
+          return;
+        }
+
+        setMessage("Sheet library could not be loaded.");
+        setMessageKind("error");
+      })
+      .finally(() => {
+        if (!isActive) {
+          return;
+        }
+
+        setLoading(false);
+      });
 
     void browserPracticeSessionService
       .getLibraryRecentPracticeSummaryBySheet({
@@ -237,8 +254,10 @@ export function SheetLibraryExperience() {
   );
 
   async function handleFileChange(files: FileList | null) {
+    const requestId = previewRequestIdRef.current + 1;
     const nextFiles = Array.from(files ?? []);
 
+    previewRequestIdRef.current = requestId;
     setSelectedFiles(nextFiles);
     setPreview(null);
     setBatchResult(null);
@@ -251,7 +270,24 @@ export function SheetLibraryExperience() {
     }
 
     setImportState("checking");
-    const result = await browserSheetLibraryService.previewImport(nextFiles);
+    let result: Awaited<ReturnType<typeof browserSheetLibraryService.previewImport>>;
+
+    try {
+      result = await browserSheetLibraryService.previewImport(nextFiles);
+    } catch {
+      if (previewRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setImportState("error");
+      setMessage("Sheet preview could not be loaded.");
+      setMessageKind("error");
+      return;
+    }
+
+    if (previewRequestIdRef.current !== requestId) {
+      return;
+    }
 
     if (!result.ok) {
       setImportState("error");

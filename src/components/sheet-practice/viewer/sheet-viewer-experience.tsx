@@ -67,14 +67,33 @@ function useSheetViewer(sheetId: string | null) {
   useEffect(() => {
     let isActive = true;
 
-    void browserSheetViewerService.loadSheet(sheetId).then((nextState) => {
-      if (isActive) {
+    void browserSheetViewerService
+      .loadSheet(sheetId)
+      .then((nextState) => {
+        if (!isActive) {
+          return;
+        }
+
         setState({
           sheetId,
           value: nextState
         });
-      }
-    });
+      })
+      .catch(() => {
+        if (!isActive) {
+          return;
+        }
+
+        setState({
+          sheetId,
+          value: {
+            status: "error",
+            code: "load-failed",
+            title: "Sheet viewer unavailable",
+            message: "The sheet could not be loaded. Return to Sheet Library and try again."
+          }
+        });
+      });
 
     return () => {
       isActive = false;
@@ -334,8 +353,11 @@ function SheetViewerReady({
     assistedPageTurnSegment?.sheetId === state.sheet.id ? assistedPageTurnSegment : null;
   const selectedAssistedPageTurnSegmentId = selectedAssistedPageTurnSegment?.id ?? null;
   const assistedPageTurnDelayMs = useMemo(
-    () => getSheetViewerAssistedPageTurnDelayMs(selectedAssistedPageTurnSegment),
-    [selectedAssistedPageTurnSegment]
+    () => getSheetViewerAssistedPageTurnDelayMs(
+      selectedAssistedPageTurnSegment,
+      referencePlaybackTimestampMs
+    ),
+    [referencePlaybackTimestampMs, selectedAssistedPageTurnSegment]
   );
   const isAssistedPageTurnArmed = armedAssistedPageTurnSegmentId !== null;
   const assistedPageTurnStateRef = useRef({
@@ -477,7 +499,7 @@ function SheetViewerReady({
     }
 
     if (assistedPageTurnDelayMs === null) {
-      return "Selected segment needs timing before assisted turning.";
+      return "Reference timestamp must be at or before the selected segment end.";
     }
 
     return null;
