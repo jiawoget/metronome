@@ -4,8 +4,15 @@ import type { SheetArtifact, SheetListItem } from "@/domain/sheet";
 import { browserSheetViewerAdapter } from "@/infrastructure/sheet-viewer/browser-sheet-viewer-adapter";
 import {
   clampSheetViewerZoom,
+  clampSheetViewerTransform,
+  createSheetViewerTransform,
   createSheetViewerService,
   formatSheetViewerPageLabel,
+  panSheetViewerTransform,
+  resetSheetViewerTransform,
+  resetSheetViewerTransformForPageChange,
+  setSheetViewerTransformScale,
+  SHEET_VIEWER_TRANSFORM_LIMITS,
   stepSheetViewerZoom,
   type SheetViewerAdapter,
   type SheetViewerThumbnailGeneration,
@@ -504,9 +511,197 @@ describe("sheet viewer service", () => {
 
   it("formats page labels and clamps zoom by fixed steps", () => {
     expect(formatSheetViewerPageLabel(1, 2)).toBe("Page 1 of 2");
+    expect(SHEET_VIEWER_TRANSFORM_LIMITS).toEqual({
+      minScale: 0.5,
+      maxScale: 2,
+      scaleStep: 0.25
+    });
     expect(stepSheetViewerZoom(1, "in")).toBe(1.25);
     expect(stepSheetViewerZoom(1, "out")).toBe(0.75);
+    expect(stepSheetViewerZoom(Number.NaN, "in")).toBe(1.25);
+    expect(stepSheetViewerZoom(Infinity, "out")).toBe(0.75);
+    expect(stepSheetViewerZoom(0.5, "out")).toBe(0.5);
+    expect(stepSheetViewerZoom(2, "in")).toBe(2);
     expect(clampSheetViewerZoom(0.1)).toBe(0.5);
     expect(clampSheetViewerZoom(3)).toBe(2);
+    expect(clampSheetViewerZoom(1.234)).toBe(1.234);
+    expect(clampSheetViewerZoom(Number.NaN)).toBe(1);
+    expect(clampSheetViewerZoom(Infinity)).toBe(1);
+    expect(clampSheetViewerZoom(-Infinity)).toBe(1);
+  });
+
+  it("creates and resets sheet viewer transforms with safe defaults", () => {
+    const defaultTransform = {
+      scale: 1,
+      translateX: 0,
+      translateY: 0
+    };
+
+    expect(createSheetViewerTransform()).toEqual(defaultTransform);
+    expect(createSheetViewerTransform({ translateX: 10 })).toEqual({
+      scale: 1,
+      translateX: 10,
+      translateY: 0
+    });
+    expect(
+      createSheetViewerTransform({
+        scale: Number.NaN,
+        translateX: Infinity,
+        translateY: Number.NaN
+      })
+    ).toEqual(defaultTransform);
+    expect(resetSheetViewerTransform()).toEqual(defaultTransform);
+    expect(resetSheetViewerTransformForPageChange()).toEqual(defaultTransform);
+  });
+
+  it("sets transform scale with rounding, clamping, and omitted-bounds reset behavior", () => {
+    const transform = {
+      scale: 1,
+      translateX: 24,
+      translateY: -24
+    };
+
+    expect(setSheetViewerTransformScale(transform, 1.236)).toEqual({
+      scale: 1.24,
+      translateX: 0,
+      translateY: 0
+    });
+    expect(setSheetViewerTransformScale(transform, 0.1).scale).toBe(0.5);
+    expect(setSheetViewerTransformScale(transform, 3).scale).toBe(2);
+    expect(setSheetViewerTransformScale(transform, Number.NaN).scale).toBe(1);
+    expect(setSheetViewerTransformScale(transform, Infinity).scale).toBe(1);
+  });
+
+  it("clamps transform translation from viewport and content bounds", () => {
+    const bounds = {
+      viewport: { width: 100, height: 100 },
+      content: { width: 100, height: 100 }
+    };
+
+    expect(
+      panSheetViewerTransform(
+        { scale: 2, translateX: 0, translateY: 0 },
+        { x: 25, y: -30 },
+        bounds
+      )
+    ).toEqual({
+      scale: 2,
+      translateX: 25,
+      translateY: -30
+    });
+    expect(
+      panSheetViewerTransform(
+        { scale: 2, translateX: 0, translateY: 0 },
+        { x: 200, y: -200 },
+        bounds
+      )
+    ).toEqual({
+      scale: 2,
+      translateX: 50,
+      translateY: -50
+    });
+    expect(
+      clampSheetViewerTransform(
+        { scale: 2, translateX: 40, translateY: 40 },
+        { viewport: { width: 300, height: 100 }, content: { width: 100, height: 100 } }
+      )
+    ).toEqual({
+      scale: 2,
+      translateX: 0,
+      translateY: 40
+    });
+  });
+
+  it("resets pan when bounds are omitted or invalid", () => {
+    const transform = {
+      scale: 3,
+      translateX: 10,
+      translateY: -10
+    };
+
+    expect(clampSheetViewerTransform(transform)).toEqual({
+      scale: 2,
+      translateX: 0,
+      translateY: 0
+    });
+    expect(panSheetViewerTransform({ scale: 1.234, translateX: 10, translateY: 10 }, { x: 10, y: 10 })).toEqual({
+      scale: 1.234,
+      translateX: 0,
+      translateY: 0
+    });
+    expect(
+      clampSheetViewerTransform(
+        { scale: 1.5, translateX: 10, translateY: 10 },
+        { viewport: { width: 0, height: 100 }, content: { width: 100, height: 100 } }
+      )
+    ).toEqual({
+      scale: 1.5,
+      translateX: 0,
+      translateY: 0
+    });
+    expect(
+      clampSheetViewerTransform(
+        { scale: 1.5, translateX: 10, translateY: 10 },
+        { viewport: { width: 100, height: 100 }, content: { width: Number.NaN, height: 100 } }
+      )
+    ).toEqual({
+      scale: 1.5,
+      translateX: 0,
+      translateY: 0
+    });
+  });
+
+  it("normalizes non-finite translation and pan deltas", () => {
+    const bounds = {
+      viewport: { width: 100, height: 100 },
+      content: { width: 100, height: 100 }
+    };
+
+    expect(clampSheetViewerTransform({ scale: 2, translateX: Infinity, translateY: Number.NaN }, bounds)).toEqual({
+      scale: 2,
+      translateX: 0,
+      translateY: 0
+    });
+    expect(
+      panSheetViewerTransform(
+        { scale: 2, translateX: 10, translateY: -10 },
+        { x: Infinity, y: Number.NaN },
+        bounds
+      )
+    ).toEqual({
+      scale: 2,
+      translateX: 10,
+      translateY: -10
+    });
+  });
+
+  it("reclamps existing translation when scale changes", () => {
+    const bounds = {
+      viewport: { width: 100, height: 100 },
+      content: { width: 100, height: 100 }
+    };
+
+    expect(
+      setSheetViewerTransformScale(
+        { scale: 2, translateX: 25, translateY: -25 },
+        1.5,
+        bounds
+      )
+    ).toEqual({
+      scale: 1.5,
+      translateX: 25,
+      translateY: -25
+    });
+    expect(
+      setSheetViewerTransformScale(
+        { scale: 2, translateX: 25, translateY: -25 },
+        1,
+        bounds
+      )
+    ).toEqual({
+      scale: 1,
+      translateX: 0,
+      translateY: 0
+    });
   });
 });
