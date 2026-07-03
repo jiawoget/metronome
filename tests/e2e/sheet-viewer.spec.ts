@@ -279,6 +279,27 @@ async function expectViewerControlsDoNotOverlap(page: Page) {
   expect(scrollBox.y + scrollBox.height).toBeLessThanOrEqual(controlsBox.y);
 }
 
+async function submitPageJump(page: Page, value: string, submitWithEnter = false) {
+  const input = page.getByRole("textbox", { name: "Page number" });
+
+  await input.fill(value);
+
+  if (submitWithEnter) {
+    await input.press("Enter");
+    return;
+  }
+
+  await page.getByRole("button", { name: "Go", exact: true }).click();
+}
+
+async function expectPageJumpError(page: Page, value: string, message: string) {
+  await submitPageJump(page, value);
+  await expect(page.getByText(message, { exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Page number" })).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
+}
+
 test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, reload, and library return", async ({
   page
 }) => {
@@ -312,6 +333,31 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   let canvas = await expectPdfCanvasRendered(page);
   const initialWidth = await canvas.evaluate((node) => (node as HTMLCanvasElement).width);
 
+  await expect(page.getByRole("textbox", { name: "Page number" })).toBeVisible();
+  await submitPageJump(page, "2");
+  await expect(page.getByText("Page 2 of 2")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
+  await expectPdfCanvasRendered(page);
+  await submitPageJump(page, "1", true);
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
+
+  await expectPageJumpError(page, "999", "Page must be between 1 and 2.");
+  await expectPageJumpError(page, "abc", "Enter a page number from 1 to 2.");
+  await expectPageJumpError(page, "1.5", "Enter a page number from 1 to 2.");
+  await expectPageJumpError(page, "-1", "Enter a page number from 1 to 2.");
+  await expectPageJumpError(page, "0", "Page must be between 1 and 2.");
+  await submitPageJump(page, "2");
+  await expect(page.getByText("Page 2 of 2")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
+
+  await page.getByRole("button", { name: "Previous page" }).click();
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+  await page.getByRole("button", { name: "Go to page 2" }).click();
+  await expect(page.getByText("Page 2 of 2")).toBeVisible();
+  await page.getByRole("button", { name: "Previous page" }).click();
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+
   await page.getByRole("button", { name: "Next page" }).click();
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
   await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
@@ -339,6 +385,9 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   await page.getByRole("button", { name: "Go to page 2" }).click();
   await expect(page.getByRole("button", { name: "Page thumbnails" })).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
+  await expectPdfCanvasRendered(page);
+  await submitPageJump(page, "1");
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
   await expectPdfCanvasRendered(page);
   await expectViewerControlsDoNotOverlap(page);
   await page.setViewportSize({ width: 900, height: 800 });
@@ -474,6 +523,12 @@ test("sheet viewer renders imported image artifact with zoom, resize, and reload
   await expect(page.getByText("Page 1 of 1")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Page thumbnails" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("textbox", { name: "Page number" })).toBeVisible();
+  await submitPageJump(page, "2");
+  await expect(page.getByText("Page must be between 1 and 1.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Page 1 of 1")).toBeVisible();
+  await submitPageJump(page, "1");
+  await expect(page.getByText("Page must be between 1 and 1.", { exact: true })).toHaveCount(0);
 
   const image = page
     .getByTestId("sheet-viewer-scroll")

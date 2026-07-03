@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { SheetArtifactFile } from "@/domain/sheet";
 import { SheetPracticeControls } from "@/components/sheet-practice/controls/sheet-practice-controls";
 import { ReferencePanel } from "@/components/sheet-practice/reference/reference-panel";
+import { SheetPageJump } from "@/components/sheet-practice/viewer/sheet-page-jump";
 import { SheetPageThumbnails } from "@/components/sheet-practice/viewer/sheet-page-thumbnails";
 import { browserSheetViewerService } from "@/infrastructure/sheet-viewer/browser-sheet-viewer-service";
 import { useBrowserSheetViewerObjectUrls } from "@/infrastructure/sheet-viewer/use-browser-sheet-viewer-object-urls";
@@ -97,6 +98,7 @@ function SheetViewerToolbar({
   zoom,
   onPrevious,
   onNext,
+  onJumpToPage,
   onZoomOut,
   onZoomIn,
   thumbnailsOpen,
@@ -109,6 +111,7 @@ function SheetViewerToolbar({
   zoom: number;
   onPrevious: () => void;
   onNext: () => void;
+  onJumpToPage: (pageNumber: number) => void;
   onZoomOut: () => void;
   onZoomIn: () => void;
   thumbnailsOpen: boolean;
@@ -160,6 +163,7 @@ function SheetViewerToolbar({
         >
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Button>
+        <SheetPageJump currentPage={currentPage} totalPages={totalPages} onJumpToPage={onJumpToPage} />
         <span className="min-w-20 text-center text-sm font-medium" aria-label="Zoom level">
           {Math.round(zoom * 100)}%
         </span>
@@ -240,6 +244,7 @@ function SheetViewerReady({
             zoom={zoom}
             onPrevious={() => setCurrentPage((page) => Math.max(1, page - 1))}
             onNext={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            onJumpToPage={setCurrentPage}
             onZoomOut={() => setZoom((current) => stepSheetViewerZoom(current, "out"))}
             onZoomIn={() => setZoom((current) => stepSheetViewerZoom(current, "in"))}
             thumbnailsOpen={thumbnailsOpen}
