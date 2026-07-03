@@ -17,7 +17,7 @@ import {
   sortErrorMarkers,
   sortRecordingsByNewest
 } from "@/lib/recordings-review/history";
-import { getSheetPracticeQueryHref } from "@/domain/sheet/routes";
+import { getRecordingsReviewBySheetHref, getSheetPracticeQueryHref } from "@/domain/sheet/routes";
 import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
 import {
   createErrorMarker,
@@ -213,6 +213,89 @@ describe("recordings review history helpers", () => {
     ).toEqual(["Bridge", "Keeper", "Warmup"]);
   });
 
+  it("filters visible recordings by normalized sheet id", () => {
+    const archivedMatchingSheetRecording = makeSheetReviewRecording(
+      {
+        ...sheetRecording,
+        id: "sheet-archived",
+        sheetId: " sheet-42 ",
+        name: "Archived matching take",
+        createdAt: "2026-06-21T14:00:00.000Z"
+      },
+      { withArtifactRef: false }
+    );
+    const otherSheetRecording = makeSheetReviewRecording(
+      {
+        ...sheetRecording,
+        id: "sheet-other",
+        sheetId: "sheet-other",
+        name: "Other sheet take",
+        createdAt: "2026-06-21T15:00:00.000Z"
+      },
+      { withArtifactRef: false }
+    );
+    const recordings = [
+      quickRecording,
+      sheetRecording,
+      segmentSheetRecording,
+      archivedMatchingSheetRecording,
+      otherSheetRecording
+    ];
+    const recordingOrganization = [
+      {
+        recordingId: "sheet-archived",
+        tags: ["Keeper"],
+        favorite: true,
+        archived: true,
+        updatedAt: "2026-06-21T15:00:00.000Z"
+      }
+    ];
+
+    expect(
+      filterRecordings({
+        recordings,
+        query: "",
+        type: "all",
+        sheetId: " sheet-42 ",
+        recordingOrganization
+      }).map((recording) => recording.id)
+    ).toEqual(["sheet-1", "sheet-segment-1"]);
+    expect(
+      filterRecordings({
+        recordings,
+        query: "",
+        type: "quick",
+        sheetId: "sheet-42"
+      })
+    ).toEqual([]);
+    expect(
+      filterRecordings({
+        recordings,
+        query: "archived matching",
+        type: "sheet",
+        archiveMode: "archived",
+        favoritesOnly: true,
+        tag: "keeper",
+        sheetId: "sheet-42",
+        recordingOrganization
+      })
+    ).toEqual([archivedMatchingSheetRecording]);
+    expect(
+      filterRecordings({
+        recordings,
+        query: "",
+        type: "all",
+        sheetId: " "
+      }).map((recording) => recording.id)
+    ).toEqual([
+      "sheet-other",
+      "sheet-archived",
+      "sheet-1",
+      "sheet-segment-1",
+      "quick-1"
+    ]);
+  });
+
   it("sorts recordings by newest first", () => {
     expect(sortRecordingsByNewest([quickRecording, sheetRecording])).toEqual([
       sheetRecording,
@@ -243,6 +326,10 @@ describe("recordings review history helpers", () => {
   });
 
   it("builds narrow sheet practice query hrefs", () => {
+    expect(getRecordingsReviewBySheetHref(" sheet/42 ")).toBe(
+      "/recordings?sheetId=sheet%2F42"
+    );
+    expect(getRecordingsReviewBySheetHref(" ")).toBe("/recordings");
     expect(
       getSheetPracticeQueryHref({
         recordingId: "take 1",

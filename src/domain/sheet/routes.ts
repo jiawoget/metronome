@@ -2,6 +2,16 @@ export function getSheetPracticeHref(sheetId: string) {
   return `/sheet-practice/${encodeURIComponent(sheetId)}`;
 }
 
+export function getRecordingsReviewBySheetHref(sheetId: string) {
+  const params = new URLSearchParams();
+
+  setOptionalQueryParam(params, "sheetId", sheetId);
+
+  const query = params.toString();
+
+  return query ? `/recordings?${query}` : "/recordings";
+}
+
 export function getSheetPracticeQueryHref({
   sheetId,
   recordingId,

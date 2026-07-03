@@ -19,6 +19,7 @@ import {
   SHEET_CATEGORIES,
   filterSheets,
   formatPageCount,
+  getRecordingsReviewBySheetHref,
   getSheetPracticeHref,
   sheetCategoryLabels,
   type SheetCategory,
@@ -1053,6 +1054,11 @@ export function SheetLibraryExperience() {
                       <Button asChild>
                         <Link href={getSheetPracticeHref(sheet.id)}>
                           Open Sheet Practice
+                        </Link>
+                      </Button>
+                      <Button asChild variant="secondary">
+                        <Link href={getRecordingsReviewBySheetHref(sheet.id)}>
+                          Review recordings
                         </Link>
                       </Button>
                       <Button

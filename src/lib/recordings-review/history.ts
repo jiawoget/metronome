@@ -78,6 +78,7 @@ export function filterRecordings({
   archiveMode = "active",
   favoritesOnly = false,
   tag = "all",
+  sheetId = null,
   recordingOrganization = []
 }: {
   recordings: ReviewRecording[];
@@ -86,14 +87,24 @@ export function filterRecordings({
   archiveMode?: RecordingArchiveFilter;
   favoritesOnly?: boolean;
   tag?: string;
+  sheetId?: string | null;
   recordingOrganization?: RecordingOrganizationMetadata[];
 }) {
   const normalizedQuery = query.trim().toLowerCase();
   const normalizedTag = tag.trim().toLowerCase();
+  const normalizedSheetId = normalizeOptionalRouteValue(sheetId);
   const organizationByRecordingId =
     createRecordingOrganizationMap(recordingOrganization);
 
   return sortRecordingsByNewest(recordings).filter((recording) => {
+    if (
+      normalizedSheetId &&
+      (recording.type !== "sheet" ||
+        recording.sheetId?.trim() !== normalizedSheetId)
+    ) {
+      return false;
+    }
+
     if (type !== "all" && recording.type !== type) {
       return false;
     }

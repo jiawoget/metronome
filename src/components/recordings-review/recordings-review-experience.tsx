@@ -72,7 +72,11 @@ import type {
 const MAX_WAVEFORM_COMPARISON_TAKES = 4;
 const MAX_RECORDING_COMPARISON_RECORDINGS = 4;
 
-export function RecordingsReviewExperience() {
+export function RecordingsReviewExperience({
+  sheetFilterId: rawSheetFilterId = null
+}: {
+  sheetFilterId?: string | null;
+}) {
   const {
     snapshot,
     service: reviewService,
@@ -90,6 +94,14 @@ export function RecordingsReviewExperience() {
   );
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(
     null
+  );
+  const sheetFilterId = rawSheetFilterId?.trim() || null;
+  const hasLocalFilters = Boolean(
+    searchQuery.trim() ||
+    typeFilter !== "all" ||
+    archiveFilter !== "active" ||
+    favoritesOnly ||
+    tagFilter !== "all"
   );
 
   const recordingOrganization = useMemo(
@@ -122,6 +134,7 @@ export function RecordingsReviewExperience() {
         archiveMode: archiveFilter,
         favoritesOnly,
         tag: tagFilter,
+        sheetId: sheetFilterId,
         recordingOrganization
       }),
     [
@@ -129,6 +142,7 @@ export function RecordingsReviewExperience() {
       favoritesOnly,
       recordingOrganization,
       searchQuery,
+      sheetFilterId,
       snapshot.recordings,
       tagFilter,
       typeFilter
@@ -242,6 +256,7 @@ export function RecordingsReviewExperience() {
         className="mx-auto flex w-full max-w-6xl flex-col gap-5"
       >
         <RecordingsHeader />
+        <ActiveSheetFilter sheetFilterId={sheetFilterId} />
         <Card>
           <CardContent className="pt-5">
             <div
@@ -273,6 +288,7 @@ export function RecordingsReviewExperience() {
       className="mx-auto flex w-full max-w-6xl flex-col gap-5"
     >
       <RecordingsHeader />
+      <ActiveSheetFilter sheetFilterId={sheetFilterId} />
 
       <Card>
         <CardContent className="pt-5">
@@ -390,7 +406,11 @@ export function RecordingsReviewExperience() {
                 data-testid="recordings-filter-empty-state"
                 className="border-border bg-muted text-muted-foreground rounded-md border border-dashed px-4 py-6 text-sm"
               >
-                No recordings match the current filters.
+                {sheetFilterId
+                  ? hasLocalFilters
+                    ? "No recordings match this sheet filter and the current filters."
+                    : "No recordings match this sheet filter."
+                  : "No recordings match the current filters."}
               </div>
             ) : (
               <div data-testid="recordings-list" className="grid gap-4">
@@ -473,6 +493,30 @@ function RecordingsHeader() {
         <span className="font-medium">Local recordings</span>
       </div>
     </header>
+  );
+}
+
+function ActiveSheetFilter({
+  sheetFilterId
+}: {
+  sheetFilterId: string | null;
+}) {
+  if (!sheetFilterId) {
+    return null;
+  }
+
+  return (
+    <div
+      data-testid="active-sheet-filter"
+      className="border-border bg-muted flex flex-col gap-3 rounded-md border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+    >
+      <p className="min-w-0 font-medium break-words">
+        Sheet filter: <span title={sheetFilterId}>{sheetFilterId}</span>
+      </p>
+      <Button asChild variant="secondary">
+        <Link href="/recordings">Clear sheet filter</Link>
+      </Button>
+    </div>
   );
 }
 
