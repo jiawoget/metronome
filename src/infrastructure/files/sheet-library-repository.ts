@@ -1,6 +1,11 @@
 import Dexie, { type Table } from "dexie";
 
-import type { ImportedSheet, SheetArtifact } from "@/domain/sheet";
+import {
+  resolveSheetOrganization,
+  type ImportedSheet,
+  type SheetArtifact,
+  type SheetOrganizationMetadata
+} from "@/domain/sheet";
 import { SHEET_LIBRARY_DB_NAME } from "@/infrastructure/storage/storage-contracts";
 import type { SheetLibraryRepository } from "@/services/sheet-library";
 
@@ -34,13 +39,24 @@ function getDatabase() {
   return database;
 }
 
+function normalizeSheetOrganization(sheet: ImportedSheet) {
+  return {
+    ...sheet,
+    ...resolveSheetOrganization(sheet)
+  };
+}
+
 export const sheetLibraryRepository: SheetLibraryRepository = {
   async listSheets() {
-    return getDatabase().sheets.orderBy("createdAt").reverse().toArray();
+    const sheets = await getDatabase().sheets.orderBy("createdAt").reverse().toArray();
+
+    return sheets.map(normalizeSheetOrganization);
   },
 
   async getSheet(sheetId) {
-    return (await getDatabase().sheets.get(sheetId)) ?? null;
+    const sheet = await getDatabase().sheets.get(sheetId);
+
+    return sheet ? normalizeSheetOrganization(sheet) : null;
   },
 
   async saveSheet(sheet, artifact) {
@@ -68,6 +84,28 @@ export const sheetLibraryRepository: SheetLibraryRepository = {
     await getDatabase().sheets.put(updatedSheet);
 
     return updatedSheet;
+  },
+
+  async updateSheetOrganization(
+    sheetId,
+    organization: SheetOrganizationMetadata,
+    updatedAt
+  ) {
+    const sheet = await getDatabase().sheets.get(sheetId);
+
+    if (!sheet) {
+      return null;
+    }
+
+    const updatedSheet = {
+      ...sheet,
+      ...organization,
+      updatedAt
+    };
+
+    await getDatabase().sheets.put(updatedSheet);
+
+    return normalizeSheetOrganization(updatedSheet);
   },
 
   async updateLastPracticedAt(sheetId, practicedAt) {
@@ -106,3 +144,26 @@ export const sheetLibraryRepository: SheetLibraryRepository = {
     });
   }
 };
+
+export async function clearSheetLibraryDatabaseForTests() {
+  const db = getDatabase();
+
+  await db.transaction("rw", db.sheets, db.artifacts, async () => {
+    await db.artifacts.clear();
+    await db.sheets.clear();
+  });
+}
+
+export function resetSheetLibraryDatabaseConnectionForTests() {
+  database?.close();
+  database = null;
+}
+
+export async function seedSheetRowForTests(
+  sheetId: string,
+  sheet: Record<string, unknown>
+) {
+  await getDatabase()
+    .table("sheets")
+    .put({ ...sheet, id: sheetId } as ImportedSheet, sheetId);
+}

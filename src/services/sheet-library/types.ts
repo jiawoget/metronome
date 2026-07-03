@@ -5,7 +5,9 @@ import type {
   SheetImageDimensions,
   SheetKind,
   SheetListItem,
-  SheetMetadataInput
+  SheetMetadataInput,
+  SheetOrganizationMetadata,
+  SheetTag
 } from "@/domain/sheet";
 
 export type SheetImportPreview = {
@@ -39,6 +41,28 @@ export type UpdateSheetMetadataInput = {
   metadata: SheetMetadataInput;
 };
 
+export type UpdateSheetOrganizationInput =
+  | {
+      sheetId: string;
+      tags: SheetTag[];
+      favorite?: boolean;
+    }
+  | {
+      sheetId: string;
+      tags?: SheetTag[];
+      favorite: boolean;
+    };
+
+export type SetSheetTagsInput = {
+  sheetId: string;
+  tags: SheetTag[];
+};
+
+export type SetSheetFavoriteInput = {
+  sheetId: string;
+  favorite: boolean;
+};
+
 export type SheetLibraryRepository = {
   listSheets: () => Promise<ImportedSheet[]>;
   getSheet: (sheetId: string) => Promise<ImportedSheet | null>;
@@ -46,6 +70,11 @@ export type SheetLibraryRepository = {
   updateSheetMetadata: (
     sheetId: string,
     metadata: SheetMetadataInput,
+    updatedAt: string
+  ) => Promise<ImportedSheet | null>;
+  updateSheetOrganization: (
+    sheetId: string,
+    organization: SheetOrganizationMetadata,
     updatedAt: string
   ) => Promise<ImportedSheet | null>;
   updateLastPracticedAt: (
@@ -76,6 +105,21 @@ export type SheetLibraryService = {
   >;
   updateSheetMetadata: (
     input: UpdateSheetMetadataInput
+  ) => Promise<
+    { ok: true; sheet: SheetListItem } | { ok: false; message: string }
+  >;
+  updateSheetOrganization: (
+    input: UpdateSheetOrganizationInput
+  ) => Promise<
+    { ok: true; sheet: SheetListItem } | { ok: false; message: string }
+  >;
+  setSheetTags: (
+    input: SetSheetTagsInput
+  ) => Promise<
+    { ok: true; sheet: SheetListItem } | { ok: false; message: string }
+  >;
+  setSheetFavorite: (
+    input: SetSheetFavoriteInput
   ) => Promise<
     { ok: true; sheet: SheetListItem } | { ok: false; message: string }
   >;

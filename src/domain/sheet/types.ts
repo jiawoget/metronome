@@ -9,6 +9,13 @@ export type SheetImageDimensions = {
   height: number;
 };
 
+export type SheetTag = string;
+
+export type SheetOrganizationMetadata = {
+  tags: SheetTag[];
+  favorite: boolean;
+};
+
 export type ImportedSheet = {
   id: string;
   name: string;
@@ -25,6 +32,8 @@ export type ImportedSheet = {
   createdAt: string;
   updatedAt: string;
   lastPracticedAt: string | null;
+  tags?: SheetTag[];
+  favorite?: boolean;
 };
 
 export type SheetMetadataInput = {

@@ -1,14 +1,19 @@
 import {
+  resolveSheetOrganization,
   validateSheetMetadata,
+  validateSheetOrganizationInput,
   type ImportedSheet,
   type SheetArtifact,
   type SheetListItem
 } from "@/domain/sheet";
 import type {
   ImportSheetInput,
+  SetSheetFavoriteInput,
+  SetSheetTagsInput,
   SheetImportAdapter,
   SheetLibraryRepository,
   SheetLibraryService,
+  UpdateSheetOrganizationInput,
   UpdateSheetMetadataInput
 } from "@/services/sheet-library/types";
 
@@ -33,14 +38,92 @@ export function createSheetLibraryService({
   now = () => new Date(),
   createId = createSheetId
 }: SheetLibraryServiceOptions): SheetLibraryService {
-  async function toListItem(sheet: ImportedSheet): Promise<SheetListItem> {
-    const artifact = await repository.getArtifact(sheet.id);
-    const artifactStatus = await importAdapter.inspectArtifact(sheet, artifact);
-
+  function normalizeOrganization(sheet: ImportedSheet): ImportedSheet {
     return {
       ...sheet,
+      ...resolveSheetOrganization(sheet)
+    };
+  }
+
+  async function toListItem(sheet: ImportedSheet): Promise<SheetListItem> {
+    const normalizedSheet = normalizeOrganization(sheet);
+    const artifact = await repository.getArtifact(normalizedSheet.id);
+    const artifactStatus = await importAdapter.inspectArtifact(normalizedSheet, artifact);
+
+    return {
+      ...normalizedSheet,
       artifactStatus
     };
+  }
+
+  async function updateSheetOrganization({
+    sheetId,
+    tags,
+    favorite
+  }: UpdateSheetOrganizationInput) {
+    const normalizedSheetId = sheetId.trim();
+
+    if (!normalizedSheetId) {
+      return {
+        ok: false,
+        message: "Sheet id is required."
+      } as const;
+    }
+
+    if (tags === undefined && favorite === undefined) {
+      return {
+        ok: false,
+        message: "Sheet organization update requires tags or favorite."
+      } as const;
+    }
+
+    let currentSheet: ImportedSheet | null = null;
+
+    if (tags === undefined || favorite === undefined) {
+      currentSheet = await repository.getSheet(normalizedSheetId);
+
+      if (!currentSheet) {
+        return {
+          ok: false,
+          message:
+            "Sheet organization could not be updated because the sheet was not found."
+        } as const;
+      }
+    }
+
+    const currentOrganization = currentSheet
+      ? resolveSheetOrganization(currentSheet)
+      : { tags: [], favorite: false };
+    const organizationResult = validateSheetOrganizationInput({
+      tags: tags ?? currentOrganization.tags,
+      favorite: favorite ?? currentOrganization.favorite
+    });
+
+    if (!organizationResult.ok) {
+      return {
+        ok: false,
+        message: organizationResult.errors.join(" ")
+      } as const;
+    }
+
+    const updatedSheet = await repository.updateSheetOrganization(
+      normalizedSheetId,
+      organizationResult.value,
+      now().toISOString()
+    );
+
+    if (!updatedSheet) {
+      return {
+        ok: false,
+        message:
+          "Sheet organization could not be updated because the sheet was not found."
+      } as const;
+    }
+
+    return {
+      ok: true,
+      sheet: await toListItem(updatedSheet)
+    } as const;
   }
 
   return {
@@ -90,7 +173,8 @@ export function createSheetLibraryService({
         originalFileNames: previewResult.preview.originalFileNames,
         createdAt,
         updatedAt: createdAt,
-        lastPracticedAt: null
+        lastPracticedAt: null,
+        ...resolveSheetOrganization({})
       };
       const artifact: SheetArtifact = {
         sheetId: sheet.id,
@@ -135,6 +219,16 @@ export function createSheetLibraryService({
         ok: true,
         sheet: await toListItem(updatedSheet)
       };
+    },
+
+    updateSheetOrganization,
+
+    setSheetTags(input: SetSheetTagsInput) {
+      return updateSheetOrganization(input);
+    },
+
+    setSheetFavorite(input: SetSheetFavoriteInput) {
+      return updateSheetOrganization(input);
     },
 
     updateLastPracticedAt(sheetId, practicedAt) {
