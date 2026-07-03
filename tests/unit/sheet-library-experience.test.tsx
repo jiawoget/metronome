@@ -13,6 +13,7 @@ import type {
   LibraryRecentPracticeSummaryBySheetSource
 } from "@/domain/practice";
 import type { SheetListItem } from "@/domain/sheet";
+import type { SheetImportPreview } from "@/services/sheet-library";
 
 const sheetServiceMocks = vi.hoisted(() => ({
   listSheets: vi.fn(),
@@ -77,6 +78,37 @@ function createSheet(overrides: Partial<SheetListItem> = {}): SheetListItem {
       readable: true,
       label: "PDF artifact parsed: 1 page"
     },
+    ...overrides
+  };
+}
+
+function createPreview(
+  overrides: Partial<SheetImportPreview> = {}
+): SheetImportPreview {
+  const kind = overrides.kind ?? "pdf";
+
+  return {
+    kind,
+    pageCount: kind === "pdf" ? 2 : null,
+    imageCount: kind === "image" ? 1 : 0,
+    imageDimensions:
+      kind === "image" ? [{ width: 800, height: 1000 }] : [],
+    mimeTypes: [kind === "pdf" ? "application/pdf" : "image/png"],
+    sizeBytes: 1024,
+    originalFileNames: [kind === "pdf" ? "preview.pdf" : "preview.png"],
+    files: [
+      {
+        name: kind === "pdf" ? "preview.pdf" : "preview.png",
+        mimeType: kind === "pdf" ? "application/pdf" : "image/png",
+        sizeBytes: 1024,
+        pageNumber: 1,
+        blob: new Blob([kind], {
+          type: kind === "pdf" ? "application/pdf" : "image/png"
+        }),
+        width: kind === "image" ? 800 : null,
+        height: kind === "image" ? 1000 : null
+      }
+    ],
     ...overrides
   };
 }
@@ -208,6 +240,103 @@ describe("SheetLibraryExperience practice summaries", () => {
         "42 min · 3 sessions · 2 recordings · 1 segment practice"
       )
     ).toBeVisible();
+  });
+
+  it("shows an error and stops loading when the sheet list cannot load", async () => {
+    sheetServiceMocks.listSheets.mockRejectedValue(
+      new Error("library unavailable")
+    );
+
+    render(<SheetLibraryExperience />);
+
+    expect(
+      await screen.findByRole("alert")
+    ).toHaveTextContent("Sheet library could not be loaded.");
+    expect(screen.queryByText("Loading sheets...")).not.toBeInTheDocument();
+  });
+
+  it("ignores stale import previews when a newer file selection resolves first", async () => {
+    const firstPreview = createDeferred<{
+      ok: true;
+      preview: SheetImportPreview;
+    }>();
+
+    sheetServiceMocks.previewImport
+      .mockReturnValueOnce(firstPreview.promise)
+      .mockResolvedValueOnce({
+        ok: true,
+        preview: createPreview({
+          kind: "image",
+          pageCount: null,
+          imageCount: 1,
+          originalFileNames: ["second.png"]
+        })
+      });
+
+    render(<SheetLibraryExperience />);
+
+    await screen.findByRole("heading", { name: "Alpha Etude" });
+
+    const input = screen.getByLabelText("File");
+
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File(["first"], "first.pdf", { type: "application/pdf" })
+        ]
+      }
+    });
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File(["second"], "second.png", { type: "image/png" })
+        ]
+      }
+    });
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Ready: 1 image."
+    );
+
+    firstPreview.resolve({
+      ok: true,
+      preview: createPreview({
+        kind: "pdf",
+        pageCount: 2,
+        imageCount: 0,
+        originalFileNames: ["first.pdf"]
+      })
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Ready: 1 image."
+      );
+      expect(screen.getByLabelText("Name")).toHaveValue("second");
+    });
+  });
+
+  it("shows an error when import preview throws", async () => {
+    sheetServiceMocks.previewImport.mockRejectedValue(
+      new Error("preview unavailable")
+    );
+
+    render(<SheetLibraryExperience />);
+
+    await screen.findByRole("heading", { name: "Alpha Etude" });
+
+    fireEvent.change(screen.getByLabelText("File"), {
+      target: {
+        files: [new File(["bad"], "bad.pdf", { type: "application/pdf" })]
+      }
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Sheet preview could not be loaded."
+    );
+    expect(
+      screen.getByRole("button", { name: "Save Imported Sheet" })
+    ).toBeDisabled();
   });
 
   it("does not show no-history copy while summaries are still loading", async () => {

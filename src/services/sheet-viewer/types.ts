@@ -3,6 +3,7 @@ import type { ImportedSheet, SheetArtifact, SheetImageDimensions, SheetListItem 
 export type SheetViewerErrorCode =
   | "missing-sheet-id"
   | "sheet-not-found"
+  | "load-failed"
   | "missing-artifact"
   | "artifact-mismatch"
   | "bad-pdf"

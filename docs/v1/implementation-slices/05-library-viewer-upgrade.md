@@ -4,6 +4,10 @@
 
 Sheet organization and navigation become efficient for larger local libraries and multi-page scores.
 
+## Scope Naming Note
+
+In this repository, P5 is `pack-5-library-viewer-upgrade` / Library Viewer Upgrade. Bilibili reference iframe, start/end marker, and segment-binding work belongs to later reference scope and is not part of this Pack 5 backlog.
+
 ## Slice Backlog
 
 ### P5-01 `library-tags-favorites-domain`
