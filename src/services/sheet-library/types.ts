@@ -36,6 +36,45 @@ export type ImportSheetInput = {
   metadata: SheetMetadataInput;
 };
 
+export type SheetBatchImportMetadataDefaults = Omit<
+  SheetMetadataInput,
+  "name"
+>;
+
+export type ImportSheetsBatchInput = {
+  files: File[];
+  metadataDefaults: SheetBatchImportMetadataDefaults;
+};
+
+export type SheetBatchImportItemResult =
+  | {
+      ok: true;
+      fileName: string;
+      sheet: SheetListItem;
+    }
+  | {
+      ok: false;
+      fileName: string;
+      message: string;
+    };
+
+export type SheetBatchImportResult =
+  | {
+      ok: true;
+      total: number;
+      importedCount: number;
+      failedCount: number;
+      items: SheetBatchImportItemResult[];
+    }
+  | {
+      ok: false;
+      message: string;
+      total: number;
+      importedCount: 0;
+      failedCount: number;
+      items: [];
+    };
+
 export type UpdateSheetMetadataInput = {
   sheetId: string;
   metadata: SheetMetadataInput;
@@ -103,6 +142,9 @@ export type SheetLibraryService = {
   ) => Promise<
     { ok: true; sheet: SheetListItem } | { ok: false; message: string }
   >;
+  importSheetsBatch: (
+    input: ImportSheetsBatchInput
+  ) => Promise<SheetBatchImportResult>;
   updateSheetMetadata: (
     input: UpdateSheetMetadataInput
   ) => Promise<

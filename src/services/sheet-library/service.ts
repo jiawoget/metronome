@@ -7,10 +7,12 @@ import {
   type SheetListItem
 } from "@/domain/sheet";
 import type {
+  ImportSheetsBatchInput,
   ImportSheetInput,
   SetSheetFavoriteInput,
   SetSheetTagsInput,
   SheetImportAdapter,
+  SheetBatchImportItemResult,
   SheetLibraryRepository,
   SheetLibraryService,
   UpdateSheetOrganizationInput,
@@ -30,6 +32,12 @@ function createSheetId() {
   }
 
   return `sheet_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+function getFileNameStem(fileName: string) {
+  const stem = fileName.replace(/\.[^.]*$/, "").trim();
+
+  return stem || "Untitled sheet";
 }
 
 export function createSheetLibraryService({
@@ -54,6 +62,53 @@ export function createSheetLibraryService({
       ...normalizedSheet,
       artifactStatus
     };
+  }
+
+  async function importOneSheet({ files, metadata }: ImportSheetInput) {
+    const metadataResult = validateSheetMetadata(metadata);
+
+    if (!metadataResult.ok) {
+      return {
+        ok: false,
+        message: metadataResult.errors.join(" ")
+      } as const;
+    }
+
+    const previewResult = await importAdapter.analyzeFiles(files);
+
+    if (!previewResult.ok) {
+      return previewResult;
+    }
+
+    const createdAt = now().toISOString();
+    const sheet: ImportedSheet = {
+      id: createId(),
+      ...metadataResult.value,
+      kind: previewResult.preview.kind,
+      pageCount: previewResult.preview.pageCount,
+      imageCount: previewResult.preview.imageCount,
+      imageDimensions: previewResult.preview.imageDimensions,
+      mimeTypes: previewResult.preview.mimeTypes,
+      sizeBytes: previewResult.preview.sizeBytes,
+      originalFileNames: previewResult.preview.originalFileNames,
+      createdAt,
+      updatedAt: createdAt,
+      lastPracticedAt: null,
+      ...resolveSheetOrganization({})
+    };
+    const artifact: SheetArtifact = {
+      sheetId: sheet.id,
+      kind: sheet.kind,
+      files: previewResult.preview.files,
+      createdAt
+    };
+
+    await repository.saveSheet(sheet, artifact);
+
+    return {
+      ok: true,
+      sheet: await toListItem(sheet)
+    } as const;
   }
 
   async function updateSheetOrganization({
@@ -144,50 +199,75 @@ export function createSheetLibraryService({
       return importAdapter.analyzeFiles(files);
     },
 
-    async importSheet({ files, metadata }: ImportSheetInput) {
-      const metadataResult = validateSheetMetadata(metadata);
+    importSheet(input: ImportSheetInput) {
+      return importOneSheet(input);
+    },
 
-      if (!metadataResult.ok) {
+    async importSheetsBatch({
+      files,
+      metadataDefaults
+    }: ImportSheetsBatchInput) {
+      const sharedDefaultsResult = validateSheetMetadata({
+        name: "Untitled sheet",
+        ...metadataDefaults
+      });
+
+      if (!sharedDefaultsResult.ok) {
         return {
           ok: false,
-          message: metadataResult.errors.join(" ")
+          message: sharedDefaultsResult.errors.join(" "),
+          total: files.length,
+          importedCount: 0,
+          failedCount: files.length,
+          items: []
         };
       }
 
-      const previewResult = await importAdapter.analyzeFiles(files);
+      const items: SheetBatchImportItemResult[] = [];
 
-      if (!previewResult.ok) {
-        return previewResult;
+      for (const file of files) {
+        try {
+          const result = await importOneSheet({
+            files: [file],
+            metadata: {
+              ...sharedDefaultsResult.value,
+              name: getFileNameStem(file.name)
+            }
+          });
+
+          items.push(
+            result.ok
+              ? {
+                  ok: true,
+                  fileName: file.name,
+                  sheet: result.sheet
+                }
+              : {
+                  ok: false,
+                  fileName: file.name,
+                  message: result.message
+                }
+          );
+        } catch (error) {
+          items.push({
+            ok: false,
+            fileName: file.name,
+            message:
+              error instanceof Error
+                ? error.message
+                : "The file could not be imported."
+          });
+        }
       }
 
-      const createdAt = now().toISOString();
-      const sheet: ImportedSheet = {
-        id: createId(),
-        ...metadataResult.value,
-        kind: previewResult.preview.kind,
-        pageCount: previewResult.preview.pageCount,
-        imageCount: previewResult.preview.imageCount,
-        imageDimensions: previewResult.preview.imageDimensions,
-        mimeTypes: previewResult.preview.mimeTypes,
-        sizeBytes: previewResult.preview.sizeBytes,
-        originalFileNames: previewResult.preview.originalFileNames,
-        createdAt,
-        updatedAt: createdAt,
-        lastPracticedAt: null,
-        ...resolveSheetOrganization({})
-      };
-      const artifact: SheetArtifact = {
-        sheetId: sheet.id,
-        kind: sheet.kind,
-        files: previewResult.preview.files,
-        createdAt
-      };
-
-      await repository.saveSheet(sheet, artifact);
+      const importedCount = items.filter((item) => item.ok).length;
 
       return {
         ok: true,
-        sheet: await toListItem(sheet)
+        total: files.length,
+        importedCount,
+        failedCount: files.length - importedCount,
+        items
       };
     },
 

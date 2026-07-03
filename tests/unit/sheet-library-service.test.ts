@@ -8,6 +8,7 @@ import type {
 import {
   createSheetLibraryService,
   type SheetImportAdapter,
+  type SheetImportResult,
   type SheetLibraryRepository
 } from "@/services/sheet-library";
 
@@ -102,10 +103,65 @@ function createAdapter(
   };
 }
 
+function createPdfPreview(file: File): SheetImportResult {
+  return {
+    ok: true,
+    preview: {
+      kind: "pdf",
+      pageCount: 1,
+      imageCount: 0,
+      imageDimensions: [],
+      mimeTypes: [file.type || "application/pdf"],
+      sizeBytes: file.size,
+      originalFileNames: [file.name],
+      files: [
+        {
+          name: file.name,
+          mimeType: file.type || "application/pdf",
+          sizeBytes: file.size,
+          pageNumber: 1,
+          blob: file,
+          width: null,
+          height: null
+        }
+      ]
+    }
+  };
+}
+
+function createImagePreview(file: File): SheetImportResult {
+  return {
+    ok: true,
+    preview: {
+      kind: "image",
+      pageCount: 1,
+      imageCount: 1,
+      imageDimensions: [{ width: 2, height: 2 }],
+      mimeTypes: [file.type || "image/png"],
+      sizeBytes: file.size,
+      originalFileNames: [file.name],
+      files: [
+        {
+          name: file.name,
+          mimeType: file.type || "image/png",
+          sizeBytes: file.size,
+          pageNumber: 1,
+          blob: file,
+          width: 2,
+          height: 2
+        }
+      ]
+    }
+  };
+}
+
 const pdfFile = new File(["%PDF-1.4"], "real-sheet.pdf", {
   type: "application/pdf"
 });
 const imageFile = new File(["png"], "real-sheet.png", { type: "image/png" });
+const unsupportedFile = new File(["text"], "unsupported-sheet.txt", {
+  type: "text/plain"
+});
 
 describe("sheet library service", () => {
   beforeEach(() => {
@@ -250,6 +306,218 @@ describe("sheet library service", () => {
         "Unsupported file type. Upload one PDF or one or more PNG/JPG image files."
     });
     expect(await service.listSheets()).toEqual([]);
+  });
+
+  it("batch imports valid candidates with filename defaults and one-file adapter calls", async () => {
+    const repository = createMemoryRepository();
+    const calls: string[][] = [];
+    const extensionOnlyImage = new File(["png"], ".png", {
+      type: "image/png"
+    });
+    let nextId = 0;
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: {
+        async analyzeFiles(files) {
+          calls.push(files.map((file) => file.name));
+
+          return files[0]?.name === ".png"
+            ? createImagePreview(extensionOnlyImage)
+            : createPdfPreview(pdfFile);
+        },
+        async inspectArtifact(sheet) {
+          return sheet.kind === "image"
+            ? {
+                readable: true,
+                label: "Image artifact decoded: 2 x 2"
+              }
+            : {
+                readable: true,
+                label: "PDF artifact parsed: 1 page"
+              };
+        }
+      },
+      now: () => new Date("2026-06-21T10:00:00.000Z"),
+      createId: () => `sheet-batch-${++nextId}`
+    });
+
+    const result = await service.importSheetsBatch({
+      files: [pdfFile, extensionOnlyImage],
+      metadataDefaults: {
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result).toMatchObject({
+      total: 2,
+      importedCount: 2,
+      failedCount: 0,
+      items: [
+        {
+          ok: true,
+          fileName: "real-sheet.pdf",
+          sheet: {
+            id: "sheet-batch-1",
+            name: "real-sheet",
+            tags: [],
+            favorite: false
+          }
+        },
+        {
+          ok: true,
+          fileName: ".png",
+          sheet: {
+            id: "sheet-batch-2",
+            name: "Untitled sheet",
+            tags: [],
+            favorite: false
+          }
+        }
+      ]
+    });
+    expect(calls).toEqual([["real-sheet.pdf"], [".png"]]);
+    await expect(service.getArtifact("sheet-batch-1")).resolves.toMatchObject({
+      sheetId: "sheet-batch-1",
+      kind: "pdf"
+    });
+    await expect(service.getArtifact("sheet-batch-2")).resolves.toMatchObject({
+      sheetId: "sheet-batch-2",
+      kind: "image"
+    });
+  });
+
+  it("batch import keeps successful files when neighboring candidates fail", async () => {
+    const repository = createMemoryRepository();
+    const calls: string[][] = [];
+    let nextId = 0;
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: {
+        async analyzeFiles(files) {
+          calls.push(files.map((file) => file.name));
+
+          if (files[0]?.name === unsupportedFile.name) {
+            return {
+              ok: false,
+              message:
+                "Unsupported file type. Upload one PDF or one or more PNG/JPG image files."
+            };
+          }
+
+          return files[0]?.type === "image/png"
+            ? createImagePreview(files[0])
+            : createPdfPreview(files[0] ?? pdfFile);
+        },
+        async inspectArtifact(sheet) {
+          return sheet.kind === "image"
+            ? {
+                readable: true,
+                label: "Image artifact decoded: 2 x 2"
+              }
+            : {
+                readable: true,
+                label: "PDF artifact parsed: 1 page"
+              };
+        }
+      },
+      createId: () => `sheet-mixed-${++nextId}`
+    });
+
+    const result = await service.importSheetsBatch({
+      files: [pdfFile, unsupportedFile, imageFile],
+      metadataDefaults: {
+        category: "exercise",
+        bpm: 96,
+        timeSignature: "6/8"
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result).toMatchObject({
+      total: 3,
+      importedCount: 2,
+      failedCount: 1,
+      items: [
+        {
+          ok: true,
+          fileName: "real-sheet.pdf",
+          sheet: { name: "real-sheet", category: "exercise" }
+        },
+        {
+          ok: false,
+          fileName: "unsupported-sheet.txt",
+          message:
+            "Unsupported file type. Upload one PDF or one or more PNG/JPG image files."
+        },
+        {
+          ok: true,
+          fileName: "real-sheet.png",
+          sheet: { name: "real-sheet", category: "exercise" }
+        }
+      ]
+    });
+    expect(calls).toEqual([
+      ["real-sheet.pdf"],
+      ["unsupported-sheet.txt"],
+      ["real-sheet.png"]
+    ]);
+    const listedSheets = await service.listSheets();
+
+    expect(listedSheets.map((sheet) => sheet.id).sort()).toEqual([
+      "sheet-mixed-1",
+      "sheet-mixed-2"
+    ]);
+    await expect(service.getArtifact("sheet-mixed-1")).resolves.toMatchObject({
+      sheetId: "sheet-mixed-1"
+    });
+    await expect(service.getArtifact("sheet-mixed-2")).resolves.toMatchObject({
+      sheetId: "sheet-mixed-2"
+    });
+    await expect(service.getArtifact("unsupported-sheet.txt")).resolves.toBeNull();
+  });
+
+  it("batch import rejects invalid shared defaults before analyzing files", async () => {
+    const calls: string[][] = [];
+    const service = createSheetLibraryService({
+      repository: createMemoryRepository(),
+      importAdapter: {
+        async analyzeFiles(files) {
+          calls.push(files.map((file) => file.name));
+
+          return createPdfPreview(pdfFile);
+        },
+        async inspectArtifact() {
+          return {
+            readable: true,
+            label: "PDF artifact parsed: 1 page"
+          };
+        }
+      }
+    });
+
+    const result = await service.importSheetsBatch({
+      files: [pdfFile, imageFile],
+      metadataDefaults: {
+        category: "song",
+        bpm: 12,
+        timeSignature: "bad"
+      }
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      message:
+        "BPM must be at least 30. Use a time signature like 4/4, 3/4, or 6/8.",
+      total: 2,
+      importedCount: 0,
+      failedCount: 2,
+      items: []
+    });
+    expect(calls).toEqual([]);
+    await expect(service.listSheets()).resolves.toEqual([]);
   });
 
   it("uses artifact inspection status from the adapter instead of blob size alone", async () => {
