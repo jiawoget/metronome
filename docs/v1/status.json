@@ -959,7 +959,8 @@
                                                             },
                                                             {
                                                                 "slice":  "F6-recording-waveform-analysis-alignment",
-                                                                "status":  "not_started"
+                                                                "status":  "planning_in_progress",
+                                                                "plan":  "docs/v1/implementation-slices/plans/F6-recording-waveform-analysis-alignment.md"
                                                             },
                                                             {
                                                                 "slice":  "F7-boundary-hardening-viewer-closeout",
