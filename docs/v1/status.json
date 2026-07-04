@@ -940,11 +940,12 @@
                                                             },
                                                             {
                                                                 "slice":  "F2-external-library-first-guardrails",
-                                                                "status":  "implementation_done"
+                                                                "status":  "verified"
                                                             },
                                                             {
                                                                 "slice":  "F3-tone-runtime-metronome-alignment",
-                                                                "status":  "not_started"
+                                                                "status":  "planning_in_progress",
+                                                                "plan":  "docs/v1/implementation-slices/plans/F3-tone-runtime-metronome-alignment.md"
                                                             },
                                                             {
                                                                 "slice":  "F4-countdown-executor-unification",
