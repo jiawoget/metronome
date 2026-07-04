@@ -1,0 +1,42 @@
+name: Metronome Debt Gates
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  semgrep-debt-gates:
+    name: Semgrep debt gates on changed files
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Semgrep
+        run: python -m pip install semgrep
+
+      - name: Validate debt gate package
+        run: node scripts/validate-metronome-gates.mjs
+
+      - name: Run Semgrep debt gates on changed files
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: node scripts/run-metronome-semgrep-changed.mjs
+
+      - name: Typecheck
+        run: npm run typecheck --if-present
+
+      - name: Lint
+        run: npm run lint --if-present

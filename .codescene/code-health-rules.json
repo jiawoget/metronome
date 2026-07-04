@@ -1,0 +1,247 @@
+{
+  "usage": "Persist this file at .codescene/code-health-rules.json. This customizes CodeScene Code Health scoring/thresholds for the metronome repository. PR quality gates must still be enabled in CodeScene project settings.",
+  "metronome_policy": {
+    "purpose": "Make source files sensitive to large methods, complex methods, nested complexity, duplicated logic, and primitive obsession. Do not use this file to hide debt.",
+    "bootstrap_note": "If CodeScene reports an unknown rule or threshold name, replace it with the exact name from the CodeScene-generated JSON template for this project/version.",
+    "target_files": [
+      "src/components/sheet-practice/controls/sheet-practice-controls.tsx",
+      "src/components/recordings-review/recordings-review-experience.tsx",
+      "src/services/practice-session/service.ts",
+      "src/components/home/home-dashboard.tsx"
+    ]
+  },
+  "rule_sets": [
+    {
+      "matching_content_path": "src/components/**/*.tsx",
+      "matching_content_path_doc": "React UI components. Components should be thin; Code Health smells here usually indicate leaked workflow/business logic.",
+      "rules": [
+        {
+          "name": "Brain Method",
+          "weight": 1.4
+        },
+        {
+          "name": "Large Method",
+          "weight": 1.3
+        },
+        {
+          "name": "Complex Method",
+          "weight": 1.4
+        },
+        {
+          "name": "Nested Complexity",
+          "weight": 1.4
+        },
+        {
+          "name": "Bumpy Road Ahead",
+          "weight": 1.4
+        },
+        {
+          "name": "Complex Conditional",
+          "weight": 1.3
+        },
+        {
+          "name": "Primitive Obsession",
+          "weight": 1.2
+        }
+      ],
+      "thresholds": [
+        {
+          "name": "function_cyclomatic_complexity_warning",
+          "value": 8
+        },
+        {
+          "name": "function_nesting_depth_warning",
+          "value": 3
+        },
+        {
+          "name": "function_duplication_min_lines_of_code_for_check",
+          "value": 6
+        },
+        {
+          "name": "function_duplication_min_similarity_percentage",
+          "value": 70
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/hooks/**/*.ts",
+      "matching_content_path_doc": "Hooks may coordinate UI state but must not become services or transaction owners.",
+      "rules": [
+        {
+          "name": "Brain Method",
+          "weight": 1.35
+        },
+        {
+          "name": "Large Method",
+          "weight": 1.25
+        },
+        {
+          "name": "Complex Method",
+          "weight": 1.35
+        },
+        {
+          "name": "Nested Complexity",
+          "weight": 1.35
+        },
+        {
+          "name": "Bumpy Road Ahead",
+          "weight": 1.3
+        },
+        {
+          "name": "Complex Conditional",
+          "weight": 1.25
+        }
+      ],
+      "thresholds": [
+        {
+          "name": "function_cyclomatic_complexity_warning",
+          "value": 8
+        },
+        {
+          "name": "function_nesting_depth_warning",
+          "value": 3
+        },
+        {
+          "name": "function_duplication_min_lines_of_code_for_check",
+          "value": 6
+        },
+        {
+          "name": "function_duplication_min_similarity_percentage",
+          "value": 70
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/services/**/*.ts",
+      "matching_content_path_doc": "Services should own use cases but must not become mixed command/query god services.",
+      "rules": [
+        {
+          "name": "Brain Method",
+          "weight": 1.35
+        },
+        {
+          "name": "Large Method",
+          "weight": 1.2
+        },
+        {
+          "name": "Complex Method",
+          "weight": 1.35
+        },
+        {
+          "name": "Nested Complexity",
+          "weight": 1.35
+        },
+        {
+          "name": "Bumpy Road Ahead",
+          "weight": 1.3
+        },
+        {
+          "name": "Complex Conditional",
+          "weight": 1.25
+        },
+        {
+          "name": "Primitive Obsession",
+          "weight": 1.25
+        }
+      ],
+      "thresholds": [
+        {
+          "name": "function_cyclomatic_complexity_warning",
+          "value": 9
+        },
+        {
+          "name": "function_nesting_depth_warning",
+          "value": 3
+        },
+        {
+          "name": "function_duplication_min_lines_of_code_for_check",
+          "value": 6
+        },
+        {
+          "name": "function_duplication_min_similarity_percentage",
+          "value": 70
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/domain/**/*.ts",
+      "matching_content_path_doc": "Domain code should be the cleanest layer. Prefer small pure functions and explicit domain concepts.",
+      "rules": [
+        {
+          "name": "Brain Method",
+          "weight": 1.45
+        },
+        {
+          "name": "Large Method",
+          "weight": 1.35
+        },
+        {
+          "name": "Complex Method",
+          "weight": 1.45
+        },
+        {
+          "name": "Nested Complexity",
+          "weight": 1.45
+        },
+        {
+          "name": "Bumpy Road Ahead",
+          "weight": 1.35
+        },
+        {
+          "name": "Complex Conditional",
+          "weight": 1.35
+        },
+        {
+          "name": "Primitive Obsession",
+          "weight": 1.4
+        }
+      ],
+      "thresholds": [
+        {
+          "name": "function_cyclomatic_complexity_warning",
+          "value": 7
+        },
+        {
+          "name": "function_nesting_depth_warning",
+          "value": 2
+        },
+        {
+          "name": "function_duplication_min_lines_of_code_for_check",
+          "value": 6
+        },
+        {
+          "name": "function_duplication_min_similarity_percentage",
+          "value": 70
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/**/*.test.*",
+      "matching_content_path_doc": "Tests can be slightly more repetitive, but not enough to hide missing test helpers.",
+      "rules": [
+        {
+          "name": "Large Assertion Blocks",
+          "weight": 0.8
+        },
+        {
+          "name": "Duplicated Assertion Blocks",
+          "weight": 0.8
+        },
+        {
+          "name": "Large Method",
+          "weight": 0.8
+        }
+      ],
+      "thresholds": [
+        {
+          "name": "function_duplication_min_lines_of_code_for_check",
+          "value": 10
+        },
+        {
+          "name": "function_duplication_min_similarity_percentage",
+          "value": 80
+        }
+      ]
+    }
+  ]
+}
