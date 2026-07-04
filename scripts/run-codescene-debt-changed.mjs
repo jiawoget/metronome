@@ -11,13 +11,23 @@ const accessTokenNames = [
     'CS_TOKEN',
     'CODESCENE_TOKEN',
 ];
-let accessToken = '';
-for (const name of accessTokenNames) {
-	if (process.env[name]) {
-		accessToken = process.env[name];
-		break;
-	}
-}
+
+const readEnvironmentValue = (candidateNames) => {
+    for (const name of candidateNames) {
+        if (!Object.hasOwn(process.env, name)) {
+            continue;
+        }
+
+        const value = process.env[name] ?? '';
+        if (value.trim() !== '') {
+            return value;
+        }
+    }
+
+    return '';
+};
+
+const accessToken = readEnvironmentValue(accessTokenNames);
 
 if (!accessToken || accessToken.trim() === '') {
     console.error('Missing CS_ACCESS_TOKEN environment variable (or alias).');
@@ -37,13 +47,7 @@ const onPremUrlNames = [
     'CODESCENE_ONPREM_URL',
     'CS_ONPREM_URL_OVERRIDE',
 ];
-let onPremUrl = '';
-for (const name of onPremUrlNames) {
-	if (process.env[name]) {
-		onPremUrl = process.env[name];
-		break;
-	}
-}
+const onPremUrl = readEnvironmentValue(onPremUrlNames);
 
 if (onPremUrl && onPremUrl.trim() !== '') {
     process.env.CS_ONPREM_URL = onPremUrl;
