@@ -43,7 +43,8 @@ substage is complete and verified.
 - `docs/v1/code-review-workflow.md`
 - `tests/unit/architecture-boundaries.test.ts`
 
-Focused scans completed after PR #104 merge:
+Focused scans completed on this planning branch after PR #104 was present on
+`main`:
 
 ```powershell
 rg -n "@/infrastructure" src/components src/app src/hooks
@@ -54,9 +55,18 @@ rg -n "componentInfrastructureImportAllowlist|default-blocks UI components|src/a
 
 ## Current Boundary Inventory
 
-`rg -n "@/infrastructure" src/components src/app src/hooks` currently reports
-18 non-viewer hits. `src/app` has no hits, but it is not yet covered by the
-default UI infrastructure-import guardrail.
+`rg -n "@/infrastructure" src/components src/app src/hooks` reported 18
+non-viewer hits on the scanned planning revision. This inventory is valid only
+for that revision. Before editing, the F7-2 coding agent must re-run the scan on
+the actual coding base and use the fresh output as the target list.
+
+If PR #104 is not included in the coding base, F7-2 must either wait for #104 to
+land on `main`, stack explicitly on top of the #104 branch with that dependency
+called out in the PR body, or regenerate this target inventory against the
+chosen base before implementation starts.
+
+In the scanned revision, `src/app` had no hits, but it was not yet covered by
+the default UI infrastructure-import guardrail.
 
 | Area | Current import owner | Current infrastructure imports | Existing injection seam |
 | --- | --- | --- | --- |
@@ -369,7 +379,11 @@ The review agent should fail F7-2 if any of these happen:
 
 ## Handoff Instructions For Coding Agent
 
-Start from a clean main after this plan PR and PR #104 are merged. Read only:
+Start coding only after external ChatGPT plan review is `PASS` for the F7-2
+plan changes and after PR #104 is merged into `main`. This plan PR is a
+plan-only draft and does not have to be merged before F7-2 coding begins.
+
+Read only:
 
 ```text
 docs/v1/START-HERE.md
@@ -386,10 +400,12 @@ Then run:
 rg -n "@/infrastructure" src/components src/app src/hooks
 ```
 
-Use the resulting files as the only implementation target list unless the
-architecture test reveals another UI/app/hook boundary import. Implement the
-smallest service-composition move needed to make that scan pass, then run the
-verification plan above.
+Confirm the coding base includes PR #104 before editing. If #104 is not on the
+base, wait for it, stack explicitly on it, or regenerate the target inventory
+against the chosen base. Use the resulting files as the only implementation
+target list unless the architecture test reveals another UI/app/hook boundary
+import. Implement the smallest service-composition move needed to make that scan
+pass, then run the verification plan above.
 
 Do not continue into F7-3 mutation hardening or final Pack F closeout in the
 same PR.
