@@ -6,6 +6,9 @@ on:
       - main
       - master
 
+permissions:
+  contents: read
+
 jobs:
   semgrep-debt-gates:
     name: Semgrep debt gates on changed files
