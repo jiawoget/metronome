@@ -1,37 +1,10 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { BarCountInReadyPlan } from "@/domain/practice/bar-count-in";
 import {
   getQuickAdvancedCountdownPlan,
-  schedulePreStartCountdown,
-  toPreStartCountdownPlan,
-  type PreStartCountdownPlan
+  toPreStartCountdownPlan
 } from "@/lib/quick-metronome/pre-start-countdown";
-
-function createPlan(overrides: Partial<PreStartCountdownPlan> = {}): PreStartCountdownPlan {
-  return {
-    beatCount: 3,
-    totalDurationMs: 7.25,
-    beats: [
-      {
-        count: 1,
-        beatNumber: 1,
-        offsetMs: -12.75
-      },
-      {
-        count: 2,
-        beatNumber: 2,
-        offsetMs: -12.25
-      },
-      {
-        count: 3,
-        beatNumber: 3,
-        offsetMs: -10
-      }
-    ],
-    ...overrides
-  };
-}
 
 function createBarCountInPlan(): BarCountInReadyPlan {
   return {
@@ -75,86 +48,6 @@ function createBarCountInPlan(): BarCountInReadyPlan {
 }
 
 describe("pre-start countdown", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it("schedules ticks from beat offsets and completion from totalDurationMs", () => {
-    const setTimeout = vi.fn((callback: () => void, delay?: number) => {
-      return window.setTimeout(callback, delay);
-    });
-    const clearTimeout = vi.fn(window.clearTimeout);
-
-    const scheduled = schedulePreStartCountdown({
-      plan: createPlan(),
-      setTimeout,
-      clearTimeout,
-      onComplete: vi.fn()
-    });
-
-    expect(setTimeout.mock.calls.map(([, delay]) => delay)).toEqual([0, 0.5, 2.75, 7.25]);
-
-    scheduled.cancel();
-  });
-
-  it("cancel prevents future ticks and completion", async () => {
-    vi.useFakeTimers();
-
-    const onTick = vi.fn();
-    const onComplete = vi.fn();
-    const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
-
-    const scheduled = schedulePreStartCountdown({
-      plan: {
-        beatCount: 2,
-        totalDurationMs: 1_000,
-        beats: [
-          {
-            count: 1,
-            beatNumber: 1,
-            offsetMs: -1_000
-          },
-          {
-            count: 2,
-            beatNumber: 2,
-            offsetMs: -500
-          }
-        ]
-      },
-      onTick,
-      onComplete
-    });
-
-    await vi.advanceTimersByTimeAsync(0);
-    scheduled.cancel();
-    await vi.advanceTimersByTimeAsync(1_000);
-
-    expect(onTick).toHaveBeenCalledOnce();
-    expect(onComplete).not.toHaveBeenCalled();
-    expect(clearTimeoutSpy).toHaveBeenCalledTimes(3);
-  });
-
-  it("rejects invalid scheduler plans", () => {
-    expect(() =>
-      schedulePreStartCountdown({
-        plan: createPlan({ beats: [] }),
-        onComplete: vi.fn()
-      })
-    ).toThrow(/without beats/);
-    expect(() =>
-      schedulePreStartCountdown({
-        plan: createPlan({ beatCount: 0 }),
-        onComplete: vi.fn()
-      })
-    ).toThrow(/positive beat count/);
-    expect(() =>
-      schedulePreStartCountdown({
-        plan: createPlan({ totalDurationMs: Number.POSITIVE_INFINITY }),
-        onComplete: vi.fn()
-      })
-    ).toThrow(/positive duration/);
-  });
-
   it("adapts bar count-in plans to neutral countdown fields", () => {
     expect(toPreStartCountdownPlan(createBarCountInPlan())).toEqual({
       beatCount: 2,

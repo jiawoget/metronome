@@ -71,20 +71,8 @@ const componentInfrastructureImportAllowlist = new Map<string, ApprovedUsage>([
 
 const runtimeTimerSchedulingAllowlist = new Map<string, ApprovedUsage>([
   [
-    "src/lib/quick-metronome/bar-count-in-scheduler.ts",
-    { count: 4, reason: "bar count-in executor replacement is scheduled for Pack F countdown unification", expiresAtStage: "F4" }
-  ],
-  [
-    "src/lib/quick-metronome/pre-start-countdown.ts",
-    { count: 4, reason: "pre-start countdown executor replacement is scheduled for Pack F countdown unification", expiresAtStage: "F4" }
-  ],
-  [
-    "src/lib/quick-metronome/use-metronome-transport.ts",
-    { count: 7, reason: "transport countdown wiring replacement is scheduled for Pack F countdown unification", expiresAtStage: "F4" }
-  ],
-  [
     "src/components/sheet-practice/controls/sheet-practice-controls.tsx",
-    { count: 1, reason: "current refresh timer is tolerated while count-in scheduling still composes here", expiresAtStage: "F4" }
+    { count: 1, reason: "non-audio zero-delay session hydration refresh remains until Pack F boundary cleanup", expiresAtStage: "F7" }
   ]
 ]);
 

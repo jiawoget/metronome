@@ -949,7 +949,7 @@
                                                             },
                                                             {
                                                                 "slice":  "F4-countdown-executor-unification",
-                                                                "status":  "planning_in_progress",
+                                                                "status":  "implementation_done",
                                                                 "plan":  "docs/v1/implementation-slices/plans/F4-countdown-executor-unification.md"
                                                             },
                                                             {
