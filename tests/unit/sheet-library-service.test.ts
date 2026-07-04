@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   ImportedSheet,
@@ -308,6 +308,118 @@ describe("sheet library service", () => {
     expect(await service.listSheets()).toEqual([]);
   });
 
+  it("converts result-returning mutation throws into ok false results", async () => {
+    const previewService = createSheetLibraryService({
+      repository: createMemoryRepository(),
+      importAdapter: {
+        async analyzeFiles() {
+          throw new Error("preview unavailable");
+        },
+        async inspectArtifact() {
+          return {
+            readable: true,
+            label: "PDF artifact parsed: 1 page"
+          };
+        }
+      }
+    });
+
+    await expect(previewService.previewImport([pdfFile])).resolves.toEqual({
+      ok: false,
+      message: "preview unavailable"
+    });
+
+    const importRepository = createMemoryRepository();
+    importRepository.saveSheet = vi.fn(async () => {
+      throw new Error("save unavailable");
+    });
+    const importService = createSheetLibraryService({
+      repository: importRepository,
+      importAdapter: createAdapter(createPdfPreview(pdfFile))
+    });
+
+    await expect(
+      importService.importSheet({
+        files: [pdfFile],
+        metadata: {
+          name: "Broken Save",
+          category: "song",
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      })
+    ).resolves.toEqual({
+      ok: false,
+      message: "save unavailable"
+    });
+    await expect(importService.listSheets()).resolves.toEqual([]);
+
+    const metadataRepository = createMemoryRepository();
+    const metadataService = createSheetLibraryService({
+      repository: metadataRepository,
+      importAdapter: createAdapter(createPdfPreview(pdfFile)),
+      createId: () => "sheet-metadata-throw"
+    });
+
+    await metadataService.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Metadata Source",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+    metadataRepository.updateSheetMetadata = vi.fn(async () => {
+      throw new Error("metadata unavailable");
+    });
+
+    await expect(
+      metadataService.updateSheetMetadata({
+        sheetId: "sheet-metadata-throw",
+        metadata: {
+          name: "New Name",
+          category: "song",
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      })
+    ).resolves.toEqual({
+      ok: false,
+      message: "metadata unavailable"
+    });
+
+    const favoriteRepository = createMemoryRepository();
+    const favoriteService = createSheetLibraryService({
+      repository: favoriteRepository,
+      importAdapter: createAdapter(createPdfPreview(pdfFile)),
+      createId: () => "sheet-favorite-throw"
+    });
+
+    await favoriteService.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Favorite Source",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+    favoriteRepository.updateSheetOrganization = vi.fn(async () => {
+      throw new Error("favorite unavailable");
+    });
+
+    await expect(
+      favoriteService.setSheetFavorite({
+        sheetId: "sheet-favorite-throw",
+        favorite: true
+      })
+    ).resolves.toEqual({
+      ok: false,
+      message: "favorite unavailable"
+    });
+  });
+
   it("batch imports valid candidates with filename defaults and one-file adapter calls", async () => {
     const repository = createMemoryRepository();
     const calls: string[][] = [];
@@ -477,6 +589,57 @@ describe("sheet library service", () => {
       sheetId: "sheet-mixed-2"
     });
     await expect(service.getArtifact("unsupported-sheet.txt")).resolves.toBeNull();
+  });
+
+  it("batch import records per-file repository throws without dropping neighboring successes", async () => {
+    const repository = createMemoryRepository();
+    const originalSaveSheet = repository.saveSheet;
+    let nextId = 0;
+
+    repository.saveSheet = vi.fn(async (sheet, artifact) => {
+      if (sheet.id === "sheet-batch-throw-2") {
+        throw new Error("save failed for neighbor");
+      }
+
+      await originalSaveSheet(sheet, artifact);
+    });
+
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: createAdapter(createPdfPreview(pdfFile)),
+      createId: () => `sheet-batch-throw-${++nextId}`
+    });
+
+    const result = await service.importSheetsBatch({
+      files: [pdfFile, imageFile],
+      metadataDefaults: {
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      total: 2,
+      importedCount: 1,
+      failedCount: 1,
+      items: [
+        {
+          ok: true,
+          fileName: "real-sheet.pdf",
+          sheet: { id: "sheet-batch-throw-1" }
+        },
+        {
+          ok: false,
+          fileName: "real-sheet.png",
+          message: "save failed for neighbor"
+        }
+      ]
+    });
+    expect((await service.listSheets()).map((sheet) => sheet.id)).toEqual([
+      "sheet-batch-throw-1"
+    ]);
   });
 
   it("batch import rejects invalid shared defaults before analyzing files", async () => {

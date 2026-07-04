@@ -964,7 +964,7 @@
                                                             },
                                                             {
                                                                 "slice":  "F7-boundary-hardening-viewer-closeout",
-                                                                "status":  "coding_in_progress",
+                                                                "status":  "implementation_done",
                                                                 "plan":  "docs/v1/implementation-slices/plans/F7-boundary-hardening-viewer-closeout.md"
                                                             }
                                                         ]

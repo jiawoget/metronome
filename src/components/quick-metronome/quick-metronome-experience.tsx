@@ -42,6 +42,12 @@ type QuickMetronomeExperienceProps = {
   sessionService?: QuickMetronomeSessionService;
 };
 
+function getSessionWriteFailureMessage(error: unknown) {
+  return error instanceof Error && error.message.trim()
+    ? error.message
+    : "Practice session could not be saved after stopping.";
+}
+
 export function QuickMetronomeExperience({
   sessionService = browserPracticeSessionService
 }: QuickMetronomeExperienceProps = {}) {
@@ -111,20 +117,27 @@ export function QuickMetronomeExperience({
     [sessionService]
   );
   const handleStopped = useCallback(async () => {
+    setErrorMessage(null);
+
     if (currentSession) {
       await sessionService.captureSessionEvent({
         sessionId: currentSession.id,
         kind: "metronome_stopped"
       });
-      const nextSession = isRecording
-        ? await sessionService.updatePracticeSessionDuration(
-            currentSession.id
-          )
-        : await sessionService.endPracticeSession(
-            currentSession.id
-          );
 
-      setCurrentSession(nextSession);
+      try {
+        const nextSession = isRecording
+          ? await sessionService.updatePracticeSessionDuration(
+              currentSession.id
+            )
+          : await sessionService.endPracticeSession(
+              currentSession.id
+            );
+
+        setCurrentSession(nextSession);
+      } catch (error) {
+        setErrorMessage(getSessionWriteFailureMessage(error));
+      }
     }
 
     setMessage(
