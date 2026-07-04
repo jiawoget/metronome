@@ -17,7 +17,7 @@ import {
   type SessionComparisonCandidate,
   type SessionComparisonResult
 } from "@/domain/practice";
-import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
+import { browserPracticeSessionService } from "@/services/practice-session/browser";
 import { practiceGoalService } from "@/services/practice-goals/browser-service";
 
 export type PracticeSessionDashboardReadStatus = "idle" | "loading" | "loaded" | "error";

@@ -17,11 +17,14 @@ import {
   type LocalAudioReference,
   type SheetReference
 } from "@/domain/reference";
-import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
-import { BrowserLocalReferenceAudioPlayer } from "@/infrastructure/reference/local-reference-audio-player";
-import { browserReferenceService } from "@/infrastructure/reference/browser-reference-service";
 import type { PracticeSessionService } from "@/services/practice-session";
+import { browserPracticeSessionService } from "@/services/practice-session/browser";
 import type { ReferenceService } from "@/services/reference";
+import {
+  browserReferenceService,
+  createBrowserLocalReferenceAudioPlayer,
+  type LocalReferenceAudioPlayer
+} from "@/services/reference/browser";
 import { Button } from "@/components/ui/button";
 
 type ReferencePanelProps = {
@@ -31,7 +34,7 @@ type ReferencePanelProps = {
     PracticeSessionService,
     "ensureSheetSession" | "captureSessionEvent"
   >;
-  createAudioPlayer?: () => BrowserLocalReferenceAudioPlayer;
+  createAudioPlayer?: () => LocalReferenceAudioPlayer;
   onPlaybackTimestampChange?: (timestampMs: number | null) => void;
 };
 
@@ -65,15 +68,11 @@ function getReferenceSummary(reference: SheetReference | null) {
     .join(" · ");
 }
 
-function createDefaultAudioPlayer() {
-  return new BrowserLocalReferenceAudioPlayer();
-}
-
 export function ReferencePanel({
   sheetId,
   referenceService = browserReferenceService,
   sessionService = browserPracticeSessionService,
-  createAudioPlayer = createDefaultAudioPlayer,
+  createAudioPlayer = createBrowserLocalReferenceAudioPlayer,
   onPlaybackTimestampChange
 }: ReferencePanelProps) {
   const audioPlayer = useMemo(() => createAudioPlayer(), [createAudioPlayer]);

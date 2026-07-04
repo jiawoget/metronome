@@ -28,36 +28,7 @@ const musicPrimitiveTableAllowlist = new Map<string, ApprovedUsage>([
   ]
 ]);
 
-const componentInfrastructureImportAllowlist = new Map<string, ApprovedUsage>([
-  [
-    "src/components/quick-metronome/quick-metronome-experience.tsx",
-    { count: 1, reason: "session service composition remains until Pack F service boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/settings/settings-experience.tsx",
-    { count: 2, reason: "settings browser service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/sheet-library/sheet-library-experience.tsx",
-    { count: 2, reason: "library import and session service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/sheet-practice/controls/sheet-practice-controls.tsx",
-    { count: 4, reason: "practice controls still compose browser services before Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/sheet-practice/measure-grid/measure-grid-calibration-panel.tsx",
-    { count: 1, reason: "measure grid browser service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/sheet-practice/reference/reference-panel.tsx",
-    { count: 3, reason: "reference service and player composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/sheet-practice/segments/practice-segment-selector-panel.tsx",
-    { count: 2, reason: "segment and measure service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-]);
+const uiInfrastructureImportAllowlist = new Map<string, ApprovedUsage>();
 
 const runtimeTimerSchedulingAllowlist = new Map<string, ApprovedUsage>([
   [
@@ -88,6 +59,12 @@ function readSources(paths: string[]): SourceFile[] {
     path: relative(repoRoot, path).split(sep).join("/"),
     source: readFileSync(path, "utf8")
   }));
+}
+
+function listUiBoundarySourceFiles() {
+  return ["src/components", "src/app", "src/hooks"].flatMap((root) =>
+    listSourceFiles(join(repoRoot, root), [".ts", ".tsx"])
+  );
 }
 
 function matchingFiles(files: SourceFile[], patterns: RegExp[]) {
@@ -234,13 +211,13 @@ describe("source architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
-  it("default-blocks UI components from importing infrastructure unless temporarily reviewed", () => {
-    const files = readSources(listSourceFiles(join(repoRoot, "src/components"), [".ts", ".tsx"]));
+  it("default-blocks UI, app, and hook files from importing infrastructure unless temporarily reviewed", () => {
+    const files = readSources(listUiBoundarySourceFiles());
     const usages = countedMatches(files, /@\/infrastructure\//g);
 
-    expect(unexpectedUsages(usages, componentInfrastructureImportAllowlist)).toEqual([]);
-    expect(staleAllowlistEntries(usages, componentInfrastructureImportAllowlist)).toEqual([]);
-    for (const approval of componentInfrastructureImportAllowlist.values()) {
+    expect(unexpectedUsages(usages, uiInfrastructureImportAllowlist)).toEqual([]);
+    expect(staleAllowlistEntries(usages, uiInfrastructureImportAllowlist)).toEqual([]);
+    for (const approval of uiInfrastructureImportAllowlist.values()) {
       expect(approval.reason).not.toHaveLength(0);
     }
   });

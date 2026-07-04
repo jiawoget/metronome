@@ -6,7 +6,7 @@ import {
   DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
   type ContinuePracticeTargetsResult
 } from "@/domain/practice";
-import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
+import { browserPracticeSessionService } from "@/services/practice-session/browser";
 
 export type CommandPaletteContinueTargetsStatus =
   | "idle"

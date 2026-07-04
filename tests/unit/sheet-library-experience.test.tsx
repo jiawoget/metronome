@@ -45,11 +45,11 @@ vi.mock("next/link", () => ({
   )
 }));
 
-vi.mock("@/infrastructure/files/sheet-library-service", () => ({
+vi.mock("@/services/sheet-library/browser", () => ({
   browserSheetLibraryService: sheetServiceMocks
 }));
 
-vi.mock("@/infrastructure/db/browser-practice-session-service", () => ({
+vi.mock("@/services/practice-session/browser", () => ({
   browserPracticeSessionService: practiceServiceMocks
 }));
 

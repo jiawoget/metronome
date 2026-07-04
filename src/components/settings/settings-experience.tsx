@@ -14,11 +14,11 @@ import {
   type UserSettings
 } from "@/domain/settings";
 import {
+  browserSettingsService,
   browserLocalDataCleanupService,
   browserMicrophonePermissionService,
   browserStorageSummaryService
-} from "@/infrastructure/db/browser-settings-local-data-service";
-import { browserSettingsService } from "@/infrastructure/db/browser-settings-service";
+} from "@/services/settings/browser";
 import type {
   LocalDataCleanupService,
   PermissionStatusService,

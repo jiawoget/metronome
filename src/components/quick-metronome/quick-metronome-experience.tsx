@@ -9,7 +9,6 @@ import { StatusTile } from "@/components/sheet-practice/controls/status-tile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PracticeSession } from "@/domain/practice";
-import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
 import { calculateTapTempo } from "@/lib/quick-metronome/control";
 import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
@@ -21,12 +20,31 @@ import {
   createBrowserMetronomeService
 } from "@/services/metronome/browser";
 import type { MetronomeTick } from "@/services/metronome";
+import type { PracticeSessionService } from "@/services/practice-session";
+import { browserPracticeSessionService } from "@/services/practice-session/browser";
 import { createBrowserRecordingCaptureService } from "@/services/recording/browser";
 import { RecordingPermissionError } from "@/services/recording";
 
 type RecordingState = "idle" | "recording" | "saving";
 
-export function QuickMetronomeExperience() {
+type QuickMetronomeSessionService = Pick<
+  PracticeSessionService,
+  | "captureSessionEvent"
+  | "endPracticeSession"
+  | "ensureQuickSession"
+  | "updatePracticeSessionDuration"
+  | "linkRecordingToSession"
+  | "restorePracticeSessionSnapshot"
+  | "deletePracticeSessionSnapshot"
+>;
+
+type QuickMetronomeExperienceProps = {
+  sessionService?: QuickMetronomeSessionService;
+};
+
+export function QuickMetronomeExperience({
+  sessionService = browserPracticeSessionService
+}: QuickMetronomeExperienceProps = {}) {
   const metronomeService = useMemo(() => createBrowserMetronomeService(), []);
   const countdownExecutor = useMemo(() => createBrowserCountdownExecutor(), []);
   const recordingService = useMemo(() => createBrowserRecordingCaptureService(), []);
@@ -64,45 +82,45 @@ export function QuickMetronomeExperience() {
     setMessage("Countdown running.");
   }, []);
   const ensureMetronomeSession = useCallback(() => {
-    return browserPracticeSessionService.ensureQuickSession({
+    return sessionService.ensureQuickSession({
       trigger: "metronome",
       bpm: settings.bpm,
       timeSignature: settings.timeSignature
     });
-  }, [settings.bpm, settings.timeSignature]);
+  }, [sessionService, settings.bpm, settings.timeSignature]);
   const handleStarted = useCallback((session: PracticeSession | null) => {
     setCurrentSession(session);
     if (session) {
-      void browserPracticeSessionService.captureSessionEvent({
+      void sessionService.captureSessionEvent({
         sessionId: session.id,
         kind: "metronome_started"
       });
     }
     setMessage("Metronome playing.");
-  }, []);
+  }, [sessionService]);
   const handleStartFailed = useCallback(
     async (error: unknown, session: PracticeSession | null) => {
       if (session) {
-        await browserPracticeSessionService.endPracticeSession(session.id);
+        await sessionService.endPracticeSession(session.id);
       }
 
       setErrorMessage(
         error instanceof Error ? error.message : "Metronome playback failed."
       );
     },
-    []
+    [sessionService]
   );
   const handleStopped = useCallback(async () => {
     if (currentSession) {
-      await browserPracticeSessionService.captureSessionEvent({
+      await sessionService.captureSessionEvent({
         sessionId: currentSession.id,
         kind: "metronome_stopped"
       });
       const nextSession = isRecording
-        ? await browserPracticeSessionService.updatePracticeSessionDuration(
+        ? await sessionService.updatePracticeSessionDuration(
             currentSession.id
           )
-        : await browserPracticeSessionService.endPracticeSession(
+        : await sessionService.endPracticeSession(
             currentSession.id
           );
 
@@ -114,7 +132,7 @@ export function QuickMetronomeExperience() {
         ? "Metronome stopped; recording is still active."
         : "Metronome stopped."
     );
-  }, [currentSession, isRecording]);
+  }, [currentSession, isRecording, sessionService]);
   const {
     transportState,
     countdownRemaining,
@@ -150,14 +168,14 @@ export function QuickMetronomeExperience() {
       await recordingService.start();
       const session =
         currentSession ??
-        (await browserPracticeSessionService.ensureQuickSession({
+        (await sessionService.ensureQuickSession({
           trigger: "recording",
           bpm: settings.bpm,
           timeSignature: settings.timeSignature
         }));
 
       setCurrentSession(session);
-      await browserPracticeSessionService.captureSessionEvent({
+      await sessionService.captureSessionEvent({
         sessionId: session.id,
         kind: "recording_started"
       });
@@ -188,7 +206,7 @@ export function QuickMetronomeExperience() {
         session: currentSession,
         settings,
         isPlaying,
-        sessionService: browserPracticeSessionService
+        sessionService
       });
 
       setCurrentSession(result.session);

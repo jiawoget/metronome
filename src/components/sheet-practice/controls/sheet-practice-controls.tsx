@@ -13,9 +13,6 @@ import {
   type SheetRecordingMetadata,
   type SheetRecordingSegmentContext
 } from "@/domain/practice";
-import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
-import { browserPracticeSegmentService } from "@/infrastructure/db/browser-practice-segment-service";
-import { browserSheetMetronomePresetService } from "@/infrastructure/db/browser-sheet-metronome-preset-service";
 import type { MetronomeTick } from "@/services/metronome";
 import {
   createBrowserCountdownExecutor,
@@ -29,8 +26,11 @@ import {
 } from "@/lib/quick-metronome/use-metronome-transport";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
+import { browserMeasureGridService } from "@/services/measure-grid/browser";
+import { browserPracticeSessionService } from "@/services/practice-session/browser";
+import { browserPracticeSegmentService } from "@/services/practice-segments/browser";
 import { createBrowserSheetRecordingService } from "@/services/recording/browser";
-import { browserMeasureGridService } from "@/infrastructure/db/browser-measure-grid-service";
+import { browserSheetMetronomePresetService } from "@/services/sheet-metronome-presets/browser";
 import { MeasureGridCalibrationPanel } from "@/components/sheet-practice/measure-grid/measure-grid-calibration-panel";
 import {
   PracticeSegmentSelectorPanel,

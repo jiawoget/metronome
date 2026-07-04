@@ -28,12 +28,15 @@ import {
   type SheetListItem
 } from "@/domain/sheet";
 import type { LibraryRecentPracticeSummaryBySheetItem } from "@/domain/practice";
-import { browserSheetLibraryService } from "@/infrastructure/files/sheet-library-service";
-import { browserPracticeSessionService } from "@/infrastructure/db/browser-practice-session-service";
 import type {
   SheetBatchImportResult,
+  SheetImportResult,
+  SheetLibraryService,
   SheetImportPreview
 } from "@/services/sheet-library";
+import type { PracticeSessionService } from "@/services/practice-session";
+import { browserPracticeSessionService } from "@/services/practice-session/browser";
+import { browserSheetLibraryService } from "@/services/sheet-library/browser";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -53,6 +56,15 @@ type ImportState =
   | "batching"
   | "error";
 type MetadataDraft = typeof defaultMetadata;
+type SheetLibraryPracticeSummaryService = Pick<
+  PracticeSessionService,
+  "getLibraryRecentPracticeSummaryBySheet"
+>;
+
+type SheetLibraryExperienceProps = {
+  sheetLibraryService?: SheetLibraryService;
+  practiceSessionService?: SheetLibraryPracticeSummaryService;
+};
 
 function formatBytes(sizeBytes: number) {
   if (sizeBytes < 1024) {
@@ -141,7 +153,10 @@ function formatBatchSummary(result: SheetBatchImportResult) {
   return `Imported ${result.importedCount} of ${result.total} files. ${failedText}`;
 }
 
-export function SheetLibraryExperience() {
+export function SheetLibraryExperience({
+  sheetLibraryService = browserSheetLibraryService,
+  practiceSessionService = browserPracticeSessionService
+}: SheetLibraryExperienceProps = {}) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const previewRequestIdRef = useRef(0);
   const [sheets, setSheets] = useState<SheetListItem[]>([]);
@@ -179,7 +194,7 @@ export function SheetLibraryExperience() {
   useEffect(() => {
     let isActive = true;
 
-    void browserSheetLibraryService
+    void sheetLibraryService
       .listSheets()
       .then((nextSheets) => {
         if (!isActive) {
@@ -204,7 +219,7 @@ export function SheetLibraryExperience() {
         setLoading(false);
       });
 
-    void browserPracticeSessionService
+    void practiceSessionService
       .getLibraryRecentPracticeSummaryBySheet({
         limit: Number.MAX_SAFE_INTEGER
       })
@@ -240,7 +255,7 @@ export function SheetLibraryExperience() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [practiceSessionService, sheetLibraryService]);
 
   const visibleSheets = useMemo(
     () =>
@@ -270,10 +285,10 @@ export function SheetLibraryExperience() {
     }
 
     setImportState("checking");
-    let result: Awaited<ReturnType<typeof browserSheetLibraryService.previewImport>>;
+    let result: SheetImportResult;
 
     try {
-      result = await browserSheetLibraryService.previewImport(nextFiles);
+      result = await sheetLibraryService.previewImport(nextFiles);
     } catch {
       if (previewRequestIdRef.current !== requestId) {
         return;
@@ -317,7 +332,7 @@ export function SheetLibraryExperience() {
     setBatchResult(null);
     setMessage(null);
 
-    const result = await browserSheetLibraryService.importSheet({
+    const result = await sheetLibraryService.importSheet({
       files: selectedFiles,
       metadata: {
         name: metadata.name,
@@ -360,7 +375,7 @@ export function SheetLibraryExperience() {
     setMessage(null);
     setMessageKind("status");
 
-    const result = await browserSheetLibraryService.importSheetsBatch({
+    const result = await sheetLibraryService.importSheetsBatch({
       files: selectedFiles,
       metadataDefaults: {
         category: metadata.category,
@@ -411,7 +426,7 @@ export function SheetLibraryExperience() {
 
   async function handleDelete(sheet: SheetListItem) {
     setDeletingId(sheet.id);
-    await browserSheetLibraryService.deleteSheet(sheet.id);
+    await sheetLibraryService.deleteSheet(sheet.id);
     setSheets((current) => current.filter((item) => item.id !== sheet.id));
     setTagDrafts((current) => {
       const remaining = { ...current };
@@ -450,7 +465,7 @@ export function SheetLibraryExperience() {
       bpm: Number(editMetadata.bpm),
       timeSignature: editMetadata.timeSignature
     };
-    const result = await browserSheetLibraryService.updateSheetMetadata({
+    const result = await sheetLibraryService.updateSheetMetadata({
       sheetId: sheet.id,
       metadata: metadataInput
     });
@@ -474,7 +489,7 @@ export function SheetLibraryExperience() {
     setFavoriteUpdatingId(sheet.id);
     setMessage(null);
 
-    const result = await browserSheetLibraryService.setSheetFavorite({
+    const result = await sheetLibraryService.setSheetFavorite({
       sheetId: sheet.id,
       favorite: !sheet.favorite
     });
@@ -506,7 +521,7 @@ export function SheetLibraryExperience() {
     setTagSavingId(sheet.id);
     setMessage(null);
 
-    const result = await browserSheetLibraryService.setSheetTags({
+    const result = await sheetLibraryService.setSheetTags({
       sheetId: sheet.id,
       tags
     });
