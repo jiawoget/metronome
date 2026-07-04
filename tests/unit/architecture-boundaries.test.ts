@@ -139,6 +139,33 @@ function staleAllowlistEntries(usages: { path: string; count: number }[], allowl
     }));
 }
 
+function filesWithLocalPeakDerivation(files: SourceFile[]) {
+  const localHelperPattern =
+    /\b(?:function|const)\s+derivePeaksFromSamples\b/;
+  const derivationSignals = [
+    /\bbucketSize\b/,
+    /\bpeakIndex\b/,
+    /\bpeaks\.push\(/,
+    /Math\.max\(\.\.\.peaks/,
+    /\.toFixed\(4\)/
+  ];
+
+  return files
+    .filter((file) => !file.path.startsWith("src/services/audio-analysis/"))
+    .filter((file) => {
+      if (localHelperPattern.test(file.source)) {
+        return true;
+      }
+
+      const signalCount = derivationSignals.filter((pattern) =>
+        pattern.test(file.source)
+      ).length;
+
+      return signalCount >= 2;
+    })
+    .map((file) => file.path);
+}
+
 describe("source architecture boundaries", () => {
   it("keeps UI components away from concrete browser audio and recording adapters", () => {
     const files = readSources(listSourceFiles(join(repoRoot, "src/components"), [".tsx"]));
@@ -183,12 +210,8 @@ describe("source architecture boundaries", () => {
 
   it("keeps production peak derivation in the audio-analysis service", () => {
     const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"]));
-    const peakDerivationViolations = matchingFiles(
-      files.filter((file) => !file.path.startsWith("src/services/audio-analysis/")),
-      [/derivePeaksFromSamples/]
-    );
 
-    expect(peakDerivationViolations).toEqual([]);
+    expect(filesWithLocalPeakDerivation(files)).toEqual([]);
   });
 
   it("blocks heavy DSP packages for current Pack F audio-analysis scope", () => {

@@ -1,5 +1,16 @@
 # F6 Recording, Waveform, and Audio Analysis Alignment Plan
 
+## Current Implementation PR Status
+
+For the F6 implementation PR, `docs/v1/status.json` is the current source of
+truth: F6 is `implementation_done`, Pack F remains
+`implementation_in_progress`, and F7 remains `not_started`.
+
+The `Planning Status`, `Status JSON Evidence`, and `Plan PR Verification
+Evidence` sections below are historical evidence from the approved draft plan
+branch. They are retained to preserve the approved planning artifact, not to
+describe the current implementation PR lifecycle state.
+
 ## Planning Status
 
 Status: `planning_in_progress`
