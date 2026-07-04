@@ -29,6 +29,11 @@ const quickExperienceMocks = vi.hoisted(() => ({
     start: vi.fn(),
     stop: vi.fn()
   },
+  countdownExecutor: {
+    run: vi.fn(() => ({
+      cancel: vi.fn()
+    }))
+  },
   practiceSessionService: {
     ensureQuickSession: vi.fn(),
     linkRecordingToSession: vi.fn(),
@@ -45,7 +50,8 @@ const quickExperienceMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/services/metronome/browser", () => ({
-  createBrowserMetronomeService: () => quickExperienceMocks.metronomeService
+  createBrowserMetronomeService: () => quickExperienceMocks.metronomeService,
+  createBrowserCountdownExecutor: () => quickExperienceMocks.countdownExecutor
 }));
 
 vi.mock("@/services/recording/browser", () => ({

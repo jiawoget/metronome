@@ -16,7 +16,10 @@ import { quickRecordingController } from "@/lib/quick-metronome/recording-contro
 import { DEFAULT_METRONOME_SETTINGS } from "@/lib/quick-metronome/types";
 import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
-import { createBrowserMetronomeService } from "@/services/metronome/browser";
+import {
+  createBrowserCountdownExecutor,
+  createBrowserMetronomeService
+} from "@/services/metronome/browser";
 import type { MetronomeTick } from "@/services/metronome";
 import { createBrowserRecordingCaptureService } from "@/services/recording/browser";
 import { RecordingPermissionError } from "@/services/recording";
@@ -25,6 +28,7 @@ type RecordingState = "idle" | "recording" | "saving";
 
 export function QuickMetronomeExperience() {
   const metronomeService = useMemo(() => createBrowserMetronomeService(), []);
+  const countdownExecutor = useMemo(() => createBrowserCountdownExecutor(), []);
   const recordingService = useMemo(() => createBrowserRecordingCaptureService(), []);
   const {
     settings,
@@ -121,6 +125,7 @@ export function QuickMetronomeExperience() {
   } = useMetronomeTransport({
     settings,
     metronomeService,
+    countdownExecutor,
     beforeStart: ensureMetronomeSession,
     onCountdownStarted: handleCountdownStarted,
     onStarted: handleStarted,

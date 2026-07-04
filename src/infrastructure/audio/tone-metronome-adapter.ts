@@ -15,6 +15,10 @@ export type ToneMetronomeLoopHandle = {
   dispose: () => void;
 };
 
+export type ToneMetronomeScheduledEventHandle = {
+  cancel: () => void;
+};
+
 export type ToneMetronomeClick = {
   time: number;
   accented: boolean;
@@ -29,6 +33,10 @@ export type ToneMetronomeAdapter = {
     callback: ToneScheduledCallback,
     interval: ToneMetronomeLoopInterval
   ) => ToneMetronomeLoopHandle;
+  scheduleOnce: (
+    callback: ToneScheduledCallback,
+    time: string | number
+  ) => ToneMetronomeScheduledEventHandle;
   draw: (callback: () => void, time: number) => void;
   startTransport: (time?: string | number) => void;
   stopTransport: () => void;
@@ -74,6 +82,10 @@ type ToneLoopLifecycle = {
   dispose: () => unknown;
 };
 
+type ToneTransportScheduledEventLifecycle = {
+  clear: (eventId: number) => unknown;
+};
+
 function createTrackedLoopHandle(
   loop: ToneLoopLifecycle,
   activeLoops: Set<ToneMetronomeLoopHandle>
@@ -113,6 +125,29 @@ function createTrackedLoopHandle(
   return handle;
 }
 
+function createTrackedScheduledEventHandle(
+  transport: ToneTransportScheduledEventLifecycle,
+  eventId: number,
+  activeEvents: Set<ToneMetronomeScheduledEventHandle>
+): ToneMetronomeScheduledEventHandle {
+  let cancelled = false;
+  const handle: ToneMetronomeScheduledEventHandle = {
+    cancel: () => {
+      if (cancelled) {
+        return;
+      }
+
+      transport.clear(eventId);
+      cancelled = true;
+      activeEvents.delete(handle);
+    }
+  };
+
+  activeEvents.add(handle);
+
+  return handle;
+}
+
 export async function createToneMetronomeAdapter(): Promise<ToneMetronomeAdapter> {
   const Tone = await import("tone");
   const synth = new Tone.Synth({
@@ -122,6 +157,7 @@ export async function createToneMetronomeAdapter(): Promise<ToneMetronomeAdapter
   }).toDestination();
   const transport = Tone.getTransport();
   const activeLoops = new Set<ToneMetronomeLoopHandle>();
+  const activeEvents = new Set<ToneMetronomeScheduledEventHandle>();
 
   return {
     now: () => Tone.now(),
@@ -135,6 +171,11 @@ export async function createToneMetronomeAdapter(): Promise<ToneMetronomeAdapter
       const loop = new Tone.Loop(callback, interval).start(TRANSPORT_TIMELINE_START);
 
       return createTrackedLoopHandle(loop, activeLoops);
+    },
+    scheduleOnce: (callback, time) => {
+      const eventId = transport.scheduleOnce(callback, time);
+
+      return createTrackedScheduledEventHandle(transport, eventId, activeEvents);
     },
     draw: (callback, time) => {
       Tone.getDraw().schedule(callback, time);
@@ -159,6 +200,7 @@ export async function createToneMetronomeAdapter(): Promise<ToneMetronomeAdapter
       );
     },
     dispose: () => {
+      Array.from(activeEvents).forEach((event) => event.cancel());
       Array.from(activeLoops).forEach((loop) => loop.dispose());
       synth.dispose();
     }

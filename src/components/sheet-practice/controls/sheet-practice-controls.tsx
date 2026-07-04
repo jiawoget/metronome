@@ -17,14 +17,15 @@ import { browserPracticeSessionService } from "@/infrastructure/db/browser-pract
 import { browserPracticeSegmentService } from "@/infrastructure/db/browser-practice-segment-service";
 import { browserSheetMetronomePresetService } from "@/infrastructure/db/browser-sheet-metronome-preset-service";
 import type { MetronomeTick } from "@/services/metronome";
-import { createBrowserMetronomeService } from "@/services/metronome/browser";
+import {
+  createBrowserCountdownExecutor,
+  createBrowserMetronomeService
+} from "@/services/metronome/browser";
 import { useMetronomeSettingsState } from "@/lib/quick-metronome/use-metronome-settings-state";
 import type { MetronomeSettings } from "@/lib/quick-metronome/types";
-import { scheduleBarCountIn } from "@/lib/quick-metronome/bar-count-in-scheduler";
 import {
   useMetronomeTransport,
-  type BarCountInSchedulerOptions,
-  type BarCountInSchedulerTick
+  type BarCountInCountdownTick
 } from "@/lib/quick-metronome/use-metronome-transport";
 import { useActiveRecordingNavigationGuard } from "@/lib/recording-navigation-guard";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
@@ -93,7 +94,7 @@ type SheetMetronomeStartContext = {
 
 type SheetRecordingStartMode = "normal" | "record-again";
 
-function formatBarCountInTickDetail(tick: BarCountInSchedulerTick | null) {
+function formatBarCountInTickDetail(tick: BarCountInCountdownTick | null) {
   if (!tick) {
     return null;
   }
@@ -210,6 +211,7 @@ export function SheetPracticeControls({
   sourceRecordingId = null,
   returnSegmentId = null,
   createMetronomeService = createBrowserMetronomeService,
+  createCountdownExecutor = createBrowserCountdownExecutor,
   createSheetRecordingService = createBrowserSheetRecordingService,
   sessionService = browserPracticeSessionService,
   measureGridService = browserMeasureGridService,
@@ -230,6 +232,10 @@ export function SheetPracticeControls({
   const metronomeService = useMemo(
     () => createMetronomeService(),
     [createMetronomeService]
+  );
+  const countdownExecutor = useMemo(
+    () => createCountdownExecutor(),
+    [createCountdownExecutor]
   );
   const sheetRecordingService = useMemo(
     () => createSheetRecordingService(),
@@ -266,7 +272,7 @@ export function SheetPracticeControls({
   const [activeBarCountInPlan, setActiveBarCountInPlan] =
     useState<BarCountInReadyPlan | null>(null);
   const [activeBarCountInTick, setActiveBarCountInTick] =
-    useState<BarCountInSchedulerTick | null>(null);
+    useState<BarCountInCountdownTick | null>(null);
   const pendingBarCountInStartRef = useRef(false);
   const barCountInPrepareRunIdRef = useRef(0);
   const isPreparingBarCountInRef = useRef(false);
@@ -737,12 +743,8 @@ export function SheetPracticeControls({
       invalidateBarCountInPrepare();
     };
   }, [invalidateBarCountInPrepare]);
-  const scheduleSheetBarCountIn = useCallback(
-    (options: BarCountInSchedulerOptions) => scheduleBarCountIn(options).cancel,
-    []
-  );
   const handleBarCountInTick = useCallback(
-    (tick: BarCountInSchedulerTick) => {
+    (tick: BarCountInCountdownTick) => {
       setActiveBarCountInTick(tick);
       getEffectiveBarCountInOptions()?.onTick?.(tick);
       dispatchBarCountInHarnessEvent(SHEET_BAR_COUNT_IN_TICK_EVENT, tick);
@@ -852,10 +854,10 @@ export function SheetPracticeControls({
   } = useMetronomeTransport({
     settings,
     metronomeService,
+    countdownExecutor,
     barCountIn: {
       enabled: activeBarCountInPlan !== null,
       plan: activeBarCountInPlan,
-      schedule: scheduleSheetBarCountIn,
       onTick: handleBarCountInTick
     },
     beforeStart: ensureMetronomeSession,

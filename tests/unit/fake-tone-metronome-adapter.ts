@@ -5,6 +5,7 @@ import type {
   ToneMetronomeClick,
   ToneMetronomeLoopHandle,
   ToneMetronomeLoopInterval,
+  ToneMetronomeScheduledEventHandle,
   ToneScheduledCallback
 } from "@/lib/quick-metronome/metronome-service";
 
@@ -21,6 +22,9 @@ function createLoopHandle(): ToneMetronomeLoopHandle {
 
 export function createFakeToneAdapter() {
   const scheduledCallbacks: ToneScheduledCallback[] = [];
+  const scheduledOnceCallbacks: ToneScheduledCallback[] = [];
+  const scheduledOnceTimes: Array<string | number> = [];
+  const scheduledOnceHandles: ToneMetronomeScheduledEventHandle[] = [];
   const clickIntents: ToneMetronomeClick[] = [];
   const loopHandles: ToneMetronomeLoopHandle[] = [];
   const loopIntervals: ToneMetronomeLoopInterval[] = [];
@@ -36,6 +40,17 @@ export function createFakeToneAdapter() {
       loopHandles.push(loopHandle);
 
       return loopHandle;
+    }),
+    scheduleOnce: vi.fn((callback, time) => {
+      const handle: ToneMetronomeScheduledEventHandle = {
+        cancel: vi.fn()
+      };
+
+      scheduledOnceCallbacks.push(callback);
+      scheduledOnceTimes.push(time);
+      scheduledOnceHandles.push(handle);
+
+      return handle;
     }),
     draw: vi.fn((callback) => {
       callback();
@@ -60,6 +75,21 @@ export function createFakeToneAdapter() {
       }
 
       callback(time);
+    },
+    emitScheduledOnce: (time: number, eventIndex = 0) => {
+      const callback = scheduledOnceCallbacks[eventIndex];
+
+      if (!callback) {
+        throw new Error(`Tone scheduled event ${eventIndex} was not created`);
+      }
+
+      callback(time);
+    },
+    get scheduledOnceTimes() {
+      return [...scheduledOnceTimes];
+    },
+    get scheduledOnceHandles() {
+      return [...scheduledOnceHandles];
     },
     get lastLoopInterval() {
       const interval = loopIntervals.at(-1);

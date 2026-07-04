@@ -1,13 +1,15 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { BarCountInReadyPlan } from "@/domain/practice/bar-count-in";
+import type { PreStartCountdownPlan } from "@/lib/quick-metronome/pre-start-countdown";
 import { DEFAULT_METRONOME_SETTINGS } from "@/lib/quick-metronome/types";
-import type { PreStartCountdownSchedulerOptions } from "@/lib/quick-metronome/pre-start-countdown";
-import {
-  type BarCountInSchedulerOptions,
-  useMetronomeTransport
-} from "@/lib/quick-metronome/use-metronome-transport";
+import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
+import type {
+  CountdownExecutor,
+  CountdownExecutorOptions,
+  CountdownExecutorTick
+} from "@/services/metronome";
 
 function createTransportService() {
   return {
@@ -44,8 +46,8 @@ function createBarCountInPlan(overrides: Partial<BarCountInReadyPlan> = {}): Bar
       },
       {
         count: 2,
-        sourceMeasureNumber: null,
-        isPreRoll: true,
+        sourceMeasureNumber: 1,
+        isPreRoll: false,
         beatNumber: 2,
         offsetMs: -500,
         durationMs: 500,
@@ -56,7 +58,7 @@ function createBarCountInPlan(overrides: Partial<BarCountInReadyPlan> = {}): Bar
   };
 }
 
-function createPreStartCountdownPlan() {
+function createPreStartCountdownPlan(): PreStartCountdownPlan {
   return {
     beatCount: 2,
     totalDurationMs: 1_000,
@@ -75,53 +77,45 @@ function createPreStartCountdownPlan() {
   };
 }
 
-function createDeferredBarCountInScheduler() {
-  let scheduledOptions: BarCountInSchedulerOptions | null = null;
-  const cancel = vi.fn();
-  const schedule = vi.fn((options: BarCountInSchedulerOptions) => {
-    scheduledOptions = options;
-    return cancel;
-  });
-
+function createCountdownTick(overrides: Partial<CountdownExecutorTick> = {}): CountdownExecutorTick {
   return {
-    schedule,
-    cancel,
-    get options() {
-      if (scheduledOptions === null) {
-        throw new Error("Bar count-in was not scheduled");
-      }
-
-      return scheduledOptions;
-    }
+    count: 1,
+    beatNumber: 1,
+    remainingBeats: 1,
+    scheduledOffsetMs: -1_000,
+    scheduledDelayMs: 0,
+    audioTime: 12.5,
+    ...overrides
   };
 }
 
-function createDeferredPreStartCountdownScheduler() {
-  let scheduledOptions: PreStartCountdownSchedulerOptions | null = null;
+function createDeferredCountdownExecutor() {
+  const runs: CountdownExecutorOptions[] = [];
   const cancel = vi.fn();
-  const schedule = vi.fn((options: PreStartCountdownSchedulerOptions) => {
-    scheduledOptions = options;
-    return { cancel };
-  });
+  const executor: CountdownExecutor = {
+    run: vi.fn((options) => {
+      runs.push(options);
+
+      return { cancel };
+    })
+  };
 
   return {
-    schedule,
+    executor,
     cancel,
     get options() {
-      if (scheduledOptions === null) {
-        throw new Error("Pre-start countdown was not scheduled");
+      const options = runs.at(-1);
+
+      if (!options) {
+        throw new Error("Countdown executor was not run");
       }
 
-      return scheduledOptions;
+      return options;
     }
   };
 }
 
 describe("useMetronomeTransport", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it("starts, updates, and stops the shared metronome service", async () => {
     const service = createTransportService();
     const onStarted = vi.fn();
@@ -154,10 +148,9 @@ describe("useMetronomeTransport", () => {
     expect(result.current.transportState).toBe("stopped");
   });
 
-  it("runs countdown before starting playback", async () => {
-    vi.useFakeTimers();
-
+  it("runs fixed countdown beats through the countdown executor before playback", async () => {
     const service = createTransportService();
+    const countdown = createDeferredCountdownExecutor();
     const onCountdownStarted = vi.fn();
     const { result } = renderHook(() =>
       useMetronomeTransport({
@@ -167,6 +160,7 @@ describe("useMetronomeTransport", () => {
           countdownBeats: 2
         },
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         onCountdownStarted
       })
     );
@@ -176,28 +170,44 @@ describe("useMetronomeTransport", () => {
     });
 
     expect(onCountdownStarted).toHaveBeenCalledWith(2);
+    expect(countdown.executor.run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bpm: 120,
+        timeSignature: "4/4",
+        plan: {
+          beatCount: 2,
+          totalDurationMs: 1_000,
+          beats: [
+            { count: 1, beatNumber: 1, offsetMs: -1_000 },
+            { count: 2, beatNumber: 2, offsetMs: -500 }
+          ]
+        }
+      })
+    );
     expect(result.current.transportState).toBe("counting");
     expect(result.current.countdownRemaining).toBe(2);
     expect(service.start).not.toHaveBeenCalled();
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
+    act(() => {
+      countdown.options.onTick?.(createCountdownTick());
     });
 
     expect(result.current.countdownRemaining).toBe(1);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
+      countdown.options.onComplete();
+      await Promise.resolve();
     });
 
-    expect(service.start).toHaveBeenCalled();
+    expect(service.start).toHaveBeenCalledWith(
+      expect.objectContaining({ countdownBeats: 2 })
+    );
     expect(result.current.transportState).toBe("playing");
   });
 
-  it("runs countdown using the shared denominator-aware meter timing policy", async () => {
-    vi.useFakeTimers();
-
+  it("builds fixed countdown plans with denominator-aware meter timing", async () => {
     const service = createTransportService();
+    const countdown = createDeferredCountdownExecutor();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: {
@@ -206,7 +216,8 @@ describe("useMetronomeTransport", () => {
           timeSignature: "6/8",
           countdownBeats: 2
         },
-        metronomeService: service
+        metronomeService: service,
+        countdownExecutor: countdown.executor
       })
     );
 
@@ -214,25 +225,20 @@ describe("useMetronomeTransport", () => {
       await result.current.startMetronome();
     });
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(250);
+    expect(countdown.options.plan).toEqual({
+      beatCount: 2,
+      totalDurationMs: 500,
+      beats: [
+        { count: 1, beatNumber: 1, offsetMs: -500 },
+        { count: 2, beatNumber: 2, offsetMs: -250 }
+      ]
     });
-
-    expect(result.current.countdownRemaining).toBe(1);
     expect(service.start).not.toHaveBeenCalled();
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(250);
-    });
-
-    expect(service.start).toHaveBeenCalled();
-    expect(result.current.transportState).toBe("playing");
   });
 
-  it("uses latest settings when countdown finishes after BPM changes", async () => {
-    vi.useFakeTimers();
-
+  it("uses latest settings when fixed countdown finishes after BPM changes", async () => {
     const service = createTransportService();
+    const countdown = createDeferredCountdownExecutor();
     const initialSettings = {
       ...DEFAULT_METRONOME_SETTINGS,
       bpm: 90,
@@ -246,26 +252,21 @@ describe("useMetronomeTransport", () => {
       ({ settings }) =>
         useMetronomeTransport({
           settings,
-          metronomeService: service
+          metronomeService: service,
+          countdownExecutor: countdown.executor
         }),
-      {
-        initialProps: {
-          settings: initialSettings
-        }
-      }
+      { initialProps: { settings: initialSettings } }
     );
 
     await act(async () => {
       await result.current.startMetronome();
     });
 
-    expect(result.current.transportState).toBe("counting");
-    expect(service.start).not.toHaveBeenCalled();
-
     rerender({ settings: editedSettings });
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_400);
+      countdown.options.onComplete();
+      await Promise.resolve();
     });
 
     expect(service.start).toHaveBeenCalledWith(editedSettings);
@@ -298,20 +299,20 @@ describe("useMetronomeTransport", () => {
     expect(result.current.transportState).toBe("stopped");
   });
 
-  it("schedules a ready bar count-in before starting playback", async () => {
+  it("runs a ready bar count-in through the countdown executor before playback", async () => {
     const service = createTransportService();
     const plan = createBarCountInPlan();
-    const scheduler = createDeferredBarCountInScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const onCountdownStarted = vi.fn();
     const onTick = vi.fn();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: DEFAULT_METRONOME_SETTINGS,
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         barCountIn: {
           enabled: true,
           plan,
-          schedule: scheduler.schedule,
           onTick
         },
         onCountdownStarted
@@ -322,35 +323,37 @@ describe("useMetronomeTransport", () => {
       await result.current.startMetronome();
     });
 
-    expect(scheduler.schedule).toHaveBeenCalledWith(
-      expect.objectContaining({
-        plan,
-        setTimeout: window.setTimeout,
-        clearTimeout: window.clearTimeout
-      })
-    );
+    expect(countdown.options.plan).toEqual({
+      beatCount: 2,
+      totalDurationMs: 1_000,
+      beats: [
+        { count: 1, beatNumber: 1, offsetMs: -1_000 },
+        { count: 2, beatNumber: 2, offsetMs: -500 }
+      ]
+    });
     expect(onCountdownStarted).toHaveBeenCalledWith(plan.beatCount);
     expect(result.current.transportState).toBe("counting");
     expect(result.current.countdownRemaining).toBe(plan.beatCount);
     expect(service.start).not.toHaveBeenCalled();
 
     act(() => {
-      scheduler.options.onTick?.({
-        count: 1,
-        beatNumber: 1,
-        remainingBeats: 1,
-        sourceMeasureNumber: null,
-        isPreRoll: true,
-        scheduledOffsetMs: -1_000,
-        scheduledDelayMs: 0
-      });
+      countdown.options.onTick?.(createCountdownTick());
     });
 
-    expect(onTick).toHaveBeenCalledWith(expect.objectContaining({ remainingBeats: 1 }));
+    expect(onTick).toHaveBeenCalledWith({
+      count: 1,
+      beatNumber: 1,
+      remainingBeats: 1,
+      sourceMeasureNumber: null,
+      isPreRoll: true,
+      scheduledOffsetMs: -1_000,
+      scheduledDelayMs: 0,
+      audioTime: 12.5
+    });
     expect(result.current.countdownRemaining).toBe(1);
 
     await act(async () => {
-      scheduler.options.onComplete();
+      countdown.options.onComplete();
       await Promise.resolve();
     });
 
@@ -359,12 +362,9 @@ describe("useMetronomeTransport", () => {
     expect(result.current.countdownRemaining).toBe(0);
   });
 
-  it("uses a ready bar count-in instead of simple countdown beats", async () => {
-    vi.useFakeTimers();
-
+  it("uses a ready bar count-in instead of fixed countdown beats", async () => {
     const service = createTransportService();
-    const plan = createBarCountInPlan();
-    const scheduler = createDeferredBarCountInScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: {
@@ -373,10 +373,10 @@ describe("useMetronomeTransport", () => {
           countdownBeats: 2
         },
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         barCountIn: {
           enabled: true,
-          plan,
-          schedule: scheduler.schedule
+          plan: createBarCountInPlan()
         }
       })
     );
@@ -385,30 +385,26 @@ describe("useMetronomeTransport", () => {
       await result.current.startMetronome();
     });
 
-    expect(scheduler.schedule).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_000);
-    });
-
+    expect(countdown.executor.run).toHaveBeenCalledTimes(1);
+    expect(countdown.options.plan.totalDurationMs).toBe(1_000);
     expect(service.start).not.toHaveBeenCalled();
     expect(result.current.transportState).toBe("counting");
   });
 
-  it("runs a generic pre-start countdown before starting playback", async () => {
+  it("runs a generic pre-start countdown before playback", async () => {
     const service = createTransportService();
     const plan = createPreStartCountdownPlan();
-    const scheduler = createDeferredPreStartCountdownScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const onCountdownStarted = vi.fn();
     const onTick = vi.fn();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: DEFAULT_METRONOME_SETTINGS,
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         preStartCountdown: {
           enabled: true,
           plan,
-          schedule: scheduler.schedule,
           onTick
         },
         onCountdownStarted
@@ -419,44 +415,30 @@ describe("useMetronomeTransport", () => {
       await result.current.startMetronome();
     });
 
-    expect(scheduler.schedule).toHaveBeenCalledWith(
-      expect.objectContaining({
-        plan,
-        setTimeout: window.setTimeout,
-        clearTimeout: window.clearTimeout
-      })
-    );
+    expect(countdown.options.plan).toBe(plan);
     expect(onCountdownStarted).toHaveBeenCalledWith(plan.beatCount);
     expect(result.current.transportState).toBe("counting");
-    expect(result.current.countdownRemaining).toBe(plan.beatCount);
     expect(service.start).not.toHaveBeenCalled();
 
     act(() => {
-      scheduler.options.onTick?.({
-        count: 1,
-        beatNumber: 1,
-        remainingBeats: 1,
-        scheduledOffsetMs: -1_000,
-        scheduledDelayMs: 0
-      });
+      countdown.options.onTick?.(createCountdownTick());
     });
 
     expect(onTick).toHaveBeenCalledWith(expect.objectContaining({ remainingBeats: 1 }));
     expect(result.current.countdownRemaining).toBe(1);
 
     await act(async () => {
-      scheduler.options.onComplete();
+      countdown.options.onComplete();
       await Promise.resolve();
     });
 
     expect(service.start).toHaveBeenCalledWith(DEFAULT_METRONOME_SETTINGS);
     expect(result.current.transportState).toBe("playing");
-    expect(result.current.countdownRemaining).toBe(0);
   });
 
   it("uses latest settings when generic pre-start countdown completes", async () => {
     const service = createTransportService();
-    const scheduler = createDeferredPreStartCountdownScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const initialSettings = {
       ...DEFAULT_METRONOME_SETTINGS,
       bpm: 96
@@ -470,17 +452,13 @@ describe("useMetronomeTransport", () => {
         useMetronomeTransport({
           settings,
           metronomeService: service,
+          countdownExecutor: countdown.executor,
           preStartCountdown: {
             enabled: true,
-            plan: createPreStartCountdownPlan(),
-            schedule: scheduler.schedule
+            plan: createPreStartCountdownPlan()
           }
         }),
-      {
-        initialProps: {
-          settings: initialSettings
-        }
-      }
+      { initialProps: { settings: initialSettings } }
     );
 
     await act(async () => {
@@ -490,25 +468,24 @@ describe("useMetronomeTransport", () => {
     rerender({ settings: editedSettings });
 
     await act(async () => {
-      scheduler.options.onComplete();
+      countdown.options.onComplete();
       await Promise.resolve();
     });
 
     expect(service.start).toHaveBeenCalledWith(editedSettings);
-    expect(result.current.transportState).toBe("playing");
   });
 
   it("cancels generic pre-start countdown without starting playback when stopped", async () => {
     const service = createTransportService();
-    const scheduler = createDeferredPreStartCountdownScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: DEFAULT_METRONOME_SETTINGS,
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         preStartCountdown: {
           enabled: true,
-          plan: createPreStartCountdownPlan(),
-          schedule: scheduler.schedule
+          plan: createPreStartCountdownPlan()
         }
       })
     );
@@ -521,28 +498,28 @@ describe("useMetronomeTransport", () => {
       await result.current.stopMetronome();
     });
 
-    expect(scheduler.cancel).toHaveBeenCalledTimes(1);
+    expect(countdown.cancel).toHaveBeenCalledTimes(1);
     expect(result.current.transportState).toBe("stopped");
 
     await act(async () => {
-      scheduler.options.onComplete();
+      countdown.options.onComplete();
       await Promise.resolve();
     });
 
     expect(service.start).not.toHaveBeenCalled();
   });
 
-  it("does not create duplicate generic pre-start countdown schedulers from repeated starts while counting", async () => {
+  it("does not create duplicate generic pre-start countdown runs", async () => {
     const service = createTransportService();
-    const scheduler = createDeferredPreStartCountdownScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: DEFAULT_METRONOME_SETTINGS,
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         preStartCountdown: {
           enabled: true,
-          plan: createPreStartCountdownPlan(),
-          schedule: scheduler.schedule
+          plan: createPreStartCountdownPlan()
         }
       })
     );
@@ -552,10 +529,10 @@ describe("useMetronomeTransport", () => {
       await result.current.startMetronome();
     });
 
-    expect(scheduler.schedule).toHaveBeenCalledTimes(1);
+    expect(countdown.executor.run).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      scheduler.options.onComplete();
+      countdown.options.onComplete();
       await Promise.resolve();
     });
 
@@ -564,21 +541,19 @@ describe("useMetronomeTransport", () => {
 
   it("lets bar count-in win when both pre-start modes are provided", async () => {
     const service = createTransportService();
-    const barScheduler = createDeferredBarCountInScheduler();
-    const genericScheduler = createDeferredPreStartCountdownScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: DEFAULT_METRONOME_SETTINGS,
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         barCountIn: {
           enabled: true,
-          plan: createBarCountInPlan(),
-          schedule: barScheduler.schedule
+          plan: createBarCountInPlan()
         },
         preStartCountdown: {
           enabled: true,
-          plan: createPreStartCountdownPlan(),
-          schedule: genericScheduler.schedule
+          plan: createPreStartCountdownPlan()
         }
       })
     );
@@ -587,16 +562,14 @@ describe("useMetronomeTransport", () => {
       await result.current.startMetronome();
     });
 
-    expect(barScheduler.schedule).toHaveBeenCalledTimes(1);
-    expect(genericScheduler.schedule).not.toHaveBeenCalled();
+    expect(countdown.executor.run).toHaveBeenCalledTimes(1);
+    expect(countdown.options.plan.totalDurationMs).toBe(1_000);
     expect(result.current.transportState).toBe("counting");
   });
 
   it("falls back to fixed countdown when generic pre-start countdown is disabled", async () => {
-    vi.useFakeTimers();
-
     const service = createTransportService();
-    const scheduler = createDeferredPreStartCountdownScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: {
@@ -605,10 +578,10 @@ describe("useMetronomeTransport", () => {
           countdownBeats: 2
         },
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         preStartCountdown: {
           enabled: false,
-          plan: createPreStartCountdownPlan(),
-          schedule: scheduler.schedule
+          plan: createPreStartCountdownPlan()
         }
       })
     );
@@ -617,26 +590,22 @@ describe("useMetronomeTransport", () => {
       await result.current.startMetronome();
     });
 
-    expect(scheduler.schedule).not.toHaveBeenCalled();
-    expect(result.current.transportState).toBe("counting");
-    expect(result.current.countdownRemaining).toBe(2);
+    expect(countdown.executor.run).toHaveBeenCalledTimes(1);
+    expect(countdown.options.plan.beatCount).toBe(2);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_000);
+      countdown.options.onComplete();
+      await Promise.resolve();
     });
 
     expect(service.start).toHaveBeenCalledWith(
-      expect.objectContaining({
-        countdownBeats: 2
-      })
+      expect.objectContaining({ countdownBeats: 2 })
     );
   });
 
   it("falls back to fixed countdown when generic pre-start countdown plan is null", async () => {
-    vi.useFakeTimers();
-
     const service = createTransportService();
-    const scheduler = createDeferredPreStartCountdownScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: {
@@ -645,9 +614,9 @@ describe("useMetronomeTransport", () => {
           countdownBeats: 2
         },
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         preStartCountdown: {
-          plan: null,
-          schedule: scheduler.schedule
+          plan: null
         }
       })
     );
@@ -656,33 +625,22 @@ describe("useMetronomeTransport", () => {
       await result.current.startMetronome();
     });
 
-    expect(scheduler.schedule).not.toHaveBeenCalled();
-    expect(result.current.transportState).toBe("counting");
-    expect(result.current.countdownRemaining).toBe(2);
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_000);
-    });
-
-    expect(service.start).toHaveBeenCalledWith(
-      expect.objectContaining({
-        countdownBeats: 2
-      })
-    );
+    expect(countdown.executor.run).toHaveBeenCalledTimes(1);
+    expect(countdown.options.plan.beatCount).toBe(2);
   });
 
   it("cancels bar count-in without starting playback when stopped", async () => {
     const service = createTransportService();
-    const scheduler = createDeferredBarCountInScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const onStopped = vi.fn();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: DEFAULT_METRONOME_SETTINGS,
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         barCountIn: {
           enabled: true,
-          plan: createBarCountInPlan(),
-          schedule: scheduler.schedule
+          plan: createBarCountInPlan()
         },
         onStopped
       })
@@ -696,13 +654,13 @@ describe("useMetronomeTransport", () => {
       await result.current.stopMetronome();
     });
 
-    expect(scheduler.cancel).toHaveBeenCalledTimes(1);
+    expect(countdown.cancel).toHaveBeenCalledTimes(1);
     expect(service.stop).toHaveBeenCalled();
     expect(onStopped).toHaveBeenCalled();
     expect(result.current.transportState).toBe("stopped");
 
     await act(async () => {
-      scheduler.options.onComplete();
+      countdown.options.onComplete();
       await Promise.resolve();
     });
 
@@ -711,7 +669,7 @@ describe("useMetronomeTransport", () => {
 
   it("uses latest settings when bar count-in completes after settings change", async () => {
     const service = createTransportService();
-    const scheduler = createDeferredBarCountInScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const initialSettings = {
       ...DEFAULT_METRONOME_SETTINGS,
       bpm: 96
@@ -725,17 +683,13 @@ describe("useMetronomeTransport", () => {
         useMetronomeTransport({
           settings,
           metronomeService: service,
+          countdownExecutor: countdown.executor,
           barCountIn: {
             enabled: true,
-            plan: createBarCountInPlan(),
-            schedule: scheduler.schedule
+            plan: createBarCountInPlan()
           }
         }),
-      {
-        initialProps: {
-          settings: initialSettings
-        }
-      }
+      { initialProps: { settings: initialSettings } }
     );
 
     await act(async () => {
@@ -745,7 +699,7 @@ describe("useMetronomeTransport", () => {
     rerender({ settings: editedSettings });
 
     await act(async () => {
-      scheduler.options.onComplete();
+      countdown.options.onComplete();
       await Promise.resolve();
     });
 
@@ -753,17 +707,17 @@ describe("useMetronomeTransport", () => {
     expect(result.current.transportState).toBe("playing");
   });
 
-  it("does not create duplicate bar count-in schedulers from repeated starts while counting", async () => {
+  it("does not create duplicate bar count-in runs from repeated starts while counting", async () => {
     const service = createTransportService();
-    const scheduler = createDeferredBarCountInScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: DEFAULT_METRONOME_SETTINGS,
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         barCountIn: {
           enabled: true,
-          plan: createBarCountInPlan(),
-          schedule: scheduler.schedule
+          plan: createBarCountInPlan()
         }
       })
     );
@@ -773,27 +727,27 @@ describe("useMetronomeTransport", () => {
       await result.current.startMetronome();
     });
 
-    expect(scheduler.schedule).toHaveBeenCalledTimes(1);
+    expect(countdown.executor.run).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      scheduler.options.onComplete();
+      countdown.options.onComplete();
       await Promise.resolve();
     });
 
     expect(service.start).toHaveBeenCalledTimes(1);
   });
 
-  it("does not create duplicate bar count-in schedulers or playback starts while playing", async () => {
+  it("does not create duplicate bar count-in runs or playback starts while playing", async () => {
     const service = createTransportService();
-    const scheduler = createDeferredBarCountInScheduler();
+    const countdown = createDeferredCountdownExecutor();
     const { result } = renderHook(() =>
       useMetronomeTransport({
         settings: DEFAULT_METRONOME_SETTINGS,
         metronomeService: service,
+        countdownExecutor: countdown.executor,
         barCountIn: {
           enabled: true,
-          plan: createBarCountInPlan(),
-          schedule: scheduler.schedule
+          plan: createBarCountInPlan()
         }
       })
     );
@@ -803,7 +757,7 @@ describe("useMetronomeTransport", () => {
     });
 
     await act(async () => {
-      scheduler.options.onComplete();
+      countdown.options.onComplete();
       await Promise.resolve();
     });
 
@@ -813,8 +767,39 @@ describe("useMetronomeTransport", () => {
       await result.current.startMetronome();
     });
 
-    expect(scheduler.schedule).toHaveBeenCalledTimes(1);
+    expect(countdown.executor.run).toHaveBeenCalledTimes(1);
     expect(service.start).toHaveBeenCalledTimes(1);
     expect(result.current.transportState).toBe("playing");
+  });
+
+  it("rolls back counting state when countdown executor startup fails", async () => {
+    const service = createTransportService();
+    const countdown = createDeferredCountdownExecutor();
+    const onStartFailed = vi.fn();
+    const error = new Error("Tone unavailable");
+    const { result } = renderHook(() =>
+      useMetronomeTransport({
+        settings: {
+          ...DEFAULT_METRONOME_SETTINGS,
+          countdownBeats: 2
+        },
+        metronomeService: service,
+        countdownExecutor: countdown.executor,
+        onStartFailed
+      })
+    );
+
+    await act(async () => {
+      await result.current.startMetronome();
+    });
+    await act(async () => {
+      countdown.options.onError?.(error);
+      await Promise.resolve();
+    });
+
+    expect(service.stop).toHaveBeenCalled();
+    expect(onStartFailed).toHaveBeenCalledWith(error, null);
+    expect(result.current.transportState).toBe("stopped");
+    expect(result.current.countdownRemaining).toBe(0);
   });
 });

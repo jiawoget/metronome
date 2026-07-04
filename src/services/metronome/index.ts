@@ -1,4 +1,10 @@
 import type { MetronomeSettings } from "@/lib/quick-metronome/types";
+export type {
+  CountdownExecutor,
+  CountdownExecutorOptions,
+  CountdownExecutorRun,
+  CountdownExecutorTick
+} from "@/services/metronome/countdown-executor";
 
 export const METRONOME_TRACE_EVENT = "quick-metronome:scheduled-tick";
 

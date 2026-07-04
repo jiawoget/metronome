@@ -48,6 +48,11 @@ import type {
 } from "@/components/sheet-practice/controls/types";
 import type { PracticeSegmentSelectorPanelProps } from "@/components/sheet-practice/segments/practice-segment-selector-panel";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
+import type {
+  CountdownExecutor,
+  CountdownExecutorOptions,
+  CountdownExecutorTick
+} from "@/services/metronome";
 
 const practiceSegmentSelectorPanelMock = vi.hoisted(() => ({
   implementation: null as
@@ -423,6 +428,65 @@ function createBarCountInHarnessCollector() {
       window.removeEventListener("sheet-practice-controls:bar-count-in-plan", handlePlan);
       harnessWindow.__sheetPracticeControlsTestHarness = previousHarnessValue;
     }
+  };
+}
+
+function createCountdownTick(
+  options: CountdownExecutorOptions,
+  beatIndex: number
+): CountdownExecutorTick {
+  const beat = options.plan.beats[beatIndex];
+  const firstBeat = options.plan.beats[0];
+
+  if (!beat || !firstBeat) {
+    throw new Error("Countdown test tick is missing a planned beat.");
+  }
+
+  return {
+    count: beat.count,
+    beatNumber: beat.beatNumber,
+    remainingBeats: options.plan.beats.length - beatIndex - 1,
+    scheduledOffsetMs: beat.offsetMs,
+    scheduledDelayMs: beat.offsetMs - firstBeat.offsetMs,
+    audioTime: performance.now() / 1_000
+  };
+}
+
+function createFirstTickCountdownExecutor(): CountdownExecutor {
+  return {
+    run: vi.fn((options: CountdownExecutorOptions) => {
+      options.onTick?.(createCountdownTick(options, 0));
+
+      return {
+        cancel: vi.fn()
+      };
+    })
+  };
+}
+
+function createTimerCountdownExecutor(): CountdownExecutor {
+  return {
+    run: vi.fn((options: CountdownExecutorOptions) => {
+      const timerIds = options.plan.beats.map((beat, index) => {
+        const firstBeat = options.plan.beats[0];
+
+        if (!firstBeat) {
+          throw new Error("Countdown test timer is missing a first beat.");
+        }
+
+        return window.setTimeout(() => {
+          options.onTick?.(createCountdownTick(options, index));
+        }, beat.offsetMs - firstBeat.offsetMs);
+      });
+
+      timerIds.push(window.setTimeout(options.onComplete, options.plan.totalDurationMs));
+
+      return {
+        cancel: () => {
+          timerIds.forEach((timerId) => window.clearTimeout(timerId));
+        }
+      };
+    })
   };
 }
 
@@ -2451,6 +2515,7 @@ describe("sheet practice controls state", () => {
           defaultBpm={defaultBpm}
           defaultTimeSignature="4/4"
           createMetronomeService={() => metronomeService.service}
+          createCountdownExecutor={() => createFirstTickCountdownExecutor()}
           sessionService={sessionService}
           measureGridService={measureGridService}
           practiceSegmentService={practiceSegmentService}
@@ -3407,7 +3472,7 @@ describe("SheetPracticeControls failure handling", () => {
     }
   });
 
-  it("routes enabled bar count-in starts through P4-04 while disabled starts keep legacy simple countdown", async () => {
+  it("lets bar count-in replace fixed countdown without loading a grid for disabled starts", async () => {
     const user = userEvent.setup();
     const collector = createBarCountInHarnessCollector();
     const grid = createTestGrid({
@@ -3425,6 +3490,7 @@ describe("SheetPracticeControls failure handling", () => {
           defaultBpm={120}
           defaultTimeSignature="4/4"
           createMetronomeService={() => disabledMetronome.service}
+          createCountdownExecutor={() => createFirstTickCountdownExecutor()}
           sessionService={createIdleSessionService()}
           measureGridService={disabledMeasureGridService}
         />
@@ -3454,6 +3520,7 @@ describe("SheetPracticeControls failure handling", () => {
           defaultBpm={120}
           defaultTimeSignature="4/4"
           createMetronomeService={() => enabledMetronome.service}
+          createCountdownExecutor={() => createFirstTickCountdownExecutor()}
           sessionService={createIdleSessionService()}
           measureGridService={enabledMeasureGridService}
         />
@@ -3562,6 +3629,7 @@ describe("SheetPracticeControls failure handling", () => {
         defaultBpm={120}
         defaultTimeSignature="4/4"
         createMetronomeService={() => preRollMetronome.service}
+        createCountdownExecutor={() => createFirstTickCountdownExecutor()}
         sessionService={createIdleSessionService()}
         measureGridService={createMeasureGridService(preRollGrid)}
       />
@@ -3590,6 +3658,7 @@ describe("SheetPracticeControls failure handling", () => {
         sheetName="Alpha"
         defaultBpm={120}
         defaultTimeSignature="4/4"
+        createCountdownExecutor={() => createFirstTickCountdownExecutor()}
         sessionService={createIdleSessionService()}
         measureGridService={createMeasureGridService(segmentGrid)}
         practiceSegmentService={createPracticeSegmentService([segment])}
@@ -3625,6 +3694,7 @@ describe("SheetPracticeControls failure handling", () => {
           defaultBpm={120}
           defaultTimeSignature="4/4"
           createMetronomeService={() => metronome.service}
+          createCountdownExecutor={() => createTimerCountdownExecutor()}
           sessionService={createIdleSessionService()}
           measureGridService={createMeasureGridService(grid)}
         />
@@ -3683,6 +3753,7 @@ describe("SheetPracticeControls failure handling", () => {
         sheetName="Alpha"
         defaultBpm={120}
         defaultTimeSignature="4/4"
+        createCountdownExecutor={() => createFirstTickCountdownExecutor()}
         sessionService={sessionService}
         createSheetRecordingService={() => recordingService.service}
         measureGridService={createMeasureGridService(grid)}
@@ -3787,6 +3858,7 @@ describe("SheetPracticeControls failure handling", () => {
         defaultBpm={120}
         defaultTimeSignature="4/4"
         createMetronomeService={() => metronome.service}
+        createCountdownExecutor={() => createFirstTickCountdownExecutor()}
         sessionService={sessionService}
         measureGridService={measureGridService}
         practiceSegmentService={createPracticeSegmentService([segment])}
@@ -3856,6 +3928,7 @@ describe("SheetPracticeControls failure handling", () => {
           defaultBpm={120}
           defaultTimeSignature="4/4"
           createMetronomeService={() => metronome.service}
+          createCountdownExecutor={() => createTimerCountdownExecutor()}
           sessionService={sessionService}
           measureGridService={measureGridService}
           barCountIn={{
@@ -3917,6 +3990,7 @@ describe("SheetPracticeControls failure handling", () => {
         defaultBpm={120}
         defaultTimeSignature="4/4"
         createMetronomeService={() => metronome.service}
+        createCountdownExecutor={() => createFirstTickCountdownExecutor()}
         sessionService={sessionService}
         measureGridService={measureGridService}
         barCountIn={{
