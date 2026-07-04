@@ -57,14 +57,6 @@ const componentInfrastructureImportAllowlist = new Map<string, ApprovedUsage>([
     "src/components/sheet-practice/segments/practice-segment-selector-panel.tsx",
     { count: 2, reason: "segment and measure service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
   ],
-  [
-    "src/components/sheet-practice/viewer/sheet-page-thumbnails.tsx",
-    { count: 1, reason: "viewer hook state type remains until Pack F viewer boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/sheet-practice/viewer/sheet-viewer-experience.tsx",
-    { count: 3, reason: "viewer browser service and hooks remain until Pack F viewer boundary cleanup", expiresAtStage: "F7" }
-  ]
 ]);
 
 const runtimeTimerSchedulingAllowlist = new Map<string, ApprovedUsage>([

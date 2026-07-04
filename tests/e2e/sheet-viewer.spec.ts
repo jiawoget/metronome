@@ -278,26 +278,26 @@ async function seedAssistedPageTurnSegment(page: Page, sheetId: string) {
   );
 }
 
-async function installAssistedPageTurnTimerHarness(page: Page, expectedDelayMs: number) {
+async function installManualSegmentPageTurnTimerHarness(page: Page, expectedDelayMs: number) {
   await page.evaluate((targetDelayMs) => {
     const nativeSetTimeout = window.setTimeout.bind(window);
     const nativeClearTimeout = window.clearTimeout.bind(window);
-    const assistedTimerId = 912_120;
-    let assistedTimer: (() => void) | null = null;
-    let assistedDelay: number | null = null;
+    const manualTimerId = 912_120;
+    let manualTimer: (() => void) | null = null;
+    let manualDelay: number | null = null;
     const targetWindow = window as Window & {
-      __metronomeAssistedPageTurnTimer?: {
+      __metronomeManualSegmentPageTurnTimer?: {
         getDelay: () => number | null;
         run: () => boolean;
       };
     };
 
-    targetWindow.__metronomeAssistedPageTurnTimer = {
-      getDelay: () => assistedDelay,
+    targetWindow.__metronomeManualSegmentPageTurnTimer = {
+      getDelay: () => manualDelay,
       run: () => {
-        const timer = assistedTimer;
+        const timer = manualTimer;
 
-        assistedTimer = null;
+        manualTimer = null;
 
         if (!timer) {
           return false;
@@ -311,18 +311,18 @@ async function installAssistedPageTurnTimerHarness(page: Page, expectedDelayMs: 
 
     window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
       if (typeof handler === "function" && timeout === targetDelayMs) {
-        assistedDelay = timeout;
-        assistedTimer = () => handler(...args);
+        manualDelay = timeout;
+        manualTimer = () => handler(...args);
 
-        return assistedTimerId;
+        return manualTimerId;
       }
 
       return nativeSetTimeout(handler, timeout, ...(args as []));
     }) as typeof window.setTimeout;
 
     window.clearTimeout = ((timerId?: number) => {
-      if (timerId === assistedTimerId) {
-        assistedTimer = null;
+      if (timerId === manualTimerId) {
+        manualTimer = null;
         return;
       }
 
@@ -331,25 +331,25 @@ async function installAssistedPageTurnTimerHarness(page: Page, expectedDelayMs: 
   }, expectedDelayMs);
 }
 
-async function getAssistedPageTurnTimerDelay(page: Page) {
+async function getManualSegmentPageTurnTimerDelay(page: Page) {
   return page.evaluate(() => {
     const harness = (window as Window & {
-      __metronomeAssistedPageTurnTimer?: {
+      __metronomeManualSegmentPageTurnTimer?: {
         getDelay: () => number | null;
       };
-    }).__metronomeAssistedPageTurnTimer;
+    }).__metronomeManualSegmentPageTurnTimer;
 
     return harness?.getDelay() ?? null;
   });
 }
 
-async function runAssistedPageTurnTimer(page: Page) {
+async function runManualSegmentPageTurnTimer(page: Page) {
   return page.evaluate(() => {
     const harness = (window as Window & {
-      __metronomeAssistedPageTurnTimer?: {
+      __metronomeManualSegmentPageTurnTimer?: {
         run: () => boolean;
       };
-    }).__metronomeAssistedPageTurnTimer;
+    }).__metronomeManualSegmentPageTurnTimer;
 
     return harness?.run() ?? false;
   });
@@ -492,12 +492,12 @@ function boxesOverlap(
   );
 }
 
-async function expectAssistedControlsDoNotOverlap(
+async function expectManualSegmentControlsDoNotOverlap(
   page: Page,
   statusText = "Ready: 1s."
 ) {
-  const toggleBox = await page.getByRole("checkbox", { name: "Assisted page turning" }).boundingBox();
-  const armButtonBox = await page.getByRole("button", { name: "Arm assisted page turn" }).boundingBox();
+  const toggleBox = await page.getByRole("checkbox", { name: "Manual segment page turn" }).boundingBox();
+  const armButtonBox = await page.getByRole("button", { name: "Arm manual page turn" }).boundingBox();
   const statusBox = await page.getByText(statusText).boundingBox();
 
   expect(toggleBox).not.toBeNull();
@@ -609,7 +609,7 @@ async function expectPageJumpError(page: Page, value: string, message: string) {
   await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
 }
 
-test("sheet viewer assisted page turning is opt-in, manually armed, and cancelable", async ({
+test("sheet viewer manual segment page turn is opt-in, manually armed, and cancelable", async ({
   page
 }) => {
   const consoleErrors: string[] = [];
@@ -637,23 +637,23 @@ test("sheet viewer assisted page turning is opt-in, manually armed, and cancelab
   await expect(page.getByRole("heading", { name: "Assisted Page Turn PDF" })).toBeVisible();
   await expectPdfCanvasRendered(page);
 
-  const assistedToggle = page.getByRole("checkbox", { name: "Assisted page turning" });
-  const armButton = page.getByRole("button", { name: "Arm assisted page turn" });
+  const manualPageTurnToggle = page.getByRole("checkbox", { name: "Manual segment page turn" });
+  const armButton = page.getByRole("button", { name: "Arm manual page turn" });
 
-  await expect(assistedToggle).not.toBeChecked();
+  await expect(manualPageTurnToggle).not.toBeChecked();
   await expect(armButton).toBeDisabled();
-  await assistedToggle.check();
+  await manualPageTurnToggle.check();
   await expect(page.getByText("Select a segment to arm a timed page turn.")).toBeVisible();
   await page.getByTestId("practice-segment-row-segment-assisted-turn").click();
   await expect(armButton).toBeEnabled();
   await expect(page.getByText("Ready: 1s.")).toBeVisible();
 
-  await installAssistedPageTurnTimerHarness(page, 1_000);
+  await installManualSegmentPageTurnTimerHarness(page, 1_000);
   await armButton.click();
-  await expect(page.getByText("Assisted page turn armed.")).toBeVisible();
-  await expect.poll(() => getAssistedPageTurnTimerDelay(page)).toBe(1_000);
+  await expect(page.getByText("Manual page turn armed.")).toBeVisible();
+  await expect.poll(() => getManualSegmentPageTurnTimerDelay(page)).toBe(1_000);
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
-  expect(await runAssistedPageTurnTimer(page)).toBe(true);
+  expect(await runManualSegmentPageTurnTimer(page)).toBe(true);
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
   await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByLabel("Zoom level")).toHaveText("100%");
@@ -663,25 +663,25 @@ test("sheet viewer assisted page turning is opt-in, manually armed, and cancelab
   await page.getByRole("button", { name: "Previous page" }).click();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
   await armButton.click();
-  await expect(page.getByText("Assisted page turn armed.")).toBeVisible();
-  await page.getByRole("button", { name: "Cancel assisted page turn" }).click();
-  expect(await runAssistedPageTurnTimer(page)).toBe(false);
+  await expect(page.getByText("Manual page turn armed.")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel manual page turn" }).click();
+  expect(await runManualSegmentPageTurnTimer(page)).toBe(false);
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
 
   await armButton.click();
-  await expect(page.getByText("Assisted page turn armed.")).toBeVisible();
-  await assistedToggle.uncheck();
-  expect(await runAssistedPageTurnTimer(page)).toBe(false);
+  await expect(page.getByText("Manual page turn armed.")).toBeVisible();
+  await manualPageTurnToggle.uncheck();
+  expect(await runManualSegmentPageTurnTimer(page)).toBe(false);
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
-  await expect(assistedToggle).not.toBeChecked();
+  await expect(manualPageTurnToggle).not.toBeChecked();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(assistedToggle).toBeVisible();
-  await assistedToggle.check();
+  await expect(manualPageTurnToggle).toBeVisible();
+  await manualPageTurnToggle.check();
   await expect(armButton).toBeVisible();
   await expect(armButton).toBeEnabled();
   await expect(page.getByText("Ready: 1s.")).toBeVisible();
-  await expectAssistedControlsDoNotOverlap(page);
+  await expectManualSegmentControlsDoNotOverlap(page);
 
   expect(consoleErrors).toEqual([]);
 });
