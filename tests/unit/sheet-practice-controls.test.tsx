@@ -4234,6 +4234,94 @@ describe("SheetPracticeControls failure handling", () => {
     expect(screen.getByTestId("sheet-session-id")).toHaveTextContent("session-alpha");
   });
 
+  it("settles sheet metronome stop state when duration update rejects", async () => {
+    const user = userEvent.setup();
+    const session = createSheetSession();
+    const sessionService = {
+      ...createIdleSessionService(),
+      getRecentSheetSession: vi.fn(async () => null),
+      ensureSheetSession: vi.fn(async () => session),
+      updateSheetSessionDuration: vi.fn(async () => {
+        throw new Error("duration unavailable");
+      })
+    };
+    const metronome = createInspectableMetronomeService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createMetronomeService={() => metronome.service}
+        sessionService={sessionService}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+    });
+
+    await user.click(screen.getByRole("button", { name: "Stop metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Metronome stopped.")).toBeVisible();
+    });
+    expect(screen.getByText("duration unavailable")).toBeVisible();
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith("session-alpha");
+  });
+
+  it("settles sheet stop and attempts duration update when stopped-event capture rejects", async () => {
+    const user = userEvent.setup();
+    const session = createSheetSession();
+    const updatedSession = {
+      ...session,
+      durationMs: 2_000,
+      updatedAt: "2026-06-21T12:00:02.000Z"
+    };
+    const sessionService = {
+      ...createIdleSessionService(),
+      getRecentSheetSession: vi.fn(async () => null),
+      ensureSheetSession: vi.fn(async () => session),
+      captureSessionEvent: vi.fn(async ({ kind }: PracticeSessionEventCaptureInput) => {
+        if (kind === "metronome_stopped") {
+          throw new Error("capture unavailable");
+        }
+
+        return null;
+      }),
+      updateSheetSessionDuration: vi.fn(async () => updatedSession)
+    };
+    const metronome = createInspectableMetronomeService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createMetronomeService={() => metronome.service}
+        sessionService={sessionService}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+    });
+
+    await user.click(screen.getByRole("button", { name: "Stop metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Metronome stopped.")).toBeVisible();
+    });
+    expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith("session-alpha");
+    expect(screen.getByTestId("sheet-session-duration")).toHaveTextContent("0:02");
+    expect(screen.queryByText("capture unavailable")).not.toBeInTheDocument();
+  });
+
   it("captures sheet metronome start and stop after successful transport transitions", async () => {
     const user = userEvent.setup();
     const session = createSheetSession();
@@ -4279,6 +4367,66 @@ describe("SheetPracticeControls failure handling", () => {
       sessionId: "session-alpha",
       kind: "metronome_stopped"
     });
+  });
+
+  it("settles recording harness duration update rejections", async () => {
+    const harnessWindow = window as SheetPracticeControlsHarnessWindow;
+    const previousHarnessValue = harnessWindow.__sheetPracticeControlsTestHarness;
+    const session = createSheetSession();
+    const sessionService = {
+      ...createIdleSessionService(),
+      getRecentSheetSession: vi.fn(async () => session),
+      updateSheetSessionDuration: vi.fn(async () => {
+        throw new Error("harness duration unavailable");
+      })
+    };
+
+    harnessWindow.__sheetPracticeControlsTestHarness = true;
+
+    try {
+      render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={72}
+          defaultTimeSignature="4/4"
+          sessionService={sessionService}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("sheet-session-id")).toHaveTextContent("session-alpha");
+      });
+
+      act(() => {
+        window.dispatchEvent(
+          new CustomEvent(
+            "sheet-practice-controls:set-recording-harness-active",
+            { detail: { active: true } }
+          )
+        );
+      });
+      expect(screen.getByText("Recording harness active.")).toBeVisible();
+
+      act(() => {
+        window.dispatchEvent(
+          new CustomEvent(
+            "sheet-practice-controls:set-recording-harness-active",
+            { detail: { active: false } }
+          )
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("harness duration unavailable")).toBeVisible();
+      });
+      expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith(
+        "session-alpha"
+      );
+      expect(screen.getByText("Recording harness stopped.")).toBeVisible();
+    } finally {
+      harnessWindow.__sheetPracticeControlsTestHarness = previousHarnessValue;
+    }
   });
 
   it("does not capture sheet metronome_stopped when the stop transition fails", async () => {

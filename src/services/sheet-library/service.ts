@@ -4,6 +4,7 @@ import {
   validateSheetOrganizationInput,
   type ImportedSheet,
   type SheetArtifact,
+  type SheetArtifactStatus,
   type SheetListItem
 } from "@/domain/sheet";
 import type {
@@ -40,6 +41,24 @@ function getFileNameStem(fileName: string) {
   return stem || "Untitled sheet";
 }
 
+function getFailureMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message.trim()
+    ? error.message
+    : fallback;
+}
+
+function mutationFailure(error: unknown, fallback: string) {
+  return {
+    ok: false,
+    message: getFailureMessage(error, fallback)
+  } as const;
+}
+
+const postWriteProjectionFailureStatus: SheetArtifactStatus = {
+  readable: false,
+  label: "Artifact status could not be inspected after the sheet was saved."
+};
+
 export function createSheetLibraryService({
   repository,
   importAdapter,
@@ -62,6 +81,17 @@ export function createSheetLibraryService({
       ...normalizedSheet,
       artifactStatus
     };
+  }
+
+  async function toMutationListItem(sheet: ImportedSheet): Promise<SheetListItem> {
+    try {
+      return await toListItem(sheet);
+    } catch {
+      return {
+        ...normalizeOrganization(sheet),
+        artifactStatus: postWriteProjectionFailureStatus
+      };
+    }
   }
 
   async function importOneSheet({ files, metadata }: ImportSheetInput) {
@@ -107,78 +137,79 @@ export function createSheetLibraryService({
 
     return {
       ok: true,
-      sheet: await toListItem(sheet)
+      sheet: await toMutationListItem(sheet)
     } as const;
   }
 
-  async function updateSheetOrganization({
-    sheetId,
-    tags,
-    favorite
-  }: UpdateSheetOrganizationInput) {
-    const normalizedSheetId = sheetId.trim();
+  async function updateSheetOrganization(input: UpdateSheetOrganizationInput) {
+    try {
+      const { sheetId, tags, favorite } = input;
+      const normalizedSheetId = sheetId.trim();
 
-    if (!normalizedSheetId) {
-      return {
-        ok: false,
-        message: "Sheet id is required."
-      } as const;
-    }
+      if (!normalizedSheetId) {
+        return {
+          ok: false,
+          message: "Sheet id is required."
+        } as const;
+      }
 
-    if (tags === undefined && favorite === undefined) {
-      return {
-        ok: false,
-        message: "Sheet organization update requires tags or favorite."
-      } as const;
-    }
+      if (tags === undefined && favorite === undefined) {
+        return {
+          ok: false,
+          message: "Sheet organization update requires tags or favorite."
+        } as const;
+      }
 
-    let currentSheet: ImportedSheet | null = null;
+      let currentSheet: ImportedSheet | null = null;
 
-    if (tags === undefined || favorite === undefined) {
-      currentSheet = await repository.getSheet(normalizedSheetId);
+      if (tags === undefined || favorite === undefined) {
+        currentSheet = await repository.getSheet(normalizedSheetId);
 
-      if (!currentSheet) {
+        if (!currentSheet) {
+          return {
+            ok: false,
+            message:
+              "Sheet organization could not be updated because the sheet was not found."
+          } as const;
+        }
+      }
+
+      const currentOrganization = currentSheet
+        ? resolveSheetOrganization(currentSheet)
+        : { tags: [], favorite: false };
+      const organizationResult = validateSheetOrganizationInput({
+        tags: tags ?? currentOrganization.tags,
+        favorite: favorite ?? currentOrganization.favorite
+      });
+
+      if (!organizationResult.ok) {
+        return {
+          ok: false,
+          message: organizationResult.errors.join(" ")
+        } as const;
+      }
+
+      const updatedSheet = await repository.updateSheetOrganization(
+        normalizedSheetId,
+        organizationResult.value,
+        now().toISOString()
+      );
+
+      if (!updatedSheet) {
         return {
           ok: false,
           message:
             "Sheet organization could not be updated because the sheet was not found."
         } as const;
       }
-    }
 
-    const currentOrganization = currentSheet
-      ? resolveSheetOrganization(currentSheet)
-      : { tags: [], favorite: false };
-    const organizationResult = validateSheetOrganizationInput({
-      tags: tags ?? currentOrganization.tags,
-      favorite: favorite ?? currentOrganization.favorite
-    });
-
-    if (!organizationResult.ok) {
       return {
-        ok: false,
-        message: organizationResult.errors.join(" ")
+        ok: true,
+        sheet: await toMutationListItem(updatedSheet)
       } as const;
+    } catch (error) {
+      return mutationFailure(error, "Sheet organization could not be updated.");
     }
-
-    const updatedSheet = await repository.updateSheetOrganization(
-      normalizedSheetId,
-      organizationResult.value,
-      now().toISOString()
-    );
-
-    if (!updatedSheet) {
-      return {
-        ok: false,
-        message:
-          "Sheet organization could not be updated because the sheet was not found."
-      } as const;
-    }
-
-    return {
-      ok: true,
-      sheet: await toListItem(updatedSheet)
-    } as const;
   }
 
   return {
@@ -195,110 +226,133 @@ export function createSheetLibraryService({
       return sheet ? toListItem(sheet) : null;
     },
 
-    previewImport(files) {
-      return importAdapter.analyzeFiles(files);
+    async previewImport(files) {
+      try {
+        return await importAdapter.analyzeFiles(files);
+      } catch (error) {
+        return mutationFailure(error, "Sheet preview could not be loaded.");
+      }
     },
 
-    importSheet(input: ImportSheetInput) {
-      return importOneSheet(input);
+    async importSheet(input: ImportSheetInput) {
+      try {
+        return await importOneSheet(input);
+      } catch (error) {
+        return mutationFailure(error, "Sheet could not be imported.");
+      }
     },
 
     async importSheetsBatch({
       files,
       metadataDefaults
     }: ImportSheetsBatchInput) {
-      const sharedDefaultsResult = validateSheetMetadata({
-        name: "Untitled sheet",
-        ...metadataDefaults
-      });
+      try {
+        const sharedDefaultsResult = validateSheetMetadata({
+          name: "Untitled sheet",
+          ...metadataDefaults
+        });
 
-      if (!sharedDefaultsResult.ok) {
+        if (!sharedDefaultsResult.ok) {
+          return {
+            ok: false,
+            message: sharedDefaultsResult.errors.join(" "),
+            total: files.length,
+            importedCount: 0,
+            failedCount: files.length,
+            items: []
+          };
+        }
+
+        const items: SheetBatchImportItemResult[] = [];
+
+        for (const file of files) {
+          try {
+            const result = await importOneSheet({
+              files: [file],
+              metadata: {
+                ...sharedDefaultsResult.value,
+                name: getFileNameStem(file.name)
+              }
+            });
+
+            items.push(
+              result.ok
+                ? {
+                    ok: true,
+                    fileName: file.name,
+                    sheet: result.sheet
+                  }
+                : {
+                    ok: false,
+                    fileName: file.name,
+                    message: result.message
+                  }
+            );
+          } catch (error) {
+            items.push({
+              ok: false,
+              fileName: file.name,
+              message: getFailureMessage(
+                error,
+                "The file could not be imported."
+              )
+            });
+          }
+        }
+
+        const importedCount = items.filter((item) => item.ok).length;
+
+        return {
+          ok: true,
+          total: files.length,
+          importedCount,
+          failedCount: files.length - importedCount,
+          items
+        };
+      } catch (error) {
         return {
           ok: false,
-          message: sharedDefaultsResult.errors.join(" "),
+          message: getFailureMessage(error, "Sheet batch import failed."),
           total: files.length,
           importedCount: 0,
           failedCount: files.length,
           items: []
         };
       }
-
-      const items: SheetBatchImportItemResult[] = [];
-
-      for (const file of files) {
-        try {
-          const result = await importOneSheet({
-            files: [file],
-            metadata: {
-              ...sharedDefaultsResult.value,
-              name: getFileNameStem(file.name)
-            }
-          });
-
-          items.push(
-            result.ok
-              ? {
-                  ok: true,
-                  fileName: file.name,
-                  sheet: result.sheet
-                }
-              : {
-                  ok: false,
-                  fileName: file.name,
-                  message: result.message
-                }
-          );
-        } catch (error) {
-          items.push({
-            ok: false,
-            fileName: file.name,
-            message:
-              error instanceof Error
-                ? error.message
-                : "The file could not be imported."
-          });
-        }
-      }
-
-      const importedCount = items.filter((item) => item.ok).length;
-
-      return {
-        ok: true,
-        total: files.length,
-        importedCount,
-        failedCount: files.length - importedCount,
-        items
-      };
     },
 
     async updateSheetMetadata({ sheetId, metadata }: UpdateSheetMetadataInput) {
-      const metadataResult = validateSheetMetadata(metadata);
+      try {
+        const metadataResult = validateSheetMetadata(metadata);
 
-      if (!metadataResult.ok) {
+        if (!metadataResult.ok) {
+          return {
+            ok: false,
+            message: metadataResult.errors.join(" ")
+          };
+        }
+
+        const updatedSheet = await repository.updateSheetMetadata(
+          sheetId,
+          metadataResult.value,
+          now().toISOString()
+        );
+
+        if (!updatedSheet) {
+          return {
+            ok: false,
+            message:
+              "Sheet metadata could not be updated because the sheet was not found."
+          };
+        }
+
         return {
-          ok: false,
-          message: metadataResult.errors.join(" ")
+          ok: true,
+          sheet: await toMutationListItem(updatedSheet)
         };
+      } catch (error) {
+        return mutationFailure(error, "Sheet metadata could not be updated.");
       }
-
-      const updatedSheet = await repository.updateSheetMetadata(
-        sheetId,
-        metadataResult.value,
-        now().toISOString()
-      );
-
-      if (!updatedSheet) {
-        return {
-          ok: false,
-          message:
-            "Sheet metadata could not be updated because the sheet was not found."
-        };
-      }
-
-      return {
-        ok: true,
-        sheet: await toListItem(updatedSheet)
-      };
     },
 
     updateSheetOrganization,

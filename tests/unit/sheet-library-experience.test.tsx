@@ -395,4 +395,160 @@ describe("SheetLibraryExperience practice summaries", () => {
       within(alphaCard).queryByText("No local practice summary yet.")
     ).not.toBeInTheDocument();
   });
+
+  it("settles single and batch import states when service calls throw", async () => {
+    sheetServiceMocks.previewImport.mockResolvedValue({
+      ok: true,
+      preview: createPreview()
+    });
+    sheetServiceMocks.importSheet.mockRejectedValue(
+      new Error("single import unavailable")
+    );
+    sheetServiceMocks.importSheetsBatch.mockRejectedValue(
+      new Error("batch import unavailable")
+    );
+
+    render(<SheetLibraryExperience />);
+
+    await screen.findByRole("heading", { name: "Alpha Etude" });
+
+    const fileInput = screen.getByLabelText("File");
+
+    fireEvent.change(fileInput, {
+      target: {
+        files: [new File(["pdf"], "throw.pdf", { type: "application/pdf" })]
+      }
+    });
+
+    await screen.findByRole("status");
+    fireEvent.click(screen.getByRole("button", { name: "Save Imported Sheet" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "single import unavailable"
+    );
+    expect(screen.getByText("PDF")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Save Imported Sheet" })
+    ).toBeDisabled();
+
+    fireEvent.change(fileInput, {
+      target: {
+        files: [
+          new File(["first"], "first.pdf", { type: "application/pdf" }),
+          new File(["second"], "second.pdf", { type: "application/pdf" })
+        ]
+      }
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Import files separately" })
+      ).toBeEnabled()
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Import files separately" })
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "batch import unavailable"
+    );
+    expect(
+      screen.getByRole("button", { name: "Import files separately" })
+    ).toBeEnabled();
+  });
+
+  it("keeps delete and metadata edit recoverable when service calls throw", async () => {
+    sheetServiceMocks.deleteSheet.mockRejectedValue(
+      new Error("delete unavailable")
+    );
+    sheetServiceMocks.updateSheetMetadata.mockRejectedValue(
+      new Error("metadata unavailable")
+    );
+
+    render(<SheetLibraryExperience />);
+
+    await screen.findByRole("heading", { name: "Alpha Etude" });
+
+    fireEvent.click(
+      within(getSheetCard("Alpha Etude")).getByRole("button", {
+        name: "Delete"
+      })
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "delete unavailable"
+    );
+    expect(screen.getByRole("heading", { name: "Alpha Etude" })).toBeVisible();
+    expect(
+      within(getSheetCard("Alpha Etude")).getByRole("button", {
+        name: "Delete"
+      })
+    ).toBeEnabled();
+
+    fireEvent.click(
+      within(getSheetCard("Alpha Etude")).getByRole("button", {
+        name: "Edit Metadata"
+      })
+    );
+    fireEvent.change(screen.getByLabelText("Edit sheet name"), {
+      target: { value: "Edited Alpha" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save metadata" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "metadata unavailable"
+    );
+    expect(screen.getByLabelText("Edit sheet name")).toHaveValue(
+      "Edited Alpha"
+    );
+    expect(
+      screen.getByRole("button", { name: "Save metadata" })
+    ).toBeEnabled();
+  });
+
+  it("clears favorite and tag row states when service calls throw", async () => {
+    sheetServiceMocks.setSheetFavorite.mockRejectedValue(
+      new Error("favorite unavailable")
+    );
+    sheetServiceMocks.setSheetTags.mockRejectedValue(
+      new Error("tags unavailable")
+    );
+
+    render(<SheetLibraryExperience />);
+
+    await screen.findByRole("heading", { name: "Alpha Etude" });
+
+    fireEvent.click(
+      within(getSheetCard("Alpha Etude")).getByRole("button", {
+        name: "Favorite Alpha Etude"
+      })
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "favorite unavailable"
+    );
+    expect(
+      within(getSheetCard("Alpha Etude")).getByRole("button", {
+        name: "Favorite Alpha Etude"
+      })
+    ).toBeEnabled();
+
+    fireEvent.change(screen.getByLabelText("Edit tags for Alpha Etude"), {
+      target: { value: "focus" }
+    });
+    fireEvent.click(
+      within(getSheetCard("Alpha Etude")).getByRole("button", {
+        name: "Save tags"
+      })
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "tags unavailable"
+    );
+    expect(
+      within(getSheetCard("Alpha Etude")).getByRole("button", {
+        name: "Save tags"
+      })
+    ).toBeEnabled();
+  });
 });

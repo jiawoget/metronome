@@ -153,6 +153,12 @@ function formatBatchSummary(result: SheetBatchImportResult) {
   return `Imported ${result.importedCount} of ${result.total} files. ${failedText}`;
 }
 
+function getMutationFailureMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message.trim()
+    ? error.message
+    : fallback;
+}
+
 export function SheetLibraryExperience({
   sheetLibraryService = browserSheetLibraryService,
   practiceSessionService = browserPracticeSessionService
@@ -332,40 +338,48 @@ export function SheetLibraryExperience({
     setBatchResult(null);
     setMessage(null);
 
-    const result = await sheetLibraryService.importSheet({
-      files: selectedFiles,
-      metadata: {
-        name: metadata.name,
-        category: metadata.category,
-        bpm: Number(metadata.bpm),
-        timeSignature: metadata.timeSignature
+    try {
+      const result = await sheetLibraryService.importSheet({
+        files: selectedFiles,
+        metadata: {
+          name: metadata.name,
+          category: metadata.category,
+          bpm: Number(metadata.bpm),
+          timeSignature: metadata.timeSignature
+        }
+      });
+
+      if (!result.ok) {
+        setImportState("error");
+        setMessage(result.message);
+        setMessageKind("error");
+        return;
       }
-    });
 
-    if (!result.ok) {
+      setSheets((current) => [
+        result.sheet,
+        ...current.filter((sheet) => sheet.id !== result.sheet.id)
+      ]);
+      setTagDrafts((current) => ({
+        ...current,
+        [result.sheet.id]: (result.sheet.tags ?? []).join(", ")
+      }));
+      setSelectedFiles([]);
+      setPreview(null);
+      setMetadata(defaultMetadata);
+      setImportState("idle");
+      setMessage(`Imported ${result.sheet.name}.`);
+      setMessageKind("status");
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
       setImportState("error");
-      setMessage(result.message);
+      setMessage(
+        getMutationFailureMessage(error, "Sheet could not be imported.")
+      );
       setMessageKind("error");
-      return;
-    }
-
-    setSheets((current) => [
-      result.sheet,
-      ...current.filter((sheet) => sheet.id !== result.sheet.id)
-    ]);
-    setTagDrafts((current) => ({
-      ...current,
-      [result.sheet.id]: (result.sheet.tags ?? []).join(", ")
-    }));
-    setSelectedFiles([]);
-    setPreview(null);
-    setMetadata(defaultMetadata);
-    setImportState("idle");
-    setMessage(`Imported ${result.sheet.name}.`);
-    setMessageKind("status");
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
     }
   }
 
@@ -375,68 +389,94 @@ export function SheetLibraryExperience({
     setMessage(null);
     setMessageKind("status");
 
-    const result = await sheetLibraryService.importSheetsBatch({
-      files: selectedFiles,
-      metadataDefaults: {
-        category: metadata.category,
-        bpm: Number(metadata.bpm),
-        timeSignature: metadata.timeSignature
+    try {
+      const result = await sheetLibraryService.importSheetsBatch({
+        files: selectedFiles,
+        metadataDefaults: {
+          category: metadata.category,
+          bpm: Number(metadata.bpm),
+          timeSignature: metadata.timeSignature
+        }
+      });
+
+      setBatchResult(result);
+
+      if (!result.ok) {
+        setImportState("error");
+        return;
       }
-    });
 
-    setBatchResult(result);
+      const importedSheets = result.items.flatMap((item) =>
+        item.ok ? [item.sheet] : []
+      );
 
-    if (!result.ok) {
+      if (importedSheets.length > 0) {
+        setSheets((current) => [
+          ...importedSheets,
+          ...current.filter(
+            (sheet) =>
+              !importedSheets.some((importedSheet) => importedSheet.id === sheet.id)
+          )
+        ]);
+        setTagDrafts((current) => ({
+          ...current,
+          ...Object.fromEntries(
+            importedSheets.map((sheet) => [
+              sheet.id,
+              (sheet.tags ?? []).join(", ")
+            ])
+          )
+        }));
+      }
+
+      setSelectedFiles([]);
+      setPreview(null);
+      setMetadata(defaultMetadata);
+      setImportState("idle");
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      setBatchResult({
+        ok: false,
+        message: getMutationFailureMessage(
+          error,
+          "Sheet batch import failed."
+        ),
+        total: selectedFiles.length,
+        importedCount: 0,
+        failedCount: selectedFiles.length,
+        items: []
+      });
       setImportState("error");
-      return;
-    }
-
-    const importedSheets = result.items.flatMap((item) =>
-      item.ok ? [item.sheet] : []
-    );
-
-    if (importedSheets.length > 0) {
-      setSheets((current) => [
-        ...importedSheets,
-        ...current.filter(
-          (sheet) =>
-            !importedSheets.some((importedSheet) => importedSheet.id === sheet.id)
-        )
-      ]);
-      setTagDrafts((current) => ({
-        ...current,
-        ...Object.fromEntries(
-          importedSheets.map((sheet) => [
-            sheet.id,
-            (sheet.tags ?? []).join(", ")
-          ])
-        )
-      }));
-    }
-
-    setSelectedFiles([]);
-    setPreview(null);
-    setMetadata(defaultMetadata);
-    setImportState("idle");
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
     }
   }
 
   async function handleDelete(sheet: SheetListItem) {
     setDeletingId(sheet.id);
-    await sheetLibraryService.deleteSheet(sheet.id);
-    setSheets((current) => current.filter((item) => item.id !== sheet.id));
-    setTagDrafts((current) => {
-      const remaining = { ...current };
-
-      delete remaining[sheet.id];
-      return remaining;
-    });
-    setDeletingId(null);
-    setMessage(`Deleted ${sheet.name}.`);
+    setMessage(null);
     setMessageKind("status");
+
+    try {
+      await sheetLibraryService.deleteSheet(sheet.id);
+      setSheets((current) => current.filter((item) => item.id !== sheet.id));
+      setTagDrafts((current) => {
+        const remaining = { ...current };
+
+        delete remaining[sheet.id];
+        return remaining;
+      });
+      setMessage(`Deleted ${sheet.name}.`);
+      setMessageKind("status");
+    } catch (error) {
+      setMessage(
+        getMutationFailureMessage(error, "Sheet could not be deleted.")
+      );
+      setMessageKind("error");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   function startEditing(sheet: SheetListItem) {
@@ -465,10 +505,23 @@ export function SheetLibraryExperience({
       bpm: Number(editMetadata.bpm),
       timeSignature: editMetadata.timeSignature
     };
-    const result = await sheetLibraryService.updateSheetMetadata({
-      sheetId: sheet.id,
-      metadata: metadataInput
-    });
+    let result: Awaited<ReturnType<SheetLibraryService["updateSheetMetadata"]>>;
+
+    try {
+      result = await sheetLibraryService.updateSheetMetadata({
+        sheetId: sheet.id,
+        metadata: metadataInput
+      });
+    } catch (error) {
+      setMessage(
+        getMutationFailureMessage(
+          error,
+          "Sheet metadata could not be updated."
+        )
+      );
+      setMessageKind("error");
+      return;
+    }
 
     if (!result.ok) {
       setMessage(result.message);
@@ -489,28 +542,38 @@ export function SheetLibraryExperience({
     setFavoriteUpdatingId(sheet.id);
     setMessage(null);
 
-    const result = await sheetLibraryService.setSheetFavorite({
-      sheetId: sheet.id,
-      favorite: !sheet.favorite
-    });
+    try {
+      const result = await sheetLibraryService.setSheetFavorite({
+        sheetId: sheet.id,
+        favorite: !sheet.favorite
+      });
 
-    if (!result.ok) {
-      setMessage(result.message);
+      if (!result.ok) {
+        setMessage(result.message);
+        setMessageKind("error");
+        return;
+      }
+
+      setSheets((current) =>
+        current.map((item) => (item.id === result.sheet.id ? result.sheet : item))
+      );
+      setMessage(
+        result.sheet.favorite
+          ? `Favorited ${result.sheet.name}.`
+          : `Unfavorited ${result.sheet.name}.`
+      );
+      setMessageKind("status");
+    } catch (error) {
+      setMessage(
+        getMutationFailureMessage(
+          error,
+          "Sheet favorite could not be updated."
+        )
+      );
       setMessageKind("error");
+    } finally {
       setFavoriteUpdatingId(null);
-      return;
     }
-
-    setSheets((current) =>
-      current.map((item) => (item.id === result.sheet.id ? result.sheet : item))
-    );
-    setMessage(
-      result.sheet.favorite
-        ? `Favorited ${result.sheet.name}.`
-        : `Unfavorited ${result.sheet.name}.`
-    );
-    setMessageKind("status");
-    setFavoriteUpdatingId(null);
   }
 
   async function saveTags(sheet: SheetListItem) {
@@ -521,28 +584,35 @@ export function SheetLibraryExperience({
     setTagSavingId(sheet.id);
     setMessage(null);
 
-    const result = await sheetLibraryService.setSheetTags({
-      sheetId: sheet.id,
-      tags
-    });
+    try {
+      const result = await sheetLibraryService.setSheetTags({
+        sheetId: sheet.id,
+        tags
+      });
 
-    if (!result.ok) {
-      setMessage(result.message);
+      if (!result.ok) {
+        setMessage(result.message);
+        setMessageKind("error");
+        return;
+      }
+
+      setSheets((current) =>
+        current.map((item) => (item.id === result.sheet.id ? result.sheet : item))
+      );
+      setTagDrafts((current) => ({
+        ...current,
+        [result.sheet.id]: (result.sheet.tags ?? []).join(", ")
+      }));
+      setMessage(`Updated tags for ${result.sheet.name}.`);
+      setMessageKind("status");
+    } catch (error) {
+      setMessage(
+        getMutationFailureMessage(error, "Sheet tags could not be updated.")
+      );
       setMessageKind("error");
+    } finally {
       setTagSavingId(null);
-      return;
     }
-
-    setSheets((current) =>
-      current.map((item) => (item.id === result.sheet.id ? result.sheet : item))
-    );
-    setTagDrafts((current) => ({
-      ...current,
-      [result.sheet.id]: (result.sheet.tags ?? []).join(", ")
-    }));
-    setMessage(`Updated tags for ${result.sheet.name}.`);
-    setMessageKind("status");
-    setTagSavingId(null);
   }
 
   return (

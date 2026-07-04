@@ -556,6 +556,152 @@ describe("quick metronome recording metadata", () => {
     });
   });
 
+  it("settles visible stop state when ending the quick session rejects", async () => {
+    const user = userEvent.setup();
+    const session: PracticeSession = {
+      id: "session-quick-end-fail",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T08:00:00.000Z",
+      endedAt: null,
+      durationMs: 0,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T08:00:00.000Z",
+      segmentContext: null
+    };
+
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
+    quickExperienceMocks.practiceSessionService.endPracticeSession.mockRejectedValueOnce(
+      new Error("end unavailable")
+    );
+
+    render(createElement(QuickMetronomeExperience));
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+    await waitFor(() => {
+      expect(screen.getByText("Metronome playing.")).toBeVisible();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Stop metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Metronome stopped.")).toBeVisible();
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("end unavailable");
+    expect(quickExperienceMocks.practiceSessionService.endPracticeSession).toHaveBeenCalledWith(
+      "session-quick-end-fail"
+    );
+    expect(quickExperienceMocks.practiceSessionService.captureSessionEvent).toHaveBeenCalledWith({
+      sessionId: "session-quick-end-fail",
+      kind: "metronome_stopped"
+    });
+  });
+
+  it("settles quick stop and attempts session end when stopped-event capture rejects", async () => {
+    const user = userEvent.setup();
+    const session: PracticeSession = {
+      id: "session-quick-capture-fail",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T08:00:00.000Z",
+      endedAt: null,
+      durationMs: 0,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T08:00:00.000Z",
+      segmentContext: null
+    };
+
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
+    quickExperienceMocks.practiceSessionService.captureSessionEvent.mockImplementation(
+      async ({ kind }: { kind: string }) => {
+        if (kind === "metronome_stopped") {
+          throw new Error("capture unavailable");
+        }
+
+        return null;
+      }
+    );
+    quickExperienceMocks.practiceSessionService.endPracticeSession.mockResolvedValue({
+      ...session,
+      endedAt: "2026-06-21T08:00:05.000Z",
+      durationMs: 5_000
+    });
+
+    render(createElement(QuickMetronomeExperience));
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+    await waitFor(() => {
+      expect(screen.getByText("Metronome playing.")).toBeVisible();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Stop metronome" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Metronome stopped.")).toBeVisible();
+    });
+    expect(quickExperienceMocks.practiceSessionService.endPracticeSession).toHaveBeenCalledWith(
+      "session-quick-capture-fail"
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("keeps recording-active stop state settled when quick duration update rejects", async () => {
+    const user = userEvent.setup();
+    const session: PracticeSession = {
+      id: "session-quick-duration-fail",
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: "2026-06-21T08:00:00.000Z",
+      endedAt: null,
+      durationMs: 0,
+      bpm: 96,
+      timeSignature: "4/4",
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: "2026-06-21T08:00:00.000Z",
+      segmentContext: null
+    };
+
+    quickExperienceMocks.recordingService.start.mockResolvedValue(undefined);
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
+    quickExperienceMocks.practiceSessionService.updatePracticeSessionDuration.mockRejectedValueOnce(
+      new Error("duration unavailable")
+    );
+
+    render(createElement(QuickMetronomeExperience));
+
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    await waitFor(() => {
+      expect(screen.getByText("Recording without metronome.")).toBeVisible();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Start metronome" }));
+    await waitFor(() => {
+      expect(screen.getByText("Metronome playing.")).toBeVisible();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Stop metronome" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Metronome stopped; recording is still active.")
+      ).toBeVisible();
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "duration unavailable"
+    );
+    expect(
+      quickExperienceMocks.practiceSessionService.updatePracticeSessionDuration
+    ).toHaveBeenCalledWith("session-quick-duration-fail");
+    expect(quickExperienceMocks.practiceSessionService.endPracticeSession).not.toHaveBeenCalled();
+  });
+
   it("does not capture quick metronome start when playback start fails", async () => {
     const user = userEvent.setup();
     const session: PracticeSession = {

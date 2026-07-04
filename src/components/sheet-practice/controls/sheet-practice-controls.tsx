@@ -172,6 +172,12 @@ function dispatchBarCountInHarnessEvent(name: string, detail: unknown) {
   window.dispatchEvent(new CustomEvent(name, { detail }));
 }
 
+function getSessionWriteFailureMessage(error: unknown) {
+  return error instanceof Error && error.message.trim()
+    ? error.message
+    : "Practice session could not be saved after stopping.";
+}
+
 function getRerecordSourceInvalidReason({
   recording,
   sheetId,
@@ -825,17 +831,27 @@ export function SheetPracticeControls({
     invalidateBarCountInPrepare();
     setActiveBarCountInPlan(null);
     setActiveBarCountInTick(null);
+    setErrorMessage(null);
 
     if (session) {
-      await sessionService.captureSessionEvent({
-        sessionId: session.id,
-        kind: "metronome_stopped"
-      });
-      const nextSession = await sessionService.updateSheetSessionDuration(
-        session.id
-      );
+      void Promise.resolve()
+        .then(() =>
+          sessionService.captureSessionEvent({
+            sessionId: session.id,
+            kind: "metronome_stopped"
+          })
+        )
+        .catch(() => undefined);
 
-      setSession(nextSession);
+      try {
+        const nextSession = await sessionService.updateSheetSessionDuration(
+          session.id
+        );
+
+        setSession(nextSession);
+      } catch (error) {
+        setErrorMessage(getSessionWriteFailureMessage(error));
+      }
     }
 
     setMessage(
@@ -1258,6 +1274,9 @@ export function SheetPracticeControls({
           .updateSheetSessionDuration(session.id)
           .then((nextSession) => {
             setSession(nextSession);
+          })
+          .catch((error) => {
+            setErrorMessage(getSessionWriteFailureMessage(error));
           });
       }
     };

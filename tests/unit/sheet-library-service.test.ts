@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   ImportedSheet,
@@ -308,6 +308,201 @@ describe("sheet library service", () => {
     expect(await service.listSheets()).toEqual([]);
   });
 
+  it("converts result-returning mutation throws into ok false results", async () => {
+    const previewService = createSheetLibraryService({
+      repository: createMemoryRepository(),
+      importAdapter: {
+        async analyzeFiles() {
+          throw new Error("preview unavailable");
+        },
+        async inspectArtifact() {
+          return {
+            readable: true,
+            label: "PDF artifact parsed: 1 page"
+          };
+        }
+      }
+    });
+
+    await expect(previewService.previewImport([pdfFile])).resolves.toEqual({
+      ok: false,
+      message: "preview unavailable"
+    });
+
+    const importRepository = createMemoryRepository();
+    importRepository.saveSheet = vi.fn(async () => {
+      throw new Error("save unavailable");
+    });
+    const importService = createSheetLibraryService({
+      repository: importRepository,
+      importAdapter: createAdapter(createPdfPreview(pdfFile))
+    });
+
+    await expect(
+      importService.importSheet({
+        files: [pdfFile],
+        metadata: {
+          name: "Broken Save",
+          category: "song",
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      })
+    ).resolves.toEqual({
+      ok: false,
+      message: "save unavailable"
+    });
+    await expect(importService.listSheets()).resolves.toEqual([]);
+
+    const metadataRepository = createMemoryRepository();
+    const metadataService = createSheetLibraryService({
+      repository: metadataRepository,
+      importAdapter: createAdapter(createPdfPreview(pdfFile)),
+      createId: () => "sheet-metadata-throw"
+    });
+
+    await metadataService.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Metadata Source",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+    metadataRepository.updateSheetMetadata = vi.fn(async () => {
+      throw new Error("metadata unavailable");
+    });
+
+    await expect(
+      metadataService.updateSheetMetadata({
+        sheetId: "sheet-metadata-throw",
+        metadata: {
+          name: "New Name",
+          category: "song",
+          bpm: 120,
+          timeSignature: "4/4"
+        }
+      })
+    ).resolves.toEqual({
+      ok: false,
+      message: "metadata unavailable"
+    });
+
+    const favoriteRepository = createMemoryRepository();
+    const favoriteService = createSheetLibraryService({
+      repository: favoriteRepository,
+      importAdapter: createAdapter(createPdfPreview(pdfFile)),
+      createId: () => "sheet-favorite-throw"
+    });
+
+    await favoriteService.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Favorite Source",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+    favoriteRepository.updateSheetOrganization = vi.fn(async () => {
+      throw new Error("favorite unavailable");
+    });
+
+    await expect(
+      favoriteService.setSheetFavorite({
+        sheetId: "sheet-favorite-throw",
+        favorite: true
+      })
+    ).resolves.toEqual({
+      ok: false,
+      message: "favorite unavailable"
+    });
+  });
+
+  it("returns import success with degraded status when post-write artifact lookup fails", async () => {
+    const repository = createMemoryRepository();
+    const originalGetArtifact = repository.getArtifact;
+
+    repository.getArtifact = vi.fn(async (sheetId) => {
+      if (sheetId === "sheet-projection-get-fail") {
+        throw new Error("artifact lookup failed");
+      }
+
+      return originalGetArtifact(sheetId);
+    });
+
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: createAdapter(createPdfPreview(pdfFile)),
+      createId: () => "sheet-projection-get-fail"
+    });
+
+    const result = await service.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Projection Failure",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      sheet: {
+        id: "sheet-projection-get-fail",
+        artifactStatus: {
+          readable: false,
+          label: "Artifact status could not be inspected after the sheet was saved."
+        }
+      }
+    });
+    await expect(repository.getSheet("sheet-projection-get-fail")).resolves.toMatchObject({
+      name: "Projection Failure"
+    });
+  });
+
+  it("returns import success with degraded status when post-write inspection fails", async () => {
+    const repository = createMemoryRepository();
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: {
+        async analyzeFiles() {
+          return createPdfPreview(pdfFile);
+        },
+        async inspectArtifact() {
+          throw new Error("inspection failed");
+        }
+      },
+      createId: () => "sheet-projection-inspect-fail"
+    });
+
+    const result = await service.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Inspection Failure",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      sheet: {
+        id: "sheet-projection-inspect-fail",
+        artifactStatus: {
+          readable: false,
+          label: "Artifact status could not be inspected after the sheet was saved."
+        }
+      }
+    });
+    await expect(repository.getArtifact("sheet-projection-inspect-fail")).resolves.toMatchObject({
+      sheetId: "sheet-projection-inspect-fail"
+    });
+  });
+
   it("batch imports valid candidates with filename defaults and one-file adapter calls", async () => {
     const repository = createMemoryRepository();
     const calls: string[][] = [];
@@ -479,6 +674,122 @@ describe("sheet library service", () => {
     await expect(service.getArtifact("unsupported-sheet.txt")).resolves.toBeNull();
   });
 
+  it("batch import records per-file repository throws without dropping neighboring successes", async () => {
+    const repository = createMemoryRepository();
+    const originalSaveSheet = repository.saveSheet;
+    let nextId = 0;
+
+    repository.saveSheet = vi.fn(async (sheet, artifact) => {
+      if (sheet.id === "sheet-batch-throw-2") {
+        throw new Error("save failed for neighbor");
+      }
+
+      await originalSaveSheet(sheet, artifact);
+    });
+
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: createAdapter(createPdfPreview(pdfFile)),
+      createId: () => `sheet-batch-throw-${++nextId}`
+    });
+
+    const result = await service.importSheetsBatch({
+      files: [pdfFile, imageFile],
+      metadataDefaults: {
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      total: 2,
+      importedCount: 1,
+      failedCount: 1,
+      items: [
+        {
+          ok: true,
+          fileName: "real-sheet.pdf",
+          sheet: { id: "sheet-batch-throw-1" }
+        },
+        {
+          ok: false,
+          fileName: "real-sheet.png",
+          message: "save failed for neighbor"
+        }
+      ]
+    });
+    expect((await service.listSheets()).map((sheet) => sheet.id)).toEqual([
+      "sheet-batch-throw-1"
+    ]);
+  });
+
+  it("batch import keeps written rows successful when post-write inspection fails", async () => {
+    const repository = createMemoryRepository();
+    let nextId = 0;
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter: {
+        async analyzeFiles(files) {
+          return files[0]?.type === "image/png"
+            ? createImagePreview(files[0])
+            : createPdfPreview(files[0] ?? pdfFile);
+        },
+        async inspectArtifact() {
+          throw new Error("batch inspection failed");
+        }
+      },
+      createId: () => `sheet-batch-projection-${++nextId}`
+    });
+
+    const result = await service.importSheetsBatch({
+      files: [pdfFile, imageFile],
+      metadataDefaults: {
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      total: 2,
+      importedCount: 2,
+      failedCount: 0,
+      items: [
+        {
+          ok: true,
+          fileName: "real-sheet.pdf",
+          sheet: {
+            id: "sheet-batch-projection-1",
+            artifactStatus: {
+              readable: false,
+              label: "Artifact status could not be inspected after the sheet was saved."
+            }
+          }
+        },
+        {
+          ok: true,
+          fileName: "real-sheet.png",
+          sheet: {
+            id: "sheet-batch-projection-2",
+            artifactStatus: {
+              readable: false,
+              label: "Artifact status could not be inspected after the sheet was saved."
+            }
+          }
+        }
+      ]
+    });
+    await expect(repository.getSheet("sheet-batch-projection-1")).resolves.toMatchObject({
+      name: "real-sheet"
+    });
+    await expect(repository.getSheet("sheet-batch-projection-2")).resolves.toMatchObject({
+      name: "real-sheet"
+    });
+  });
+
   it("batch import rejects invalid shared defaults before analyzing files", async () => {
     const calls: string[][] = [];
     const service = createSheetLibraryService({
@@ -636,6 +947,97 @@ describe("sheet library service", () => {
     expect(await service.getArtifact("sheet-edit")).toMatchObject({
       sheetId: "sheet-edit",
       kind: "pdf"
+    });
+  });
+
+  it("returns update successes with degraded status when post-write inspection fails", async () => {
+    const repository = createMemoryRepository();
+    const importAdapter = createAdapter(createPdfPreview(pdfFile));
+    const service = createSheetLibraryService({
+      repository,
+      importAdapter,
+      now: () => new Date("2026-06-21T10:00:00.000Z"),
+      createId: () => "sheet-update-projection"
+    });
+
+    await service.importSheet({
+      files: [pdfFile],
+      metadata: {
+        name: "Original",
+        category: "song",
+        bpm: 120,
+        timeSignature: "4/4"
+      }
+    });
+
+    importAdapter.inspectArtifact = vi.fn(async () => {
+      throw new Error("update inspection failed");
+    });
+
+    await expect(
+      service.updateSheetMetadata({
+        sheetId: "sheet-update-projection",
+        metadata: {
+          name: "Edited",
+          category: "scale",
+          bpm: 144,
+          timeSignature: "7/8"
+        }
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      sheet: {
+        id: "sheet-update-projection",
+        name: "Edited",
+        artifactStatus: {
+          readable: false,
+          label: "Artifact status could not be inspected after the sheet was saved."
+        }
+      }
+    });
+    await expect(repository.getSheet("sheet-update-projection")).resolves.toMatchObject({
+      name: "Edited",
+      category: "scale"
+    });
+
+    await expect(
+      service.setSheetFavorite({
+        sheetId: "sheet-update-projection",
+        favorite: true
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      sheet: {
+        id: "sheet-update-projection",
+        favorite: true,
+        artifactStatus: {
+          readable: false,
+          label: "Artifact status could not be inspected after the sheet was saved."
+        }
+      }
+    });
+    await expect(repository.getSheet("sheet-update-projection")).resolves.toMatchObject({
+      favorite: true
+    });
+
+    await expect(
+      service.setSheetTags({
+        sheetId: "sheet-update-projection",
+        tags: ["Focus"]
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      sheet: {
+        id: "sheet-update-projection",
+        tags: ["Focus"],
+        artifactStatus: {
+          readable: false,
+          label: "Artifact status could not be inspected after the sheet was saved."
+        }
+      }
+    });
+    await expect(repository.getSheet("sheet-update-projection")).resolves.toMatchObject({
+      tags: ["Focus"]
     });
   });
 
