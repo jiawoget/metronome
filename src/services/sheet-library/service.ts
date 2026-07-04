@@ -4,6 +4,7 @@ import {
   validateSheetOrganizationInput,
   type ImportedSheet,
   type SheetArtifact,
+  type SheetArtifactStatus,
   type SheetListItem
 } from "@/domain/sheet";
 import type {
@@ -53,6 +54,11 @@ function mutationFailure(error: unknown, fallback: string) {
   } as const;
 }
 
+const postWriteProjectionFailureStatus: SheetArtifactStatus = {
+  readable: false,
+  label: "Artifact status could not be inspected after the sheet was saved."
+};
+
 export function createSheetLibraryService({
   repository,
   importAdapter,
@@ -75,6 +81,17 @@ export function createSheetLibraryService({
       ...normalizedSheet,
       artifactStatus
     };
+  }
+
+  async function toMutationListItem(sheet: ImportedSheet): Promise<SheetListItem> {
+    try {
+      return await toListItem(sheet);
+    } catch {
+      return {
+        ...normalizeOrganization(sheet),
+        artifactStatus: postWriteProjectionFailureStatus
+      };
+    }
   }
 
   async function importOneSheet({ files, metadata }: ImportSheetInput) {
@@ -120,7 +137,7 @@ export function createSheetLibraryService({
 
     return {
       ok: true,
-      sheet: await toListItem(sheet)
+      sheet: await toMutationListItem(sheet)
     } as const;
   }
 
@@ -188,7 +205,7 @@ export function createSheetLibraryService({
 
       return {
         ok: true,
-        sheet: await toListItem(updatedSheet)
+        sheet: await toMutationListItem(updatedSheet)
       } as const;
     } catch (error) {
       return mutationFailure(error, "Sheet organization could not be updated.");
@@ -331,7 +348,7 @@ export function createSheetLibraryService({
 
         return {
           ok: true,
-          sheet: await toListItem(updatedSheet)
+          sheet: await toMutationListItem(updatedSheet)
         };
       } catch (error) {
         return mutationFailure(error, "Sheet metadata could not be updated.");
