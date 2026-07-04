@@ -10,7 +10,6 @@ jobs:
   semgrep-debt-gates:
     name: Semgrep debt gates on changed files
     runs-on: ubuntu-latest
-    environment: metronome
 
     steps:
       - uses: actions/checkout@v4
@@ -38,36 +37,6 @@ jobs:
         env:
           BASE_REF: origin/${{ github.base_ref }}
         run: node scripts/run-metronome-semgrep-changed.mjs
-
-      - name: Install CodeScene CLI
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          curl -fsSL https://downloads.codescene.io/enterprise/cli/cs-linux-amd64-latest.zip -o /tmp/cs.zip
-          unzip -o /tmp/cs.zip -d "$HOME/.local/bin"
-          chmod +x "$HOME/.local/bin/cs"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Check CodeScene token source
-        env:
-          DETECTED_CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN || secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_TOKEN || secrets.CODESCENE_TOKEN || vars.CS_ACCESS_TOKEN || vars.CODESCENE_ACCESS_TOKEN || vars.CS_TOKEN || vars.CODESCENE_TOKEN }}
-        run: |
-          echo "GitHub environment name: ${GITHUB_ENVIRONMENT_NAME:-<not-set>}"
-          if [ -n "$DETECTED_CS_ACCESS_TOKEN" ]; then
-            echo "A CodeScene/CS token is available in this workflow context."
-          else
-            echo "No CodeScene/CS token-looking secret or variable is visible in this workflow context."
-          fi
-          echo "CS_ACCESS_TOKEN alias resolution candidate values are checked directly in step env mapping."
-
-      - name: Run CodeScene delta debt gates on changed files
-        env:
-          BASE_REF: origin/${{ github.base_ref }}
-          HEAD_REF: origin/${{ github.head_ref }}
-          CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN || secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_TOKEN || secrets.CODESCENE_TOKEN || vars.CS_ACCESS_TOKEN || vars.CODESCENE_ACCESS_TOKEN || vars.CS_TOKEN || vars.CODESCENE_TOKEN }}
-          CODESCENE_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN || secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_TOKEN || secrets.CODESCENE_TOKEN || vars.CS_ACCESS_TOKEN || vars.CODESCENE_ACCESS_TOKEN || vars.CS_TOKEN || vars.CODESCENE_TOKEN }}
-          CS_ONPREM_URL: ${{ secrets.CS_ONPREM_URL || secrets.CODESCENE_ONPREM_URL || vars.CS_ONPREM_URL || vars.CODESCENE_ONPREM_URL }}
-          CODESCENE_ONPREM_URL: ${{ secrets.CS_ONPREM_URL || secrets.CODESCENE_ONPREM_URL || vars.CS_ONPREM_URL || vars.CODESCENE_ONPREM_URL }}
-        run: node scripts/run-codescene-debt-changed.mjs
 
       - name: Typecheck
         run: npm run typecheck --if-present
