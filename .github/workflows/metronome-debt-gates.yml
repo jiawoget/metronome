@@ -39,7 +39,12 @@ jobs:
         run: node scripts/run-metronome-semgrep-changed.mjs
 
       - name: Install CodeScene CLI
-        run: curl -fsSL https://downloads.codescene.io/enterprise/cli/install-cs-tool.sh | sh
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL https://downloads.codescene.io/enterprise/cli/cs-linux-amd64-latest.zip -o /tmp/cs.zip
+          unzip -o /tmp/cs.zip -d "$HOME/.local/bin"
+          chmod +x "$HOME/.local/bin/cs"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Run CodeScene delta debt gates on changed files
         env:
