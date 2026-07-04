@@ -4,6 +4,21 @@ import {execFileSync, spawnSync} from 'node:child_process';
 import {existsSync} from 'node:fs';
 import process from 'node:process';
 
+const xoIgnoredSuffixes = [
+	'.config.js',
+	'.config.mjs',
+	'.config.cjs',
+	'.config.ts',
+	'.config.cts',
+	'.config.mts',
+	'.config.tsx',
+	'.config.jsx',
+];
+
+function isXoIgnoredFile(file) {
+	return xoIgnoredSuffixes.some((suffix) => file.endsWith(suffix));
+}
+
 function runGit(args) {
 	return execFileSync('git', args, {encoding: 'utf8'}).trim();
 }
@@ -27,6 +42,7 @@ const changedFiles = runGit(['diff', '--name-only', '--diff-filter=ACMR', mergeB
 	.map(file => file.trim())
 	.filter(Boolean)
 	.filter(file => /\.(?:js|jsx|mjs|cjs|ts|tsx|mts|cts)$/v.test(file))
+	.filter(file => !isXoIgnoredFile(file))
 	.filter(file => existsSync(file));
 
 if (changedFiles.length === 0) {
