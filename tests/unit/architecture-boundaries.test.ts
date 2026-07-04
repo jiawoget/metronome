@@ -19,6 +19,17 @@ const repoRoot = process.cwd();
 const primitiveExceptionMarker = "PACK_F_APPROVED_PRIMITIVE_EXCEPTION";
 const runtimeTimerExceptionMarker = "PACK_F_APPROVED_RUNTIME_TIMER_EXCEPTION";
 
+const musicPrimitiveTableAllowlist = new Map<string, ApprovedUsage>([
+  [
+    "src/domain/practice/validation.ts",
+    { count: 1, reason: "practice validation owns the current product-approved time-signature policy until F5", expiresAtStage: "F5" }
+  ],
+  [
+    "src/lib/quick-metronome/control.ts",
+    { count: 2, reason: "quick metronome owns current product-approved time-signature and subdivision policy until F5", expiresAtStage: "F5" }
+  ]
+]);
+
 const componentInfrastructureImportAllowlist = new Map<string, ApprovedUsage>([
   [
     "src/components/quick-metronome/quick-metronome-experience.tsx",
@@ -189,14 +200,19 @@ describe("source architecture boundaries", () => {
     }
   });
 
-  it("blocks custom music primitive tables unless an approved exception marker is present", () => {
+  it("blocks custom music primitive tables unless they are approved policy or facade exceptions", () => {
     const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])).filter(
       (file) => !file.source.includes(primitiveExceptionMarker)
     );
     const primitiveTablePattern =
-      /\b(?:const|let|var)\s+(?:[A-Z0-9_]*(?:NOTE|NOTES|INTERVAL|INTERVALS|CHORD|CHORDS|SCALE|SCALES|KEY_SIGNATURE|KEY_SIGNATURES|PITCH|MIDI)[A-Z0-9_]*|noteNames|notesByName|intervalNames|intervalsByName|chordNames|chordsByName|scaleNames|scalesByName|keySignatures|keysByName|pitchClasses|midiNotes)\s*=\s*(?:\[|{)/g;
+      /\b(?:export\s+)?(?:const|let|var)\s+(?:[A-Z0-9_]*(?:NOTE|NOTES|INTERVAL|INTERVALS|CHORD|CHORDS|SCALE|SCALES|KEY_SIGNATURE|KEY_SIGNATURES|TIME_SIGNATURE|TIME_SIGNATURES|SUBDIVISION|SUBDIVISIONS|RHYTHM|RHYTHMS|DURATION|DURATIONS|DURATION_VALUE|DURATION_VALUES|NOTE_VALUE|NOTE_VALUES|BEAT_VALUE|BEAT_VALUES|PITCH|MIDI)[A-Z0-9_]*|noteNames|notesByName|intervalNames|intervalsByName|chordNames|chordsByName|scaleNames|scalesByName|keySignatures|keysByName|timeSignatures|timeSignaturesByName|subdivisions|subdivisionsByName|rhythms|rhythmPatterns|durations|durationValues|noteDurations|beatValues|pitchClasses|midiNotes)\s*=\s*(?:\[|{)/g;
+    const usages = countedMatches(files, primitiveTablePattern);
 
-    expect(countedMatches(files, primitiveTablePattern)).toEqual([]);
+    expect(unexpectedUsages(usages, musicPrimitiveTableAllowlist)).toEqual([]);
+    expect(staleAllowlistEntries(usages, musicPrimitiveTableAllowlist)).toEqual([]);
+    for (const approval of musicPrimitiveTableAllowlist.values()) {
+      expect(approval.reason).not.toHaveLength(0);
+    }
   });
 
   it("blocks new beat, countdown, and metronome runtime setTimeout scheduling", () => {

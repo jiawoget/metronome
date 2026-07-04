@@ -311,12 +311,13 @@ External ChatGPT review must fail this plan if any of the following are true:
 
 ## Status Evidence
 
-`docs/v1/status.json` records Pack F without advancing any coding stage:
+`docs/v1/status.json` records Pack F after the F1 external plan review passed and the F2 guardrail implementation finished:
 
 - Adds `pack-f-audio-music-library-alignment` so Pack F is visible in the v1 source-of-truth status ledger.
-- Sets the Pack F pack status to `planning_in_progress`, reflecting that only the F1 plan/review gate is active.
-- Adds `F1-library-first-rescan-plan` as `planning_in_progress` with its `plan` pointer set to this file.
-- Keeps F2-F7 as `not_started`; no Pack F implementation slice is marked planning-ready, coding-ready, or complete.
+- Sets the Pack F pack status to `implementation_in_progress`, reflecting that Pack F is active but not verified.
+- Records `F1-library-first-rescan-plan` as `verified` with its `plan` pointer set to this file.
+- Records `F2-external-library-first-guardrails` as `implementation_done`, using the existing status vocabulary for done and ready for review.
+- Keeps F3-F7 as `not_started`; no runtime rewrite stage is advanced.
 - Leaves existing pack statuses unchanged.
 
 ## Plan-PR Verification
