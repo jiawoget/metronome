@@ -1,3 +1,5 @@
+import { getMusicBeatDurationMs } from "@/domain/music/duration";
+import { getMusicTimeSignatureParts } from "@/domain/music/time-signature";
 import type { PracticeTimeSignature } from "@/domain/practice/types";
 
 export type MeterTimingInput = {
@@ -6,15 +8,13 @@ export type MeterTimingInput = {
 };
 
 export function getMeterTimeSignatureParts(timeSignature: PracticeTimeSignature) {
-  const [numerator, denominator] = timeSignature.split("/").map((value) => Number.parseInt(value, 10));
-
-  return { numerator, denominator };
+  return getMusicTimeSignatureParts(timeSignature);
 }
 
 export function getMeterBeatDurationMs({ bpm, timeSignature }: MeterTimingInput) {
   const { denominator } = getMeterTimeSignatureParts(timeSignature);
 
-  return (60_000 / bpm) * (4 / denominator);
+  return getMusicBeatDurationMs({ bpm, denominator });
 }
 
 export function getMeterMeasureDurationMs(input: MeterTimingInput) {

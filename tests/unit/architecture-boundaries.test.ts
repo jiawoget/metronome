@@ -12,7 +12,7 @@ type SourceFile = {
 type ApprovedUsage = {
   count: number;
   reason: string;
-  expiresAtStage: "F3" | "F4" | "F5" | "F7";
+  expiresAtStage?: "F3" | "F4" | "F5" | "F7";
 };
 
 const repoRoot = process.cwd();
@@ -21,12 +21,8 @@ const runtimeTimerExceptionMarker = "PACK_F_APPROVED_RUNTIME_TIMER_EXCEPTION";
 
 const musicPrimitiveTableAllowlist = new Map<string, ApprovedUsage>([
   [
-    "src/domain/practice/validation.ts",
-    { count: 1, reason: "practice validation owns the current product-approved time-signature policy until F5", expiresAtStage: "F5" }
-  ],
-  [
-    "src/lib/quick-metronome/control.ts",
-    { count: 2, reason: "quick metronome owns current product-approved time-signature and subdivision policy until F5", expiresAtStage: "F5" }
+    "src/domain/music/meter-policy.ts",
+    { count: 2, reason: "F5-approved product policy owner for supported time signatures and subdivisions" }
   ]
 ]);
 
@@ -197,6 +193,15 @@ describe("source architecture boundaries", () => {
     for (const approval of musicPrimitiveTableAllowlist.values()) {
       expect(approval.reason).not.toHaveLength(0);
     }
+  });
+
+  it("blocks direct time-signature string parsing outside the music domain", () => {
+    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])).filter(
+      (file) => !file.path.startsWith("src/domain/music/")
+    );
+    const usages = countedMatches(files, /\btimeSignature\.split\(["']\/["']\)/g);
+
+    expect(usages).toEqual([]);
   });
 
   it("blocks new beat, countdown, and metronome runtime setTimeout scheduling", () => {

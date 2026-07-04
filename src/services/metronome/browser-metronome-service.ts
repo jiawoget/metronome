@@ -1,4 +1,4 @@
-import { getMeterTimeSignatureParts } from "@/domain/practice/meter-timing";
+import { getMusicTimeSignatureParts } from "@/domain/music/time-signature";
 import {
   clampBpm,
   getSubdivisionMultiplier,
@@ -194,7 +194,7 @@ export class BrowserMetronomeService implements MetronomeService {
 function getToneLoopInterval(
   settings: Pick<MetronomeSettings, "timeSignature" | "subdivision">
 ): ToneMetronomeLoopInterval {
-  const { denominator } = getMeterTimeSignatureParts(settings.timeSignature);
+  const { denominator } = getMusicTimeSignatureParts(settings.timeSignature);
 
   if (denominator === 4) {
     switch (settings.subdivision) {
