@@ -98,7 +98,6 @@ describe("quick metronome recording metadata", () => {
     const session = { id: "session-canonical-quick" };
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
-      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
       durationMs: 1_245.4,
       mimeType: "audio/webm",
       sizeBytes: 15,
@@ -141,7 +140,6 @@ describe("quick metronome recording metadata", () => {
     const session = { id: "session-canonical-quick" };
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
-      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
       durationMs: 1_245.4,
       mimeType: "audio/webm",
       sizeBytes: 15,
@@ -182,7 +180,6 @@ describe("quick metronome recording metadata", () => {
     await quickRecordingController.clear();
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
-      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
       durationMs: 1_245.4,
       mimeType: "audio/webm",
       sizeBytes: 15,
@@ -256,7 +253,6 @@ describe("quick metronome recording metadata", () => {
     await quickRecordingController.clear();
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
-      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
       durationMs: 1_245.4,
       mimeType: "audio/webm",
       sizeBytes: 15,
@@ -367,7 +363,6 @@ describe("quick metronome recording metadata", () => {
     });
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
-      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
       durationMs: 1_245.4,
       mimeType: "audio/webm",
       sizeBytes: 15,
@@ -420,7 +415,6 @@ describe("quick metronome recording metadata", () => {
     };
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"], { type: "audio/webm" }),
-      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
       durationMs: 1_245.4,
       mimeType: "audio/webm",
       sizeBytes: 15,
@@ -694,7 +688,6 @@ describe("quick metronome recording metadata", () => {
     await quickRecordingController.clear();
     const artifact: RecordingArtifact = {
       blob: new Blob(["synthetic audio"]),
-      dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
       durationMs: 1_245.4,
       mimeType: "audio/webm",
       sizeBytes: 15,
@@ -865,7 +858,6 @@ describe("quick metronome recording metadata", () => {
 function createStoredQuickRecording(overrides: Partial<QuickRecording> = {}) {
   const artifact: RecordingArtifact = {
     blob: new Blob(["synthetic audio"]),
-    dataUrl: "data:audio/webm;base64,c3ludGhldGlj",
     durationMs: 1_245.4,
     mimeType: "audio/webm",
     sizeBytes: 15,

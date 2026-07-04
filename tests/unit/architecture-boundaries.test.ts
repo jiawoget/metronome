@@ -18,6 +18,8 @@ type ApprovedUsage = {
 const repoRoot = process.cwd();
 const primitiveExceptionMarker = "PACK_F_APPROVED_PRIMITIVE_EXCEPTION";
 const runtimeTimerExceptionMarker = "PACK_F_APPROVED_RUNTIME_TIMER_EXCEPTION";
+const approvedMediaCaptureAdapter = "src/infrastructure/audio/browser-recording-capture.ts";
+const approvedAudioDecodeAdapter = "src/infrastructure/audio/browser-audio-decode-adapter.ts";
 
 const musicPrimitiveTableAllowlist = new Map<string, ApprovedUsage>([
   [
@@ -157,7 +159,7 @@ describe("source architecture boundaries", () => {
   it("keeps browser capture and Tone imports in infrastructure audio adapters", () => {
     const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"]));
     const captureViolations = matchingFiles(
-      files.filter((file) => !file.path.startsWith("src/infrastructure/audio/")),
+      files.filter((file) => file.path !== approvedMediaCaptureAdapter),
       [/MediaRecorder/, /navigator\.mediaDevices\.getUserMedia/]
     );
     const toneViolations = matchingFiles(
@@ -167,6 +169,54 @@ describe("source architecture boundaries", () => {
 
     expect(captureViolations).toEqual([]);
     expect(toneViolations).toEqual([]);
+  });
+
+  it("keeps browser audio decoding in the shared decode adapter", () => {
+    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"]));
+    const decodeViolations = matchingFiles(
+      files.filter((file) => file.path !== approvedAudioDecodeAdapter),
+      [/decodeAudioData/, /new\s+AudioContext\b/, /webkitAudioContext/]
+    );
+
+    expect(decodeViolations).toEqual([]);
+  });
+
+  it("keeps production peak derivation in the audio-analysis service", () => {
+    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"]));
+    const peakDerivationViolations = matchingFiles(
+      files.filter((file) => !file.path.startsWith("src/services/audio-analysis/")),
+      [/derivePeaksFromSamples/]
+    );
+
+    expect(peakDerivationViolations).toEqual([]);
+  });
+
+  it("blocks heavy DSP packages for current Pack F audio-analysis scope", () => {
+    const packageSources = [
+      readFileSync("package-lock.json", "utf8"),
+      JSON.stringify(packageJson.dependencies ?? {}),
+      JSON.stringify(packageJson.devDependencies ?? {})
+    ].join("\n");
+    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"]));
+    const heavyDspPattern = /\b(?:Meyda|Aubio|Essentia|meyda|aubio|essentia)\b/;
+
+    expect(packageSources).not.toMatch(heavyDspPattern);
+    expect(matchingFiles(files, [heavyDspPattern])).toEqual([]);
+  });
+
+  it("keeps audio-analysis services independent from waveform UI libraries", () => {
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src/services/audio-analysis"), [".ts"])
+    );
+    const violations = matchingFiles(files, [
+      /wavesurfer/i,
+      /\bWaveSurfer\b/,
+      /\bHTMLElement\b/,
+      /\bHTMLDivElement\b/,
+      /\bdocument\./
+    ]);
+
+    expect(violations).toEqual([]);
   });
 
   it("default-blocks UI components from importing infrastructure unless temporarily reviewed", () => {

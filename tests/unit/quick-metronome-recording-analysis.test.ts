@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { analyzeDecodedRecording } from "@/lib/quick-metronome/recording-service";
+import { analyzeDecodedRecording } from "@/services/audio-analysis";
 
 function createAudioBufferLike({
   frequencyHz,

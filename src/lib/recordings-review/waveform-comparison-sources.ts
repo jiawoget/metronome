@@ -1,7 +1,5 @@
-import {
-  hasUsablePeaks,
-  loadRecordingArtifactDetails
-} from "@/lib/recordings-review/artifact-details";
+import { loadRecordingArtifactDetails } from "@/lib/recordings-review/artifact-details";
+import { hasUsablePeaks } from "@/services/audio-analysis";
 import { isPotentiallyDecodableAudioMime } from "@/lib/recordings-review/audio-mime";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import { normalizeRequiredString } from "@/lib/recordings-review/string-normalization";

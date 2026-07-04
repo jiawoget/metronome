@@ -1,16 +1,12 @@
 import type { LocalAudioInspectionAdapter, ReferenceResult } from "@/services/reference";
-
-function getAudioContextConstructor() {
-  return window.AudioContext ?? window.webkitAudioContext;
-}
-
-declare global {
-  interface Window {
-    webkitAudioContext?: typeof AudioContext;
-  }
-}
+import { createBrowserAudioDecodeAdapter } from "@/infrastructure/audio/browser-audio-decode-adapter";
+import { AudioDecodeError, type AudioDecodeAdapter } from "@/services/audio-analysis";
 
 export class BrowserLocalAudioInspectionAdapter implements LocalAudioInspectionAdapter {
+  constructor(
+    private readonly decodeAdapter: AudioDecodeAdapter = createBrowserAudioDecodeAdapter()
+  ) {}
+
   async inspectFile(file: File): Promise<ReferenceResult<{ durationMs: number }>> {
     if (typeof window === "undefined") {
       return {
@@ -19,20 +15,8 @@ export class BrowserLocalAudioInspectionAdapter implements LocalAudioInspectionA
       };
     }
 
-    const AudioContextConstructor = getAudioContextConstructor();
-
-    if (!AudioContextConstructor) {
-      return {
-        ok: false,
-        message: "This browser cannot decode local audio references."
-      };
-    }
-
-    const audioContext = new AudioContextConstructor();
-
     try {
-      const buffer = await file.arrayBuffer();
-      const decoded = await audioContext.decodeAudioData(buffer.slice(0));
+      const decoded = await this.decodeAdapter.decodeBlob(file);
       const durationMs = Math.round(decoded.duration * 1_000);
 
       if (!Number.isFinite(durationMs) || durationMs <= 0) {
@@ -48,13 +32,18 @@ export class BrowserLocalAudioInspectionAdapter implements LocalAudioInspectionA
           durationMs
         }
       };
-    } catch {
+    } catch (error) {
+      if (error instanceof AudioDecodeError && error.reason === "unavailable") {
+        return {
+          ok: false,
+          message: "This browser cannot decode local audio references."
+        };
+      }
+
       return {
         ok: false,
         message: "The selected audio file could not be decoded."
       };
-    } finally {
-      await audioContext.close().catch(() => undefined);
     }
   }
 }
