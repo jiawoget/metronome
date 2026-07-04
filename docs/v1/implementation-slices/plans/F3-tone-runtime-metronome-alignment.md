@@ -2,15 +2,17 @@
 
 ## Planning Status
 
-- Branch: `codex/pack-f-f3-tone-runtime-plan`
-- Scope type: Pack F planning PR only.
-- Implementation stage planned: one smallest coding PR after this plan passes external ChatGPT plan review.
+- Original planning branch: `codex/pack-f-f3-tone-runtime-plan`
+- Implementation branch: `codex/pack-f-f3-tone-runtime`
+- Scope type: historical Pack F planning artifact plus PR #96 implementation evidence.
+- Implementation stage: PR #96 implements the smallest F3 coding stage described by this plan.
 - Model/tier for implementation: high-risk timing/audio work; use `gpt-5.5`, high/extra-high reasoning, standard speed.
-- Current baseline assumption: `main` includes merged F2 guardrails. This plan does not write production code.
+- Current baseline assumption: `main` includes merged F2 guardrails.
+- This file preserves the planning content as the handoff and records the implementation PR status update; it is not a replacement design doc.
 
 ## Status JSON Evidence
 
-This plan PR changes only Pack F status evidence in `docs/v1/status.json`:
+The original plan PR changed only Pack F status evidence in `docs/v1/status.json`:
 
 - Pack F remains `implementation_in_progress`.
 - `F1-library-first-rescan-plan` remains `verified` with plan pointer `docs/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md`.
@@ -18,6 +20,12 @@ This plan PR changes only Pack F status evidence in `docs/v1/status.json`:
 - `F3-tone-runtime-metronome-alignment` moves from `not_started` to `planning_in_progress` and gains plan pointer `docs/v1/implementation-slices/plans/F3-tone-runtime-metronome-alignment.md`.
 - `F4-countdown-executor-unification`, `F5-tonaljs-music-domain-policy`, `F6-recording-waveform-analysis-alignment`, and `F7-boundary-hardening-viewer-closeout` remain `not_started`.
 - No Pack F slice is advanced to coding or verification by this plan PR.
+
+PR #96 implementation status evidence:
+
+- Pack F remains `implementation_in_progress`; it is active but not pack-verified.
+- `F3-tone-runtime-metronome-alignment` moves from `planning_in_progress` to `implementation_done`, matching the implemented runtime PR state before pack verification.
+- `F4-countdown-executor-unification`, `F5-tonaljs-music-domain-policy`, `F6-recording-waveform-analysis-alignment`, and `F7-boundary-hardening-viewer-closeout` remain `not_started`.
 
 ## Required Reads
 
