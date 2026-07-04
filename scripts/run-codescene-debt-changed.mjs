@@ -5,10 +5,17 @@ import process from 'node:process';
 
 const baseRef = process.env.BASE_REF;
 const headRef = process.env.HEAD_REF;
-const accessToken = [
+const accessTokenNames = [
     'CS_ACCESS_TOKEN',
     'CODESCENE_ACCESS_TOKEN',
-].reduce((found, name) => found || process.env[name], '');
+];
+let accessToken = '';
+for (const name of accessTokenNames) {
+	if (process.env[name]) {
+		accessToken = process.env[name];
+		break;
+	}
+}
 
 if (!accessToken || accessToken.trim() === '') {
     console.error('Missing CS_ACCESS_TOKEN environment variable (or alias).');
@@ -23,11 +30,18 @@ if (!baseRef || !headRef) {
     process.exit(1);
 }
 
-const onPremUrl = [
+const onPremUrlNames = [
     'CS_ONPREM_URL',
     'CODESCENE_ONPREM_URL',
     'CS_ONPREM_URL_OVERRIDE',
-].reduce((found, name) => found || process.env[name], '');
+];
+let onPremUrl = '';
+for (const name of onPremUrlNames) {
+	if (process.env[name]) {
+		onPremUrl = process.env[name];
+		break;
+	}
+}
 
 if (onPremUrl && onPremUrl.trim() !== '') {
     process.env.CS_ONPREM_URL = onPremUrl;
