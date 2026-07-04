@@ -15,7 +15,7 @@ vi.mock("@/infrastructure/sheet-viewer/browser-sheet-viewer-service", () => ({
 }));
 
 import { SheetPageThumbnails } from "@/components/sheet-practice/viewer/sheet-page-thumbnails";
-import { useBrowserSheetViewerPageThumbnails } from "@/infrastructure/sheet-viewer/use-browser-sheet-viewer-page-thumbnails";
+import { useBrowserSheetViewerPageThumbnails } from "@/services/sheet-viewer/browser-hooks";
 
 type Deferred<T> = {
   promise: Promise<T>;

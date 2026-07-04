@@ -9,6 +9,8 @@ const viewerMocks = vi.hoisted(() => ({
   controlsProps: [] as Array<{ currentMeasureGridTimestampMs?: number | null }>,
   loadSheet: vi.fn(),
   loadPageThumbnails: vi.fn(),
+  createArtifactObjectUrls: vi.fn(),
+  revokeArtifactObjectUrls: vi.fn(),
   revokePageThumbnails: vi.fn()
 }));
 
@@ -35,18 +37,10 @@ vi.mock("@/infrastructure/sheet-viewer/browser-sheet-viewer-service", () => ({
   browserSheetViewerService: {
     loadSheet: viewerMocks.loadSheet,
     loadPageThumbnails: viewerMocks.loadPageThumbnails,
+    createArtifactObjectUrls: viewerMocks.createArtifactObjectUrls,
+    revokeArtifactObjectUrls: viewerMocks.revokeArtifactObjectUrls,
     revokePageThumbnails: viewerMocks.revokePageThumbnails
   }
-}));
-
-vi.mock("@/infrastructure/sheet-viewer/use-browser-sheet-viewer-object-urls", () => ({
-  useBrowserSheetViewerObjectUrls: (state: SheetViewerLoadState) =>
-    state.status === "ready"
-      ? {
-          sheetId: state.sheet.id,
-          urls: ["blob:sheet-alpha-page-1"]
-        }
-      : null
 }));
 
 vi.mock("@/components/sheet-practice/reference/reference-panel", () => ({
@@ -146,6 +140,14 @@ describe("SheetViewerExperience measure-grid timestamp wiring", () => {
       thumbnails: []
     });
     viewerMocks.revokePageThumbnails.mockReset();
+    viewerMocks.createArtifactObjectUrls.mockReset();
+    viewerMocks.createArtifactObjectUrls.mockImplementation(
+      (artifact: Extract<SheetViewerLoadState, { status: "ready" }>["artifact"]) => ({
+        sheetId: artifact.sheetId,
+        urls: ["blob:sheet-alpha-page-1"]
+      })
+    );
+    viewerMocks.revokeArtifactObjectUrls.mockReset();
   });
 
   it("passes the reference playback timestamp through to sheet practice controls", async () => {

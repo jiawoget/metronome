@@ -8,7 +8,7 @@ import {
   createSheetViewerTransform,
   createSheetViewerService,
   formatSheetViewerPageLabel,
-  getSheetViewerAssistedPageTurnDelayMs,
+  getManualSegmentPageTurnDelayMs,
   panSheetViewerTransform,
   resetSheetViewerTransform,
   resetSheetViewerTransformForPageChange,
@@ -723,7 +723,7 @@ describe("sheet viewer service", () => {
     });
   });
 
-  it("derives assisted page turn delay from selected segment measure timing", () => {
+  it("derives manual segment page turn delay from selected segment measure timing", () => {
     const segment = buildPracticeSegment({
       range: {
         startMeasure: 2,
@@ -731,14 +731,14 @@ describe("sheet viewer service", () => {
       }
     });
 
-    expect(getSheetViewerAssistedPageTurnDelayMs(segment)).toBe(5_000);
-    expect(getSheetViewerAssistedPageTurnDelayMs(null)).toBeNull();
-    expect(getSheetViewerAssistedPageTurnDelayMs(undefined)).toBeNull();
+    expect(getManualSegmentPageTurnDelayMs(segment)).toBe(5_000);
+    expect(getManualSegmentPageTurnDelayMs(null)).toBeNull();
+    expect(getManualSegmentPageTurnDelayMs(undefined)).toBeNull();
   });
 
-  it("returns null for assisted page turn segments without usable timing", () => {
+  it("returns null for manual segment page turn segments without usable timing", () => {
     expect(
-      getSheetViewerAssistedPageTurnDelayMs({
+      getManualSegmentPageTurnDelayMs({
         ...buildPracticeSegment(),
         grid: {
           measureGridVersion: "bad-grid",
@@ -750,7 +750,7 @@ describe("sheet viewer service", () => {
       })
     ).toBeNull();
     expect(
-      getSheetViewerAssistedPageTurnDelayMs({
+      getManualSegmentPageTurnDelayMs({
         ...buildPracticeSegment(),
         range: {
           startMeasure: 3,

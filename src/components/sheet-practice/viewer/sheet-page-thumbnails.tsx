@@ -1,6 +1,6 @@
 "use client";
 
-import type { SheetViewerPageThumbnailState } from "@/infrastructure/sheet-viewer/use-browser-sheet-viewer-page-thumbnails";
+import type { SheetViewerPageThumbnailState } from "@/services/sheet-viewer/browser-hooks";
 import { cn } from "@/lib/utils";
 
 type SheetPageThumbnailsProps = {
