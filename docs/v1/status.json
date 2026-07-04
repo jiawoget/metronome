@@ -927,6 +927,42 @@
                                                                 "status":  "verified"
                                                             }
                                                         ]
+                                         },
+                                         {
+                                             "pack":  "pack-f-audio-music-library-alignment",
+                                             "scope":  "Post-Pack-5 library-first architecture correction and tech-debt closeout for audio, music theory, recording, waveform, sheet viewer, mutation hardening, and UI-to-infrastructure boundaries. F1 is plan-only and cannot move to coding until external ChatGPT plan review passes.",
+                                             "status":  "implementation_in_progress",
+                                             "slices":  [
+                                                            {
+                                                                "slice":  "F1-library-first-rescan-plan",
+                                                                "status":  "verified",
+                                                                "plan":  "docs/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md"
+                                                            },
+                                                            {
+                                                                "slice":  "F2-external-library-first-guardrails",
+                                                                "status":  "implementation_done"
+                                                            },
+                                                            {
+                                                                "slice":  "F3-tone-runtime-metronome-alignment",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "F4-countdown-executor-unification",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "F5-tonaljs-music-domain-policy",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "F6-recording-waveform-analysis-alignment",
+                                                                "status":  "not_started"
+                                                            },
+                                                            {
+                                                                "slice":  "F7-boundary-hardening-viewer-closeout",
+                                                                "status":  "not_started"
+                                                            }
+                                                        ]
                                          }
                                      ]
                        }

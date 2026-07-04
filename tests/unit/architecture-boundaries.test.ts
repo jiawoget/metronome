@@ -9,7 +9,88 @@ type SourceFile = {
   source: string;
 };
 
+type ApprovedUsage = {
+  count: number;
+  reason: string;
+  expiresAtStage: "F3" | "F4" | "F5" | "F7";
+};
+
 const repoRoot = process.cwd();
+const primitiveExceptionMarker = "PACK_F_APPROVED_PRIMITIVE_EXCEPTION";
+const runtimeTimerExceptionMarker = "PACK_F_APPROVED_RUNTIME_TIMER_EXCEPTION";
+
+const musicPrimitiveTableAllowlist = new Map<string, ApprovedUsage>([
+  [
+    "src/domain/practice/validation.ts",
+    { count: 1, reason: "practice validation owns the current product-approved time-signature policy until F5", expiresAtStage: "F5" }
+  ],
+  [
+    "src/lib/quick-metronome/control.ts",
+    { count: 2, reason: "quick metronome owns current product-approved time-signature and subdivision policy until F5", expiresAtStage: "F5" }
+  ]
+]);
+
+const componentInfrastructureImportAllowlist = new Map<string, ApprovedUsage>([
+  [
+    "src/components/quick-metronome/quick-metronome-experience.tsx",
+    { count: 1, reason: "session service composition remains until Pack F service boundary cleanup", expiresAtStage: "F7" }
+  ],
+  [
+    "src/components/settings/settings-experience.tsx",
+    { count: 2, reason: "settings browser service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
+  ],
+  [
+    "src/components/sheet-library/sheet-library-experience.tsx",
+    { count: 2, reason: "library import and session service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
+  ],
+  [
+    "src/components/sheet-practice/controls/sheet-practice-controls.tsx",
+    { count: 4, reason: "practice controls still compose browser services before Pack F boundary cleanup", expiresAtStage: "F7" }
+  ],
+  [
+    "src/components/sheet-practice/measure-grid/measure-grid-calibration-panel.tsx",
+    { count: 1, reason: "measure grid browser service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
+  ],
+  [
+    "src/components/sheet-practice/reference/reference-panel.tsx",
+    { count: 3, reason: "reference service and player composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
+  ],
+  [
+    "src/components/sheet-practice/segments/practice-segment-selector-panel.tsx",
+    { count: 2, reason: "segment and measure service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
+  ],
+  [
+    "src/components/sheet-practice/viewer/sheet-page-thumbnails.tsx",
+    { count: 1, reason: "viewer hook state type remains until Pack F viewer boundary cleanup", expiresAtStage: "F7" }
+  ],
+  [
+    "src/components/sheet-practice/viewer/sheet-viewer-experience.tsx",
+    { count: 3, reason: "viewer browser service and hooks remain until Pack F viewer boundary cleanup", expiresAtStage: "F7" }
+  ]
+]);
+
+const runtimeTimerSchedulingAllowlist = new Map<string, ApprovedUsage>([
+  [
+    "src/services/metronome/browser-metronome-service.ts",
+    { count: 1, reason: "Tone Draw replacement is scheduled for Pack F runtime alignment", expiresAtStage: "F3" }
+  ],
+  [
+    "src/lib/quick-metronome/bar-count-in-scheduler.ts",
+    { count: 4, reason: "bar count-in executor replacement is scheduled for Pack F countdown unification", expiresAtStage: "F4" }
+  ],
+  [
+    "src/lib/quick-metronome/pre-start-countdown.ts",
+    { count: 4, reason: "pre-start countdown executor replacement is scheduled for Pack F countdown unification", expiresAtStage: "F4" }
+  ],
+  [
+    "src/lib/quick-metronome/use-metronome-transport.ts",
+    { count: 7, reason: "transport countdown wiring replacement is scheduled for Pack F countdown unification", expiresAtStage: "F4" }
+  ],
+  [
+    "src/components/sheet-practice/controls/sheet-practice-controls.tsx",
+    { count: 1, reason: "current refresh timer is tolerated while count-in scheduling still composes here", expiresAtStage: "F4" }
+  ]
+]);
 
 function listSourceFiles(root: string, extensions: string[]) {
   const paths: string[] = [];
@@ -39,6 +120,41 @@ function matchingFiles(files: SourceFile[], patterns: RegExp[]) {
   return files
     .filter((file) => patterns.some((pattern) => pattern.test(file.source)))
     .map((file) => file.path);
+}
+
+function countedMatches(files: SourceFile[], pattern: RegExp) {
+  return files
+    .map((file) => ({
+      path: file.path,
+      count: Array.from(file.source.matchAll(pattern)).length
+    }))
+    .filter((usage) => usage.count > 0);
+}
+
+function unexpectedUsages(usages: { path: string; count: number }[], allowlist: Map<string, ApprovedUsage>) {
+  return usages
+    .filter((usage) => {
+      const approved = allowlist.get(usage.path);
+
+      return !approved || usage.count > approved.count;
+    })
+    .map((usage) => ({
+      path: usage.path,
+      count: usage.count,
+      approvedCount: allowlist.get(usage.path)?.count ?? 0
+    }));
+}
+
+function staleAllowlistEntries(usages: { path: string; count: number }[], allowlist: Map<string, ApprovedUsage>) {
+  const usageCounts = new Map(usages.map((usage) => [usage.path, usage.count]));
+
+  return Array.from(allowlist.entries())
+    .filter(([path, approval]) => usageCounts.get(path) !== approval.count)
+    .map(([path, approval]) => ({
+      path,
+      approvedCount: approval.count,
+      currentCount: usageCounts.get(path) ?? 0
+    }));
 }
 
 describe("source architecture boundaries", () => {
@@ -71,6 +187,50 @@ describe("source architecture boundaries", () => {
 
     expect(captureViolations).toEqual([]);
     expect(toneViolations).toEqual([]);
+  });
+
+  it("default-blocks UI components from importing infrastructure unless temporarily reviewed", () => {
+    const files = readSources(listSourceFiles(join(repoRoot, "src/components"), [".ts", ".tsx"]));
+    const usages = countedMatches(files, /@\/infrastructure\//g);
+
+    expect(unexpectedUsages(usages, componentInfrastructureImportAllowlist)).toEqual([]);
+    expect(staleAllowlistEntries(usages, componentInfrastructureImportAllowlist)).toEqual([]);
+    for (const approval of componentInfrastructureImportAllowlist.values()) {
+      expect(approval.reason).not.toHaveLength(0);
+    }
+  });
+
+  it("blocks custom music primitive tables unless they are approved policy or facade exceptions", () => {
+    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])).filter(
+      (file) => !file.source.includes(primitiveExceptionMarker)
+    );
+    const primitiveTablePattern =
+      /\b(?:export\s+)?(?:const|let|var)\s+(?:[A-Z0-9_]*(?:NOTE|NOTES|INTERVAL|INTERVALS|CHORD|CHORDS|SCALE|SCALES|KEY_SIGNATURE|KEY_SIGNATURES|TIME_SIGNATURE|TIME_SIGNATURES|SUBDIVISION|SUBDIVISIONS|RHYTHM|RHYTHMS|DURATION|DURATIONS|DURATION_VALUE|DURATION_VALUES|NOTE_VALUE|NOTE_VALUES|BEAT_VALUE|BEAT_VALUES|PITCH|MIDI)[A-Z0-9_]*|noteNames|notesByName|intervalNames|intervalsByName|chordNames|chordsByName|scaleNames|scalesByName|keySignatures|keysByName|timeSignatures|timeSignaturesByName|subdivisions|subdivisionsByName|rhythms|rhythmPatterns|durations|durationValues|noteDurations|beatValues|pitchClasses|midiNotes)\s*=\s*(?:\[|{)/g;
+    const usages = countedMatches(files, primitiveTablePattern);
+
+    expect(unexpectedUsages(usages, musicPrimitiveTableAllowlist)).toEqual([]);
+    expect(staleAllowlistEntries(usages, musicPrimitiveTableAllowlist)).toEqual([]);
+    for (const approval of musicPrimitiveTableAllowlist.values()) {
+      expect(approval.reason).not.toHaveLength(0);
+    }
+  });
+
+  it("blocks new beat, countdown, and metronome runtime setTimeout scheduling", () => {
+    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"]))
+      .filter((file) => !file.source.includes(runtimeTimerExceptionMarker))
+      .filter(
+        (file) =>
+          file.path.startsWith("src/services/metronome/") ||
+          file.path.startsWith("src/lib/quick-metronome/") ||
+          file.path === "src/components/sheet-practice/controls/sheet-practice-controls.tsx"
+      );
+    const usages = countedMatches(files, /\bsetTimeout\b/g);
+
+    expect(unexpectedUsages(usages, runtimeTimerSchedulingAllowlist)).toEqual([]);
+    expect(staleAllowlistEntries(usages, runtimeTimerSchedulingAllowlist)).toEqual([]);
+    for (const approval of runtimeTimerSchedulingAllowlist.values()) {
+      expect(approval.reason).not.toHaveLength(0);
+    }
   });
 
   it("documents the Zustand boundary and keeps the dependency explicit", () => {
