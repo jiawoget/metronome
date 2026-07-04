@@ -1,0 +1,97 @@
+rules:
+  - id: metronome.no-production-window-test-harness
+    languages: [generic]
+    severity: ERROR
+    message: "Production components/hooks must not depend on window.__* test harness globals. Use injected test adapters or test-only helpers."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+        - "src/hooks/**/*.ts"
+        - "src/hooks/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+        - "src/**/__tests__/**"
+    pattern-regex: 'window\.__[A-Za-z0-9_]*(Harness|TestHarness|E2E|Test|BarCountIn)[A-Za-z0-9_]*|__[A-Za-z0-9_]*(Harness|TestHarness|E2E|Test|BarCountIn)[A-Za-z0-9_]*'
+
+  - id: metronome.no-production-custom-event-harness
+    languages: [generic]
+    severity: ERROR
+    message: "Production components/hooks must not dispatch test harness CustomEvents. Move harness events to test-only adapter."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+        - "src/hooks/**/*.ts"
+        - "src/hooks/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: 'new\s+CustomEvent\s*\(\s*["''][^"'']*(harness|test|controls:|bar-count-in)[^"'']*["'']'
+
+  - id: metronome.no-ui-owned-recording-transaction-start
+    languages: [typescript]
+    severity: ERROR
+    message: "Component owns recording transaction start: startCapture + ensureSheetSession in one UI function. Move transaction to service/workflow."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    patterns:
+      - pattern-inside: |
+          function $F(...) {
+            ...
+          }
+      - pattern: $REC.startCapture(...)
+      - pattern: $SESSION.ensureSheetSession(...)
+
+  - id: metronome.no-ui-owned-recording-transaction-stop
+    languages: [typescript]
+    severity: ERROR
+    message: "Component owns recording transaction stop/save and read-model refresh. Move transaction to service/workflow."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    patterns:
+      - pattern-inside: |
+          function $F(...) {
+            ...
+          }
+      - pattern: $REC.stopAndSave(...)
+      - pattern-either:
+          - pattern: $SESSION.listRecordingMetadata(...)
+          - pattern: $SERVICE.listRecordingMetadata(...)
+
+  - id: metronome.warn-ui-list-recording-metadata
+    languages: [typescript]
+    severity: WARNING
+    message: "Component reads all recording metadata. This is usually read-model aggregation leakage."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern: $S.listRecordingMetadata(...)
+
+  - id: metronome.warn-component-practice-goal-validation
+    languages: [generic]
+    severity: WARNING
+    message: "Practice goal validation/building in UI detected. Move validation/building to domain/service."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: 'validatePracticeGoalDraft|buildLocalPracticeGoalFromDraft|isPracticeGoalKind|isPracticeGoalPeriod'

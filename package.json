@@ -15,6 +15,9 @@
     "next-env:stable": "node scripts/stabilize-next-env.mjs",
     "start": "next start",
     "lint": "eslint .",
+    "lint:xo": "xo",
+    "lint:xo:fix": "xo --fix",
+    "lint:xo:changed": "node scripts/run-xo-changed.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run",
@@ -22,6 +25,10 @@
     "test:e2e": "node scripts/run-playwright-stable-env.mjs",
     "test:e2e:ui": "node scripts/run-playwright-stable-env.mjs --ui",
     "playwright:install": "playwright install chromium",
+    "lint:debt": "semgrep --config .semgrep --error",
+    "lint:debt:changed": "node scripts/run-metronome-semgrep-changed.mjs",
+    "lint:debt:inventory": "semgrep --config .semgrep --json --output semgrep-inventory.json || true",
+    "validate:debt-gates": "node scripts/validate-metronome-gates.mjs",
     "smoke": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run test:e2e"
   },
   "dependencies": {
@@ -56,6 +63,7 @@
     "autoprefixer": "^10.5.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.9",
+    "eslint-config-xo-react": "^0.31.0",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.15",
@@ -64,7 +72,8 @@
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "xo": "^3.0.2"
   },
   "overrides": {
     "next": {

@@ -1,0 +1,68 @@
+rules:
+  - id: metronome.no-json-stringify-semantic-equality
+    languages: [typescript]
+    severity: ERROR
+    message: "Do not use JSON.stringify for semantic equality. Move equality into an explicit domain comparator."
+    paths:
+      include:
+        - "src/**/*.ts"
+        - "src/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-either:
+      - pattern: JSON.stringify($A) === JSON.stringify($B)
+      - pattern: JSON.stringify($A) !== JSON.stringify($B)
+      - pattern: JSON.stringify($A) == JSON.stringify($B)
+      - pattern: JSON.stringify($A) != JSON.stringify($B)
+
+  - id: metronome.local-date-now-random-id-generator
+    languages: [generic]
+    severity: WARNING
+    message: "Local Date.now()+Math.random() ID generator found. Use one shared app ID generator or inject createId."
+    paths:
+      include:
+        - "src/**/*.ts"
+        - "src/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: 'Date\.now\(\)[\s\S]{0,160}Math\.random\(\)|Math\.random\(\)[\s\S]{0,160}Date\.now\(\)'
+
+  - id: metronome.local-optional-id-normalizer
+    languages: [generic]
+    severity: WARNING
+    message: "Local optional ID normalizer found. Repeated trim-empty-to-null logic should use one shared helper or domain type."
+    paths:
+      include:
+        - "src/**/*.ts"
+        - "src/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: 'function\s+normalize[A-Za-z0-9_]*(Id|ID|Value|RouteValue|ContextId|AnalyticsId)\s*\([^)]*\)\s*\{[\s\S]{0,500}\.trim\(\)[\s\S]{0,500}null'
+
+  - id: metronome.duplicated-manual-utc-timestamp-formatter
+    languages: [generic]
+    severity: WARNING
+    message: "Manual UTC timestamp formatter found. Centralize timestamp formatting policy instead of copying getUTC* + padStart logic."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+        - "src/hooks/**/*.ts"
+        - "src/hooks/**/*.tsx"
+        - "src/lib/**/*.ts"
+    pattern-regex: 'getUTCFullYear\(\)[\s\S]{0,600}getUTCMonth\(\)[\s\S]{0,600}padStart\(2,\s*["'']0["'']\)[\s\S]{0,600}UTC'
+
+  - id: metronome.duplicated-dashboard-duration-formatter
+    languages: [generic]
+    severity: WARNING
+    message: "Manual minute/hour duration formatter found. Confirm it belongs to the shared duration formatting policy."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+        - "src/hooks/**/*.ts"
+        - "src/hooks/**/*.tsx"
+    pattern-regex: '60_000[\s\S]{0,500}hr|Math\.floor\([^)]*/\s*60_000\)'

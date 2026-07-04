@@ -1,0 +1,92 @@
+rules:
+  - id: metronome.no-ui-tone-direct-import
+    languages: [generic]
+    severity: ERROR
+    message: "UI/hooks must not import Tone.js directly. Use the metronome/audio adapter boundary."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+        - "src/hooks/**/*.ts"
+        - "src/hooks/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: 'from\s+["'']tone["'']|from\s+["'']tone/|require\(["'']tone'
+
+  - id: metronome.no-ui-wavesurfer-direct-import
+    languages: [generic]
+    severity: ERROR
+    message: "UI/hooks must not import wavesurfer directly. Use WaveSurfer adapter/components."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+        - "src/hooks/**/*.ts"
+        - "src/hooks/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: 'from\s+["'']wavesurfer\.js|require\(["'']wavesurfer\.js'
+
+  - id: metronome.no-ui-mediarecorder-direct-use
+    languages: [generic]
+    severity: ERROR
+    message: "UI/hooks must not instantiate MediaRecorder directly. Use MediaRecorderAdapter / recording service."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+        - "src/hooks/**/*.ts"
+        - "src/hooks/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: 'new\s+MediaRecorder\s*\('
+
+  - id: metronome.no-ui-audio-context-direct-use
+    languages: [generic]
+    severity: ERROR
+    message: "UI/hooks must not create Web Audio contexts directly. Use WebAudioEngine/audio adapter."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+        - "src/hooks/**/*.ts"
+        - "src/hooks/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: 'new\s+(window\.)?(AudioContext|webkitAudioContext)\s*\('
+
+  - id: metronome.no-manual-metronome-interval-in-ui
+    languages: [generic]
+    severity: ERROR
+    message: "Do not build metronome timing in UI with setInterval. Use Tone/transport service through adapter."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+        - "src/hooks/**/*.ts"
+        - "src/hooks/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: 'setInterval\s*\('
+
+  - id: metronome.warn-raw-indexeddb-outside-infrastructure
+    languages: [generic]
+    severity: WARNING
+    message: "Raw indexedDB outside infrastructure usually means persistence leakage. Prefer repository/service boundary."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+        - "src/hooks/**/*.ts"
+        - "src/hooks/**/*.tsx"
+        - "src/services/**/*.ts"
+      exclude:
+        - "src/infrastructure/**"
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: '\bindexedDB\b'

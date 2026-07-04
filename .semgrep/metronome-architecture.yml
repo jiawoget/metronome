@@ -1,0 +1,73 @@
+rules:
+  - id: metronome.no-component-direct-db-infrastructure
+    languages: [generic]
+    severity: ERROR
+    message: "UI/hooks must not import infrastructure DB directly. Route through service/controller/hook boundaries."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+        - "src/hooks/**/*.ts"
+        - "src/hooks/**/*.tsx"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+        - "src/**/__tests__/**"
+    pattern-regex: 'from\s+["'']@/infrastructure/db/|require\(["'']@/infrastructure/db/'
+
+  - id: metronome.no-service-or-domain-react-import
+    languages: [generic]
+    severity: ERROR
+    message: "Domain/services must not import React or use client components. Move React state/effects to components/hooks."
+    paths:
+      include:
+        - "src/domain/**/*.ts"
+        - "src/services/**/*.ts"
+      exclude:
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: 'from\s+["'']react["'']|require\(["'']react["'']\)|^["'']use client["''];?'
+
+  - id: metronome.no-recordings-review-service-mutation-from-ui
+    languages: [typescript]
+    severity: ERROR
+    message: "Recordings review UI must not mutate reviewService directly. Use useRecordingsReviewController/action boundary."
+    paths:
+      include:
+        - "src/components/recordings-review/**/*.ts"
+        - "src/components/recordings-review/**/*.tsx"
+      exclude:
+        - "src/components/recordings-review/use-recordings-review-controller.ts"
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-either:
+      - pattern: $S.setBestTake(...)
+      - pattern: $S.setActiveTake(...)
+      - pattern: $S.setRecordingFavorite(...)
+      - pattern: $S.setRecordingArchived(...)
+      - pattern: $S.addRecordingTag(...)
+      - pattern: $S.removeRecordingTag(...)
+
+  - id: metronome.warn-recordings-review-service-import-in-ui
+    languages: [generic]
+    severity: WARNING
+    message: "Review UI importing RecordingsReviewService usually means the controller boundary can be bypassed. Prefer injected controller actions."
+    paths:
+      include:
+        - "src/components/recordings-review/**/*.ts"
+        - "src/components/recordings-review/**/*.tsx"
+      exclude:
+        - "src/components/recordings-review/use-recordings-review-controller.ts"
+        - "src/**/*.test.ts"
+        - "src/**/*.test.tsx"
+    pattern-regex: '@/services/recordings-review'
+
+  - id: metronome.no-component-service-clear
+    languages: [typescript]
+    severity: ERROR
+    message: "Components must not call service.clear(); clear/reset belongs in test setup, admin flows, or service-level maintenance."
+    paths:
+      include:
+        - "src/components/**/*.ts"
+        - "src/components/**/*.tsx"
+    pattern: $S.clear(...)
