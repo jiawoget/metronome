@@ -1,9 +1,17 @@
-import { getSubdivisionMultiplier, getTickIntervalMs, isAccentTick } from "@/lib/quick-metronome/control";
+import { getMeterTimeSignatureParts } from "@/domain/practice/meter-timing";
+import {
+  clampBpm,
+  getSubdivisionMultiplier,
+  getTickIntervalMs,
+  isAccentTick
+} from "@/lib/quick-metronome/control";
 import { DEFAULT_METRONOME_SETTINGS, type MetronomeSettings } from "@/lib/quick-metronome/types";
 import {
   createToneMetronomeAdapter,
   type ToneMetronomeAdapter,
-  type ToneMetronomeAdapterFactory
+  type ToneMetronomeAdapterFactory,
+  type ToneMetronomeLoopHandle,
+  type ToneMetronomeLoopInterval
 } from "@/infrastructure/audio/tone-metronome-adapter";
 import {
   METRONOME_TRACE_EVENT,
@@ -13,9 +21,14 @@ import {
   type MetronomeTraceEventDetail
 } from "@/services/metronome";
 
+const TRANSPORT_TIMELINE_START = 0;
+const INITIAL_TRANSPORT_START_OFFSET = "+0.05";
+const RESCHEDULE_TRANSPORT_START_OFFSET = "+0.02";
+const MIN_TRIGGER_TIME_STEP_SECONDS = 0.001;
+
 export class BrowserMetronomeService implements MetronomeService {
   private adapter: ToneMetronomeAdapter | null = null;
-  private eventId: number | null = null;
+  private loop: ToneMetronomeLoopHandle | null = null;
   private readonly createAdapter: ToneMetronomeAdapterFactory;
   private settings: MetronomeSettings = DEFAULT_METRONOME_SETTINGS;
   private scheduleToken = 0;
@@ -28,7 +41,7 @@ export class BrowserMetronomeService implements MetronomeService {
   }
 
   get isPlaying() {
-    return this.eventId !== null;
+    return this.loop !== null;
   }
 
   onTick(handler: MetronomeTickHandler) {
@@ -57,8 +70,9 @@ export class BrowserMetronomeService implements MetronomeService {
     this.tickIndex = 0;
     this.lastTriggerTime = Number.NEGATIVE_INFINITY;
     this.scheduleToken += 1;
+    this.adapter.setBpm(clampBpm(settings.bpm));
     this.scheduleCurrentSettings(this.scheduleToken);
-    this.adapter.startTransport("+0.05");
+    this.adapter.startTransport(INITIAL_TRANSPORT_START_OFFSET);
   }
 
   update(settings: MetronomeSettings) {
@@ -71,15 +85,11 @@ export class BrowserMetronomeService implements MetronomeService {
 
   stop() {
     if (!this.adapter) {
-      this.eventId = null;
+      this.loop = null;
       return;
     }
 
-    if (this.eventId !== null) {
-      this.adapter.clear(this.eventId);
-      this.eventId = null;
-    }
-
+    this.clearLoop();
     this.adapter.stopTransport();
     this.adapter.cancelTransport();
     this.adapter.dispose();
@@ -92,18 +102,15 @@ export class BrowserMetronomeService implements MetronomeService {
       return;
     }
 
-    if (this.eventId !== null) {
-      this.adapter.clear(this.eventId);
-      this.eventId = null;
-    }
-
     this.adapter.stopTransport();
     this.adapter.cancelTransport();
+    this.adapter.setBpm(clampBpm(this.settings.bpm));
+    this.clearLoop();
     this.tickIndex = 0;
     this.lastTriggerTime = Number.NEGATIVE_INFINITY;
     this.scheduleToken += 1;
     this.scheduleCurrentSettings(this.scheduleToken);
-    this.adapter.startTransport("+0.02");
+    this.adapter.startTransport(RESCHEDULE_TRANSPORT_START_OFFSET);
   }
 
   private scheduleCurrentSettings(scheduleToken: number) {
@@ -111,11 +118,11 @@ export class BrowserMetronomeService implements MetronomeService {
       return;
     }
 
-    this.eventId = this.adapter.scheduleRepeat((time) => {
+    this.loop = this.adapter.createLoop((time) => {
       if (scheduleToken === this.scheduleToken) {
         this.handleScheduledTick(time);
       }
-    }, getTickIntervalMs(this.settings) / 1_000);
+    }, getToneLoopInterval(this.settings));
   }
 
   private handleScheduledTick(audioTime: number) {
@@ -139,26 +146,32 @@ export class BrowserMetronomeService implements MetronomeService {
 
     const beatMultiplier = getSubdivisionMultiplier(this.settings.subdivision);
     const isBeatTick = tick.tickIndex % beatMultiplier === 0;
-    const note = tick.accented ? "E6" : isBeatTick ? "B5" : "E5";
-    const triggerTime = tick.audioTime <= this.lastTriggerTime ? this.lastTriggerTime + 0.001 : tick.audioTime;
+    const triggerTime =
+      tick.audioTime <= this.lastTriggerTime
+        ? this.lastTriggerTime + MIN_TRIGGER_TIME_STEP_SECONDS
+        : tick.audioTime;
 
     this.lastTriggerTime = triggerTime;
 
-    this.adapter.trigger({
-      note,
-      duration: 0.06,
+    this.adapter.triggerClick({
       time: triggerTime,
-      velocity: tick.accented ? 0.9 : 0.55
+      accented: tick.accented,
+      beatTick: isBeatTick
     });
   }
 
   private emitTick(tick: MetronomeTick) {
-    const now = this.adapter?.now() ?? tick.audioTime;
-    const delayMs = Math.max(0, (tick.audioTime - now) * 1_000);
-
-    window.setTimeout(() => {
+    this.adapter?.draw(() => {
       this.tickHandlers.forEach((handler) => handler(tick));
-    }, delayMs);
+    }, tick.audioTime);
+  }
+
+  private clearLoop() {
+    this.loop
+      ?.stop(TRANSPORT_TIMELINE_START)
+      .cancel(TRANSPORT_TIMELINE_START)
+      .dispose();
+    this.loop = null;
   }
 
   private emitTrace(tick: MetronomeTick) {
@@ -176,4 +189,38 @@ export class BrowserMetronomeService implements MetronomeService {
 
     window.dispatchEvent(new CustomEvent<MetronomeTraceEventDetail>(METRONOME_TRACE_EVENT, { detail }));
   }
+}
+
+function getToneLoopInterval(
+  settings: Pick<MetronomeSettings, "timeSignature" | "subdivision">
+): ToneMetronomeLoopInterval {
+  const { denominator } = getMeterTimeSignatureParts(settings.timeSignature);
+
+  if (denominator === 4) {
+    switch (settings.subdivision) {
+      case "quarter":
+        return "4n";
+      case "eighth":
+        return "8n";
+      case "triplet":
+        return "8t";
+      case "sixteenth":
+        return "16n";
+    }
+  }
+
+  if (denominator === 8) {
+    switch (settings.subdivision) {
+      case "quarter":
+        return "8n";
+      case "eighth":
+        return "16n";
+      case "triplet":
+        return "16t";
+      case "sixteenth":
+        return "32n";
+    }
+  }
+
+  throw new Error(`Unsupported metronome denominator: ${denominator}`);
 }

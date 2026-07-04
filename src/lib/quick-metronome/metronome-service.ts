@@ -9,6 +9,8 @@ export { BrowserMetronomeService } from "@/services/metronome/browser-metronome-
 export {
   type ToneMetronomeAdapter,
   type ToneMetronomeAdapterFactory,
-  type ToneMetronomeTrigger,
+  type ToneMetronomeClick,
+  type ToneMetronomeLoopHandle,
+  type ToneMetronomeLoopInterval,
   type ToneScheduledCallback
 } from "@/infrastructure/audio/tone-metronome-adapter";
