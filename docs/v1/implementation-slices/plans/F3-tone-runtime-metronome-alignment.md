@@ -8,6 +8,17 @@
 - Model/tier for implementation: high-risk timing/audio work; use `gpt-5.5`, high/extra-high reasoning, standard speed.
 - Current baseline assumption: `main` includes merged F2 guardrails. This plan does not write production code.
 
+## Status JSON Evidence
+
+This plan PR changes only Pack F status evidence in `docs/v1/status.json`:
+
+- Pack F remains `implementation_in_progress`.
+- `F1-library-first-rescan-plan` remains `verified` with plan pointer `docs/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md`.
+- `F2-external-library-first-guardrails` moves from `implementation_done` to `verified`, matching the merged F2 guardrail baseline.
+- `F3-tone-runtime-metronome-alignment` moves from `not_started` to `planning_in_progress` and gains plan pointer `docs/v1/implementation-slices/plans/F3-tone-runtime-metronome-alignment.md`.
+- `F4-countdown-executor-unification`, `F5-tonaljs-music-domain-policy`, `F6-recording-waveform-analysis-alignment`, and `F7-boundary-hardening-viewer-closeout` remain `not_started`.
+- No Pack F slice is advanced to coding or verification by this plan PR.
+
 ## Required Reads
 
 - `docs/v1/START-HERE.md`
@@ -242,6 +253,22 @@ git diff --check
 ```
 
 If E2E is too slow for the coding agent's first loop, it may run the unit/lint/typecheck set first, but F3 cannot be marked verified without the two targeted E2E specs.
+
+## Plan PR Verification Evidence
+
+Plan/status-only verification for this PR:
+
+```text
+git diff --check
+```
+
+Result: passed. The command returned exit code `0`; only Git LF-to-CRLF working-copy warning was printed for `docs/v1/implementation-slices/plans/F3-tone-runtime-metronome-alignment.md`.
+
+```text
+Get-Content docs\v1\status.json -Raw | ConvertFrom-Json | Out-Null; Write-Output 'docs/v1/status.json parsed OK'
+```
+
+Result: passed with output `docs/v1/status.json parsed OK`.
 
 ## Risks And Mitigations
 
