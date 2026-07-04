@@ -142,6 +142,7 @@ The implementation agent must:
 - Update only the assigned feature status and implementation notes.
 - Preserve v0 verified behavior unless the contract explicitly changes it.
 - Keep UI away from storage, audio, cloud, analysis, and third-party internals.
+- For audio, music theory, metronome timing, countdown/count-in, recording, decode, waveform, or reference playback work, complete an External Primitive Check against the existing library/platform primitive before adding repo-owned primitive logic.
 - Run relevant self-tests before handoff.
 
 The implementation agent must not:
@@ -204,6 +205,7 @@ Verification must fail if:
 - Persistence is claimed but not tested after reload.
 - Media behavior is claimed but no real artifact or timing evidence is inspected.
 - Product code bypasses service or adapter boundaries.
+- Audio, music, waveform, recording, or timing code adds local primitive logic without an External Primitive Check and documented replace / keep-business-logic / no-go-with-guardrail decision.
 - User-facing UI ignores the reference image or v1 UI design requirements.
 - The feature implements v2 scope.
 - A previously verified core v0 workflow is broken.

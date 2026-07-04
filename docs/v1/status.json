@@ -931,7 +931,7 @@
                                          {
                                              "pack":  "pack-f-audio-music-library-alignment",
                                              "scope":  "Post-Pack-5 library-first architecture correction and tech-debt closeout for audio, music theory, recording, waveform, sheet viewer, mutation hardening, and UI-to-infrastructure boundaries. F1 is plan-only and cannot move to coding until external ChatGPT plan review passes.",
-                                             "status":  "planning_in_progress",
+                                             "status":  "implementation_in_progress",
                                              "slices":  [
                                                             {
                                                                 "slice":  "F1-library-first-rescan-plan",
@@ -940,7 +940,7 @@
                                                             },
                                                             {
                                                                 "slice":  "F2-external-library-first-guardrails",
-                                                                "status":  "not_started"
+                                                                "status":  "implementation_done"
                                                             },
                                                             {
                                                                 "slice":  "F3-tone-runtime-metronome-alignment",
