@@ -38,6 +38,17 @@ jobs:
           BASE_REF: origin/${{ github.base_ref }}
         run: node scripts/run-metronome-semgrep-changed.mjs
 
+      - name: Install CodeScene CLI
+        run: curl -fsSL https://downloads.codescene.io/enterprise/cli/install-cs-tool.sh | sh
+
+      - name: Run CodeScene delta debt gates on changed files
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+          HEAD_REF: origin/${{ github.head_ref }}
+          CS_ACCESS_TOKEN: ${{ secrets.CODESCENE_ACCESS_TOKEN }}
+          CS_ONPREM_URL: ${{ secrets.CODESCENE_ONPREM_URL }}
+        run: node scripts/run-codescene-debt-changed.mjs
+
       - name: Typecheck
         run: npm run typecheck --if-present
 
