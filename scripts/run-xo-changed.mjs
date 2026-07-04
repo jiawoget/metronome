@@ -1,6 +1,8 @@
 #!/usr/bin/env node
+
 import {execFileSync, spawnSync} from 'node:child_process';
 import {existsSync} from 'node:fs';
+import process from 'node:process';
 
 function runGit(args) {
 	return execFileSync('git', args, {encoding: 'utf8'}).trim();
@@ -21,10 +23,10 @@ try {
 }
 
 const changedFiles = runGit(['diff', '--name-only', '--diff-filter=ACMR', mergeBase, 'HEAD'])
-	.split(/\r?\n/)
+	.split(/\r?\n/v)
 	.map(file => file.trim())
 	.filter(Boolean)
-	.filter(file => /\.(?:js|jsx|mjs|cjs|ts|tsx|mts|cts)$/.test(file))
+	.filter(file => /\.(?:js|jsx|mjs|cjs|ts|tsx|mts|cts)$/v.test(file))
 	.filter(file => existsSync(file));
 
 if (changedFiles.length === 0) {

@@ -5,7 +5,7 @@
     "lint:xo:changed": "node scripts/run-xo-changed.mjs"
   },
   "devDependencies": {
-    "xo": "latest",
-    "eslint-config-xo-react": "latest"
+    "xo": "^3.0.2",
+    "eslint-config-xo-react": "^0.31.0"
   }
 }
