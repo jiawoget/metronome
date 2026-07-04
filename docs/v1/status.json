@@ -949,7 +949,8 @@
                                                             },
                                                             {
                                                                 "slice":  "F4-countdown-executor-unification",
-                                                                "status":  "not_started"
+                                                                "status":  "planning_in_progress",
+                                                                "plan":  "docs/v1/implementation-slices/plans/F4-countdown-executor-unification.md"
                                                             },
                                                             {
                                                                 "slice":  "F5-tonaljs-music-domain-policy",
