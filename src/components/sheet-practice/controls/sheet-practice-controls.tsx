@@ -834,10 +834,14 @@ export function SheetPracticeControls({
     setErrorMessage(null);
 
     if (session) {
-      await sessionService.captureSessionEvent({
-        sessionId: session.id,
-        kind: "metronome_stopped"
-      });
+      void Promise.resolve()
+        .then(() =>
+          sessionService.captureSessionEvent({
+            sessionId: session.id,
+            kind: "metronome_stopped"
+          })
+        )
+        .catch(() => undefined);
 
       try {
         const nextSession = await sessionService.updateSheetSessionDuration(

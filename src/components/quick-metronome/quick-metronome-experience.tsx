@@ -120,10 +120,14 @@ export function QuickMetronomeExperience({
     setErrorMessage(null);
 
     if (currentSession) {
-      await sessionService.captureSessionEvent({
-        sessionId: currentSession.id,
-        kind: "metronome_stopped"
-      });
+      void Promise.resolve()
+        .then(() =>
+          sessionService.captureSessionEvent({
+            sessionId: currentSession.id,
+            kind: "metronome_stopped"
+          })
+        )
+        .catch(() => undefined);
 
       try {
         const nextSession = isRecording
