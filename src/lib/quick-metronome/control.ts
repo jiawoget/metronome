@@ -3,6 +3,12 @@ import {
   getMeterTicksPerMeasure
 } from "@/domain/practice/meter-timing";
 import {
+  SUPPORTED_SUBDIVISIONS,
+  SUPPORTED_TIME_SIGNATURES,
+  isSupportedSubdivision,
+  isSupportedTimeSignature
+} from "@/domain/music/meter-policy";
+import {
   DEFAULT_BPM,
   DEFAULT_METRONOME_SETTINGS,
   MAX_BPM,
@@ -13,19 +19,8 @@ import {
   type TimeSignature
 } from "@/lib/quick-metronome/types";
 
-export const TIME_SIGNATURES = [
-  "2/4",
-  "3/4",
-  "4/4",
-  "6/8",
-  "12/8"
-] as const satisfies readonly TimeSignature[];
-export const SUBDIVISIONS = [
-  "quarter",
-  "eighth",
-  "triplet",
-  "sixteenth"
-] as const satisfies readonly Subdivision[];
+export const TIME_SIGNATURES = SUPPORTED_TIME_SIGNATURES satisfies readonly TimeSignature[];
+export const SUBDIVISIONS = SUPPORTED_SUBDIVISIONS satisfies readonly Subdivision[];
 export const ACCENT_MODES: AccentMode[] = ["downbeat", "every-beat", "off"];
 export const COUNTDOWN_BEAT_OPTIONS = [0, 4, 8, 16] as const;
 
@@ -62,12 +57,12 @@ export function parseTimeSignature(value: string): TimeSignature {
 export function isQuickMetronomeTimeSignature(
   value: string | null
 ): value is TimeSignature {
-  return value !== null && (TIME_SIGNATURES as readonly string[]).includes(value);
+  return isSupportedTimeSignature(value);
 }
 
 export function parseSubdivision(value: string): Subdivision {
-  if (SUBDIVISIONS.includes(value as Subdivision)) {
-    return value as Subdivision;
+  if (isSupportedSubdivision(value)) {
+    return value;
   }
 
   return DEFAULT_METRONOME_SETTINGS.subdivision;

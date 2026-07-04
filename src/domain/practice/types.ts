@@ -1,10 +1,11 @@
 import type { MeasureGrid, MeasureRange, MeasureRangeMs } from "@/domain/practice/measure-grid";
+import type { SupportedTimeSignature } from "@/domain/music/meter-policy";
 
 type PracticeSourceType = "quick" | "sheet";
 
 export type PracticeActivityTrigger = "metronome" | "recording" | "reference";
 
-export type PracticeTimeSignature = "2/4" | "3/4" | "4/4" | "6/8" | "12/8";
+export type PracticeTimeSignature = SupportedTimeSignature;
 
 export type SheetRecordingSegmentContext = {
   segmentId: string;

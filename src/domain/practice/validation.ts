@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+import {
+  SUPPORTED_TIME_SIGNATURES,
+  isSupportedTimeSignature
+} from "@/domain/music/meter-policy";
 import type {
   LocalPracticeGoal,
   PracticeSession,
@@ -23,16 +27,11 @@ const isoDateSchema = z.iso
     message: "Expected a strict ISO datetime with a real calendar date."
   });
 
-const PRACTICE_TIME_SIGNATURES = ["2/4", "3/4", "4/4", "6/8", "12/8"] as const;
-
 export function parsePracticeTimeSignature(value: unknown) {
-  return typeof value === "string" &&
-    (PRACTICE_TIME_SIGNATURES as readonly string[]).includes(value)
-    ? value
-    : null;
+  return isSupportedTimeSignature(value) ? value : null;
 }
 
-const practiceTimeSignatureSchema = z.enum(PRACTICE_TIME_SIGNATURES);
+const practiceTimeSignatureSchema = z.enum(SUPPORTED_TIME_SIGNATURES);
 const LOCAL_PRACTICE_GOAL_STATUSES = ["active", "completed", "invalid"] as const;
 const localPracticeGoalStatusSchema = z.enum(LOCAL_PRACTICE_GOAL_STATUSES);
 const trimmedRequiredStringSchema = z.string().trim().min(1);

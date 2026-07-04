@@ -954,7 +954,8 @@
                                                             },
                                                             {
                                                                 "slice":  "F5-tonaljs-music-domain-policy",
-                                                                "status":  "not_started"
+                                                                "status":  "implementation_done",
+                                                                "plan":  "docs/v1/implementation-slices/plans/F5-tonaljs-music-domain-policy.md"
                                                             },
                                                             {
                                                                 "slice":  "F6-recording-waveform-analysis-alignment",
