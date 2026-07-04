@@ -2,19 +2,12 @@ import type { MetronomeSettings } from "@/lib/quick-metronome/types";
 import type { SheetRecordingMetadata, SheetRecordingSegmentContext } from "@/domain/practice";
 import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
 import type { PracticeSessionService } from "@/services/practice-session";
+import type { RecordingArtifactAnalysis } from "@/services/audio-analysis";
 
-export type RecordingArtifactAnalysis = {
-  decodedDurationMs: number;
-  sampleRate: number;
-  peakAmplitude: number;
-  rmsAmplitude: number;
-  estimatedFrequencyHz: number | null;
-  isSilent: boolean;
-};
+export type { RecordingArtifactAnalysis } from "@/services/audio-analysis";
 
 export type RecordingArtifact = {
   blob: Blob;
-  dataUrl: string;
   durationMs: number;
   mimeType: string;
   sizeBytes: number;

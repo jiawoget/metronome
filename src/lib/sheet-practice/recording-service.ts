@@ -6,9 +6,9 @@ import {
 } from "@/lib/recordings-review/artifact-storage";
 import { restoreOrDeletePracticeSessionSnapshot } from "@/services/practice-session/snapshot-rollback";
 import {
-  hasUsablePeaks,
   loadRecordingArtifactDetailsFromBody
 } from "@/lib/recordings-review/artifact-details";
+import { hasUsablePeaks } from "@/services/audio-analysis";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
 import type { MetronomeSettings, RecordingArtifact } from "@/lib/quick-metronome/types";

@@ -4,20 +4,18 @@ import type {
 } from "@/lib/recordings-review/types";
 import { RecordingArtifactError } from "@/lib/recordings-review/artifact-model";
 import { resolveRecordingArtifactBody } from "@/lib/recordings-review/artifact-storage";
+import { createBrowserAudioDecodeAdapter } from "@/infrastructure/audio/browser-audio-decode-adapter";
+import {
+  AudioDecodeError,
+  decodeAudioBlob,
+  derivePeaksFromBuffer,
+  hasUsablePeaks,
+  normalizePeaks,
+  type AudioDecodeAdapter
+} from "@/services/audio-analysis";
 
 const MIN_DURATION_TOLERANCE_MS = 250;
 const DURATION_TOLERANCE_RATIO = 0.1;
-
-function getAudioContextConstructor() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const audioWindow = window as Window &
-    typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-
-  return audioWindow.AudioContext || audioWindow.webkitAudioContext || null;
-}
 
 export function getDurationWarning({
   decodedDurationMs,
@@ -36,59 +34,20 @@ export function getDurationWarning({
   return `Decoded audio duration (${(decodedDurationMs / 1_000).toFixed(1)}s) differs from saved metadata (${(metadataDurationMs / 1_000).toFixed(1)}s).`;
 }
 
-function normalizeTrustedPeaks(peaks: number[]) {
-  return peaks.map((peak) => Math.max(0, Math.min(1, peak)));
-}
-
-export function hasUsablePeaks(peaks: number[]) {
-  return peaks.length > 0 && peaks.every((peak) => Number.isFinite(peak)) && peaks.some((peak) => peak > 0);
-}
-
-export function derivePeaksFromSamples(samples: Float32Array, peakCount = 48) {
-  if (samples.length === 0) {
-    return [];
-  }
-
-  const peaks: number[] = [];
-  const bucketSize = Math.max(1, Math.floor(samples.length / peakCount));
-
-  for (let peakIndex = 0; peakIndex < peakCount; peakIndex += 1) {
-    const start = peakIndex * bucketSize;
-    const end = Math.min(samples.length, start + bucketSize);
-    let peak = 0;
-
-    for (let index = start; index < end; index += 1) {
-      peak = Math.max(peak, Math.abs(samples[index] ?? 0));
-    }
-
-    peaks.push(Number(peak.toFixed(4)));
-  }
-
-  const maxPeak = Math.max(...peaks, 0);
-
-  return maxPeak > 0 ? peaks.map((peak) => Number((peak / maxPeak).toFixed(4))) : peaks;
-}
-
-async function decodeAudioBlob(blob: Blob) {
-  const AudioContextConstructor = getAudioContextConstructor();
-
-  if (!AudioContextConstructor) {
-    throw new RecordingArtifactError(
-      "Audio decoding is not available in this browser.",
-      "decode-failed"
-    );
-  }
-
+async function decodeRecordingArtifactBlob(
+  blob: Blob,
+  adapter: AudioDecodeAdapter
+) {
   try {
-    const arrayBuffer = await blob.arrayBuffer();
-    const audioContext = new AudioContextConstructor();
-
-    try {
-      return await audioContext.decodeAudioData(arrayBuffer.slice(0));
-    } finally {
-      void audioContext.close();
+    return await decodeAudioBlob(blob, adapter);
+  } catch (error) {
+    if (error instanceof AudioDecodeError && error.reason === "unavailable") {
+      throw new RecordingArtifactError(
+        "Audio decoding is not available in this browser.",
+        "decode-failed"
+      );
     }
-  } catch {
+
     throw new RecordingArtifactError(
       "This recording artifact could not be decoded locally and cannot be decoded.",
       "decode-failed"
@@ -100,15 +59,17 @@ export async function loadRecordingArtifactDetailsFromBody({
   recordingId,
   blob,
   metadataDurationMs,
-  trustedPeaks
+  trustedPeaks,
+  decodeAdapter = createBrowserAudioDecodeAdapter()
 }: {
   recordingId: string;
   blob: Blob;
   metadataDurationMs: number;
   trustedPeaks?: number[];
+  decodeAdapter?: AudioDecodeAdapter;
 }): Promise<RecordingArtifactDetails> {
-  const audioBuffer = await decodeAudioBlob(blob);
-  const decodedPeaks = derivePeaksFromSamples(audioBuffer.getChannelData(0));
+  const audioBuffer = await decodeRecordingArtifactBlob(blob, decodeAdapter);
+  const decodedPeaks = derivePeaksFromBuffer(audioBuffer);
 
   if (decodedPeaks.length === 0 || Math.max(...decodedPeaks) <= 0) {
     throw new RecordingArtifactError(
@@ -127,7 +88,7 @@ export async function loadRecordingArtifactDetailsFromBody({
     );
   }
 
-  const normalizedTrustedPeaks = useTrustedPeaks ? normalizeTrustedPeaks(trustedPeaks) : [];
+  const normalizedTrustedPeaks = useTrustedPeaks ? normalizePeaks(trustedPeaks) : [];
 
   if (useTrustedPeaks && !hasUsablePeaks(normalizedTrustedPeaks)) {
     throw new RecordingArtifactError(

@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  derivePeaksFromSamples,
   getDurationWarning,
   loadRecordingArtifactDetails,
   loadRecordingArtifactDetailsFromBody
 } from "@/lib/recordings-review/artifact-details";
+import { derivePeaksFromSamples } from "@/services/audio-analysis";
 import { createRecordingArtifactRef } from "@/lib/recordings-review/artifact-storage";
 import { formatDuration, formatTimestamp } from "@/lib/recordings-review/format";
 import {

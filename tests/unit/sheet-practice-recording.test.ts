@@ -79,7 +79,6 @@ const previousSession: PracticeSession = {
 function createArtifact(overrides: Partial<RecordingArtifact> = {}): RecordingArtifact {
   return {
     blob: new Blob(["audio"], { type: "audio/webm" }),
-    dataUrl: "data:audio/webm;base64,UklGRg==",
     durationMs: 812,
     mimeType: "audio/webm",
     sizeBytes: 128,
@@ -289,12 +288,8 @@ describe("sheet practice recording service", () => {
     ).resolves.toBeNull();
   });
 
-  it("decodes sheet captures from the Blob without relying on artifact dataUrl", async () => {
-    const capture = createCaptureService(
-      createArtifact({
-        dataUrl: "not-a-data-url"
-      })
-    );
+  it("decodes sheet captures from the Blob without relying on artifact metadata bytes", async () => {
+    const capture = createCaptureService(createArtifact());
     const sessionService = createPreparedSessionService();
     const service = new BrowserSheetRecordingService(capture.service);
 

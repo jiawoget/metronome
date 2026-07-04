@@ -1,18 +1,13 @@
 import {
   RecordingPermissionError,
   type RecordingArtifact,
-  type RecordingArtifactAnalysis,
   type RecordingCaptureService
 } from "@/services/recording";
-
-function blobToDataUrl(blob: Blob) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => resolve(String(reader.result)));
-    reader.addEventListener("error", () => reject(reader.error));
-    reader.readAsDataURL(blob);
-  });
-}
+import { createBrowserAudioDecodeAdapter } from "@/infrastructure/audio/browser-audio-decode-adapter";
+import {
+  analyzeRecordingBlob,
+  type AudioDecodeAdapter
+} from "@/services/audio-analysis";
 
 function getPreferredMimeType() {
   if (typeof MediaRecorder === "undefined" || !("isTypeSupported" in MediaRecorder)) {
@@ -24,76 +19,15 @@ function getPreferredMimeType() {
   return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? "";
 }
 
-async function decodeBlob(blob: Blob) {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const audioWindow = window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-  const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
-
-  if (!AudioContextConstructor) {
-    return null;
-  }
-
-  const audioContext = new AudioContextConstructor();
-
-  try {
-    const arrayBuffer = await blob.arrayBuffer();
-    return await audioContext.decodeAudioData(arrayBuffer.slice(0));
-  } catch {
-    return null;
-  } finally {
-    void audioContext.close();
-  }
-}
-
-export function analyzeDecodedRecording(audioBuffer: AudioBuffer): RecordingArtifactAnalysis {
-  const channelData = audioBuffer.getChannelData(0);
-  let peakAmplitude = 0;
-  let sumSquares = 0;
-  let positiveZeroCrossings = 0;
-  let previousSample = channelData[0] ?? 0;
-
-  for (let index = 0; index < channelData.length; index += 1) {
-    const sample = channelData[index] ?? 0;
-    const absoluteSample = Math.abs(sample);
-
-    peakAmplitude = Math.max(peakAmplitude, absoluteSample);
-    sumSquares += sample * sample;
-
-    if (previousSample < 0 && sample >= 0) {
-      positiveZeroCrossings += 1;
-    }
-
-    previousSample = sample;
-  }
-
-  const rmsAmplitude = Math.sqrt(sumSquares / Math.max(1, channelData.length));
-  const decodedDurationMs = audioBuffer.duration * 1_000;
-  const estimatedFrequencyHz = decodedDurationMs > 0 ? positiveZeroCrossings / (decodedDurationMs / 1_000) : null;
-
-  return {
-    decodedDurationMs,
-    sampleRate: audioBuffer.sampleRate,
-    peakAmplitude,
-    rmsAmplitude,
-    estimatedFrequencyHz,
-    isSilent: rmsAmplitude < 0.005 || peakAmplitude < 0.01
-  };
-}
-
-async function analyzeBlob(blob: Blob) {
-  const audioBuffer = await decodeBlob(blob);
-
-  return audioBuffer ? analyzeDecodedRecording(audioBuffer) : null;
-}
-
 export class BrowserRecordingService implements RecordingCaptureService {
   private chunks: Blob[] = [];
   private mediaRecorder: MediaRecorder | null = null;
   private startedAt = 0;
   private stream: MediaStream | null = null;
+
+  constructor(
+    private readonly decodeAdapter: AudioDecodeAdapter = createBrowserAudioDecodeAdapter()
+  ) {}
 
   get isRecording() {
     return this.mediaRecorder?.state === "recording";
@@ -164,11 +98,10 @@ export class BrowserRecordingService implements RecordingCaptureService {
 
     return {
       blob,
-      dataUrl: await blobToDataUrl(blob),
       durationMs,
       mimeType,
       sizeBytes: blob.size,
-      analysis: await analyzeBlob(blob)
+      analysis: await analyzeRecordingBlob(blob, this.decodeAdapter)
     };
   }
 }
