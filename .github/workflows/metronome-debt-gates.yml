@@ -10,6 +10,7 @@ jobs:
   semgrep-debt-gates:
     name: Semgrep debt gates on changed files
     runs-on: ubuntu-latest
+    environment: metronome
 
     steps:
       - uses: actions/checkout@v4
@@ -45,6 +46,19 @@ jobs:
           unzip -o /tmp/cs.zip -d "$HOME/.local/bin"
           chmod +x "$HOME/.local/bin/cs"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Check CodeScene token source
+        run: |
+          if [ -n "${{ secrets.CODESCENE_ACCESS_TOKEN }}" ]; then
+            echo "CODESCENE_ACCESS_TOKEN secret is available in this workflow context."
+          else
+            echo "CODESCENE_ACCESS_TOKEN is not available in this workflow context."
+          fi
+          if [ -n "${{ secrets.CS_ACCESS_TOKEN }}" ]; then
+            echo "CS_ACCESS_TOKEN is available in this workflow context."
+          else
+            echo "CS_ACCESS_TOKEN is not available in this workflow context."
+          fi
 
       - name: Run CodeScene delta debt gates on changed files
         env:
