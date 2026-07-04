@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { join, posix, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import packageJson from "../../package.json";
@@ -78,6 +78,45 @@ function countedMatches(files: SourceFile[], pattern: RegExp) {
     .map((file) => ({
       path: file.path,
       count: Array.from(file.source.matchAll(pattern)).length
+    }))
+    .filter((usage) => usage.count > 0);
+}
+
+const importSpecifierPattern =
+  /\bfrom\s+["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)|^\s*import\s+["']([^"']+)["']/gm;
+
+function resolveRepoImportPath(file: SourceFile, specifier: string) {
+  if (specifier.startsWith("@/")) {
+    return `src/${specifier.slice(2)}`;
+  }
+
+  if (!specifier.startsWith(".")) {
+    return null;
+  }
+
+  const resolvedPath = posix.normalize(
+    posix.join(posix.dirname(file.path), specifier)
+  );
+
+  return resolvedPath.startsWith("../") ? null : resolvedPath;
+}
+
+function resolvesToInfrastructure(file: SourceFile, specifier: string) {
+  const resolvedPath = resolveRepoImportPath(file, specifier);
+
+  return (
+    resolvedPath === "src/infrastructure" ||
+    resolvedPath?.startsWith("src/infrastructure/")
+  );
+}
+
+function countedInfrastructureImports(files: SourceFile[]) {
+  return files
+    .map((file) => ({
+      path: file.path,
+      count: Array.from(file.source.matchAll(importSpecifierPattern)).filter(
+        (match) => resolvesToInfrastructure(file, match[1] ?? match[2] ?? match[3] ?? "")
+      ).length
     }))
     .filter((usage) => usage.count > 0);
 }
@@ -211,9 +250,41 @@ describe("source architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
+  it("resolves alias and relative UI infrastructure imports for the guardrail", () => {
+    expect(
+      countedInfrastructureImports([
+        {
+          path: "src/components/example/widget.tsx",
+          source: [
+            'import { browserThing } from "@/infrastructure/db/browser-thing";',
+            'import type { OtherThing } from "../../infrastructure/db/other-thing";',
+            'export { helper } from "@/services/example";'
+          ].join("\n")
+        },
+        {
+          path: "src/hooks/use-example.ts",
+          source: 'const module = await import("../infrastructure/db/browser-thing");'
+        },
+        {
+          path: "src/app/example/page.tsx",
+          source: 'import { service } from "../../services/example";'
+        }
+      ])
+    ).toEqual([
+      {
+        path: "src/components/example/widget.tsx",
+        count: 2
+      },
+      {
+        path: "src/hooks/use-example.ts",
+        count: 1
+      }
+    ]);
+  });
+
   it("default-blocks UI, app, and hook files from importing infrastructure unless temporarily reviewed", () => {
     const files = readSources(listUiBoundarySourceFiles());
-    const usages = countedMatches(files, /@\/infrastructure\//g);
+    const usages = countedInfrastructureImports(files);
 
     expect(unexpectedUsages(usages, uiInfrastructureImportAllowlist)).toEqual([]);
     expect(staleAllowlistEntries(usages, uiInfrastructureImportAllowlist)).toEqual([]);
