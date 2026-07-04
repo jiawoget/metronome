@@ -147,7 +147,7 @@ rg -n "Meyda|Aubio|Essentia|meyda|aubio|essentia" package.json package-lock.json
 | Waveform comparison | `src/lib/recordings-review/waveform-comparison-sources.ts` | Maps artifact errors and eligibility into user-facing unavailable reasons. | Preserve `decode-failed`, `unsupported-mime`, `empty-audio`, `missing-artifact`, `invalid-peaks`, `invalid-duration`, and stale membership mapping. |
 | Artifact storage | `src/lib/recordings-review/artifact-storage.ts` | Blob/artifactRef is the current user-recording body source. Storage failures map to `storage-unavailable` and `quota-exceeded`. | Do not move storage into audio-analysis. Preserve artifactRef ownership checks and storage failure mapping. |
 | Waveform playback | `src/lib/recordings-review/wavesurfer-adapter.ts`; `src/lib/recordings-review/artifact-review-controller.ts` | wavesurfer owns rendering, playback, seek, and timeupdate events. It currently loads Blob without service-provided peaks. | Keep wavesurfer as rendering owner by default. Only use service-level peaks with wavesurfer if the spike proves `loadBlob(blob, peaks, duration)` or related API reduces decode work without UI coupling. |
-| Reference audio inspection | `src/infrastructure/reference/local-audio-inspection-adapter.ts` | Uses another direct `decodeAudioData` path to validate reference audio duration. | F6 may optionally route this through the new decode adapter only if it stays small and does not enter F7 reference feature scope. Otherwise leave a documented F7/P9 follow-up guardrail. |
+| Reference audio inspection | `src/infrastructure/reference/local-audio-inspection-adapter.ts` | Uses another direct `decodeAudioData` path to validate reference audio duration. | F6 must route this duration-only decode through the shared browser decode adapter. Do not change reference feature semantics, reference A-B loop behavior, or Regions scope. |
 | Architecture guardrails | `tests/unit/architecture-boundaries.test.ts` | Raw `MediaRecorder` and `getUserMedia` are already confined to `src/infrastructure/audio/**`; no equivalent guardrail exists for `decodeAudioData` or peak derivation. | Add boundary tests so raw `MediaRecorder`, `decodeAudioData`, and production peak derivation are owned by approved adapter/service paths. |
 
 Current behavior that must not drift:
@@ -223,7 +223,8 @@ Likely new production files:
 Expected responsibilities:
 
 - `browser-audio-decode-adapter.ts` is the only production owner of
-  `AudioContext` and `decodeAudioData` for recording/review analysis.
+  `AudioContext` and `decodeAudioData` for recording, review analysis, and the
+  existing reference-audio duration inspection path.
 - `peaks.ts` owns normalized peak derivation, default peak count, trusted-peak
   normalization, and `hasUsablePeaks`.
 - `silence.ts` or equivalent owns peak/RMS/zero-crossing analysis and the
@@ -247,12 +248,21 @@ export type AudioDecodeAdapter = {
 export type AudioAnalysisService = {
   analyzeBlob(blob: Blob): Promise<RecordingArtifactAnalysis>;
   derivePeaksFromBuffer(buffer: AudioBuffer, peakCount?: number): number[];
-  loadArtifactDetails(input: AudioArtifactDetailsInput): Promise<RecordingArtifactDetails>;
+  normalizePeaks(peaks: number[]): number[];
+  hasUsablePeaks(peaks: number[]): boolean;
 };
 ```
 
-Exact names can differ, but ownership must be one adapter plus one service
-boundary, not new parallel decode helpers.
+Exact names can differ, but ownership must be one adapter plus one primitive
+service boundary, not new parallel decode helpers.
+
+The audio-analysis service must not return or import
+`RecordingArtifactDetails`. It also must not own duration warning text,
+artifact-specific error mapping, storage lookup, trusted-peak acceptance rules
+that require an artifact body, or review unavailable reason mapping. Those
+semantics stay composed in `src/lib/recordings-review/artifact-details.ts` and
+`src/lib/recordings-review/waveform-comparison-sources.ts` over the low-level
+decode, peaks, and silence primitives.
 
 ### 2. Route capture through shared analysis
 
@@ -306,6 +316,10 @@ Required result:
 
 - Sheet save derives trusted peaks from the same service used by review.
 - Review artifact details keep current duration tolerance and warning text.
+- `src/lib/recordings-review/artifact-details.ts` remains the owner that composes
+  decoded duration, metadata duration, duration warnings, trusted peak
+  acceptance, and `RecordingArtifactError` reasons into
+  `RecordingArtifactDetails`.
 - Trusted peaks still require a decodable local artifact before being accepted.
 - Invalid trusted peaks still map to the current invalid-peak/decode-failed
   behavior in tests.
@@ -348,7 +362,24 @@ Expected default:
 - Do not import wavesurfer into `src/services/audio-analysis/**` unless the spike
   proves no DOM/UI coupling and the PR records the evidence.
 
-### 7. Tighten architecture guardrails
+### 7. Route reference duration inspection through the shared decode adapter
+
+Likely edited production file:
+
+- `src/infrastructure/reference/local-audio-inspection-adapter.ts`
+
+Required result:
+
+- The reference inspection adapter no longer calls `decodeAudioData` directly.
+- It uses the shared browser decode adapter only to obtain decoded duration.
+- Its current user-facing result messages and duration validation remain
+  unchanged.
+- F6 does not implement reference A-B loop, Regions, playback-speed,
+  manual-offset alignment, segment binding, or reference waveform display.
+- Architecture tests have no temporary `decodeAudioData` exception for this
+  file after F6.
+
+### 8. Tighten architecture guardrails
 
 Likely edited test file:
 
@@ -358,8 +389,7 @@ Required guardrail result:
 
 - Raw `MediaRecorder` and `navigator.mediaDevices.getUserMedia` remain allowed
   only in `src/infrastructure/audio/**`.
-- `decodeAudioData` is allowed only in the approved browser decode adapter, plus
-  a documented temporary exception for reference inspection if F6 leaves it.
+- `decodeAudioData` is allowed only in the approved browser decode adapter.
 - Production `derivePeaksFromSamples` or equivalent peak derivation is allowed
   only in `src/services/audio-analysis/**`.
 - Heavy DSP dependencies such as Meyda/Aubio/Essentia cannot be introduced for
@@ -389,11 +419,12 @@ Expected edited production files:
 - `src/lib/recordings-review/artifact-details.ts`
 - `src/lib/recordings-review/waveform-comparison-sources.ts`
 - `src/lib/recordings-review/types.ts` if shared types move
-- `src/infrastructure/reference/local-audio-inspection-adapter.ts` only if the
-  decode adapter reuse is small and stays out of F7 reference feature scope
+- `src/infrastructure/reference/local-audio-inspection-adapter.ts`, limited to
+  reusing the shared decode adapter for existing duration inspection
 
 Expected test files:
 
+- mandatory new `tests/unit/audio-analysis-service.test.ts`
 - `tests/unit/quick-metronome-recording-analysis.test.ts`
 - `tests/unit/quick-metronome-session.test.ts`
 - `tests/unit/sheet-practice-recording.test.ts`
@@ -402,7 +433,15 @@ Expected test files:
 - `tests/unit/recordings-review-waveform-comparison-sources.test.ts`
 - `tests/unit/recordings-review-audio-export.test.ts`
 - `tests/unit/architecture-boundaries.test.ts`
-- optional new `tests/unit/audio-analysis-service.test.ts`
+
+The dedicated audio-analysis test is mandatory. It must cover at least:
+
+- peak derivation and normalization;
+- empty, all-zero, non-finite, and otherwise invalid peaks;
+- current silence threshold behavior for peak and RMS analysis;
+- decode adapter failure mapping or an injected fake decode path;
+- service-level operation without wavesurfer, DOM containers, or a mounted
+  waveform instance.
 
 Expected E2E verification specs:
 
@@ -422,8 +461,8 @@ No-go for F6:
 - No wholesale capture replacement with Tone Recorder or wavesurfer Record
   without spike evidence that preserves current constraints and save semantics.
 - No raw `MediaRecorder` outside the approved capture adapter.
-- No scattered `decodeAudioData` helpers after F6, except an explicit reviewed
-  exception if reference inspection is left for later.
+- No scattered `decodeAudioData` helpers after F6; reference inspection must use
+  the shared decode adapter.
 - No wavesurfer import in services unless the spike proves service-level peaks
   can use it without DOM/UI coupling.
 - No Meyda, Aubio, Essentia, spectrogram, onset, pitch, or spectral-analysis
@@ -454,8 +493,21 @@ The future F6 coding PR passes only when all of these are true:
 - Peak derivation is owned by one peaks service.
 - Silence and recording amplitude/frequency analysis are owned by one
   analysis/silence service.
+- `src/services/audio-analysis/**` owns only low-level decode, peaks, silence,
+  and recording-analysis primitives. It does not own `RecordingArtifactDetails`,
+  duration warning text, artifact-specific error mapping, storage lookup, or
+  review unavailable reason mapping.
 - Capture, review artifact details, waveform comparison, and sheet save trusted
   peaks reuse the shared analysis boundary.
+- `src/lib/recordings-review/artifact-details.ts` remains the owner that
+  composes low-level analysis facts into `RecordingArtifactDetails`, duration
+  warnings, `RecordingArtifactError` reasons, and review-facing artifact detail
+  behavior.
+- `src/lib/recordings-review/waveform-comparison-sources.ts` remains the owner
+  of review unavailable reason mapping.
+- `src/infrastructure/reference/local-audio-inspection-adapter.ts` no longer
+  calls `decodeAudioData` directly and uses the shared decode adapter only for
+  its current duration-inspection behavior.
 - Quick recording save still rejects empty and silent captures before metadata
   or session commit.
 - Sheet recording save still rejects empty, silent, and un-peaked captures before
@@ -476,6 +528,9 @@ The future F6 coding PR passes only when all of these are true:
   tests.
 - `tests/unit/architecture-boundaries.test.ts` blocks recurrence for raw
   `MediaRecorder`, scattered `decodeAudioData`, and scattered peak derivation.
+- `tests/unit/audio-analysis-service.test.ts` exists and covers peaks,
+  normalization, invalid/empty peaks, silence thresholds, fake decode/failure
+  behavior, and no wavesurfer/DOM dependency.
 - No production dependency on Meyda/Aubio/Essentia or another heavy DSP library
   is added.
 - wavesurfer remains the rendering/playback owner unless spike evidence
@@ -487,8 +542,8 @@ Run from repo root after implementation:
 
 ```powershell
 git diff --check
-& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/quick-metronome-recording-analysis.test.ts tests/unit/quick-metronome-session.test.ts tests/unit/sheet-practice-recording.test.ts tests/unit/recordings-review-artifact-storage.test.ts tests/unit/recordings-review-history.test.ts tests/unit/recordings-review-waveform-comparison-sources.test.ts tests/unit/recordings-review-audio-export.test.ts tests/unit/architecture-boundaries.test.ts
-& .\scripts\npm-local.ps1 --% run lint -- src/services/audio-analysis src/infrastructure/audio src/services/recording src/lib/quick-metronome src/lib/sheet-practice src/lib/recordings-review src/infrastructure/reference tests/unit/quick-metronome-recording-analysis.test.ts tests/unit/quick-metronome-session.test.ts tests/unit/sheet-practice-recording.test.ts tests/unit/recordings-review-artifact-storage.test.ts tests/unit/recordings-review-history.test.ts tests/unit/recordings-review-waveform-comparison-sources.test.ts tests/unit/recordings-review-audio-export.test.ts tests/unit/architecture-boundaries.test.ts
+& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/audio-analysis-service.test.ts tests/unit/quick-metronome-recording-analysis.test.ts tests/unit/quick-metronome-session.test.ts tests/unit/sheet-practice-recording.test.ts tests/unit/recordings-review-artifact-storage.test.ts tests/unit/recordings-review-history.test.ts tests/unit/recordings-review-waveform-comparison-sources.test.ts tests/unit/recordings-review-audio-export.test.ts tests/unit/architecture-boundaries.test.ts
+& .\scripts\npm-local.ps1 --% run lint -- src/services/audio-analysis src/infrastructure/audio src/services/recording src/lib/quick-metronome src/lib/sheet-practice src/lib/recordings-review src/infrastructure/reference tests/unit/audio-analysis-service.test.ts tests/unit/quick-metronome-recording-analysis.test.ts tests/unit/quick-metronome-session.test.ts tests/unit/sheet-practice-recording.test.ts tests/unit/recordings-review-artifact-storage.test.ts tests/unit/recordings-review-history.test.ts tests/unit/recordings-review-waveform-comparison-sources.test.ts tests/unit/recordings-review-audio-export.test.ts tests/unit/architecture-boundaries.test.ts
 & .\scripts\npm-local.ps1 --% run typecheck
 & .\scripts\npm-local.ps1 --% run build
 & .\scripts\npm-local.ps1 --% run test:e2e -- tests/e2e/quick-metronome.spec.ts tests/e2e/recordings-review.spec.ts tests/e2e/sheet-segment-recording.spec.ts tests/e2e/sheet-recording-review.spec.ts
