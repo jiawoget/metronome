@@ -2,7 +2,7 @@
 
 ## Scope
 
-This is the durable planning artifact for Pack F. It uses the external plan at `D:\Downloads\pack-f-audio-music-library-alignment-plan.md` as the umbrella workstream and embeds the F1 pure-plan inventory in this same file. A separate F1 file is not needed because F1 is not an implementation slice; it is the scan and review gate that freezes the Pack F debt map before F2-F7 coding starts.
+This is the durable, repo-local planning artifact and source of truth for Pack F. The initial out-of-repo seed material has been folded into this file; future Pack F work must use this repository artifact rather than any local download path. A separate F1 file is not needed because F1 is not an implementation slice; it is the scan and review gate that freezes the Pack F debt map before F2-F7 coding starts.
 
 Pack F is plan-first and library-first:
 
@@ -13,7 +13,6 @@ Pack F is plan-first and library-first:
 
 ## Required Reads Completed
 
-- `D:\Downloads\pack-f-audio-music-library-alignment-plan.md`
 - `docs/v1/START-HERE.md`
 - `docs/v1/status.json`
 - `docs/v1/implementation-slices/README.md`
@@ -23,6 +22,8 @@ Pack F is plan-first and library-first:
 - `docs/v1/implementation-slices/05-library-viewer-upgrade.md`
 - `docs/v1/implementation-slices/06-quick-metronome-training.md`
 - `docs/v1/implementation-slices/09-audio-analysis-infrastructure.md`
+
+The external seed plan was used only to initialize this repo-local artifact. It is not a normative dependency for future Pack F planning, coding, review, or status updates.
 
 ## F1 Scan Evidence
 
@@ -307,6 +308,16 @@ External ChatGPT review must fail this plan if any of the following are true:
 
 - `Remaining known issues in this stage` must be `none` or `blocking; Pack F cannot be verified`.
 - New audio/music/timing/recording/waveform primitive not listed in F1 must return to F1 inventory before implementation proceeds.
+
+## Status Evidence
+
+`docs/v1/status.json` records Pack F without advancing any coding stage:
+
+- Adds `pack-f-audio-music-library-alignment` so Pack F is visible in the v1 source-of-truth status ledger.
+- Sets the Pack F pack status to `planning_in_progress`, reflecting that only the F1 plan/review gate is active.
+- Adds `F1-library-first-rescan-plan` as `planning_in_progress` with its `plan` pointer set to this file.
+- Keeps F2-F7 as `not_started`; no Pack F implementation slice is marked planning-ready, coding-ready, or complete.
+- Leaves existing pack statuses unchanged.
 
 ## Plan-PR Verification
 
