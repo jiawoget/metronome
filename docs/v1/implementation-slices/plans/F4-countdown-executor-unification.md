@@ -21,6 +21,67 @@ This plan PR should make only the minimal Pack F status update:
 
 No F4 coding, review, verification, or downstream stage status is advanced by this plan.
 
+Current `docs/v1/status.json` evidence on this branch:
+
+```json
+{
+  "pack": "pack-f-audio-music-library-alignment",
+  "status": "implementation_in_progress",
+  "slices": [
+    {
+      "slice": "F1-library-first-rescan-plan",
+      "status": "verified",
+      "plan": "docs/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md"
+    },
+    {
+      "slice": "F2-external-library-first-guardrails",
+      "status": "verified"
+    },
+    {
+      "slice": "F3-tone-runtime-metronome-alignment",
+      "status": "implementation_done",
+      "plan": "docs/v1/implementation-slices/plans/F3-tone-runtime-metronome-alignment.md"
+    },
+    {
+      "slice": "F4-countdown-executor-unification",
+      "status": "planning_in_progress",
+      "plan": "docs/v1/implementation-slices/plans/F4-countdown-executor-unification.md"
+    },
+    {
+      "slice": "F5-tonaljs-music-domain-policy",
+      "status": "not_started"
+    },
+    {
+      "slice": "F6-recording-waveform-analysis-alignment",
+      "status": "not_started"
+    },
+    {
+      "slice": "F7-boundary-hardening-viewer-closeout",
+      "status": "not_started"
+    }
+  ]
+}
+```
+
+Status diff evidence:
+
+```diff
+diff --git a/docs/v1/status.json b/docs/v1/status.json
+index e6e7415a..ac32cb95 100644
+--- a/docs/v1/status.json
++++ b/docs/v1/status.json
+@@ -949,7 +949,8 @@
+                                                             },
+                                                             {
+                                                                 "slice":  "F4-countdown-executor-unification",
+-                                                                "status":  "not_started"
++                                                                "status":  "planning_in_progress",
++                                                                "plan":  "docs/v1/implementation-slices/plans/F4-countdown-executor-unification.md"
+                                                             },
+                                                             {
+                                                                 "slice":  "F5-tonaljs-music-domain-policy",
+```
+
 ## Required Reads
 
 - `docs/v1/START-HERE.md`
@@ -359,11 +420,28 @@ Targeted behavior to assert:
 
 ## Plan PR Verification
 
-For this plan/status-only PR, required verification is intentionally small:
+For this plan/status-only PR, verification is intentionally small and was rerun after the external plan review requested explicit evidence.
 
 ```text
 git diff --check
+```
+
+Result: passed. The command returned exit code `0` and printed no output.
+
+```text
 Get-Content docs\v1\status.json -Raw | ConvertFrom-Json | Out-Null; Write-Output 'docs/v1/status.json parsed OK'
+```
+
+Result: passed with output:
+
+```text
+docs/v1/status.json parsed OK
+```
+
+The status diff shown in `Status JSON Evidence` was produced with:
+
+```text
+git diff origin/main...HEAD -- docs\v1\status.json
 ```
 
 Do not run product unit or E2E suites as proof for the plan-only PR.
