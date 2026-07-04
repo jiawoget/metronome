@@ -48,33 +48,25 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Check CodeScene token source
+        env:
+          DETECTED_CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN || secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_TOKEN || secrets.CODESCENE_TOKEN || vars.CS_ACCESS_TOKEN || vars.CODESCENE_ACCESS_TOKEN || vars.CS_TOKEN || vars.CODESCENE_TOKEN }}
         run: |
           echo "GitHub environment name: ${GITHUB_ENVIRONMENT_NAME:-<not-set>}"
-          if [ -n "${{ secrets.CODESCENE_ACCESS_TOKEN }}" ]; then
-            echo "CODESCENE_ACCESS_TOKEN secret is available in this workflow context."
-          elif [ -n "${{ vars.CODESCENE_ACCESS_TOKEN }}" ]; then
-            echo "CODESCENE_ACCESS_TOKEN variable is available in this workflow context."
+          if [ -n "$DETECTED_CS_ACCESS_TOKEN" ]; then
+            echo "A CodeScene/CS token is available in this workflow context."
           else
-            echo "CODESCENE_ACCESS_TOKEN is not available in this workflow context."
+            echo "No CodeScene/CS token-looking secret or variable is visible in this workflow context."
           fi
-          if [ -n "${{ secrets.CS_ACCESS_TOKEN }}" ]; then
-            echo "CS_ACCESS_TOKEN is available in this workflow context."
-          elif [ -n "${{ vars.CS_ACCESS_TOKEN }}" ]; then
-            echo "CS_ACCESS_TOKEN variable is available in this workflow context."
-          elif [ -n "${{ secrets.CODESCENE_ACCESS_TOKEN }}" ] && [ -n "${{ vars.CODESCENE_ACCESS_TOKEN }}" ]; then
-            echo "CODESCENE_ACCESS_TOKEN is available via variable fallback."
-          else
-            echo "CS_ACCESS_TOKEN is not available in this workflow context."
-          fi
+          echo "CS_ACCESS_TOKEN alias resolution candidate values are checked directly in step env mapping."
 
       - name: Run CodeScene delta debt gates on changed files
         env:
           BASE_REF: origin/${{ github.base_ref }}
           HEAD_REF: origin/${{ github.head_ref }}
-          CS_ACCESS_TOKEN: ${{ secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_ACCESS_TOKEN || vars.CODESCENE_ACCESS_TOKEN || vars.CS_ACCESS_TOKEN }}
-          CODESCENE_ACCESS_TOKEN: ${{ secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_ACCESS_TOKEN || vars.CODESCENE_ACCESS_TOKEN || vars.CS_ACCESS_TOKEN }}
-          CS_ONPREM_URL: ${{ secrets.CODESCENE_ONPREM_URL || secrets.CS_ONPREM_URL || vars.CODESCENE_ONPREM_URL || vars.CS_ONPREM_URL }}
-          CODESCENE_ONPREM_URL: ${{ secrets.CODESCENE_ONPREM_URL || secrets.CS_ONPREM_URL || vars.CODESCENE_ONPREM_URL || vars.CS_ONPREM_URL }}
+          CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN || secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_TOKEN || secrets.CODESCENE_TOKEN || vars.CS_ACCESS_TOKEN || vars.CODESCENE_ACCESS_TOKEN || vars.CS_TOKEN || vars.CODESCENE_TOKEN }}
+          CODESCENE_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN || secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_TOKEN || secrets.CODESCENE_TOKEN || vars.CS_ACCESS_TOKEN || vars.CODESCENE_ACCESS_TOKEN || vars.CS_TOKEN || vars.CODESCENE_TOKEN }}
+          CS_ONPREM_URL: ${{ secrets.CS_ONPREM_URL || secrets.CODESCENE_ONPREM_URL || vars.CS_ONPREM_URL || vars.CODESCENE_ONPREM_URL }}
+          CODESCENE_ONPREM_URL: ${{ secrets.CS_ONPREM_URL || secrets.CODESCENE_ONPREM_URL || vars.CS_ONPREM_URL || vars.CODESCENE_ONPREM_URL }}
         run: node scripts/run-codescene-debt-changed.mjs
 
       - name: Typecheck

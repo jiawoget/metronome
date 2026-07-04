@@ -8,6 +8,8 @@ const headRef = process.env.HEAD_REF;
 const accessTokenNames = [
     'CS_ACCESS_TOKEN',
     'CODESCENE_ACCESS_TOKEN',
+    'CS_TOKEN',
+    'CODESCENE_TOKEN',
 ];
 let accessToken = '';
 for (const name of accessTokenNames) {
@@ -19,7 +21,7 @@ for (const name of accessTokenNames) {
 
 if (!accessToken || accessToken.trim() === '') {
     console.error('Missing CS_ACCESS_TOKEN environment variable (or alias).');
-    console.error('Set one of: CS_ACCESS_TOKEN, CODESCENE_ACCESS_TOKEN in repository secrets and rerun.');
+    console.error('Set one of: CS_ACCESS_TOKEN, CODESCENE_ACCESS_TOKEN, CS_TOKEN, CODESCENE_TOKEN in workflow secrets/vars.');
     process.exit(1);
 }
 
