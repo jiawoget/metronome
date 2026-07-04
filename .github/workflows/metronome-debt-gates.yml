@@ -49,13 +49,20 @@ jobs:
 
       - name: Check CodeScene token source
         run: |
+          echo "GitHub environment name: ${GITHUB_ENVIRONMENT_NAME:-<not-set>}"
           if [ -n "${{ secrets.CODESCENE_ACCESS_TOKEN }}" ]; then
             echo "CODESCENE_ACCESS_TOKEN secret is available in this workflow context."
+          elif [ -n "${{ vars.CODESCENE_ACCESS_TOKEN }}" ]; then
+            echo "CODESCENE_ACCESS_TOKEN variable is available in this workflow context."
           else
             echo "CODESCENE_ACCESS_TOKEN is not available in this workflow context."
           fi
           if [ -n "${{ secrets.CS_ACCESS_TOKEN }}" ]; then
             echo "CS_ACCESS_TOKEN is available in this workflow context."
+          elif [ -n "${{ vars.CS_ACCESS_TOKEN }}" ]; then
+            echo "CS_ACCESS_TOKEN variable is available in this workflow context."
+          elif [ -n "${{ secrets.CODESCENE_ACCESS_TOKEN }}" ] && [ -n "${{ vars.CODESCENE_ACCESS_TOKEN }}" ]; then
+            echo "CODESCENE_ACCESS_TOKEN is available via variable fallback."
           else
             echo "CS_ACCESS_TOKEN is not available in this workflow context."
           fi
@@ -64,10 +71,10 @@ jobs:
         env:
           BASE_REF: origin/${{ github.base_ref }}
           HEAD_REF: origin/${{ github.head_ref }}
-          CS_ACCESS_TOKEN: ${{ secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_ACCESS_TOKEN }}
-          CODESCENE_ACCESS_TOKEN: ${{ secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_ACCESS_TOKEN }}
-          CS_ONPREM_URL: ${{ secrets.CODESCENE_ONPREM_URL || secrets.CS_ONPREM_URL }}
-          CODESCENE_ONPREM_URL: ${{ secrets.CODESCENE_ONPREM_URL || secrets.CS_ONPREM_URL }}
+          CS_ACCESS_TOKEN: ${{ secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_ACCESS_TOKEN || vars.CODESCENE_ACCESS_TOKEN || vars.CS_ACCESS_TOKEN }}
+          CODESCENE_ACCESS_TOKEN: ${{ secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_ACCESS_TOKEN || vars.CODESCENE_ACCESS_TOKEN || vars.CS_ACCESS_TOKEN }}
+          CS_ONPREM_URL: ${{ secrets.CODESCENE_ONPREM_URL || secrets.CS_ONPREM_URL || vars.CODESCENE_ONPREM_URL || vars.CS_ONPREM_URL }}
+          CODESCENE_ONPREM_URL: ${{ secrets.CODESCENE_ONPREM_URL || secrets.CS_ONPREM_URL || vars.CODESCENE_ONPREM_URL || vars.CS_ONPREM_URL }}
         run: node scripts/run-codescene-debt-changed.mjs
 
       - name: Typecheck
