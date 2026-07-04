@@ -36,13 +36,14 @@ if (child.error) {
 const output = (child.stdout || '').trim();
 const errorOutput = (child.stderr || '').trim();
 
-if (!output) {
-	if (errorOutput) {
-		console.error(errorOutput);
+	if (!output) {
+		if (errorOutput) {
+			console.error(errorOutput);
+		}
+
+		console.error('CodeScene delta produced no JSON output.');
+		process.exit(1);
 	}
-	console.error('CodeScene delta produced no JSON output.');
-	process.exit(1);
-}
 
 let parsed;
 try {
