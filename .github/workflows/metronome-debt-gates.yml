@@ -50,8 +50,8 @@ jobs:
         env:
           BASE_REF: origin/${{ github.base_ref }}
           HEAD_REF: origin/${{ github.head_ref }}
-          CS_ACCESS_TOKEN: ${{ secrets.CODESCENE_ACCESS_TOKEN }}
-          CS_ONPREM_URL: ${{ secrets.CODESCENE_ONPREM_URL }}
+          CS_ACCESS_TOKEN: ${{ secrets.CODESCENE_ACCESS_TOKEN || secrets.CS_ACCESS_TOKEN }}
+          CS_ONPREM_URL: ${{ secrets.CODESCENE_ONPREM_URL || secrets.CS_ONPREM_URL }}
         run: node scripts/run-codescene-debt-changed.mjs
 
       - name: Typecheck
