@@ -81,8 +81,8 @@ Expected Pack F status excerpt after this plan PR:
 
 Status handling for future F7 implementation PRs:
 
-- After this plan receives the external plan-review gate and is merged, the
-  first coding PR may move F7 to `coding_in_progress`.
+- After this plan receives external plan-review PASS, the first implementation
+  PR may move F7 to `coding_in_progress`.
 - Intermediate F7 coding PRs should keep F7 `coding_in_progress`, keep the same
   plan pointer, and document which F7 substage they cover in the PR body.
 - The final F7 closeout coding PR may move F7 to `implementation_done` only
