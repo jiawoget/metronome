@@ -11,8 +11,8 @@ import type {
   LocalAudioReferenceArtifact,
   SheetReference
 } from "@/domain/reference";
-import type { BrowserLocalReferenceAudioPlayer } from "@/infrastructure/reference/local-reference-audio-player";
 import type { PracticeSessionEventCaptureInput } from "@/services/practice-session";
+import type { LocalReferenceAudioPlayer } from "@/services/reference/browser";
 import type { ReferenceService } from "@/services/reference";
 
 const localReference: LocalAudioReference = {
@@ -145,22 +145,14 @@ function createReferenceService({
   };
 }
 
-function createAudioPlayer(): BrowserLocalReferenceAudioPlayer {
+function createAudioPlayer(): LocalReferenceAudioPlayer {
   return {
     load: vi.fn(),
     play: vi.fn(async () => undefined),
     pause: vi.fn(),
     setVolume: vi.fn((value: number) => value),
-    getSnapshot: vi.fn(() => ({
-      referenceId: localReference.id,
-      state: "paused",
-      currentTime: 0,
-      volume: 1,
-      duration: 3,
-      message: null
-    })),
     dispose: vi.fn()
-  } as unknown as BrowserLocalReferenceAudioPlayer;
+  };
 }
 
 function createSessionService(session: PracticeSession | null = sheetSession) {

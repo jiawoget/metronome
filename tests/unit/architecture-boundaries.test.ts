@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { join, posix, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import packageJson from "../../package.json";
@@ -28,36 +28,7 @@ const musicPrimitiveTableAllowlist = new Map<string, ApprovedUsage>([
   ]
 ]);
 
-const componentInfrastructureImportAllowlist = new Map<string, ApprovedUsage>([
-  [
-    "src/components/quick-metronome/quick-metronome-experience.tsx",
-    { count: 1, reason: "session service composition remains until Pack F service boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/settings/settings-experience.tsx",
-    { count: 2, reason: "settings browser service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/sheet-library/sheet-library-experience.tsx",
-    { count: 2, reason: "library import and session service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/sheet-practice/controls/sheet-practice-controls.tsx",
-    { count: 4, reason: "practice controls still compose browser services before Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/sheet-practice/measure-grid/measure-grid-calibration-panel.tsx",
-    { count: 1, reason: "measure grid browser service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/sheet-practice/reference/reference-panel.tsx",
-    { count: 3, reason: "reference service and player composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-  [
-    "src/components/sheet-practice/segments/practice-segment-selector-panel.tsx",
-    { count: 2, reason: "segment and measure service composition remains until Pack F boundary cleanup", expiresAtStage: "F7" }
-  ],
-]);
+const uiInfrastructureImportAllowlist = new Map<string, ApprovedUsage>();
 
 const runtimeTimerSchedulingAllowlist = new Map<string, ApprovedUsage>([
   [
@@ -90,6 +61,12 @@ function readSources(paths: string[]): SourceFile[] {
   }));
 }
 
+function listUiBoundarySourceFiles() {
+  return ["src/components", "src/app", "src/hooks"].flatMap((root) =>
+    listSourceFiles(join(repoRoot, root), [".ts", ".tsx"])
+  );
+}
+
 function matchingFiles(files: SourceFile[], patterns: RegExp[]) {
   return files
     .filter((file) => patterns.some((pattern) => pattern.test(file.source)))
@@ -101,6 +78,45 @@ function countedMatches(files: SourceFile[], pattern: RegExp) {
     .map((file) => ({
       path: file.path,
       count: Array.from(file.source.matchAll(pattern)).length
+    }))
+    .filter((usage) => usage.count > 0);
+}
+
+const importSpecifierPattern =
+  /\bfrom\s+["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)|^\s*import\s+["']([^"']+)["']/gm;
+
+function resolveRepoImportPath(file: SourceFile, specifier: string) {
+  if (specifier.startsWith("@/")) {
+    return `src/${specifier.slice(2)}`;
+  }
+
+  if (!specifier.startsWith(".")) {
+    return null;
+  }
+
+  const resolvedPath = posix.normalize(
+    posix.join(posix.dirname(file.path), specifier)
+  );
+
+  return resolvedPath.startsWith("../") ? null : resolvedPath;
+}
+
+function resolvesToInfrastructure(file: SourceFile, specifier: string) {
+  const resolvedPath = resolveRepoImportPath(file, specifier);
+
+  return (
+    resolvedPath === "src/infrastructure" ||
+    resolvedPath?.startsWith("src/infrastructure/")
+  );
+}
+
+function countedInfrastructureImports(files: SourceFile[]) {
+  return files
+    .map((file) => ({
+      path: file.path,
+      count: Array.from(file.source.matchAll(importSpecifierPattern)).filter(
+        (match) => resolvesToInfrastructure(file, match[1] ?? match[2] ?? match[3] ?? "")
+      ).length
     }))
     .filter((usage) => usage.count > 0);
 }
@@ -234,13 +250,45 @@ describe("source architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
-  it("default-blocks UI components from importing infrastructure unless temporarily reviewed", () => {
-    const files = readSources(listSourceFiles(join(repoRoot, "src/components"), [".ts", ".tsx"]));
-    const usages = countedMatches(files, /@\/infrastructure\//g);
+  it("resolves alias and relative UI infrastructure imports for the guardrail", () => {
+    expect(
+      countedInfrastructureImports([
+        {
+          path: "src/components/example/widget.tsx",
+          source: [
+            'import { browserThing } from "@/infrastructure/db/browser-thing";',
+            'import type { OtherThing } from "../../infrastructure/db/other-thing";',
+            'export { helper } from "@/services/example";'
+          ].join("\n")
+        },
+        {
+          path: "src/hooks/use-example.ts",
+          source: 'const module = await import("../infrastructure/db/browser-thing");'
+        },
+        {
+          path: "src/app/example/page.tsx",
+          source: 'import { service } from "../../services/example";'
+        }
+      ])
+    ).toEqual([
+      {
+        path: "src/components/example/widget.tsx",
+        count: 2
+      },
+      {
+        path: "src/hooks/use-example.ts",
+        count: 1
+      }
+    ]);
+  });
 
-    expect(unexpectedUsages(usages, componentInfrastructureImportAllowlist)).toEqual([]);
-    expect(staleAllowlistEntries(usages, componentInfrastructureImportAllowlist)).toEqual([]);
-    for (const approval of componentInfrastructureImportAllowlist.values()) {
+  it("default-blocks UI, app, and hook files from importing infrastructure unless temporarily reviewed", () => {
+    const files = readSources(listUiBoundarySourceFiles());
+    const usages = countedInfrastructureImports(files);
+
+    expect(unexpectedUsages(usages, uiInfrastructureImportAllowlist)).toEqual([]);
+    expect(staleAllowlistEntries(usages, uiInfrastructureImportAllowlist)).toEqual([]);
+    for (const approval of uiInfrastructureImportAllowlist.values()) {
       expect(approval.reason).not.toHaveLength(0);
     }
   });

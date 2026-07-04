@@ -14,7 +14,7 @@ const serviceMocks = vi.hoisted(() => ({
   subscribe: vi.fn()
 }));
 
-vi.mock("@/infrastructure/db/browser-practice-session-service", () => ({
+vi.mock("@/services/practice-session/browser", () => ({
   browserPracticeSessionService: serviceMocks
 }));
 

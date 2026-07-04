@@ -10,10 +10,10 @@ import {
   type PracticeSegment,
   type PracticeSegmentGridStatus
 } from "@/domain/practice";
-import { browserPracticeSegmentService } from "@/infrastructure/db/browser-practice-segment-service";
-import { browserMeasureGridService } from "@/infrastructure/db/browser-measure-grid-service";
 import type { PracticeSegmentService } from "@/services/practice-segments";
+import { browserPracticeSegmentService } from "@/services/practice-segments/browser";
 import type { MeasureGridService } from "@/services/measure-grid";
+import { browserMeasureGridService } from "@/services/measure-grid/browser";
 import { useSheetPracticeRecordingWorkflowStore } from "@/stores/sheet-practice-recording-workflow-store";
 import { Button } from "@/components/ui/button";
 

@@ -8,7 +8,6 @@ import {
   validateMeasureGrid,
   type MeasureGrid
 } from "@/domain/practice";
-import { browserMeasureGridService } from "@/infrastructure/db/browser-measure-grid-service";
 import {
   TIME_SIGNATURES,
   isQuickMetronomeTimeSignature
@@ -18,6 +17,7 @@ import type {
   TimeSignature
 } from "@/lib/quick-metronome/types";
 import type { MeasureGridService } from "@/services/measure-grid";
+import { browserMeasureGridService } from "@/services/measure-grid/browser";
 import { Button } from "@/components/ui/button";
 
 const MIN_GRID_BPM = 30;

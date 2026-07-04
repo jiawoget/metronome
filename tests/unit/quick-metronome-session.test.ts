@@ -58,7 +58,7 @@ vi.mock("@/services/recording/browser", () => ({
   createBrowserRecordingCaptureService: () => quickExperienceMocks.recordingService
 }));
 
-vi.mock("@/infrastructure/db/browser-practice-session-service", () => ({
+vi.mock("@/services/practice-session/browser", () => ({
   browserPracticeSessionService: quickExperienceMocks.practiceSessionService
 }));
 
