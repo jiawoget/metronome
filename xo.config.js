@@ -62,6 +62,15 @@ const xoConfig = [
 	},
 
 	{
+		name: 'metronome/scripts',
+		files: ['scripts/**/*.{js,mjs,ts}'],
+		rules: {
+			'react/forward-ref-uses-ref': 'off',
+			'react/prop-types': 'off',
+		},
+	},
+
+	{
 		name: 'metronome/ui-architecture-boundaries',
 		files: [
 			'src/components/**/*.{ts,tsx}',
