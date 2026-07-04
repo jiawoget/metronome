@@ -71,10 +71,6 @@ const componentInfrastructureImportAllowlist = new Map<string, ApprovedUsage>([
 
 const runtimeTimerSchedulingAllowlist = new Map<string, ApprovedUsage>([
   [
-    "src/services/metronome/browser-metronome-service.ts",
-    { count: 1, reason: "Tone Draw replacement is scheduled for Pack F runtime alignment", expiresAtStage: "F3" }
-  ],
-  [
     "src/lib/quick-metronome/bar-count-in-scheduler.ts",
     { count: 4, reason: "bar count-in executor replacement is scheduled for Pack F countdown unification", expiresAtStage: "F4" }
   ],

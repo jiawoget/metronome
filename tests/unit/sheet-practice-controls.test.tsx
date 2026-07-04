@@ -33,13 +33,11 @@ import type {
 import {
   BrowserMetronomeService,
   METRONOME_TRACE_EVENT,
-  type MetronomeTraceEventDetail,
-  type ToneMetronomeAdapter,
-  type ToneMetronomeTrigger,
-  type ToneScheduledCallback
+  type MetronomeTraceEventDetail
 } from "@/lib/quick-metronome/metronome-service";
 import { DEFAULT_METRONOME_SETTINGS } from "@/lib/quick-metronome/types";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
+import { createFakeToneAdapter } from "./fake-tone-metronome-adapter";
 import {
   initialSheetPracticeRecordingWorkflowState,
   useSheetPracticeRecordingWorkflowStore
@@ -90,30 +88,6 @@ function expectNoCaptureKind(
         input.kind === kind
     )
   ).toEqual([]);
-}
-
-function createFakeToneAdapter() {
-  const callbacks: ToneScheduledCallback[] = [];
-  const triggers: ToneMetronomeTrigger[] = [];
-  const adapter: ToneMetronomeAdapter = {
-    now: vi.fn(() => 0),
-    start: vi.fn(async () => undefined),
-    scheduleRepeat: vi.fn((callback) => {
-      callbacks.push(callback);
-
-      return callbacks.length;
-    }),
-    startTransport: vi.fn(),
-    stopTransport: vi.fn(),
-    cancelTransport: vi.fn(),
-    clear: vi.fn(),
-    trigger: vi.fn((trigger) => {
-      triggers.push(trigger);
-    }),
-    dispose: vi.fn()
-  };
-
-  return { adapter, callbacks, triggers };
 }
 
 function createIdleSessionService() {
@@ -3222,25 +3196,37 @@ describe("sheet practice controls metronome reuse", () => {
     });
 
     for (let index = 0; index < 7; index += 1) {
-      fakeTone.callbacks[0]?.(10 + index * 0.25);
+      fakeTone.emitScheduledTick(10 + index * 0.25);
     }
 
     service.stop();
     window.removeEventListener(METRONOME_TRACE_EVENT, listener);
 
-    expect(fakeTone.adapter.scheduleRepeat).toHaveBeenCalledWith(expect.any(Function), 0.25);
-    expect(traces.map((trace) => trace.accented)).toEqual([true, false, false, false, false, false, true]);
-    expect(traces.every((trace) => trace.subdivision === "eighth")).toBe(true);
-    expect(traces.every((trace) => trace.expectedIntervalMs === 250)).toBe(true);
-    expect(fakeTone.triggers.map((trigger) => trigger.note)).toEqual([
-      "E6",
-      "E5",
-      "B5",
-      "E5",
-      "B5",
-      "E5",
-      "E6"
-    ]);
+    const downbeatTicks = new Set([0, 6]);
+    const beatTicks = new Set([0, 2, 4, 6]);
+    const expectedTickIntents = Array.from({ length: 7 }, (_, tickIndex) => ({
+      accented: downbeatTicks.has(tickIndex),
+      beatTick: beatTicks.has(tickIndex)
+    }));
+    const traceSummary = traces.map(({ accented, subdivision, expectedIntervalMs }) => ({
+      accented,
+      subdivision,
+      expectedIntervalMs
+    }));
+    const clickIntents = fakeTone.clickIntents.map(({ accented, beatTick }) => ({
+      accented,
+      beatTick
+    }));
+
+    expect(fakeTone.lastLoopInterval).toBe("8n");
+    expect(traceSummary).toEqual(
+      expectedTickIntents.map(({ accented }) => ({
+        accented,
+        subdivision: "eighth",
+        expectedIntervalMs: 250
+      }))
+    );
+    expect(clickIntents).toEqual(expectedTickIntents);
   });
 });
 
