@@ -26,7 +26,7 @@ Neighbor files reviewed:
 
 ### 文件概况
 
-- `src/hooks/use-practice-session-dashboard.ts` 当前是一个 569 行的 browser-only home dashboard coordinator。它不只是一个“读数据 hook”，还同时承接了 dashboard read model、goal read model、goal mutation lifecycle、browser subscription wiring，以及 session comparison 的 home 专用 view-model 格式化。
+- `src/hooks/use-practice-session-dashboard.ts` 当前是一个 656 行的 browser-only home dashboard coordinator。它不只是一个“读数据 hook”，还同时承接了 dashboard read model、goal read model、goal mutation lifecycle、browser subscription wiring，以及 session comparison 的 home 专用 view-model 格式化。
 - 文件内部结构已经明显分层堆叠：
   - `23-103` 行导出了整套 dashboard/goal/session-comparison 类型契约。
   - `105-195` 行维护成组的 empty-state 常量。
