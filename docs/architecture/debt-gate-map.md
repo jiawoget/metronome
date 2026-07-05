@@ -18,6 +18,16 @@ Required search families:
 - service, repository, controller, hook, adapter, read-model names related to the change
 - old aliases, compatibility fields, wrappers, and direct callers named in the plan
 
+Gate-control changes always require PR debt-contract evidence, even when no `src/**` production file changed:
+
+- `scripts/**`
+- `skills/**`
+- `.github/workflows/**`
+- `.github/pull_request_template.md`
+- `.semgrep/**`
+- `.codescene/**`
+- `docs/architecture/debt-gate-map.md`
+
 ## Shared Primitive Rule
 
 A PR that extracts a shared primitive, controller, service, presenter, formatter, validator, parser, adapter, or helper is not debt reduction unless it:
@@ -43,12 +53,12 @@ Block new imports or defaults that move runtime dependencies inward:
 
 The code review agent must run gates in this order before normal review:
 
-1. CodeScene score/delta for changed production source files.
+1. CodeScene score/delta for the PR branch.
    - Primary path is CodeScene MCP `analyze_change_set` against the PR base ref.
    - Shell `npm run lint:codescene:changed` is fallback only when MCP is unavailable, and fallback evidence must explain why MCP could not run.
    - Missing shell token/env is not a valid reason to skip MCP.
    - Any Code Health decline is `CHANGES_REQUIRED`.
-   - If CodeScene cannot run for a production-source PR, review is blocked unless the user explicitly grants a one-off override.
+   - If CodeScene cannot run for a production-source or gate-control PR, review is blocked unless the user explicitly grants a one-off override.
 2. Semgrep changed-file gate.
    - `npm run lint:debt:changed` must pass.
    - Any Semgrep failure is `CHANGES_REQUIRED`.

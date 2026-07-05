@@ -2,7 +2,7 @@
 
 This is the legacy reviewer entrypoint. The canonical hard-gate workflow is `skills/metronome_reviewer.md`.
 
-Before reviewing any production-source PR:
+Before reviewing any production-source or gate-control PR:
 
 1. Read `skills/metronome_reviewer.md`.
 2. Run its pre-review gates in order: CodeScene MCP `analyze_change_set` first, Semgrep changed-file second.

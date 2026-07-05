@@ -6,6 +6,15 @@ import process from 'node:process';
 const sourceFilePattern = /^src\/.*\.(?:ts|tsx)$/v;
 const ignoredFilePattern = /(?:^|\/)__tests__\/|(?:\.test|\.spec)\.(?:ts|tsx)$/v;
 const primitiveNamePattern = /\b(?:normalize|format|validate|resolve|select|build|create)[A-Z]\w*\b/v;
+const gateControlFilePatterns = [
+	/^scripts\//v,
+	/^skills\//v,
+	/^\.github\/workflows\//v,
+	/^\.github\/pull_request_template\.md$/v,
+	/^\.semgrep\//v,
+	/^\.codescene\//v,
+	/^docs\/architecture\/debt-gate-map\.md$/v,
+];
 
 const requiredSections = [
 	'Reuse Proof',
@@ -72,12 +81,20 @@ function isProductionSourceFile(file) {
 	return sourceFilePattern.test(file) && !ignoredFilePattern.test(file) && existsSync(file);
 }
 
+function isGateControlFile(file) {
+	return gateControlFilePatterns.some(pattern => pattern.test(file)) && existsSync(file);
+}
+
+function requiresDebtContractEvidence(file) {
+	return isProductionSourceFile(file) || isGateControlFile(file);
+}
+
 function parseFiles(output) {
 	return output
 		.split(/\r?\n/v)
 		.map(file => normalizePath(file))
 		.filter(Boolean)
-		.filter(file => isProductionSourceFile(file));
+		.filter(file => requiresDebtContractEvidence(file));
 }
 
 function uniqueFiles(files) {
@@ -243,7 +260,9 @@ function scanRiskyAdditions(contexts) {
 }
 
 function scanContextRiskyAdditions(context) {
-	return context.files.flatMap(file => scanFileRiskyAdditions(context, file));
+	return context.files.flatMap(file => (
+		isProductionSourceFile(file) ? scanFileRiskyAdditions(context, file) : []
+	));
 }
 
 function scanFileRiskyAdditions(context, file) {
@@ -495,15 +514,15 @@ const mergeBase = getMergeBase();
 const scanContexts = getScanContexts(mergeBase, prContext)
 	.map(context => ({...context, files: uniqueFiles(context.files)}))
 	.filter(context => context.files.length > 0);
-const changedSourceFiles = uniqueFiles(scanContexts.flatMap(context => context.files));
+const changedDebtContractFiles = uniqueFiles(scanContexts.flatMap(context => context.files));
 const riskyFindings = scanRiskyAdditions(scanContexts);
 
-if (changedSourceFiles.length === 0) {
-	console.log('No changed production source files require debt contract evidence.');
+if (changedDebtContractFiles.length === 0) {
+	console.log('No changed production source or gate-control files require debt contract evidence.');
 	process.exit(0);
 }
 
-console.log(`Debt contract source scope: ${changedSourceFiles.length} changed production source file(s).`);
+console.log(`Debt contract scope: ${changedDebtContractFiles.length} changed production source or gate-control file(s).`);
 for (const context of scanContexts) {
 	console.log(`- ${context.name}: ${context.files.length} file(s)`);
 }
@@ -531,7 +550,7 @@ if (!prContext.isPullRequest) {
 }
 
 if (prContext.body.trim() === '') {
-	console.error('Pull request body is empty. Debt contract evidence is required for production source changes.');
+	console.error('Pull request body is empty. Debt contract evidence is required for production source or gate-control changes.');
 	process.exit(1);
 }
 

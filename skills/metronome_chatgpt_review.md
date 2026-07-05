@@ -93,7 +93,7 @@ Send all of this before asking for review:
 - Semgrep changed-file output.
 - Reviewer gate output from `skills/metronome_reviewer.md`.
 
-If any item is missing for a production-source PR, fix the packet before review.
+If any item is missing for a production-source or gate-control PR, fix the packet before review.
 
 ## PR Review Prompt
 

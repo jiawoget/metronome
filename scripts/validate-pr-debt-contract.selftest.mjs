@@ -69,6 +69,13 @@ function commitSourceChange(cwd) {
 	git(cwd, ['commit', '-m', 'change']);
 }
 
+function commitGateControlChange(cwd) {
+	write(cwd, 'scripts/gate-package.mjs', 'export const gatePackage = true;\n');
+	write(cwd, 'docs/architecture/debt-gate-map.md', '# Debt gate map\n');
+	git(cwd, ['add', '-A']);
+	git(cwd, ['commit', '-m', 'gate package change']);
+}
+
 const validBody = `## Summary
 
 Tighten the debt gate.
@@ -139,7 +146,29 @@ No new surface.
 
 {
 	const cwd = createRepo();
+	commitGateControlChange(cwd);
+	const result = runGate(
+		cwd,
+		validBody.replace(
+			'- ChatGPT final review prompt/verdict: PASS',
+			'- ChatGPT final review prompt/verdict: not run yet',
+		),
+	);
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must include PASS or PASS_WITH_NITS/v);
+}
+
+{
+	const cwd = createRepo();
 	commitSourceChange(cwd);
+	const result = runGate(cwd, validBody);
+	assert.equal(result.status, 0);
+	assert.match(result.stdout, /PR debt contract evidence sections are present and specific/v);
+}
+
+{
+	const cwd = createRepo();
+	commitGateControlChange(cwd);
 	const result = runGate(cwd, validBody);
 	assert.equal(result.status, 0);
 	assert.match(result.stdout, /PR debt contract evidence sections are present and specific/v);

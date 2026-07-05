@@ -13,9 +13,9 @@ Before reviewing, collect:
 - CodeScene MCP `analyze_change_set` output for the PR branch.
 - Semgrep changed-file output.
 - Verification output.
-- Changed-file list, diffstat, and production/test/docs split.
+- Changed-file list, diffstat, and production/test/docs/scripts/workflow split.
 
-If any input is missing for a production-source PR, return `CHANGES_REQUIRED`.
+If any input is missing for a production-source or gate-control PR, return `CHANGES_REQUIRED`.
 
 ## Review Workflow
 
@@ -23,8 +23,8 @@ If any input is missing for a production-source PR, return `CHANGES_REQUIRED`.
    - First run CodeScene through MCP, not a shell script: use `select_project` if project context is unclear, then run MCP `analyze_change_set` with the repository path and base ref.
    - Shell `npm run lint:codescene:changed` is fallback only when the CodeScene MCP tool is unavailable. If fallback is used, document why MCP could not run and include the fallback command, env source, and output.
    - A missing shell `CS_ACCESS_TOKEN` is not a reason to skip MCP. Try MCP before declaring CodeScene unavailable.
-   - If any changed source file Code Health score declines, return `CHANGES_REQUIRED` and send the work back for rework.
-   - If CodeScene cannot run for a production-source PR, return `CHANGES_REQUIRED` unless the user explicitly grants a one-off override.
+   - If any changed file Code Health score declines, return `CHANGES_REQUIRED` and send the work back for rework.
+   - If CodeScene cannot run for a production-source or gate-control PR, return `CHANGES_REQUIRED` unless the user explicitly grants a one-off override.
    - Next run Semgrep with `npm run lint:debt:changed`.
    - If Semgrep fails, return `CHANGES_REQUIRED` and send the work back for rework.
    - Only continue after CodeScene and Semgrep pass.
