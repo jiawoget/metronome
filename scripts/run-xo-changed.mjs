@@ -14,6 +14,7 @@ const xoIgnoredSuffixes = [
 	'.config.tsx',
 	'.config.jsx',
 ];
+const xoCliPath = 'node_modules/xo/dist/cli.js';
 
 function isXoIgnoredFile(file) {
 	return xoIgnoredSuffixes.some((suffix) => file.endsWith(suffix));
@@ -50,14 +51,19 @@ if (changedFiles.length === 0) {
 	process.exit(0);
 }
 
+if (!existsSync(xoCliPath)) {
+	console.error(`Missing local XO CLI at ${xoCliPath}. Run npm install first.`);
+	process.exit(1);
+}
+
 console.log(`Running XO on ${changedFiles.length} changed file(s):`);
 for (const file of changedFiles) {
 	console.log(`- ${file}`);
 }
 
 const result = spawnSync(
-	'npx',
-	['xo', '--max-warnings=0', ...changedFiles],
+	process.execPath,
+	[xoCliPath, '--max-warnings=0', ...changedFiles],
 	{stdio: 'inherit'},
 );
 

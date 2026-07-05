@@ -5,6 +5,12 @@ on:
     branches:
       - main
       - master
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+      - ready_for_review
 
 permissions:
   contents: read
@@ -34,7 +40,9 @@ jobs:
         run: python -m pip install semgrep
 
       - name: Validate debt gate package
-        run: node scripts/validate-metronome-gates.mjs
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: npm run validate:debt-gates
 
       - name: Run Semgrep debt gates on changed files
         env:

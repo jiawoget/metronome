@@ -13,6 +13,7 @@ function hasCommand(command) {
 }
 
 const semgrepBin = process.env.SEMGREP_BIN || 'semgrep';
+const semgrepChangedFilePattern = /\.(?:[cm]?js|jsx|[cm]?ts|tsx)$/v;
 
 if (!existsSync('.semgrep')) {
 	console.error('Missing .semgrep directory.');
@@ -42,11 +43,11 @@ const changed = runGit(['diff', '--name-only', '--diff-filter=ACMR', mergeBase, 
 	.split(/\r?\n/v)
 	.map(line => line.trim())
 	.filter(Boolean)
-	.filter(file => /\.(?:ts|tsx|js|jsx)$/v.test(file))
+	.filter(file => semgrepChangedFilePattern.test(file))
 	.filter(file => existsSync(file));
 
 if (changed.length === 0) {
-	console.log('No changed JS/TS files to scan.');
+	console.log('No changed JavaScript or TypeScript files to scan.');
 	process.exit(0);
 }
 
