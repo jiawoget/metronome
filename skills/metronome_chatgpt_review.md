@@ -51,7 +51,7 @@ Send all of this before asking for review:
 
 - Slice/stage name.
 - Full original plan text.
-- Plan file path under `docs/v1/implementation-slices/plans/`.
+- Plan file path under `docs/v1/implementation-slices/plans/`, or for refactor pipelines under `docs/v1/implementation-slices/refactor/`.
 - `docs/architecture/debt-gate-map.md` content or relevant excerpt.
 - Any known reviewer concern or no-go question.
 
@@ -68,14 +68,16 @@ If any item is missing, fix the packet before review.
 - CHANGES_REQUIRED
 
 必须验证这些 Gate，并在 Evidence Checked 表里逐项给 pass/fail/not applicable 和证据：
-1. Inputs Read：是否包含相关 docs/agent-index、v1 slice docs、prior plans、docs/architecture/debt-gate-map.md、必要代码和测试。
-2. Repo Map Evidence：搜索范围是否覆盖 src、tests、必要 scripts/docs；搜索词是否覆盖 normalize/format/validate/resolve/select/build/create、service/repository/hook/controller/adapter、旧 alias/compat/wrapper/direct caller。
-3. Existing Primitive Search：Need、Search terms、Existing primitive/library、Files read、Decision 是否具体。
-4. Shared Primitive Call-Site Audit：抽 shared primitive/controller/service/presenter/helper 时，是否至少迁移两个旧调用点并让旧实现删除/收窄；少于两个时是否有全仓搜索证据且不得声称 debt reduction。
-5. New Surface Budget：每个新增 helper/service/wrapper/controller/hook/formatter/validator/parser/adapter/repository method 是否都有 rejected alternative 和 same-PR retired surface。
-6. Retired Surface Target：是否列出旧 helper、旧 alias、旧 state 字段、旧 service method、旧 wrapper、旧 direct import，或明确说明本 PR 不声称 debt reduction。
+1. Inputs Read / Coding Read Set：普通 slice 是否包含相关 docs/agent-index、v1 slice docs、prior plans、docs/architecture/debt-gate-map.md、必要代码和测试；refactor pipeline 是否把 coding read set 分成 Must read、Planner-only evidence、Read only if blocked，且 Must read 不超过 5 个文件。
+2. Repo Map / Construction Evidence：普通 slice 的 repo-map 搜索是否覆盖 src、tests、必要 scripts/docs 和 normalize/format/validate/resolve/select/build/create、service/repository/hook/controller/adapter、旧 alias/compat/wrapper/direct caller；refactor pipeline 是否把 repo-map 证据压缩为可执行 construction/implementation steps，而不是把搜索噪音交给 coding agent。
+3. Existing Primitive / Replacement Proof：Need、existing primitive/library、files read、decision 是否具体；refactor pipeline 的每个 replacement 是否指向 existing primitive 或被允许的新 local surface。
+4. Required Retired Surface：普通 slice 是否列出旧 helper、alias、state 字段、service method、wrapper、direct import；refactor pipeline 是否列出至少一个 `RS-*` required retired surface，并要求 same-PR actual deletion。重命名、搬文件、narrowing、保留 compatibility wrapper 不能算 deletion。
+5. New Surface Budget：每个新增 helper/service/wrapper/controller/hook/formatter/validator/parser/adapter/repository method 是否都有 rejected alternative 和 same-PR retired surface；refactor pipeline 中 new file 默认 no，除非 plan blocked/request monitor review。
+6. Implementation Specificity：refactor pipeline 是否以 delete X -> replace with Y -> must not change Z -> proof command/test 的形式给 coding handoff；普通 slice 是否有足够具体的 implementation/test plan。
 7. Boundary Impact：是否避免新增 UI -> browser/infrastructure、domain -> UI/service、service passthrough；composition root 例外是否明确。
-8. Tests Required：删除兼容 surface 后是否包含 behavior-equivalence coverage。
+8. Async / State / Side-Effect Safety：如果涉及 async reads、effects、store writes、capture/save、persistence、UI messages，是否规定 pure resolver/helper、stale guard、store ownership、capture/save ordering。
+9. Tests Required / Verification Before Review Handoff：删除兼容 surface 后是否包含 behavior-equivalence coverage、deletion proof、focused tests、typecheck/lint evidence。
+10. Scope Integrity：是否没有把单个 pipeline 宣称为整个 remediation phase closeout；如果需要 split，是否输出 blocked 而不是自己拆。
 
 如果任何 gate 缺 evidence 或只是占位，输出 CHANGES_REQUIRED。
 ```
