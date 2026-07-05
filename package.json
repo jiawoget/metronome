@@ -25,6 +25,7 @@
     "test:e2e": "node scripts/run-playwright-stable-env.mjs",
     "test:e2e:ui": "node scripts/run-playwright-stable-env.mjs --ui",
     "playwright:install": "playwright install chromium",
+    "lint:codescene:changed": "node scripts/run-codescene-debt-changed.mjs",
     "lint:debt": "semgrep --config .semgrep --error",
     "lint:debt:changed": "node scripts/run-metronome-semgrep-changed.mjs",
     "lint:debt:inventory": "semgrep --config .semgrep --json --output semgrep-inventory.json || true",

@@ -355,9 +355,21 @@ function validateDebtGateEvidence(sectionBody) {
 		return value === null || isPlaceholder(value) || !/\bpass(?:ed)?\b/iv.test(value);
 	});
 
-	return missing.length === 0
-		? []
-		: [`Debt Gate Evidence must include passed output for: ${missing.join(', ')}`];
+	const failures = [];
+	if (missing.length > 0) {
+		failures.push(`Debt Gate Evidence must include passed output for: ${missing.join(', ')}`);
+	}
+
+	const codeSceneEvidence = valueAfterColon(sectionBody, 'CodeScene pre-review score delta');
+	if (
+		codeSceneEvidence === null
+		|| isPlaceholder(codeSceneEvidence)
+		|| !/\b(?:pass(?:ed)?|no decline|no regression)\b/iv.test(codeSceneEvidence)
+	) {
+		failures.push('Debt Gate Evidence must include CodeScene pre-review score delta with no decline.');
+	}
+
+	return failures;
 }
 
 function extractVerdict(sectionBody, label, allowedVerdicts) {

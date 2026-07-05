@@ -89,8 +89,9 @@ Send all of this before asking for review:
 - PR body.
 - Approved plan text or plan path plus relevant excerpt.
 - Local verification output copied from the commands actually run.
+- CodeScene pre-review score/delta output.
+- Semgrep changed-file output.
 - Reviewer gate output from `skills/metronome_reviewer.md`.
-- CodeScene summary or explicit note that CodeScene is not connected.
 
 If any item is missing for a production-source PR, fix the packet before review.
 
@@ -111,9 +112,11 @@ If any item is missing for a production-source PR, fix the packet before review.
 4. Shared Primitive Two-Call-Site Rule：shared primitive/controller/service/presenter/helper 是否至少迁移两个旧调用点并让旧实现消失；少于两个时是否有全仓搜索证据且没有声称 debt reduction。
 5. Boundary Delta：是否没有新增 UI -> browser/infrastructure、domain -> UI/service、service passthrough；composition-root 例外是否明确。
 6. Agent Gate Evidence：是否看到 PLAN_READY、CODE_READY、reviewer PASS/PASS_WITH_NITS，以及本次 ChatGPT verdict 之前的 reviewer output。
-7. Behavior-Equivalence Tests：是否覆盖 retired compatibility surface；不能只是更新旧测试或 snapshot。
-8. Static Gates：validate:debt-gates、lint:debt:changed、lint:xo:changed、lint、typecheck、test:unit、build 是否真实通过。
-9. Cleanup Integrity：是否没有 later cleanup、兼容旧入口不退休、wrapper 叠 wrapper、或 N/A/TODO/占位证据。
+7. CodeScene Pre-Review：是否在 review 前运行，且 changed source files 没有 Code Health decline；如果失败是否拒绝并要求 rework。
+8. Semgrep Pre-Review：lint:debt:changed 是否在 review 前运行且通过；如果失败是否拒绝并要求 rework。
+9. Behavior-Equivalence Tests：是否覆盖 retired compatibility surface；不能只是更新旧测试或 snapshot。
+10. Static Gates：validate:debt-gates、lint:debt:changed、lint:xo:changed、lint、typecheck、test:unit、build 是否真实通过。
+11. Cleanup Integrity：是否没有 later cleanup、兼容旧入口不退休、wrapper 叠 wrapper、或 N/A/TODO/占位证据。
 
 如果任何 gate 缺 evidence，输出 CHANGES_REQUIRED。
 ```

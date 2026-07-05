@@ -49,6 +49,8 @@ const requiredContent = {
 	'skills/metronome_reviewer.md': [
 		'Required Input Packet',
 		'Review Workflow',
+		'CodeScene score/delta',
+		'Semgrep pre-review',
 		'Immediate CHANGES_REQUIRED',
 		'Net surface delta',
 		'PASS / PASS_WITH_NITS / CHANGES_REQUIRED',
@@ -56,6 +58,8 @@ const requiredContent = {
 	'skills/metronome_chatgpt_review.md': [
 		'Required Plan Review Packet',
 		'Required PR Review Packet',
+		'CodeScene Pre-Review',
+		'Semgrep Pre-Review',
 		'Evidence Checked',
 		'CHANGES_REQUIRED',
 		'Agent Gate Evidence',
@@ -63,6 +67,7 @@ const requiredContent = {
 	'docs/architecture/debt-gate-map.md': [
 		'Shared Primitive Rule',
 		'Boundary Rules',
+		'Review Preflight Gates',
 		'Repo Map Inputs',
 	],
 };

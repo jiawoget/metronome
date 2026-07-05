@@ -10,12 +10,23 @@ Before reviewing, collect:
 - PR body.
 - Approved plan file.
 - `docs/architecture/debt-gate-map.md`.
+- CodeScene score/delta output for changed production source files.
+- Semgrep changed-file output.
 - Verification output.
 - Changed-file list, diffstat, and production/test/docs split.
 
 If any input is missing for a production-source PR, return `CHANGES_REQUIRED`.
 
 ## Review Workflow
+
+0. Run pre-review quality gates before reading for correctness.
+   - First run CodeScene scoring/delta for changed production source files.
+   - Preferred paths are CodeScene MCP `analyze_change_set` or `npm run lint:codescene:changed` with `BASE_REF` and `HEAD_REF` set.
+   - If any changed source file Code Health score declines, return `CHANGES_REQUIRED` and send the work back for rework.
+   - If CodeScene cannot run for a production-source PR, return `CHANGES_REQUIRED` unless the user explicitly grants a one-off override.
+   - Next run Semgrep with `npm run lint:debt:changed`.
+   - If Semgrep fails, return `CHANGES_REQUIRED` and send the work back for rework.
+   - Only continue after CodeScene and Semgrep pass.
 
 1. Freeze scope.
    - Confirm base/head or PR number.
@@ -56,6 +67,8 @@ If any input is missing for a production-source PR, return `CHANGES_REQUIRED`.
 Return `CHANGES_REQUIRED` if any of these are true:
 
 - Missing or placeholder PR body evidence.
+- CodeScene score/delta is missing, fails, or reports any changed source file Code Health decline.
+- Semgrep changed-file gate is missing or fails.
 - Missing `PLAN_READY`, `CODE_READY`, reviewer verdict, or ChatGPT verdict.
 - Added wrapper/helper/service method/controller/hook/formatter/validator/parser/adapter/repository method without old surface retired/narrowed in the same PR.
 - Refactor/debt PR claims debt reduction while net surface grows.
@@ -86,6 +99,8 @@ Use this exact structure:
 - New Surface budget verified: yes/no
 - Boundary Delta verified: yes/no
 - Agent Gate Evidence verified: yes/no
+- CodeScene pre-review: pass/fail
+- Semgrep pre-review: pass/fail
 - Net surface delta: shrinks/neutral/grows
 - Independent primitive search: pass/fail
 - Shared primitive two-call-site rule: pass/fail/not applicable
@@ -94,6 +109,7 @@ Use this exact structure:
 ## Static Gate Status
 
 - Debt contract: pass/fail/not run
+- CodeScene score/delta: pass/fail/not run
 - Semgrep changed-file gate: pass/fail/not run
 - XO changed-file gate: pass/fail/not run
 - Lint: pass/fail/not run

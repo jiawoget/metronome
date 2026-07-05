@@ -39,6 +39,19 @@ Block new imports or defaults that move runtime dependencies inward:
 - Service methods that only return `repository.*(...)` must retire at least one direct repository caller in the same PR.
 - Composition-root exceptions must be named explicitly in the plan and PR body.
 
+## Review Preflight Gates
+
+The code review agent must run gates in this order before normal review:
+
+1. CodeScene score/delta for changed production source files.
+   - Any Code Health decline is `CHANGES_REQUIRED`.
+   - If CodeScene cannot run for a production-source PR, review is blocked unless the user explicitly grants a one-off override.
+2. Semgrep changed-file gate.
+   - `npm run lint:debt:changed` must pass.
+   - Any Semgrep failure is `CHANGES_REQUIRED`.
+
+Only after both preflight gates pass may the reviewer inspect normal correctness.
+
 ## Retired Surface Examples
 
 Examples of surfaces that must be listed when touched:

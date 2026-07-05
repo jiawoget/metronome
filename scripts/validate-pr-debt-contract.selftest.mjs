@@ -98,6 +98,7 @@ No new surface.
 
 ## Debt Gate Evidence
 
+- CodeScene pre-review score delta: passed, no decline
 - \`npm run validate:debt-gates\`: passed
 - \`npm run lint:debt:changed\`: passed
 - \`npm run lint:xo:changed\`: passed
