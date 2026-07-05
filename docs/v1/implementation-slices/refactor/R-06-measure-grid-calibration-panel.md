@@ -20,11 +20,9 @@ This pipeline is not allowed to widen public API, add services/hooks/controllers
 ### Planner-only evidence
 | File | Why coding should not start from it |
 |---|---|
-| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md` | broad strategy distilled here |
-| `docs/refactor/src-debt-forensics-2026-07-04/00-project-codescene-scan.md` | CodeScene rank/baseline only |
-| `docs/refactor/src-debt-forensics-2026-07-04/06-measure-grid-calibration-panel.md` | debt evidence distilled into RS rows |
-| `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md` | template already applied |
-| `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` | style reference only |
+| `skills/metronome_planner.md`; `docs/architecture/debt-gate-map.md`; `docs/agent-index/05-sheet-practice.md`; `docs/agent-index/05b-practice-controls.md`; `docs/v1/05f-practice-segments.md` | Skill file read: `skills/metronome_planner.md`; Debt gate map read: `docs/architecture/debt-gate-map.md`; owner/v1 evidence says MeasureGrid UI must reuse domain utilities and not create segment/recording behavior. |
+| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md`; `00-project-codescene-scan.md`; `06-measure-grid-calibration-panel.md`; `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` | remediation, rank, per-file debt, and prior-plan evidence distilled into scope and RS rows. |
+| Repo-map searches over `src/**`, `tests/**`, `docs/v1/**`, `docs/refactor/**`: `normalize|format|validate|resolve|select|build|create`, service/repository/controller/hook/adapter, `isSupportedTimeSignature|gridsEqual|validateDraft|LabeledSelect|getMeasureGridVersion` | Existing primitive search found `validateMeasureGrid`, `getMeasureGridVersion`, `isQuickMetronomeTimeSignature`, and `LabeledSelect`; RS list is sufficient because no new shared primitive/file is allowed. |
 ### Read only if blocked
 | File | Trigger for reading |
 |---|---|
@@ -32,7 +30,6 @@ This pipeline is not allowed to widen public API, add services/hooks/controllers
 | `src/components/sheet-practice/controls/sheet-practice-controls.tsx` | parent prop/default behavior appears affected |
 | `src/components/sheet-practice/controls/practice-control-state.ts` | default draft source becomes ambiguous |
 | `src/lib/quick-metronome/control.ts` | `TIME_SIGNATURES` or supported-signature behavior appears unclear |
-| `docs/architecture/debt-gate-map.md` | reviewer asks for debt-gate alignment |
 ## 3. Existing Behavior Contract
 Preserve public props/export `MeasureGridCalibrationPanelProps` and `MeasureGridCalibrationPanel`; no URL/query/storage changes; visible text/status/errors `Measure grid`, `Offset source: current playback timestamp`, `Offset source: manual entry`, `Loading`, `Needs calibration`, `Calibrated`, `Unsaved changes`, `No playback timestamp available.`, `Grid BPM must be an integer from 30 to 300.`, `Pickup beats must be an integer from 0 to N.`, `Set or enter a measure 1 offset before saving.`, `Measure 1 offset must be a non-negative integer in milliseconds.`, `Choose a supported grid time signature.`, `Measure grid values are invalid.`, `Measure grid could not be loaded.`, `Measure grid could not be saved.`, `Saving...`, `Save grid`; local load state starts loading then becomes ready/error; save state is saving only around `saveGrid`; `loadedSheetId` remains the cross-sheet async guard; validation happens before service save; failed save keeps draft and previous saved snapshot; tests keep `data-testid="measure-grid-calibration-panel"` and `data-testid="measure-grid-status"`.
 If preserving this requires widening scope, stop and report `PLAN_BLOCKED`.

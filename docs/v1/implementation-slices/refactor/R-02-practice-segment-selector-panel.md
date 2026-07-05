@@ -23,10 +23,9 @@ This pipeline must not widen public API, add services/hooks/controllers/reposito
 ### Planner-only evidence
 | File | Why coding should not start from it |
 |---|---|
-| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md` | broad strategy distilled here |
-| `docs/refactor/src-debt-forensics-2026-07-04/00-project-codescene-scan.md` | baseline only |
-| `docs/refactor/src-debt-forensics-2026-07-04/02-practice-segment-selector-panel.md` | debt evidence distilled into RS rows |
-| `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` | adjacent pipeline only; do not import its scope |
+| `skills/metronome_planner.md`; `docs/architecture/debt-gate-map.md`; `docs/agent-index/05-sheet-practice.md`; `docs/agent-index/05b-practice-controls.md`; `docs/v1/05f-practice-segments.md` | Skill file read: `skills/metronome_planner.md`; Debt gate map read: `docs/architecture/debt-gate-map.md`; owner/v1 evidence says segment UI must reuse MeasureGrid/domain/store boundaries and not claim Phase 1 closeout. |
+| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md`; `00-project-codescene-scan.md`; `02-practice-segment-selector-panel.md`; `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` | remediation, rank, per-file debt, and prior-plan evidence distilled into scope and RS rows. |
+| Repo-map searches over `src/**`, `tests/**`, `docs/v1/**`, `docs/refactor/**`: `normalize|format|validate|resolve|select|build|create`, service/repository/controller/hook/adapter, `GridLoadState|maxLength={120}|source-segment-missing|PracticeSegmentSelectorPanel` | Existing primitive search found segment domain parsers and workflow-store actions; RS list is sufficient because allowed local adapters retire RS-2/RS-4 and no shared-primitive claim is made. |
 
 ### Read only if blocked
 | File | Trigger for reading |

@@ -21,10 +21,9 @@ This pipeline is not allowed to:
 ### Planner-only evidence
 | File | Why coding should not start from it |
 |---|---|
-| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md` | Broad strategy already distilled here. |
-| `docs/refactor/src-debt-forensics-2026-07-04/00-project-codescene-scan.md` | Ranking evidence only. |
-| `docs/refactor/src-debt-forensics-2026-07-04/10-recordings-review-repository.md` | Debt evidence converted into RS items. |
-| `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md` | Output rules already applied. |
+| `skills/metronome_planner.md`; `docs/architecture/debt-gate-map.md`; `docs/agent-index/03-recordings-review.md`; `docs/agent-index/05c-sheet-recording-review.md`; `docs/v1/03-recordings-review.md`; `docs/v1/05c-sheet-recording-review.md` | Skill file read: `skills/metronome_planner.md`; Debt gate map read: `docs/architecture/debt-gate-map.md`; owner/v1 evidence keeps storage/artifact contracts and sheet recording review behavior stable. |
+| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md`; `00-project-codescene-scan.md`; `10-recordings-review-repository.md`; `docs/v1/implementation-slices/refactor/R-03-recordings-review-experience.md` | remediation, rank, per-file debt, and sibling UI-plan evidence distilled into scope and RS rows. |
+| Repo-map searches over `src/**`, `tests/**`, `docs/v1/**`, `docs/refactor/**`: `normalize|format|validate|resolve|select|build|create`, service/repository/controller/hook/adapter, `writeSnapshot|takeSelection|recordingOrganization|seedRecordingHistoryForTests|direct caller` | Existing primitive search found snapshot, organization, and take-selection helpers; RS list is sufficient because no API/new file is allowed and every local write duplicate maps to RS-1..RS-4. |
 ### Read only if blocked
 | File | Trigger for reading |
 |---|---|
@@ -32,7 +31,6 @@ This pipeline is not allowed to:
 | `src/services/recordings-review/index.ts` | Typecheck says service contract changed. |
 | `src/lib/sheet-practice/recording-service.ts` | Typecheck says a sheet caller contract changed. |
 | `src/lib/quick-metronome/recording-controller.ts` | Typecheck says a quick caller contract changed. |
-| `docs/architecture/debt-gate-map.md` | Architecture boundary test fails and rule owner is unclear. |
 ## 3. Existing Behavior Contract
 - Public props / exported API: `RECORDINGS_STORAGE_KEY`, `RecordingHistoryConcurrentWriteError`, `seedRecordingHistoryForTests`, and every current `recordingHistoryRepository` method name, argument shape, and return behavior.
 - URL/query/storage contract: `RECORDINGS_STORAGE_KEY` and snapshot fields `sessions`, `recordings`, `errorMarkers`, `takeSelections`, `recordingOrganization`, `sheetRecordingMetadata`.

@@ -18,10 +18,9 @@ This pipeline is not allowed to: widen public API; add a service/hook/controller
 ### Planner-only evidence
 | File | Why coding should not start from it |
 |---|---|
-| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md` | Broad phase guidance already narrowed here. |
-| `docs/refactor/src-debt-forensics-2026-07-04/00-project-codescene-scan.md` | Establishes R-04 rank and score only. |
-| `docs/refactor/src-debt-forensics-2026-07-04/04-home-dashboard.md` | Evidence already distilled into RS list. |
-| `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md` | Formatting contract already applied. |
+| `skills/metronome_planner.md`; `docs/architecture/debt-gate-map.md`; `docs/agent-index/01-app-shell-home.md`; `docs/agent-index/08-practice-session.md`; `docs/v1/01-app-shell-home.md`; `docs/v1/08-practice-session.md` | Skill file read: `skills/metronome_planner.md`; Debt gate map read: `docs/architecture/debt-gate-map.md`; owner/v1 evidence says Home stays an action dashboard and session-owned history remains local-first. |
+| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md`; `00-project-codescene-scan.md`; `04-home-dashboard.md`; `docs/v1/implementation-slices/refactor/R-09-use-practice-session-dashboard.md` | remediation, rank, per-file debt, and sibling hook-plan evidence distilled into scope and RS rows. |
+| Repo-map searches over `src/**`, `tests/**`, `docs/v1/**`, `docs/refactor/**`: `normalize|format|validate|resolve|select|build|create`, service/repository/controller/hook/adapter, `continueTarget|continueTargets|onSavePracticeGoal|onDeletePracticeGoal|HomeDashboard` | Existing primitive search found plural Continue Practice rows and canonical hook actions; RS list is sufficient because no new surface is allowed and each compatibility alias is deleted in home/hook only. |
 ### Read only if blocked
 | File | Trigger for reading |
 |---|---|

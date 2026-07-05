@@ -28,10 +28,9 @@ This pipeline is not allowed to:
 ### Planner-only evidence
 | File | Why coding should not start from it |
 |---|---|
-| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md` | Broad strategy already narrowed to this PR. |
-| `docs/refactor/src-debt-forensics-2026-07-04/00-project-codescene-scan.md` | Establishes R-05 rank and baseline only. |
-| `docs/refactor/src-debt-forensics-2026-07-04/05-practice-session-service.md` | Evidence distilled into retired surfaces below. |
-| `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md` | Template contract only. |
+| `skills/metronome_planner.md`; `docs/architecture/debt-gate-map.md`; `docs/agent-index/08-practice-session.md`; `docs/v1/08-practice-session.md`; `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md` | Skill file read: `skills/metronome_planner.md`; Debt gate map read: `docs/architecture/debt-gate-map.md`; owner/v1 evidence says session service owns history/Continue Practice and must stay local-first without API widening. |
+| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md`; `00-project-codescene-scan.md`; `05-practice-session-service.md`; `docs/v1/implementation-slices/refactor/R-07-practice-rules.md` | remediation, rank, per-file debt, and sibling domain-plan evidence distilled into scope and RS rows. |
+| Repo-map searches over `src/**`, `tests/**`, `docs/v1/**`, `docs/refactor/**`: `normalize|format|validate|resolve|select|build|create`, service/repository/controller/hook/adapter, `getContinuePracticeTarget|continueTarget|lookup|target|metadata|direct caller` | Existing primitive search found session-history/recent-activity target shapes; RS list is sufficient because resolver pair is local, retires duplicate helpers, and does not claim Phase 2 shared primitive completion. |
 ### Read only if blocked
 | File | Trigger for reading |
 |---|---|

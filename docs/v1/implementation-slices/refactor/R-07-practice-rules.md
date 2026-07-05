@@ -20,11 +20,9 @@ This pipeline is not allowed to: widen public API; add a service/hook/controller
 ### Planner-only evidence
 | File | Why coding should not start from it |
 |---|---|
-| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md` | Broad Phase 2 guidance already narrowed here. |
-| `docs/refactor/src-debt-forensics-2026-07-04/00-project-codescene-scan.md` | Establishes R-07 rank and score only. |
-| `docs/refactor/src-debt-forensics-2026-07-04/07-practice-rules.md` | Evidence already distilled into RS list. |
-| `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md` | Formatting contract already applied. |
-| `docs/v1/implementation-slices/refactor/R-04-home-dashboard.md` | Adjacent plan confirms service `getContinuePracticeTarget()` is out of scope. |
+| `skills/metronome_planner.md`; `docs/architecture/debt-gate-map.md`; `docs/agent-index/08-practice-session.md`; `docs/v1/08-practice-session.md`; `docs/v1/implementation-slices/refactor/R-04-home-dashboard.md` | Skill file read: `skills/metronome_planner.md`; Debt gate map read: `docs/architecture/debt-gate-map.md`; owner/v1/prior-plan evidence keeps service `getContinuePracticeTarget()` and Phase 2 closeout out of scope. |
+| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md`; `00-project-codescene-scan.md`; `07-practice-rules.md`; `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md` | remediation, rank, per-file debt, and template evidence distilled into scope and RS rows. |
+| Repo-map searches over `src/**`, `tests/**`, `docs/v1/**`, `docs/refactor/**`: `normalize|format|validate|resolve|select|build|create`, service/repository/controller/hook/adapter, `getContinuePracticeTarget|applyPracticeTrigger|sanitizeDuration|duration|compat|wrapper` | Existing primitive search found current service/domain replacements and duration rules; RS list is sufficient because this deletes obsolete exports/local duplication without new public surface. |
 ### Read only if blocked
 | File | Trigger for reading |
 |---|---|
@@ -32,7 +30,6 @@ This pipeline is not allowed to: widen public API; add a service/hook/controller
 | `src/domain/practice/types.ts` | Typecheck says removed imports require public type changes. |
 | `tests/unit/continue-practice-targets.test.ts` | Continue Practice compatibility expectations appear to change. |
 | `src/components/home/continue-practice-navigation.ts` | A href expectation changes despite service/domain scope. |
-| `docs/architecture/debt-gate-map.md` | Debt gate command fails with a changed-file rule not covered by this plan. |
 ## 3. Existing Behavior Contract
 The coding agent must preserve:
 - Public props / exported API: delete only `rules.ts` exports `getContinuePracticeTarget(session)` and `applyPracticeTrigger(...)`; keep `PracticeSessionService.getContinuePracticeTarget()`, `ContinuePracticeTarget`, and all analytics/streak/library/goal exports unchanged.

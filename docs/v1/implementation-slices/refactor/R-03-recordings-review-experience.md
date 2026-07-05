@@ -29,10 +29,9 @@ This pipeline is not allowed to widen public API, add a new service/hook/control
 ### Planner-only evidence
 | File | Why coding should not start from it |
 |---|---|
-| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md` | broad strategy distilled here |
-| `docs/refactor/src-debt-forensics-2026-07-04/00-project-codescene-scan.md` | baseline only |
-| `docs/refactor/src-debt-forensics-2026-07-04/03-recordings-review-experience.md` | debt evidence distilled into RS rows |
-| `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md` | format source already applied |
+| `skills/metronome_planner.md`; `docs/architecture/debt-gate-map.md`; `docs/agent-index/03-recordings-review.md`; `docs/agent-index/05c-sheet-recording-review.md`; `docs/v1/03-recordings-review.md`; `docs/v1/05c-sheet-recording-review.md` | Skill file read: `skills/metronome_planner.md`; Debt gate map read: `docs/architecture/debt-gate-map.md`; owner/v1 evidence says review UI must not own storage/waveform internals and must preserve real artifact flows. |
+| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md`; `00-project-codescene-scan.md`; `03-recordings-review-experience.md`; `docs/v1/implementation-slices/refactor/R-10-recordings-review-repository.md` | remediation, rank, per-file debt, and sibling repository-plan evidence distilled into scope and RS rows. |
+| Repo-map searches over `src/**`, `tests/**`, `docs/v1/**`, `docs/refactor/**`: `normalize|format|validate|resolve|select|build|create`, service/repository/controller/hook/adapter, `resolveRecordingOrganizationForRecord|recordingOrganizationById|toggleFavorite|updateBestTake|updateActiveTake|useBoundedRecordingSelection` | Existing primitive search found controller toggle actions, `resolveRecordingOrganization`, and bounded selection predicates; RS list is sufficient because all new code is one local UI adapter tied to RS-3. |
 
 ### Read only if blocked
 | File | Trigger for reading |

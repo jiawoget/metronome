@@ -20,11 +20,9 @@ This pipeline is not allowed to widen public API, add a hook/controller/service/
 ### Planner-only evidence
 | File | Why coding should not start from it |
 |---|---|
-| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md` | Broad phase strategy already distilled here. |
-| `docs/refactor/src-debt-forensics-2026-07-04/00-project-codescene-scan.md` | Baseline evidence only; no coding instructions. |
-| `docs/refactor/src-debt-forensics-2026-07-04/09-use-practice-session-dashboard.md` | Forensics source; this plan selects the narrow R-09 slice. |
-| `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md` | Template source only. |
-| `docs/v1/implementation-slices/refactor/R-04-home-dashboard.md` | Confirms `continueTarget` and goal action aliases belong to R-04, not R-09. |
+| `skills/metronome_planner.md`; `docs/architecture/debt-gate-map.md`; `docs/agent-index/01-app-shell-home.md`; `docs/agent-index/08-practice-session.md`; `docs/v1/01-app-shell-home.md`; `docs/v1/08-practice-session.md` | Skill file read: `skills/metronome_planner.md`; Debt gate map read: `docs/architecture/debt-gate-map.md`; owner/v1 evidence keeps Home action flow and session-owned history stable. |
+| `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md`; `00-project-codescene-scan.md`; `09-use-practice-session-dashboard.md`; `docs/v1/implementation-slices/refactor/R-04-home-dashboard.md` | remediation, rank, per-file debt, and sibling plan evidence separate R-09 from R-04 compatibility-alias cleanup. |
+| Repo-map searches over `src/**`, `tests/**`, `docs/v1/**`, `docs/refactor/**`: `normalize|format|validate|resolve|select|build|create`, service/repository/controller/hook/adapter, `formatSessionComparisonMinutes|evaluatePracticeGoalCompletion|practiceGoalsStatus|usePracticeSessionDashboard` | Existing primitive search found goal evaluator and session-comparison formatter paths; RS list is sufficient because only local hook duplication/wrapper residue is deleted. |
 
 ### Read only if blocked
 | File | Trigger for reading |
