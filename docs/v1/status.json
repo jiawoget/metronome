@@ -972,7 +972,7 @@
                                          {
                                              "pack":  "pack-r-codescene-refactor-remediation",
                                              "scope":  "CodeScene-guided refactor remediation batch for the top 10 source debt files captured under docs/refactor/src-debt-forensics-2026-07-04. This pack runs one pipeline at a time: plan agent, coding agent, review agent, local/CI verification, then external ChatGPT final review before merge or continuing to the next pipeline.",
-                                             "status":  "planning_done",
+                                             "status":  "plan_blocked",
                                              "slices":  [
                                                             {
                                                                 "slice":  "R-01 sheet-practice-controls",
@@ -980,8 +980,71 @@
                                                                 "target":  "src/components/sheet-practice/controls/sheet-practice-controls.tsx",
                                                                 "forensics":  "docs/refactor/src-debt-forensics-2026-07-04/01-sheet-practice-controls.md",
                                                                 "plan":  "docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md"
+                                                            },
+                                                            {
+                                                                "slice":  "R-02 practice-segment-selector-panel",
+                                                                "status":  "planning_done",
+                                                                "target":  "src/components/sheet-practice/segments/practice-segment-selector-panel.tsx",
+                                                                "forensics":  "docs/refactor/src-debt-forensics-2026-07-04/02-practice-segment-selector-panel.md",
+                                                                "plan":  "docs/v1/implementation-slices/refactor/R-02-practice-segment-selector-panel.md"
+                                                            },
+                                                            {
+                                                                "slice":  "R-03 recordings-review-experience",
+                                                                "status":  "planning_done",
+                                                                "target":  "src/components/recordings-review/recordings-review-experience.tsx",
+                                                                "forensics":  "docs/refactor/src-debt-forensics-2026-07-04/03-recordings-review-experience.md",
+                                                                "plan":  "docs/v1/implementation-slices/refactor/R-03-recordings-review-experience.md"
+                                                            },
+                                                            {
+                                                                "slice":  "R-04 home-dashboard",
+                                                                "status":  "planning_done",
+                                                                "target":  "src/components/home/home-dashboard.tsx",
+                                                                "forensics":  "docs/refactor/src-debt-forensics-2026-07-04/04-home-dashboard.md",
+                                                                "plan":  "docs/v1/implementation-slices/refactor/R-04-home-dashboard.md"
+                                                            },
+                                                            {
+                                                                "slice":  "R-05 practice-session-service",
+                                                                "status":  "planning_done",
+                                                                "target":  "src/services/practice-session/service.ts",
+                                                                "forensics":  "docs/refactor/src-debt-forensics-2026-07-04/05-practice-session-service.md",
+                                                                "plan":  "docs/v1/implementation-slices/refactor/R-05-practice-session-service.md"
+                                                            },
+                                                            {
+                                                                "slice":  "R-06 measure-grid-calibration-panel",
+                                                                "status":  "planning_done",
+                                                                "target":  "src/components/sheet-practice/measure-grid/measure-grid-calibration-panel.tsx",
+                                                                "forensics":  "docs/refactor/src-debt-forensics-2026-07-04/06-measure-grid-calibration-panel.md",
+                                                                "plan":  "docs/v1/implementation-slices/refactor/R-06-measure-grid-calibration-panel.md"
+                                                            },
+                                                            {
+                                                                "slice":  "R-07 practice-rules",
+                                                                "status":  "planning_done",
+                                                                "target":  "src/domain/practice/rules.ts",
+                                                                "forensics":  "docs/refactor/src-debt-forensics-2026-07-04/07-practice-rules.md",
+                                                                "plan":  "docs/v1/implementation-slices/refactor/R-07-practice-rules.md"
+                                                            },
+                                                            {
+                                                                "slice":  "R-08 practice-recent-activity",
+                                                                "status":  "plan_blocked",
+                                                                "target":  "src/domain/practice/recent-activity.ts",
+                                                                "forensics":  "docs/refactor/src-debt-forensics-2026-07-04/08-practice-recent-activity.md",
+                                                                "plan":  "docs/v1/implementation-slices/refactor/R-08-practice-recent-activity.md"
+                                                            },
+                                                            {
+                                                                "slice":  "R-09 use-practice-session-dashboard",
+                                                                "status":  "planning_done",
+                                                                "target":  "src/hooks/use-practice-session-dashboard.ts",
+                                                                "forensics":  "docs/refactor/src-debt-forensics-2026-07-04/09-use-practice-session-dashboard.md",
+                                                                "plan":  "docs/v1/implementation-slices/refactor/R-09-use-practice-session-dashboard.md"
+                                                            },
+                                                            {
+                                                                "slice":  "R-10 recordings-review-repository",
+                                                                "status":  "planning_done",
+                                                                "target":  "src/lib/recordings-review/repository.ts",
+                                                                "forensics":  "docs/refactor/src-debt-forensics-2026-07-04/10-recordings-review-repository.md",
+                                                                "plan":  "docs/v1/implementation-slices/refactor/R-10-recordings-review-repository.md"
                                                             }
-                                                        ]
+                                                         ]
                                          }
                                      ]
                        }
