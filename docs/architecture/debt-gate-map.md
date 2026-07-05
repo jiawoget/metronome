@@ -9,6 +9,7 @@ Agents must search beyond the local file they intend to edit:
 - `src/**`
 - `tests/**`
 - `scripts/**` when tooling or test helpers are touched
+- `package.json` and lockfiles when package scripts, dependencies, or tool versions are touched
 - `docs/v1/implementation-slices/plans/**` for active slice plans
 - `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md` for current debt acceptance gates
 
@@ -21,6 +22,11 @@ Required search families:
 Gate-control changes always require PR debt-contract evidence, even when no `src/**` production file changed:
 
 - `scripts/**`
+- `package.json`
+- `package-lock.json`
+- `npm-shrinkwrap.json`
+- `pnpm-lock.yaml`
+- `yarn.lock`
 - `skills/**`
 - `.github/workflows/**`
 - `.github/pull_request_template.md`

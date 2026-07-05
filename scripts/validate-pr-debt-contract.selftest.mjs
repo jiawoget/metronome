@@ -85,6 +85,16 @@ function commitGateControlDeletion(cwd) {
 	git(cwd, ['commit', '-m', 'delete gate package file']);
 }
 
+function commitPackageManifestChange(cwd) {
+	write(
+		cwd,
+		'package.json',
+		'{\n  "scripts": {\n    "validate:debt-gates": "node scripts/validate-metronome-gates.mjs"\n  }\n}\n',
+	);
+	git(cwd, ['add', 'package.json']);
+	git(cwd, ['commit', '-m', 'package gate scripts']);
+}
+
 const validBody = `## Summary
 
 Tighten the debt gate.
@@ -134,6 +144,13 @@ No new surface.
 - ChatGPT final review prompt/verdict: PASS
 `;
 
+function replaceLine(body, from, to) {
+	const sourceLine = `${from}\n`;
+	const index = body.indexOf(sourceLine);
+	assert.notEqual(index, -1, `Missing source line in test body: ${from}`);
+	return `${body.slice(0, index)}${to}\n${body.slice(index + sourceLine.length)}`;
+}
+
 {
 	const cwd = createRepo();
 	commitSourceChange(cwd);
@@ -158,13 +175,14 @@ No new surface.
 	commitGateControlChange(cwd);
 	const result = runGate(
 		cwd,
-		validBody.replace(
+		replaceLine(
+			validBody,
 			'- ChatGPT final review prompt/verdict: PASS',
 			'- ChatGPT final review prompt/verdict: not run yet',
 		),
 	);
 	assert.equal(result.status, 1);
-	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must include PASS or PASS_WITH_NITS/v);
+	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must be exactly PASS or PASS_WITH_NITS/v);
 }
 
 {
@@ -172,13 +190,97 @@ No new surface.
 	commitGateControlDeletion(cwd);
 	const result = runGate(
 		cwd,
-		validBody.replace(
+		replaceLine(
+			validBody,
 			'- ChatGPT final review prompt/verdict: PASS',
 			'- ChatGPT final review prompt/verdict: not run yet',
 		),
 	);
 	assert.equal(result.status, 1);
-	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must include PASS or PASS_WITH_NITS/v);
+	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must be exactly PASS or PASS_WITH_NITS/v);
+}
+
+{
+	const cwd = createRepo();
+	commitPackageManifestChange(cwd);
+	const result = runGate(cwd, '');
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /Pull request body is empty/v);
+}
+
+{
+	const cwd = createRepo();
+	commitPackageManifestChange(cwd);
+	const result = runGate(
+		cwd,
+		replaceLine(
+			validBody,
+			'- ChatGPT final review prompt/verdict: PASS',
+			'- ChatGPT final review prompt/verdict: not run yet',
+		),
+	);
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must be exactly PASS or PASS_WITH_NITS/v);
+}
+
+{
+	const cwd = createRepo();
+	commitSourceChange(cwd);
+	const result = runGate(
+		cwd,
+		replaceLine(
+			validBody,
+			'- `npm run lint`: passed',
+			'- `npm run lint`: not passed',
+		),
+	);
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /Debt Gate Evidence must include positive passed\/success output for: npm run lint/v);
+}
+
+{
+	const cwd = createRepo();
+	commitSourceChange(cwd);
+	const result = runGate(
+		cwd,
+		replaceLine(
+			validBody,
+			'- CodeScene MCP `analyze_change_set`: passed, no decline',
+			'- CodeScene MCP `analyze_change_set`: failed, not passed',
+		),
+	);
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /Debt Gate Evidence must include CodeScene MCP analyze_change_set output with no decline/v);
+}
+
+{
+	const cwd = createRepo();
+	commitSourceChange(cwd);
+	const result = runGate(
+		cwd,
+		replaceLine(
+			validBody,
+			'- Reviewer verdict: PASS',
+			'- Reviewer verdict: not PASS',
+		),
+	);
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /Reviewer verdict must be exactly PASS or PASS_WITH_NITS/v);
+}
+
+{
+	const cwd = createRepo();
+	commitSourceChange(cwd);
+	const result = runGate(
+		cwd,
+		replaceLine(
+			validBody,
+			'- ChatGPT final review prompt/verdict: PASS',
+			'- ChatGPT final review prompt/verdict: CHANGES_REQUIRED; PASS later',
+		),
+	);
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must be exactly PASS or PASS_WITH_NITS/v);
 }
 
 {
@@ -192,6 +294,14 @@ No new surface.
 {
 	const cwd = createRepo();
 	commitGateControlChange(cwd);
+	const result = runGate(cwd, validBody);
+	assert.equal(result.status, 0);
+	assert.match(result.stdout, /PR debt contract evidence sections are present and specific/v);
+}
+
+{
+	const cwd = createRepo();
+	commitPackageManifestChange(cwd);
 	const result = runGate(cwd, validBody);
 	assert.equal(result.status, 0);
 	assert.match(result.stdout, /PR debt contract evidence sections are present and specific/v);

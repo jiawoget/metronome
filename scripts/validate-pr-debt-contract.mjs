@@ -7,6 +7,11 @@ const sourceFilePattern = /^src\/.*\.(?:ts|tsx)$/v;
 const ignoredFilePattern = /(?:^|\/)__tests__\/|(?:\.test|\.spec)\.(?:ts|tsx)$/v;
 const primitiveNamePattern = /\b(?:normalize|format|validate|resolve|select|build|create)[A-Z]\w*\b/v;
 const gateControlFilePatterns = [
+	/^package\.json$/v,
+	/^package-lock\.json$/v,
+	/^npm-shrinkwrap\.json$/v,
+	/^pnpm-lock\.yaml$/v,
+	/^yarn\.lock$/v,
 	/^scripts\//v,
 	/^skills\//v,
 	/^\.github\/workflows\//v,
@@ -48,6 +53,8 @@ const requiredAgentSkillEvidence = [
 	['Reviewer skill read evidence', 'skills/metronome_reviewer.md'],
 ];
 const debtContractDiffFilter = 'ACMRD';
+const positiveStatusPattern = /^(?:passed|success)\b/iv;
+const blockingEvidencePattern = /\bnot\b|\bfails?\b|\bfailed\b|\bfailures?\b|\berrors?\b|\bblocked\b|\bchanges_required\b|\bchanges required\b/iv;
 
 function runGit(args) {
 	return execFileSync('git', args, {encoding: 'utf8'}).trim();
@@ -327,6 +334,15 @@ function isPlaceholder(value) {
 	return ['', '.', '-', 'n/a', 'na', 'none', 'todo', 'tbd', 'placeholder', 'not run'].includes(normalized);
 }
 
+function isPositiveStatusEvidence(value) {
+	if (value === null || isPlaceholder(value)) {
+		return false;
+	}
+
+	const normalized = normalizeCell(value);
+	return positiveStatusPattern.test(normalized) && !blockingEvidencePattern.test(normalized);
+}
+
 function parseTable(sectionBody) {
 	return stripComments(sectionBody)
 		.split(/\r?\n/v)
@@ -368,15 +384,16 @@ function hasExplicitNoRetiredSurface(sectionBody) {
 }
 
 function valueAfterColon(sectionBody, label) {
+	const prefix = `- ${label}:`;
 	const line = sectionText(sectionBody)
 		.split('\n')
-		.find(candidate => candidate.toLowerCase().startsWith(`- ${label.toLowerCase()}:`));
+		.find(candidate => candidate.toLowerCase().startsWith(prefix.toLowerCase()));
 
 	if (!line) {
 		return null;
 	}
 
-	return normalizeCell(line.slice(line.indexOf(':') + 1));
+	return normalizeCell(line.slice(prefix.length));
 }
 
 function validateBoundaryDelta(sectionBody) {
@@ -400,12 +417,12 @@ function validateBoundaryDelta(sectionBody) {
 function validateDebtGateEvidence(sectionBody) {
 	const missing = requiredCommands.filter(command => {
 		const value = valueAfterColon(sectionBody, `\`${command}\``) ?? valueAfterColon(sectionBody, command);
-		return value === null || isPlaceholder(value) || !/\bpass(?:ed)?\b/iv.test(value);
+		return !isPositiveStatusEvidence(value);
 	});
 
 	const failures = [];
 	if (missing.length > 0) {
-		failures.push(`Debt Gate Evidence must include passed output for: ${missing.join(', ')}`);
+		failures.push(`Debt Gate Evidence must include positive passed/success output for: ${missing.join(', ')}`);
 	}
 
 	return [...failures, ...validateCodeSceneEvidence(sectionBody)];
@@ -421,22 +438,18 @@ function validateCodeSceneEvidence(sectionBody) {
 }
 
 function isPassingCodeSceneEvidence(evidence) {
-	if (evidence === null || isPlaceholder(evidence)) {
-		return false;
-	}
-
-	return /\b(?:pass(?:ed)?|no decline|no regression)\b/iv.test(evidence);
+	return isPositiveStatusEvidence(evidence);
 }
 
 function extractVerdict(sectionBody, label, allowedVerdicts) {
 	const value = valueAfterColon(sectionBody, label);
 
-	if (!value) {
+	if (!value || isPlaceholder(value)) {
 		return false;
 	}
 
-	const verdictTokens = new Set(value.toUpperCase().split(/[^A-Z_]+/v));
-	return [...allowedVerdicts].some(verdict => verdictTokens.has(verdict));
+	const normalized = normalizeCell(value).toUpperCase();
+	return allowedVerdicts.has(normalized);
 }
 
 function validateAgentGateEvidence(sectionBody) {
@@ -449,19 +462,19 @@ function validateAgentGateEvidence(sectionBody) {
 	}
 
 	if (!extractVerdict(sectionBody, 'Planner skill verdict', allowedPlanVerdicts)) {
-		failures.push('Planner skill verdict must include PLAN_READY.');
+		failures.push('Planner skill verdict must be exactly PLAN_READY.');
 	}
 
 	if (!extractVerdict(sectionBody, 'Coder repo map / primitive search', allowedCodeVerdicts)) {
-		failures.push('Coder repo map / primitive search must include CODE_READY.');
+		failures.push('Coder repo map / primitive search must be exactly CODE_READY.');
 	}
 
 	if (!extractVerdict(sectionBody, 'Reviewer verdict', allowedReviewVerdicts)) {
-		failures.push('Reviewer verdict must include PASS or PASS_WITH_NITS.');
+		failures.push('Reviewer verdict must be exactly PASS or PASS_WITH_NITS.');
 	}
 
 	if (!extractVerdict(sectionBody, 'ChatGPT final review prompt/verdict', allowedChatGptVerdicts)) {
-		failures.push('ChatGPT final review prompt/verdict must include PASS or PASS_WITH_NITS.');
+		failures.push('ChatGPT final review prompt/verdict must be exactly PASS or PASS_WITH_NITS.');
 	}
 
 	return failures;
