@@ -153,7 +153,7 @@ async function main() {
 	};
 
 	await mkdir(generatedDirectory, {recursive: true});
-	await writeFile(`${outputPath}\n`, JSON.stringify(index, null, 2));
+	await writeFile(outputPath, JSON.stringify(index, null, 2));
 	console.log(`Wrote ${toRepositoryPath(outputPath)} with ${exports.length} exports, ${localHelpers.length} local helper candidates, and ${componentBrowserDefaults.length} browser defaults.`);
 }
 
