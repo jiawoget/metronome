@@ -1,8 +1,8 @@
 ## Source Debt Forensics: `measure-grid-calibration-panel`
 
-Status: complete  
-Target: `src/components/sheet-practice/measure-grid/measure-grid-calibration-panel.tsx`  
-Method: CodeScene baseline + static source reading, no product-code edits  
+Status: complete
+Target: `src/components/sheet-practice/measure-grid/measure-grid-calibration-panel.tsx`
+Method: CodeScene baseline + static source reading, no product-code edits
 Excluded: all `tests/**`, `*.test.*`, `*.spec.*`
 
 ## 文件概况

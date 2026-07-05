@@ -1,10 +1,10 @@
 # `repository.ts` 债务取证
 
-状态: complete  
-日期: 2026-07-05  
-目标文件: `src/lib/recordings-review/repository.ts`  
-取证方式: 先做 CodeScene 基线，再做静态源码阅读  
-范围: `src/lib/recordings-review/**`, `src/services/recordings-review/index.ts`, `src/lib/quick-metronome/recording-controller.ts`, `src/lib/sheet-practice/**`, `src/infrastructure/db/**`, `src/infrastructure/reference/reference-repository.ts`  
+状态: complete
+日期: 2026-07-05
+目标文件: `src/lib/recordings-review/repository.ts`
+取证方式: 先做 CodeScene 基线，再做静态源码阅读
+范围: `src/lib/recordings-review/**`, `src/services/recordings-review/index.ts`, `src/lib/quick-metronome/recording-controller.ts`, `src/lib/sheet-practice/**`, `src/infrastructure/db/**`, `src/infrastructure/reference/reference-repository.ts`
 排除: 所有 `tests/**`, `*.test.*`, `*.spec.*`
 
 本报告是债务取证，不是 remediation plan，不提供修复步骤，不提供测试计划。

@@ -1,8 +1,8 @@
 ## Source Debt Forensics: `practice-segment-selector-panel`
 
-Status: complete  
-Target: `src/components/sheet-practice/segments/practice-segment-selector-panel.tsx`  
-Method: read-only forensics, no product-code edits  
+Status: complete
+Target: `src/components/sheet-practice/segments/practice-segment-selector-panel.tsx`
+Method: read-only forensics, no product-code edits
 Excluded: all `tests/**`, `*.test.*`, `*.spec.*`
 
 ## 文件概况

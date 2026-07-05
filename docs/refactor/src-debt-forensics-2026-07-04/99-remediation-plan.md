@@ -11,24 +11,24 @@ This file is the only artifact in this batch that contains remediation guidance.
 
 这 10 个文件里的技术债不是 10 个彼此独立的小问题，而是 5 类跨文件、重复出现的结构模式：
 
-1. UI/controller 过度增厚  
-   代表文件：`01-sheet-practice-controls.md`、`02-practice-segment-selector-panel.md`、`04-home-dashboard.md`、`06-measure-grid-calibration-panel.md`、`03-recordings-review-experience.md`，以及同一边界模式下的 `src/components/sheet-practice/reference/reference-panel.tsx`  
+1. UI/controller 过度增厚
+   代表文件：`01-sheet-practice-controls.md`、`02-practice-segment-selector-panel.md`、`04-home-dashboard.md`、`06-measure-grid-calibration-panel.md`、`03-recordings-review-experience.md`，以及同一边界模式下的 `src/components/sheet-practice/reference/reference-panel.tsx`
    共同症状：单个组件或 hook 同时承担渲染、读模型拼装、表单校验、service orchestration、workflow state machine、默认浏览器适配器绑定。
 
-2. practice read-model 家族横向复制  
-   代表文件：`05-practice-session-service.md`、`07-practice-rules.md`、`08-practice-recent-activity.md`、`09-use-practice-session-dashboard.md`、`04-home-dashboard.md`  
+2. practice read-model 家族横向复制
+   代表文件：`05-practice-session-service.md`、`07-practice-rules.md`、`08-practice-recent-activity.md`、`09-use-practice-session-dashboard.md`、`04-home-dashboard.md`
    共同症状：session/recording 聚合骨架、target 解析、string normalize、timestamp/duration format、continue-practice 兼容包装，在 domain / service / hook / component 多层平行演化。
 
-3. 边界没有持续收口  
-   代表文件：`01`、`02`、`05`、`06`、`10`  
+3. 边界没有持续收口
+   代表文件：`01`、`02`、`05`、`06`、`10`
    共同症状：UI 直接知道 browser adapter；repository 直接解析 domain 值对象；service 直接拼 read-model；feature service 存在但调用方继续绕过它直连大 repository。
 
-4. 历史兼容层和别名接口持续累积  
-   代表文件：`07`、`09`、`10`、`04`  
+4. 历史兼容层和别名接口持续累积
+   代表文件：`07`、`09`、`10`、`04`
    共同症状：旧的单目标 continue 包装、新旧 action 命名双轨、empty-state 占位字段、半抽出的 service/controller facade、只剩少量调用者甚至无调用者的薄包装 API。
 
-5. CodeScene 能抓到复杂度，但抓不完横向重复  
-   代表文件：几乎所有报告  
+5. CodeScene 能抓到复杂度，但抓不完横向重复
+   代表文件：几乎所有报告
    共同症状：CodeScene 对单文件复杂方法、长方法、条件矩阵、重复 mutator 发出明确信号；但“同一业务语义在相邻文件分别重写”仍需要人工横向取证。
 
 ## 2. Why Current Guardrails Failed
@@ -144,15 +144,15 @@ This file is the only artifact in this batch that contains remediation guidance.
 
 修复方向：
 
-1. 抽出统一的 sheet-practice panel/controller primitive  
+1. 抽出统一的 sheet-practice panel/controller primitive
    把 string draft -> parsed domain fields -> validation errors -> save lifecycle 这一整套壳从两个 panel 中收成共享原语。
-2. 抽出统一的 rerecord / selected-segment transition primitive  
+2. 抽出统一的 rerecord / selected-segment transition primitive
    让 selector panel 和 controls 不再各自拼 `invalidateRerecordSource(...)` 规则。
-3. 把 browser adapter 默认绑定移出 UI component  
+3. 把 browser adapter 默认绑定移出 UI component
    component 只吃接口，不直接知道浏览器实现入口。
-4. 把 `ReferencePanel` 一并纳入这一轮 session/reference orchestration 收口  
+4. 把 `ReferencePanel` 一并纳入这一轮 session/reference orchestration 收口
    让 reference side effect 也回到更薄的 use-case / controller 边界，而不是继续在 client component 里直接 `ensureSheetSession()` / `captureSessionEvent()`。
-5. 明确区分 composition wrapper 和债务 wrapper  
+5. 明确区分 composition wrapper 和债务 wrapper
    允许保留一个很薄的 route/page composition root 负责注入 browser service，但业务组件本体不能再默认 import browser adapter。
 
 ### Phase 2: 再收 practice read-model 家族
@@ -176,19 +176,19 @@ This file is the only artifact in this batch that contains remediation guidance.
 
 修复方向：
 
-1. 先统一 normalize/format/target-resolution family  
+1. 先统一 normalize/format/target-resolution family
    包括 string normalize、timestamp sanitize、duration format、segment range format、target-state resolution；目标状态必须同时覆盖 `recent-activity.ts`、`session-comparison.ts`、`session-history-groups.ts`、`continue-practice.ts`，而不是只在其中一个文件新建第三套 helper。
-2. 再统一 continue-practice contract  
+2. 再统一 continue-practice contract
    先迁移 production contract，再删除旧 singular surface。
    - 迁移顺序应是：`service.ts` / `types.ts` -> `use-practice-session-dashboard.ts` -> `home-dashboard.tsx` -> command palette 相关消费方 -> tests。
    - `getContinuePracticeTarget()`、`continueTarget`、以及 `onSavePracticeGoal` / `onDeletePracticeGoal` 这类兼容 alias 不允许长期保留。
-3. 把 practice-session service 从“browser practice facade”收回到更窄的 use-case 集合  
+3. 把 practice-session service 从“browser practice facade”收回到更窄的 use-case 集合
    读模型 selector 尽量回 domain，持久化协调留 service，避免两边都做 aggregation。
-4. 去掉 `continue-practice.ts` 对 `recent-activity` metadata 字符串的正则反解析  
+4. 去掉 `continue-practice.ts` 对 `recent-activity` metadata 字符串的正则反解析
    `segmentRange` 必须走结构化字段，而不是在旧 metadata 上再叠一层 parser。
-5. target-resolution shared primitive 的完成标准必须是“旧 fork 消失”  
+5. target-resolution shared primitive 的完成标准必须是“旧 fork 消失”
    至少同时替换 `recent-activity.ts` 和 `session-comparison.ts`，并移除 `continue-practice.ts` 对 metadata regex 的依赖；否则只是新增了第三套 target abstraction。
-6. 最后再拆 home hook / home dashboard  
+6. 最后再拆 home hook / home dashboard
    否则 UI 只是从一个大文件变成几个仍然共享重复 contract 的中等文件。
 
 ### Phase 3: 处理 recordings-review 的页面与 repository 双中心
@@ -251,52 +251,52 @@ This file is the only artifact in this batch that contains remediation guidance.
 
 本次取证里最值得先复用、而不是继续自造的仓内原语有这些：
 
-1. `domain/practice/segments` 的 schema / validate 原语  
+1. `domain/practice/segments` 的 schema / validate 原语
    不要继续在 panel 内手写 segment 字段校验。
 
-2. `domain/practice/measure-grid` 的 schema / validate 原语  
+2. `domain/practice/measure-grid` 的 schema / validate 原语
    不要让 UI、service、repository 三层各写一套近似 grid 校验。
 
-3. `getMeasureGridVersion` / 现有 canonical identity 表达  
+3. `getMeasureGridVersion` / 现有 canonical identity 表达
    不要继续在 UI 本地写新的 grid equality 规则。
 
-4. `recording-organization-metadata.ts` 的 tag normalize 原语  
+4. `recording-organization-metadata.ts` 的 tag normalize 原语
    不要在 repository mutator 里再写一次重复 tag 校验。
 
-5. `recordingsReviewService` / controller hook 已经存在的边界  
+5. `recordingsReviewService` / controller hook 已经存在的边界
    新代码应该优先收敛到它们，而不是继续在页面层或 feature sidecar service 里复制包装。
 
-6. 现有 repository subscribe/event 骨架  
+6. 现有 repository subscribe/event 骨架
    不要每个 browser-state center 再发明一套事件协议。
 
 ## 6. Suggested Repair Order by Outcome
 
 如果要在交付和风险之间取平衡，建议实际执行顺序如下：
 
-1. 建立 review guardrail 与 CodeScene gate  
+1. 建立 review guardrail 与 CodeScene gate
    先阻止继续生新债。
-2. 收 sheet-practice shared primitive  
+2. 收 sheet-practice shared primitive
    先拿下 `SheetPracticeControls`、`PracticeSegmentSelectorPanel`、`MeasureGridCalibrationPanel`、`ReferencePanel` 这一整组 panel/controller 平行复制与 session side-effect 直编排。
-3. 收 practice read-model primitive  
+3. 收 practice read-model primitive
    先统一 `recent-activity`、`session-comparison`、`session-history-groups`、`continue-practice` 的 normalize/target/format/structured field，再动 service/domain/home。
-4. 拆 `home-dashboard.tsx` 和 `use-practice-session-dashboard.ts`  
+4. 拆 `home-dashboard.tsx` 和 `use-practice-session-dashboard.ts`
    这时拆出来的模块才不会只是复制旧 contract。
-5. 收 recordings-review page/service/repository  
+5. 收 recordings-review page/service/repository
    最后处理这一整块独立领域，避免同时开两片大 surgery。
 
 ## 7. Refactor PR Acceptance Gates
 
 这些 gate 比“建议”更硬，目标是避免 shared primitive PR 最终只是多包一层。
 
-1. 每个 refactor PR 必须列出 `retired surface` 清单。  
+1. 每个 refactor PR 必须列出 `retired surface` 清单。
    例如删除 `continueTarget` 字段、删除 `onSavePracticeGoal` / `onDeletePracticeGoal` alias、删除 `formatSessionComparisonMinutes()`、删除 `getContinuePracticeTarget()` singular API，或者明确说明为什么本 PR 还删不掉、下一 PR 必须删什么。
-2. 每个 shared primitive 必须至少迁移两个旧调用点，并让旧实现消失。  
+2. 每个 shared primitive 必须至少迁移两个旧调用点，并让旧实现消失。
    例如 target-resolution primitive 必须同时替换 `recent-activity.ts` 和 `session-comparison.ts`，并移除 `continue-practice.ts` 对 metadata 的 regex 反解；否则不算债务下降。
-3. UI 去 browser adapter default 时，要区分 composition wrapper 和债务 wrapper。  
+3. UI 去 browser adapter default 时，要区分 composition wrapper 和债务 wrapper。
    允许保留一个很薄的 route/page composition root，但 `SheetPracticeControls`、`PracticeSegmentSelectorPanel`、`MeasureGridCalibrationPanel`、`ReferencePanel` 这类业务组件本体不能再默认 import browser service。
-4. 所有“候选删除”都要跑全仓调用点，而不是只搜 `src`。  
+4. 所有“候选删除”都要跑全仓调用点，而不是只搜 `src`。
    tests 仍在依赖的 surface，应该迁到 test helper / test seam，而不是直接砍掉。
-5. 删除兼容 surface 的 PR 必须附带行为等价测试。  
+5. 删除兼容 surface 的 PR 必须附带行为等价测试。
    特别是 continue practice、record again、goal progress refresh、recording history persistence、sheet reference session side effect 这几条高风险路径。
 
 ## 8. Review Contract Changes

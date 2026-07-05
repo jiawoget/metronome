@@ -37,7 +37,7 @@ CodeScene hotspot 链接：
 
 ### 1. target 解析逻辑成片复制
 
-`recent-activity.ts` 的 `resolveTarget(...)` 和 `session-comparison.ts` 的 `resolveTarget(...)` 本质上在做同一件事：  
+`recent-activity.ts` 的 `resolveTarget(...)` 和 `session-comparison.ts` 的 `resolveTarget(...)` 本质上在做同一件事：
 给 session / recording 归一化出 `sheetId`、`segmentId`、lookup 状态，再产出 valid / missing / lookup-failed / no-target。
 
 - `src/domain/practice/recent-activity.ts:198-238`
@@ -206,7 +206,7 @@ CodeScene hotspot 链接：
 - `src/domain/practice/rules.ts:310-318,344-356`
 - `src/domain/practice/session-comparison.ts:533-567`
 
-`recent-activity.ts` 又重写了一套 `requiredString(...)`、`validTimestamp(...)`、`validDuration(...)`、`validBpm(...)`。  
+`recent-activity.ts` 又重写了一套 `requiredString(...)`、`validTimestamp(...)`、`validDuration(...)`、`validBpm(...)`。
 这不是缺基础设施，而是选择了“每个读模型自带一套私有净化逻辑”。
 
 ### 3. `formatRange(...)` 没复用现成同义实现
@@ -253,7 +253,7 @@ CodeScene hotspot 链接：
 - 生产字符串：`src/domain/practice/recent-activity.ts:268-321`
 - 反解字符串：`src/domain/practice/continue-practice.ts:261-263`
 
-`continue-practice.ts` 并不是读取结构化 `segmentRangeLabel`，而是在 `metadata` 中用正则找 `mX-Y`。  
+`continue-practice.ts` 并不是读取结构化 `segmentRangeLabel`，而是在 `metadata` 中用正则找 `mX-Y`。
 这说明两个 domain 文件之间传递的不是稳定结构，而是展示层字符串协议。
 
 ### 3. service / domain 共同拼成一个读模型状态机
@@ -305,7 +305,7 @@ domain 已经给了：
 
 ### 2. 为了让 UI 变薄，把展示文案前推到了 domain
 
-`recent-activity.ts` 不只输出结构化状态，还直接输出最终用户可读文案。  
+`recent-activity.ts` 不只输出结构化状态，还直接输出最终用户可读文案。
 这通常是为了让组件层更简单、更少 if/switch，但代价是：
 
 - 文案散落在 domain
@@ -337,7 +337,7 @@ domain 已经给了：
 
 ### 1. file-level review 很容易看见“功能完整”，看不见“家族式复制”
 
-如果只看 `recent-activity.ts`，它会像一个自洽 selector。  
+如果只看 `recent-activity.ts`，它会像一个自洽 selector。
 但真正的债是在它和：
 
 - `session-comparison.ts`
@@ -346,7 +346,7 @@ domain 已经给了：
 - `use-practice-session-dashboard.ts`
 - `home-dashboard.tsx`
 
-之间形成的重复与边界分裂。  
+之间形成的重复与边界分裂。
 这类债需要跨文件对照，普通 coding agent / review agent / ChatGPT PR review 很容易只盯行为正确性。
 
 ### 2. 重复不是逐字复制，而是“轻微变体复制”
@@ -382,45 +382,45 @@ domain 已经给了：
 
 ## 证据清单
 
-- `src/domain/practice/recent-activity.ts:93-118`  
+- `src/domain/practice/recent-activity.ts:93-118`
   `selectHomeRecentActivity(...)` 同时负责拼接、去重、排序、裁剪，行为契约集中在单个 selector。
-- `src/domain/practice/recent-activity.ts:198-238`  
+- `src/domain/practice/recent-activity.ts:198-238`
   `resolveTarget(...)` 是本文件复杂度最高的状态决策树，CodeScene 标记 `cc = 23`。
-- `src/domain/practice/recent-activity.ts:240-248`  
+- `src/domain/practice/recent-activity.ts:240-248`
   `target(...)` 只是零行为对象包装，属于可删候选。
-- `src/domain/practice/recent-activity.ts:250-266`  
+- `src/domain/practice/recent-activity.ts:250-266`
   `labelFor(...)` 在 domain 内直接决定最终显示文案。
-- `src/domain/practice/recent-activity.ts:268-321`  
+- `src/domain/practice/recent-activity.ts:268-321`
   `metadataFor(...)` / `formatRange(...)` 生成 UI metadata，其中 `mX-Y` 成为后续隐式协议。
-- `src/domain/practice/recent-activity.ts:324-338`  
+- `src/domain/practice/recent-activity.ts:324-338`
   `disabledReasonFor(...)` 把 `targetState` 再派生为第二套状态表达。
-- `src/domain/practice/recent-activity.ts:348-382`  
+- `src/domain/practice/recent-activity.ts:348-382`
   timestamp / string / number 归一化 helper 在文件尾部自成一套私有原语。
-- `src/domain/practice/session-comparison.ts:202-252`  
+- `src/domain/practice/session-comparison.ts:202-252`
   存在近乎同构的 `resolveTarget(...)`，说明 target 解析没有抽成共享原语。
-- `src/domain/practice/session-comparison.ts:525-567`  
+- `src/domain/practice/session-comparison.ts:525-567`
   `formatSegmentRange(...)`、`validTimestamp(...)`、`requiredString(...)` 等 helper 与 `recent-activity.ts` 重复。
-- `src/domain/practice/session-history-groups.ts:124-158,165-216`  
+- `src/domain/practice/session-history-groups.ts:124-158,165-216`
   “Quick Practice”“Deleted sheet”和 target state 判定在另一份 domain 文件里再次实现。
-- `src/domain/practice/session-history-groups.ts:258-281`  
+- `src/domain/practice/session-history-groups.ts:258-281`
   已存在 sheet / segment target state 归类 helper，但没有被 recent activity 复用。
-- `src/domain/practice/continue-practice.ts:156-223`  
+- `src/domain/practice/continue-practice.ts:156-223`
   继续练习目标直接消费 `HomeRecentActivityItem`，说明 recent activity 已成为别的 domain 逻辑输入。
-- `src/domain/practice/continue-practice.ts:261-263`  
+- `src/domain/practice/continue-practice.ts:261-263`
   通过正则从 `metadata` 反解 `segmentRangeLabel`，证实展示字符串协议耦合。
-- `src/domain/practice/rules.ts:310-318,344-356`  
+- `src/domain/practice/rules.ts:310-318,344-356`
   已有 `normalizeAnalyticsId(...)`、`validDurationMs(...)`、timestamp helper，同义净化原语分散存在。
-- `src/services/practice-session/service.ts:306-427`  
+- `src/services/practice-session/service.ts:306-427`
   service 为 recent activity 单独构造 sheet / segment target maps，读模型跨 service/domain 切开。
-- `src/services/practice-session/service.ts:430-455`  
+- `src/services/practice-session/service.ts:430-455`
   `readHomeRecentActivity(...)` 先做 gateway lookup，再把结果交给 domain selector，表明一个读模型横跨两层。
-- `src/components/home/home-dashboard.tsx:1333-1384`  
+- `src/components/home/home-dashboard.tsx:1333-1384`
   UI 只读取 `label`、`metadata`、`targetState`、`disabledReason`，未直接使用 `durationMs` / `bpm` / `timeSignature`。
-- `src/components/home/home-dashboard.tsx:1415-1445`  
+- `src/components/home/home-dashboard.tsx:1415-1445`
   UI 再次把 `targetState` 翻译成状态 badge 文案和样式，说明展示职责没有收口。
-- `src/components/home/home-dashboard.tsx:1237-1265`  
+- `src/components/home/home-dashboard.tsx:1237-1265`
   continue practice 行内容仍保留 `sortTimestamp ?? occurredAt` 双轨读取，证实时间状态并行存在。
-- `src/hooks/use-practice-session-dashboard.ts:549-567,569-586`  
+- `src/hooks/use-practice-session-dashboard.ts:549-567,569-586`
   home hook 对另一块读模型再次实现 sheet / segment target 文案翻译，说明 home 侧展示语义分散。
 
 ## 总结性判断
