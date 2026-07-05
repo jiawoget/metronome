@@ -277,7 +277,25 @@ function splitSections(body) {
 }
 
 function stripComments(value) {
-	return value.replaceAll(/<!--[\s\S]*?-->/gv, '');
+	let output = '';
+	let index = 0;
+
+	while (index < value.length) {
+		const start = value.indexOf('<!--', index);
+		if (start === -1) {
+			return output + value.slice(index);
+		}
+
+		output += value.slice(index, start);
+		const end = value.indexOf('-->', start + 4);
+		if (end === -1) {
+			return output;
+		}
+
+		index = end + 3;
+	}
+
+	return output;
 }
 
 function normalizeCell(value) {
