@@ -28,6 +28,8 @@
     "lint:debt": "semgrep --config .semgrep --error",
     "lint:debt:changed": "node scripts/run-metronome-semgrep-changed.mjs",
     "lint:debt:inventory": "semgrep --config .semgrep --json --output semgrep-inventory.json || true",
+    "validate:debt-contract": "node scripts/validate-pr-debt-contract.mjs",
+    "validate:debt-contract:selftest": "node scripts/validate-pr-debt-contract.selftest.mjs",
     "validate:debt-gates": "node scripts/validate-metronome-gates.mjs",
     "smoke": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run test:e2e"
   },
