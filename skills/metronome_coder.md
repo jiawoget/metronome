@@ -95,6 +95,11 @@ Run the smallest useful behavior tests plus the repo gates:
 
 CODE_READY / BLOCKED
 
+## Skill Evidence
+
+- Skill file read: skills/metronome_coder.md
+- Debt gate map read: docs/architecture/debt-gate-map.md
+
 ## Files Changed
 
 | File | Purpose |

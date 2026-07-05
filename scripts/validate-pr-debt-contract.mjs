@@ -33,6 +33,12 @@ const allowedCodeVerdicts = new Set(['CODE_READY']);
 const allowedReviewVerdicts = new Set(['PASS', 'PASS_WITH_NITS']);
 const allowedChatGptVerdicts = new Set(['PASS', 'PASS_WITH_NITS']);
 
+const requiredAgentSkillEvidence = [
+	['Planner skill read evidence', 'skills/metronome_planner.md'],
+	['Coder skill read evidence', 'skills/metronome_coder.md'],
+	['Reviewer skill read evidence', 'skills/metronome_reviewer.md'],
+];
+
 function runGit(args) {
 	return execFileSync('git', args, {encoding: 'utf8'}).trim();
 }
@@ -398,6 +404,12 @@ function extractVerdict(sectionBody, label, allowedVerdicts) {
 function validateAgentGateEvidence(sectionBody) {
 	const failures = [];
 
+	for (const [label, expectedPath] of requiredAgentSkillEvidence) {
+		if (!hasSkillReadEvidence(sectionBody, label, expectedPath)) {
+			failures.push(`${label} must mention ${expectedPath}.`);
+		}
+	}
+
 	if (!extractVerdict(sectionBody, 'Planner skill verdict', allowedPlanVerdicts)) {
 		failures.push('Planner skill verdict must include PLAN_READY.');
 	}
@@ -415,6 +427,11 @@ function validateAgentGateEvidence(sectionBody) {
 	}
 
 	return failures;
+}
+
+function hasSkillReadEvidence(sectionBody, label, expectedPath) {
+	const value = valueAfterColon(sectionBody, label);
+	return value !== null && !isPlaceholder(value) && normalizePath(value).includes(expectedPath);
 }
 
 function validateSections(body) {

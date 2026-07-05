@@ -75,6 +75,11 @@ Use this exact structure:
 
 PLAN_READY / BLOCKED
 
+## Skill Evidence
+
+- Skill file read: skills/metronome_planner.md
+- Debt gate map read: docs/architecture/debt-gate-map.md
+
 ## Scope
 
 - Slice/stage:

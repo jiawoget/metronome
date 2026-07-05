@@ -40,7 +40,7 @@ If any input is missing for a production-source PR, return `CHANGES_REQUIRED`.
    - `New Surface` lists every new surface or explicitly says none.
    - `Boundary Delta` has yes/no answers with evidence.
    - `Debt Gate Evidence` includes passed commands.
-   - `Agent Gate Evidence` includes `PLAN_READY`, `CODE_READY`, reviewer verdict, and ChatGPT verdict.
+   - `Agent Gate Evidence` includes planner/coder/reviewer skill-read evidence, `PLAN_READY`, `CODE_READY`, reviewer verdict, and ChatGPT verdict.
 
 3. Repeat independent repo-map search.
    - Search for same-semantics primitives and helpers.
@@ -70,6 +70,7 @@ Return `CHANGES_REQUIRED` if any of these are true:
 - Missing or placeholder PR body evidence.
 - CodeScene MCP `analyze_change_set` output is missing, fails, or reports any changed source file Code Health decline.
 - Semgrep changed-file gate is missing or fails.
+- Missing planner, coder, or reviewer skill-read evidence.
 - Missing `PLAN_READY`, `CODE_READY`, reviewer verdict, or ChatGPT verdict.
 - Added wrapper/helper/service method/controller/hook/formatter/validator/parser/adapter/repository method without old surface retired/narrowed in the same PR.
 - Refactor/debt PR claims debt reduction while net surface grows.
@@ -121,6 +122,11 @@ Use this exact structure:
 ## Gate Verdict
 
 PASS / PASS_WITH_NITS / CHANGES_REQUIRED
+
+## Skill Evidence
+
+- Skill file read: skills/metronome_reviewer.md
+- Debt gate map read: docs/architecture/debt-gate-map.md
 
 ## Notes
 

@@ -40,7 +40,10 @@ Net surface delta:
 
 ## Agent Gate Evidence
 
+- Planner skill read evidence:
 - Planner skill verdict:
+- Coder skill read evidence:
 - Coder repo map / primitive search:
+- Reviewer skill read evidence:
 - Reviewer verdict:
 - ChatGPT final review prompt/verdict:

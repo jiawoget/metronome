@@ -111,7 +111,7 @@ If any item is missing for a production-source PR, fix the packet before review.
 3. New Surface / Net Surface Delta：每个新 helper/service/type/component 是否有 why-not-reuse 和 same-PR old surface；Net surface delta 是否与 diff 一致。
 4. Shared Primitive Two-Call-Site Rule：shared primitive/controller/service/presenter/helper 是否至少迁移两个旧调用点并让旧实现消失；少于两个时是否有全仓搜索证据且没有声称 debt reduction。
 5. Boundary Delta：是否没有新增 UI -> browser/infrastructure、domain -> UI/service、service passthrough；composition-root 例外是否明确。
-6. Agent Gate Evidence：是否看到 PLAN_READY、CODE_READY、reviewer PASS/PASS_WITH_NITS，以及本次 ChatGPT verdict 之前的 reviewer output。
+6. Agent Gate Evidence：是否看到 planner/coder/reviewer skill read evidence、PLAN_READY、CODE_READY、reviewer PASS/PASS_WITH_NITS，以及本次 ChatGPT verdict 之前的 reviewer output。
 7. CodeScene Pre-Review：reviewer 是否先用 CodeScene MCP analyze_change_set 运行 branch gate，且 changed source files 没有 Code Health decline；如果只提供 CLI output，是否说明 MCP 不可用和 one-off fallback；如果失败是否拒绝并要求 rework。
 8. Semgrep Pre-Review：lint:debt:changed 是否在 review 前运行且通过；如果失败是否拒绝并要求 rework。
 9. Behavior-Equivalence Tests：是否覆盖 retired compatibility surface；不能只是更新旧测试或 snapshot。

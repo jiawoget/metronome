@@ -55,6 +55,16 @@ The code review agent must run gates in this order before normal review:
 
 Only after both preflight gates pass may the reviewer inspect normal correctness.
 
+## Agent Skill Load Gates
+
+Each agent output must prove it read the matching hard-gate skill:
+
+- Planner output must include `Skill file read: skills/metronome_planner.md`.
+- Coder output must include `Skill file read: skills/metronome_coder.md`.
+- Reviewer output must include `Skill file read: skills/metronome_reviewer.md`.
+
+The PR body's `Agent Gate Evidence` must include planner, coder, and reviewer skill-read evidence. Missing or placeholder skill-read evidence is `CHANGES_REQUIRED`.
+
 ## Retired Surface Examples
 
 Examples of surfaces that must be listed when touched:

@@ -109,8 +109,11 @@ No new surface.
 
 ## Agent Gate Evidence
 
+- Planner skill read evidence: Skill file read: skills/metronome_planner.md
 - Planner skill verdict: PLAN_READY
+- Coder skill read evidence: Skill file read: skills/metronome_coder.md
 - Coder repo map / primitive search: CODE_READY
+- Reviewer skill read evidence: Skill file read: skills/metronome_reviewer.md
 - Reviewer verdict: PASS
 - ChatGPT final review prompt/verdict: PASS
 `;
