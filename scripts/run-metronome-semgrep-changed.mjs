@@ -15,16 +15,6 @@ function hasCommand(command) {
 const semgrepBin = process.env.SEMGREP_BIN || 'semgrep';
 const semgrepChangedFilePattern = /\.(?:[cm]?js|jsx|[cm]?ts|tsx)$/v;
 
-if (!existsSync('.semgrep')) {
-	console.error('Missing .semgrep directory.');
-	process.exit(1);
-}
-
-if (!hasCommand(semgrepBin)) {
-	console.error(`Missing ${semgrepBin}. Install with: python -m pip install semgrep`);
-	process.exit(1);
-}
-
 const baseRef = process.env.BASE_REF || process.env.GITHUB_BASE_REF || 'origin/main';
 
 let mergeBase;
@@ -49,6 +39,16 @@ const changed = runGit(['diff', '--name-only', '--diff-filter=ACMR', mergeBase, 
 if (changed.length === 0) {
 	console.log('No changed JavaScript or TypeScript files to scan.');
 	process.exit(0);
+}
+
+if (!existsSync('.semgrep')) {
+	console.error('Missing .semgrep directory.');
+	process.exit(1);
+}
+
+if (!hasCommand(semgrepBin)) {
+	console.error(`Missing ${semgrepBin}. Install with: python -m pip install semgrep`);
+	process.exit(1);
 }
 
 console.log(`Running Semgrep debt gates on ${changed.length} changed file(s):`);

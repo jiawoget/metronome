@@ -6,15 +6,19 @@ This coder is a hard gate. Do not edit production code until an approved plan ha
 
 Before editing, read and list:
 
-- Approved plan file path under `docs/v1/implementation-slices/plans/`.
+- Approved plan file path under `docs/v1/implementation-slices/plans/`, or for refactor pipelines under `docs/v1/implementation-slices/refactor/`.
 - `docs/architecture/debt-gate-map.md`.
 - Relevant `docs/agent-index/*.md`.
 - Existing primitives, services, repositories, hooks, controllers, adapters, and tests named by the plan.
 - `package.json` when library reuse is relevant.
 
-Return `BLOCKED: plan missing debt contract` if the plan lacks Existing Primitive Search, Shared Primitive Call-Site Audit, New Surface Budget, Retired Surface Target, Boundary Impact, or Tests Required.
+Return `BLOCKED: plan missing debt contract` if a normal implementation plan lacks Existing Primitive Search, Shared Primitive Call-Site Audit, New Surface Budget, Retired Surface Target, Boundary Impact, or Tests Required.
 
-Return `BLOCKED: repo map missing` if the plan does not show repo-map searches.
+For refactor pipeline plans under `docs/v1/implementation-slices/refactor/`, use the refactor template contract instead. Return `BLOCKED: refactor plan missing debt contract` if the plan lacks Pipeline Contract, Coding Read Set, Existing Behavior Contract, Required Retired Surfaces, Allowed New Surface Budget, Implementation Steps, Verification Before Review Handoff, or Final Coding Agent Handoff.
+
+Return `BLOCKED: repo map missing` only for normal implementation plans that do not show repo-map searches.
+
+For refactor pipeline plans, do not require a full repo-map search table in the plan. Require construction evidence instead: concrete `Required Retired Surfaces`, replacement proof, allowed new surface budget, implementation steps, and deletion proof commands.
 
 ## Coding Workflow
 
@@ -32,6 +36,7 @@ Return `BLOCKED: repo map missing` if the plan does not show repo-map searches.
 3. Retire old surface while coding.
    - Do not leave old wrappers, aliases, compatibility fields, or direct paths active unless the PR says it is not debt reduction and explains why.
    - Shared primitive/controller/service/presenter/helper work must migrate at least two old call sites and delete/narrow old implementations unless repo-wide search proves fewer than two old call sites exist.
+   - For refactor pipelines, surfaces listed under `Required Retired Surfaces` must actually be deleted. Renaming, moving, narrowing, or leaving compatibility wrappers is not completion unless the plan is explicitly `PLAN_BLOCKED`.
 
 4. Keep boundaries intact.
    - Business UI must not default to browser services.
@@ -69,6 +74,8 @@ Fill these sections with concrete rows, not placeholders:
 `Reuse Proof` must include search terms, files read, and reuse/extract/no-go decision.
 
 `Retired Surface` must list old helpers, aliases, state fields, service methods, wrappers, or direct imports removed/narrowed. If no retired surface exists, state `Not a debt-reduction PR; no retired surface`.
+
+For refactor pipelines, `Retired Surface` must map back to every `RS-*` item from the plan and include the deletion proof command/result.
 
 `New Surface` must list every new helper/service/type/component or state `No new surface`.
 
