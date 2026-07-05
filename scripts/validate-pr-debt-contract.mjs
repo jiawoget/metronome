@@ -26,6 +26,8 @@ const requiredCommands = [
 	'npm run build',
 ];
 
+const codeSceneMcpEvidenceLabel = 'CodeScene MCP `analyze_change_set`';
+
 const allowedPlanVerdicts = new Set(['PLAN_READY']);
 const allowedCodeVerdicts = new Set(['CODE_READY']);
 const allowedReviewVerdicts = new Set(['PASS', 'PASS_WITH_NITS']);
@@ -231,20 +233,22 @@ function getRiskKind(file, text) {
 }
 
 function scanRiskyAdditions(contexts) {
-	const findings = [];
+	return contexts.flatMap(context => scanContextRiskyAdditions(context));
+}
 
-	for (const context of contexts) {
-		for (const file of context.files) {
-			for (const added of getDiffLines(context, file)) {
-				const kind = getRiskKind(file, added.text);
-				if (kind) {
-					findings.push({...added, context: context.name, kind});
-				}
-			}
-		}
-	}
+function scanContextRiskyAdditions(context) {
+	return context.files.flatMap(file => scanFileRiskyAdditions(context, file));
+}
 
-	return findings;
+function scanFileRiskyAdditions(context, file) {
+	return getDiffLines(context, file)
+		.map(added => createRiskFinding(context, added))
+		.filter(Boolean);
+}
+
+function createRiskFinding(context, added) {
+	const kind = getRiskKind(added.file, added.text);
+	return kind ? {...added, context: context.name, kind} : null;
 }
 
 function splitSections(body) {
@@ -360,16 +364,24 @@ function validateDebtGateEvidence(sectionBody) {
 		failures.push(`Debt Gate Evidence must include passed output for: ${missing.join(', ')}`);
 	}
 
-	const codeSceneEvidence = valueAfterColon(sectionBody, 'CodeScene pre-review score delta');
-	if (
-		codeSceneEvidence === null
-		|| isPlaceholder(codeSceneEvidence)
-		|| !/\b(?:pass(?:ed)?|no decline|no regression)\b/iv.test(codeSceneEvidence)
-	) {
-		failures.push('Debt Gate Evidence must include CodeScene pre-review score delta with no decline.');
+	return [...failures, ...validateCodeSceneEvidence(sectionBody)];
+}
+
+function validateCodeSceneEvidence(sectionBody) {
+	const evidence = valueAfterColon(sectionBody, codeSceneMcpEvidenceLabel);
+	if (isPassingCodeSceneEvidence(evidence)) {
+		return [];
 	}
 
-	return failures;
+	return ['Debt Gate Evidence must include CodeScene MCP analyze_change_set output with no decline.'];
+}
+
+function isPassingCodeSceneEvidence(evidence) {
+	if (evidence === null || isPlaceholder(evidence)) {
+		return false;
+	}
+
+	return /\b(?:pass(?:ed)?|no decline|no regression)\b/iv.test(evidence);
 }
 
 function extractVerdict(sectionBody, label, allowedVerdicts) {

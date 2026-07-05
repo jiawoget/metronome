@@ -44,6 +44,9 @@ Block new imports or defaults that move runtime dependencies inward:
 The code review agent must run gates in this order before normal review:
 
 1. CodeScene score/delta for changed production source files.
+   - Primary path is CodeScene MCP `analyze_change_set` against the PR base ref.
+   - Shell `npm run lint:codescene:changed` is fallback only when MCP is unavailable, and fallback evidence must explain why MCP could not run.
+   - Missing shell token/env is not a valid reason to skip MCP.
    - Any Code Health decline is `CHANGES_REQUIRED`.
    - If CodeScene cannot run for a production-source PR, review is blocked unless the user explicitly grants a one-off override.
 2. Semgrep changed-file gate.

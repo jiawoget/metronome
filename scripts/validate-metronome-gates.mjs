@@ -49,7 +49,7 @@ const requiredContent = {
 	'skills/metronome_reviewer.md': [
 		'Required Input Packet',
 		'Review Workflow',
-		'CodeScene score/delta',
+		'CodeScene MCP `analyze_change_set`',
 		'Semgrep pre-review',
 		'Immediate CHANGES_REQUIRED',
 		'Net surface delta',
@@ -68,6 +68,7 @@ const requiredContent = {
 		'Shared Primitive Rule',
 		'Boundary Rules',
 		'Review Preflight Gates',
+		'CodeScene MCP `analyze_change_set`',
 		'Repo Map Inputs',
 	],
 };

@@ -12,6 +12,7 @@ coverage/
 playwright-report/
 test-results/
 .audit/
+.tmp/
 
 # Local environment
 .env

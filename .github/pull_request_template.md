@@ -29,7 +29,7 @@ Net surface delta:
 
 ## Debt Gate Evidence
 
-- CodeScene pre-review score delta:
+- CodeScene MCP `analyze_change_set`:
 - `npm run validate:debt-gates`:
 - `npm run lint:debt:changed`:
 - `npm run lint:xo:changed`:

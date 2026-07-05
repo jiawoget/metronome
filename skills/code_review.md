@@ -5,7 +5,7 @@ This is the legacy reviewer entrypoint. The canonical hard-gate workflow is `ski
 Before reviewing any production-source PR:
 
 1. Read `skills/metronome_reviewer.md`.
-2. Run its pre-review gates in order: CodeScene score/delta first, Semgrep changed-file second.
+2. Run its pre-review gates in order: CodeScene MCP `analyze_change_set` first, Semgrep changed-file second.
 3. If CodeScene reports any changed source file Code Health decline, or Semgrep fails, return `CHANGES_REQUIRED` before normal review.
 4. Use its Required Input Packet, Review Workflow, Immediate `CHANGES_REQUIRED`, Required Output Schema, and Verdict Handling.
 5. If `skills/metronome_reviewer.md` is missing or conflicts with this file, return `CHANGES_REQUIRED`; do not fall back to a softer review.
