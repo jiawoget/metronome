@@ -47,6 +47,7 @@ const requiredAgentSkillEvidence = [
 	['Coder skill read evidence', 'skills/metronome_coder.md'],
 	['Reviewer skill read evidence', 'skills/metronome_reviewer.md'],
 ];
+const debtContractDiffFilter = 'ACMRD';
 
 function runGit(args) {
 	return execFileSync('git', args, {encoding: 'utf8'}).trim();
@@ -78,11 +79,11 @@ function normalizePath(file) {
 }
 
 function isProductionSourceFile(file) {
-	return sourceFilePattern.test(file) && !ignoredFilePattern.test(file) && existsSync(file);
+	return sourceFilePattern.test(file) && !ignoredFilePattern.test(file);
 }
 
 function isGateControlFile(file) {
-	return gateControlFilePatterns.some(pattern => pattern.test(file)) && existsSync(file);
+	return gateControlFilePatterns.some(pattern => pattern.test(file));
 }
 
 function requiresDebtContractEvidence(file) {
@@ -137,15 +138,15 @@ function getScanContexts(mergeBase, prContext) {
 		return [{
 			name: 'pull request diff',
 			diffArgs: ['diff', '--unified=0', mergeBase, 'HEAD', '--'],
-			files: parseFiles(tryRunGit(['diff', '--name-only', '--diff-filter=ACMR', mergeBase, 'HEAD'])),
+			files: parseFiles(tryRunGit(['diff', '--name-only', `--diff-filter=${debtContractDiffFilter}`, mergeBase, 'HEAD'])),
 			requiresPrBody: true,
 		}];
 	}
 
-	const stagedFiles = parseFiles(tryRunGit(['diff', '--cached', '--name-only', '--diff-filter=ACMR']));
-	const workingTreeFiles = parseFiles(tryRunGit(['diff', '--name-only', '--diff-filter=ACMR']));
+	const stagedFiles = parseFiles(tryRunGit(['diff', '--cached', '--name-only', `--diff-filter=${debtContractDiffFilter}`]));
+	const workingTreeFiles = parseFiles(tryRunGit(['diff', '--name-only', `--diff-filter=${debtContractDiffFilter}`]));
 	const committedBranchFiles = mergeBase
-		? parseFiles(tryRunGit(['diff', '--name-only', '--diff-filter=ACMR', mergeBase, 'HEAD']))
+		? parseFiles(tryRunGit(['diff', '--name-only', `--diff-filter=${debtContractDiffFilter}`, mergeBase, 'HEAD']))
 		: [];
 
 	const contexts = [];

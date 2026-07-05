@@ -22,13 +22,17 @@ function write(cwd, file, content) {
 	writeFileSync(fullPath, content);
 }
 
-function createRepo() {
+function createRepo({withGateControlFile = false} = {}) {
 	const cwd = mkdtempSync(path.join(tmpdir(), 'metronome-debt-contract-'));
 
 	git(cwd, ['init']);
 	git(cwd, ['config', 'user.email', 'test@example.com']);
 	git(cwd, ['config', 'user.name', 'Test User']);
 	write(cwd, 'src/lib/existing.ts', 'export const existing = 1;\n');
+	if (withGateControlFile) {
+		write(cwd, 'scripts/existing-gate.mjs', 'export const existingGate = true;\n');
+	}
+
 	git(cwd, ['add', '-A']);
 	git(cwd, ['commit', '-m', 'base']);
 	git(cwd, ['branch', '-M', 'main']);
@@ -74,6 +78,11 @@ function commitGateControlChange(cwd) {
 	write(cwd, 'docs/architecture/debt-gate-map.md', '# Debt gate map\n');
 	git(cwd, ['add', '-A']);
 	git(cwd, ['commit', '-m', 'gate package change']);
+}
+
+function commitGateControlDeletion(cwd) {
+	git(cwd, ['rm', 'scripts/existing-gate.mjs']);
+	git(cwd, ['commit', '-m', 'delete gate package file']);
 }
 
 const validBody = `## Summary
@@ -159,6 +168,20 @@ No new surface.
 }
 
 {
+	const cwd = createRepo({withGateControlFile: true});
+	commitGateControlDeletion(cwd);
+	const result = runGate(
+		cwd,
+		validBody.replace(
+			'- ChatGPT final review prompt/verdict: PASS',
+			'- ChatGPT final review prompt/verdict: not run yet',
+		),
+	);
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must include PASS or PASS_WITH_NITS/v);
+}
+
+{
 	const cwd = createRepo();
 	commitSourceChange(cwd);
 	const result = runGate(cwd, validBody);
@@ -169,6 +192,14 @@ No new surface.
 {
 	const cwd = createRepo();
 	commitGateControlChange(cwd);
+	const result = runGate(cwd, validBody);
+	assert.equal(result.status, 0);
+	assert.match(result.stdout, /PR debt contract evidence sections are present and specific/v);
+}
+
+{
+	const cwd = createRepo({withGateControlFile: true});
+	commitGateControlDeletion(cwd);
 	const result = runGate(cwd, validBody);
 	assert.equal(result.status, 0);
 	assert.match(result.stdout, /PR debt contract evidence sections are present and specific/v);
