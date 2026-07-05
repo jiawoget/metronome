@@ -29,6 +29,7 @@
     "lint:debt:changed": "node scripts/run-metronome-semgrep-changed.mjs",
     "lint:debt:inventory": "semgrep --config .semgrep --json --output semgrep-inventory.json || true",
     "validate:debt-gates": "node scripts/validate-metronome-gates.mjs",
+    "debt:primitive-index": "node scripts/generate-primitive-index.mjs",
     "smoke": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run test:e2e"
   },
   "dependencies": {
