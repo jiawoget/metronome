@@ -16,7 +16,9 @@ Return `BLOCKED: plan missing debt contract` if a normal implementation plan lac
 
 For refactor pipeline plans under `docs/v1/implementation-slices/refactor/`, use the refactor template contract instead. Return `BLOCKED: refactor plan missing debt contract` if the plan lacks Pipeline Contract, Coding Read Set, Existing Behavior Contract, Required Retired Surfaces, Allowed New Surface Budget, Implementation Steps, Verification Before Review Handoff, or Final Coding Agent Handoff.
 
-Return `BLOCKED: repo map missing` if the plan does not show repo-map searches.
+Return `BLOCKED: repo map missing` only for normal implementation plans that do not show repo-map searches.
+
+For refactor pipeline plans, do not require a full repo-map search table in the plan. Require construction evidence instead: concrete `Required Retired Surfaces`, replacement proof, allowed new surface budget, implementation steps, and deletion proof commands.
 
 ## Coding Workflow
 
