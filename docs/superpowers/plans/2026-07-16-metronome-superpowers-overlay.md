@@ -12,14 +12,14 @@
 
 **Estimated Production-Code Diff:** `0 LOC` under `src/**`. Expected changes are workflow docs, one repo skill, and the existing validator/self-test/PR template only.
 
-**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `e15fe5f934c48f5740edbafa61906d649af595d8` is superseded. Overlay coding remains blocked until Task 0 passes for the new commit and hashes.
+**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `dc9015b9aaa62eeda5217669a15390d8dc993c5b` is superseded. Overlay coding remains blocked until Task 0 passes for the new commit and hashes.
 
 ## Verified Interfaces and Limits
 
 - `codex-cli 0.144.5` was verified with `codex.exe --version`.
-- `codex exec --help` verified `--model`, `--config`, `--strict-config`, `--ignore-user-config`, `--sandbox read-only`, `--ephemeral`, `--cd`, `--json`, and `--output-last-message`.
-- `codex debug models --bundled` verified `gpt-5.6-terra` and `gpt-5.6-luna`; standard launches use `model_reasoning_effort="medium"` and `service_tier="default"`. Every nested reviewer or acceptance launch must set these explicitly and must never inherit the active Sol/low configuration.
-- Real `codex exec --json` output exposes thread, turn, and item events. The only fields used here are completed `command_execution` items (`command`, `aggregated_output`, `exit_code`, `status`) and final output written by `--output-last-message`. There are no claimed discovery or invocation events.
+- `codex exec --help` verified `--model`, `--config`, `--strict-config`, `--ignore-user-config`, `--sandbox read-only`, `--sandbox workspace-write`, `--ephemeral`, `--cd`, `--json`, and `--output-last-message`.
+- `codex debug models --bundled` verified `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna` with medium reasoning available; standard launches here set `model_reasoning_effort="medium"` and `service_tier="default"`. Every nested planner or reviewer launch sets these explicitly and never inherits active user configuration.
+- Task 0 retains the raw `codex exec --json` review trace but parses no lifecycle or discovery schema. The real R-01 trial uses the generated plan, Git identities, and independent review result instead of telemetry assertions.
 - The following Superpowers sources were verified as files under `C:\Users\wsuto\.codex\.tmp\plugins\plugins\superpowers\skills`: `using-superpowers\SKILL.md`, `writing-plans\SKILL.md`, `executing-plans\SKILL.md`, and `subagent-driven-development\SKILL.md`. Task 0 rechecks them; a missing source is `PLAN_BLOCKED`.
 - The available CodeScene schema verifies `mcp__codescene__analyze_change_set({git_repository_path, base_ref})` and its `quality_gates`/`results[].verdict` response. It is used once, at final promotion. If the target call cannot run or cannot prove no decline, promotion is blocked.
 - Any newly claimed CLI flag, JSONL field, MCP field, gate entrypoint, or plugin path must first be proven by an actual target command or official schema. Otherwise stop with `PLAN_BLOCKED`; do not infer or simulate the interface.
@@ -31,7 +31,7 @@
 The implementation must place shared policy only in `.agents/skills/metronome-workflow/SKILL.md`; root `AGENTS.md` is the mandatory pointer to it.
 
 1. A Superpowers Task is the Metronome Stage.
-2. Plan agents use GPT-5.6 Sol standard. Every coder, diagnosis agent, reviewer, and fresh-context acceptance agent uses GPT-5.6 Terra standard or GPT-5.6 Luna standard. Never use fast, and never route a non-plan role to Sol.
+2. Plan agents, including the fresh R-01 trial planner, use GPT-5.6 Sol standard. Every coder, diagnosis agent, and reviewer uses GPT-5.6 Terra standard or GPT-5.6 Luna standard. Never use fast, and never route a non-plan role to Sol.
 3. Small cohesive work uses one coding agent through `superpowers:executing-plans`; large independently separable work uses `superpowers:subagent-driven-development`.
 4. `PLAN_READY` does not authorize coding. The current tracked plan commit, Git blob, and SHA-256 must have a matching independent Terra/Luna `PLAN_REVIEW_PASS` first.
 5. Unexpected production LOC growth, Code Health decline, scope expansion, or an unplanned wrapper/public API means: stop; launch independent GPT-5.6 Terra standard or GPT-5.6 Luna standard diagnosis; resume only after explicit user decision. Never route diagnosis, fix, or review to GPT-5.6 Sol.
@@ -52,11 +52,11 @@ This tracked, hashed plan is the sole authority for this overlay rollout. Its st
 | `MSO-3` | Root router and repo overlay exist |
 | `MSO-4` | Role references and refactor reference are narrowed |
 | `MSO-5` | Existing hooks, tests, scope audit, and CodeScene pass |
-| `MSO-6` | Isolated R-01 observable-conformance acceptance passes |
+| `MSO-6` | Isolated real R-01 plan trial and independent plan review pass |
 
 `MSO-0` through `MSO-5` are operational checkpoints recorded and advanced by the monitor under the stated threat model. They are not repository-level states, and the implementation must not add generic transition parsing or intermediate-stage evidence.
 
-The existing PR validator mechanically accepts this overlay PR only at exact final stage `MSO-6`. For changes to `AGENTS.md` or `.agents/skills/metronome-workflow/SKILL.md`, it must require the exact plan path, current plan commit/blob/SHA-256, independent plan-review policy and PASS, existing final role verdicts, and `Current metronome Stage: MSO-6`. `MSO-5`, an unknown heading, or a missing heading must fail. The monitor is the authorized promoter after all evidence exists; CI is the final mechanical check.
+The existing PR validator mechanically accepts this overlay PR only at exact final stage `MSO-6`. For changes to `AGENTS.md` or `.agents/skills/metronome-workflow/SKILL.md`, it must require the exact overlay-plan identity and independent review PASS, the real R-01 trial identity and independent review PASS, R-01 coding still blocked for user decision, existing final role verdicts, and `Current metronome Stage: MSO-6`. `MSO-5`, an unknown heading, or a missing heading must fail. The monitor is the authorized promoter after all evidence exists; CI is the final mechanical check.
 
 ---
 
@@ -183,6 +183,10 @@ When a PR diff includes either overlay control file, parse these additional line
 - Overlay plan SHA-256:
 - Independent plan review policy:
 - Independent plan review verdict:
+- R-01 trial identity:
+- R-01 trial review policy:
+- R-01 trial review verdict:
+- R-01 coding authorization:
 - Current metronome Stage:
 ```
 
@@ -194,14 +198,18 @@ Require:
 - declared SHA-256 equals the current plan file SHA-256;
 - policy exactly `GPT-5.6 Terra standard` or `GPT-5.6 Luna standard`;
 - independent verdict exactly `PLAN_REVIEW_PASS`;
+- R-01 trial identity exactly `candidate=<40hex>; planCommit=<40hex>; blob=<40hex>; sha256=<64hex>`, with `candidate` equal to `HEAD`;
+- R-01 trial review policy exactly `GPT-5.6 Terra standard` or `GPT-5.6 Luna standard`;
+- R-01 trial review verdict exactly `PASS`;
+- R-01 coding authorization exactly `BLOCKED_PENDING_USER_DECISION`;
 - existing planner/coder/reviewer/ChatGPT final verdicts remain valid;
 - stage exactly `MSO-6`.
 
-Do not accept arbitrary `MSO-*` headings. Do not parse legal transitions or intermediate evidence. This is one special final-promotion check inside the existing validator.
+The validator can prove the candidate is current and the evidence is complete; the monitor proves the isolated plan commit/blob/SHA relationship before promotion because that validation commit is intentionally not merged into the workflow PR. Do not accept arbitrary `MSO-*` headings or parse intermediate transitions.
 
 **Step 3: Make the self-test executable and exact**
 
-Extend `validBody` with valid values computed from each temporary repository's committed plan fixture. Add negative cases for `MSO-5`, an unknown stage, missing independent PASS, stale commit/blob/SHA-256, and a positive `MSO-6` case.
+Extend `validBody` with valid overlay and R-01 evidence. Add negative cases for `MSO-5`, an unknown stage, missing overlay-plan PASS, stale overlay commit/blob/SHA-256, stale R-01 candidate, R-01 review `CHANGES_REQUIRED`, R-01 coding not blocked, and one positive `MSO-6` case.
 
 Run:
 
@@ -217,11 +225,11 @@ Update `scripts/validate-metronome-gates.mjs` to require the two overlay files a
 
 - root router contains `.agents/skills/metronome-workflow/SKILL.md`;
 - overlay contains `Superpowers Task is the Metronome Stage`, all four hard-pause triggers, `explicit user decision`, `Never route diagnosis, fix, or review to GPT-5.6 Sol`, and both execution-mode skill names;
-- validator/self-test/template contain the exact overlay evidence labels and `MSO-6`.
+- validator/self-test/template contain the exact overlay and R-01 trial evidence labels and `MSO-6`.
 
 Do not add another validator or a generic status protocol.
 
-**Step 5: Add the seven evidence lines to the existing PR template**
+**Step 5: Add the final-promotion evidence lines to the existing PR template**
 
 Add the labels under `Agent Gate Evidence`; keep all existing evidence fields.
 
@@ -330,121 +338,113 @@ git status --short
 
 Use normal hooks. Do not set PR stage `MSO-6` yet.
 
-### Task 6 [MSO-6]: Run Minimal Fresh-Context R-01 Acceptance
+### Task 6 [MSO-6]: Run the Real Fresh-Context R-01 Planning Trial
 
-Validate the candidate commit in a detached worktree, write evidence only under `C:\tmp\metronome-r01-evidence`, and modify no repository files. This proves observable conformance, not unobservable internal skill invocation.
+Run the trial on a local validation branch rooted at the green overlay candidate. Its only repository change is the real durable R-01 plan; never merge or cherry-pick that validation commit into the overlay workflow PR.
 
-**Step 1: Create a clean isolated validation worktree**
+**Step 1: Create the isolated clean validation branch**
 
 ```powershell
 $repo = 'C:\Users\wsuto\metronome'
 $candidate = git -C $repo rev-parse HEAD
 $worktree = 'C:\tmp\metronome-r01-worktree'
 $evidence = 'C:\tmp\metronome-r01-evidence'
-if (Test-Path $worktree) { throw 'R-01 BLOCKED: validation worktree path already exists' }
-git -C $repo worktree add --detach $worktree $candidate
+$branch = "codex/r01-overlay-validation-$($candidate.Substring(0, 12))"
+if (Test-Path $worktree) { throw 'R-01 PLAN_BLOCKED: validation worktree exists' }
+git -C $repo show-ref --verify --quiet "refs/heads/$branch"
+if ($LASTEXITCODE -eq 0) { throw 'R-01 PLAN_BLOCKED: validation branch exists' }
+git -C $repo worktree add -b $branch $worktree $candidate
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
+if (git -C $worktree status --porcelain=v2 --untracked-files=all) { throw 'R-01 PLAN_BLOCKED: validation worktree is not Git-visible clean' }
 ```
 
-**Step 2: Run one pinned, read-only, neutral fresh task**
+**Step 2: Launch a brand-new empty-context Sol plan agent**
 
-The prompt must not name `AGENTS.md`, the repo-local skill, or their paths:
+This is the acceptance trial, not product implementation. The fresh planner must be led by persistent repo routing to read root/overlay instructions, applicable Superpowers planning and execution-mode skills, and these authoritative R-01 sources:
+
+- `docs/refactor/src-debt-forensics-2026-07-04/00-project-codescene-scan.md`
+- `docs/refactor/src-debt-forensics-2026-07-04/01-sheet-practice-controls.md`
+- `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md`
+- `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md`
+- existing `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md`
+- only the necessary debt-map, target, focused test, and directly relevant primitive files
+
+The neutral prompt must not name `AGENTS.md`, the repo overlay, or Superpowers source paths:
 
 ```powershell
 $worktree = 'C:\tmp\metronome-r01-worktree'
 $evidence = 'C:\tmp\metronome-r01-evidence'
 $codex = 'C:\Users\wsuto\.codex\.sandbox-bin\codex.exe'
-$before = git -C $worktree status --porcelain=v2 --untracked-files=all
-if ($before) { throw 'R-01 BLOCKED: worktree is not Git-visible clean before acceptance' }
 $prompt = @'
-In this repository, locate and read the governing workflow, its composed execution guidance, and the approved implementation plan. Perform a read-only dry run for two cases: (A) a small cohesive change whose plan says PLAN_READY but has no matching independent plan-review PASS, and (B) the same task unexpectedly grows production LOC. Do not modify files. Return nine lines and no others, using these labels in order: PLAN, RESULT, TASK_IS_STAGE, MODE, CODER, PLAN_READY_ALONE, ON_PRODUCTION_LOC_GROWTH, RESUME, FINAL_PROMOTION_STAGE. Determine every value from the repository.
+Prepare the durable complete R-01 refactor implementation plan at the repository-prescribed path. Follow all persistent repository workflow and planning instructions. Locate and read the authoritative project scan, R-01 target forensics, remediation plan, refactor template, existing R-01 plan, and only the target/repo-map code needed to make exact decisions. Record the governing workflow and planning-skill sources actually read as planner-only evidence. Map every R-01 scan finding to an implementation stage or an explicit PLAN_BLOCKED item. For each stage, choose one-agent reuse or a fresh agent based on its size and independence. Include retired-surface deletion proof, allowed new surface, net-debt evidence, production-LOC and Code Health guards, and a mandatory user review stop before coding. The finding-coverage table alone may exceed the template line cap. Write only the R-01 plan; do not edit product code. Return exactly PLAN_READY or PLAN_BLOCKED.
 '@
-& $codex exec --model gpt-5.6-terra --config 'model_reasoning_effort="medium"' --config 'service_tier="default"' --strict-config --ignore-user-config --sandbox read-only --ephemeral --cd $worktree --json --output-last-message "$evidence\r01-last.txt" $prompt |
-  Tee-Object -FilePath "$evidence\r01-events.jsonl"
-if ($LASTEXITCODE -ne 0) { throw 'R-01 BLOCKED: fresh task failed' }
-$after = git -C $worktree status --porcelain=v2 --untracked-files=all
-if ($after -ne $before -or $after) { throw 'R-01 BLOCKED: Git-visible tracked/untracked status changed' }
+& $codex exec --model gpt-5.6-sol --config 'model_reasoning_effort="medium"' --config 'service_tier="default"' --strict-config --ignore-user-config --sandbox workspace-write --ephemeral --cd $worktree --output-last-message "$evidence\r01-plan-last.txt" $prompt
+if ($LASTEXITCODE -ne 0 -or (Get-Content -Raw "$evidence\r01-plan-last.txt").Trim() -ne 'PLAN_READY') { throw 'R-01 PLAN_BLOCKED: fresh Sol plan agent did not return PLAN_READY' }
 ```
 
-**Step 3: Require source-read command evidence using real JSONL fields**
+This is a new `codex exec`, not `resume`; `--ephemeral` and the neutral prompt provide empty conversation context. The explicit model, medium reasoning, default service tier, and ignored user config prevent Sol/fast or inherited active configuration drift.
 
-Parse only completed `command_execution` items. For each required source, require exit code `0`, a read command containing the path, and `aggregated_output` containing its marker:
-
-| Required source | Distinctive marker |
-|---|---|
-| root `AGENTS.md` | `metronome-workflow/SKILL.md` |
-| `.agents/skills/metronome-workflow/SKILL.md` | `Superpowers Task is the Metronome Stage` |
-| this plan | `Metronome Superpowers Overlay Implementation Plan` |
-| Superpowers `using-superpowers/SKILL.md` | `name: using-superpowers` |
-| Superpowers `executing-plans/SKILL.md` | `name: executing-plans` |
-
-Run this inline assertion; do not move it into a reusable parser or schema:
+**Step 3: Enforce plan-only scope and bind the artifact**
 
 ```powershell
-$evidence = 'C:\tmp\metronome-r01-evidence'
-$commands = Get-Content "$evidence\r01-events.jsonl" | ForEach-Object {
-  $event = $_ | ConvertFrom-Json
-  if ($event.type -eq 'item.completed' -and $event.item.type -eq 'command_execution') { $event.item }
-}
-$reads = @(
-  @('AGENTS\.md', 'metronome-workflow/SKILL.md'),
-  @('metronome-workflow[\\/]SKILL\.md', 'Superpowers Task is the Metronome Stage'),
-  @('2026-07-16-metronome-superpowers-overlay\.md', 'Metronome Superpowers Overlay Implementation Plan'),
-  @('using-superpowers[\\/]SKILL\.md', 'name: using-superpowers'),
-  @('executing-plans[\\/]SKILL\.md', 'name: executing-plans')
-)
-foreach ($read in $reads) {
-  $hit = $commands | Where-Object { $_.exit_code -eq 0 -and $_.command -match '(Get-Content|rg|Select-String|type)' -and $_.command -match $read[0] -and $_.aggregated_output -match [regex]::Escape($read[1]) }
-  if (-not $hit) { throw "R-01 BLOCKED: no command-read evidence for $($read[0])" }
-}
-```
-
-A path mentioned only in final prose does not count. If the installed CLI cannot prove these reads through the verified fields, return `PLAN_BLOCKED` rather than infer them.
-
-**Step 4: Require the exact behavioral result**
-
-Run this exact trimmed equality assertion:
-
-```powershell
-$evidence = 'C:\tmp\metronome-r01-evidence'
-$expected = @'
-PLAN: docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md
-RESULT: PLAN_READY
-TASK_IS_STAGE: YES
-MODE: superpowers:executing-plans
-CODER: GPT-5.6 Terra standard
-PLAN_READY_ALONE: BLOCKED
-ON_PRODUCTION_LOC_GROWTH: STOP_AND_INDEPENDENT_TERRA_OR_LUNA_DIAGNOSIS
-RESUME: EXPLICIT_USER_DECISION
-FINAL_PROMOTION_STAGE: MSO-6
-'@
-if ((Get-Content -Raw "$evidence\r01-last.txt").Trim() -ne $expected.Trim()) { throw 'R-01 BLOCKED: behavioral output mismatch' }
-```
-
-The fresh task prompt may specify these output labels but must not reveal the expected values. Any mismatch fails closed.
-
-**Step 5: Promote only after R-01 passes**
-
-Populate the existing PR evidence with the exact current plan identities, independent review PASS, final role verdicts, CodeScene no-decline result, and `Current metronome Stage: MSO-6`. Run `npm run validate:debt-gates` in PR context through existing CI.
-
-If R-01 exposes a repair, stop and rerun the Task 0 pre-coding assertion before changing code. An unplanned repair or any plan edit requires a new plan-only commit/hash and fresh independent Task 0 review; after implementation edits, rerun Tasks 5 and 6.
-
-Remove the detached validation worktree only after evidence is retained outside it:
-
-```powershell
-$repo = 'C:\Users\wsuto\metronome'
 $worktree = 'C:\tmp\metronome-r01-worktree'
-git -C $repo worktree remove $worktree
+$evidence = 'C:\tmp\metronome-r01-evidence'
+$repo = 'C:\Users\wsuto\metronome'
+$r01Plan = 'docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md'
+$candidate = git -C $repo rev-parse HEAD
+if ((git -C $worktree rev-parse HEAD) -ne $candidate) { throw 'R-01 PLAN_BLOCKED: fresh planner created an unexpected commit' }
+$changed = @(git -C $worktree status --porcelain=v1 --untracked-files=all)
+$changedPaths = @($changed | ForEach-Object { $_.Substring(3).Trim('"') })
+if ($changedPaths.Count -ne 1 -or $changedPaths[0] -ne $r01Plan) { throw 'R-01 PLAN_BLOCKED: fresh planner changed anything except the R-01 plan' }
+if (git -C $worktree diff --name-only -- src) { throw 'R-01 PLAN_BLOCKED: product code changed' }
+rg -n '^Verdict: `PLAN_READY`$' "$worktree\$r01Plan"
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: durable plan verdict is not PLAN_READY' }
+git -C $worktree add -- $r01Plan
+$staged = @(git -C $worktree diff --cached --name-only)
+if ($staged.Count -ne 1 -or $staged[0] -ne $r01Plan) { throw 'R-01 PLAN_BLOCKED: validation commit is not plan-only' }
+git -C $worktree commit -m "Validate overlay with fresh R-01 plan"
+if (git -C $worktree status --porcelain=v2 --untracked-files=all) { throw 'R-01 PLAN_BLOCKED: validation branch is not clean after commit' }
+$candidate = git -C $worktree rev-parse HEAD^
+$planCommit = git -C $worktree rev-parse HEAD
+$planBlob = git -C $worktree rev-parse "HEAD:$r01Plan"
+$planSha256 = (Get-FileHash -Algorithm SHA256 "$worktree\$r01Plan").Hash.ToLowerInvariant()
+[ordered]@{candidate=$candidate; planCommit=$planCommit; blob=$planBlob; sha256=$planSha256} | ConvertTo-Json | Set-Content -Encoding utf8 "$evidence\r01-identity.json"
 ```
+
+Use normal hooks for this plan-only validation commit. The commit parent binds the generated plan to the exact overlay candidate; the blob and SHA-256 bind its content.
+
+**Step 4: Launch a fresh independent read-only Luna plan review**
+
+```powershell
+$worktree = 'C:\tmp\metronome-r01-worktree'
+$evidence = 'C:\tmp\metronome-r01-evidence'
+$codex = 'C:\Users\wsuto\.codex\.sandbox-bin\codex.exe'
+$identity = Get-Content -Raw "$evidence\r01-identity.json" | ConvertFrom-Json
+$beforeReview = git -C $worktree status --porcelain=v2 --untracked-files=all
+if ($beforeReview) { throw 'R-01 PLAN_BLOCKED: review worktree is not Git-visible clean' }
+$prompt = @"
+Independently review the R-01 plan at commit $($identity.planCommit), blob $($identity.blob), SHA-256 $($identity.sha256), based on candidate $($identity.candidate). Read docs/refactor/src-debt-forensics-2026-07-04/00-project-codescene-scan.md, docs/refactor/src-debt-forensics-2026-07-04/01-sheet-practice-controls.md, docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md, docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md, and docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md. Check required router/overlay/Superpowers planner-read evidence, 100% target-finding coverage, stage feasibility, per-stage one-agent reuse versus fresh-agent strategy, deletion/new-surface/net-debt evidence, anti-wrapper and production-LOC guards, Code Health no-decline, no product coding, and the explicit user review stop before R-01 coding. Do not modify files. Return exactly PASS or CHANGES_REQUIRED.
+"@
+& $codex exec --model gpt-5.6-luna --config 'model_reasoning_effort="medium"' --config 'service_tier="default"' --strict-config --ignore-user-config --sandbox read-only --ephemeral --cd $worktree --output-last-message "$evidence\r01-review-last.txt" $prompt
+if ($LASTEXITCODE -ne 0 -or (Get-Content -Raw "$evidence\r01-review-last.txt").Trim() -ne 'PASS') { throw 'R-01 PLAN_BLOCKED: independent plan review did not PASS' }
+$afterReview = git -C $worktree status --porcelain=v2 --untracked-files=all
+if ($afterReview -ne $beforeReview -or $afterReview) { throw 'R-01 PLAN_BLOCKED: read-only review changed Git-visible status' }
+```
+
+**Step 5: Promote the overlay workflow, not R-01 coding**
+
+Populate the existing PR evidence with `R-01 trial identity: candidate=<candidate>; planCommit=<planCommit>; blob=<blob>; sha256=<sha256>`, `R-01 trial review policy: GPT-5.6 Luna standard`, `R-01 trial review verdict: PASS`, `R-01 coding authorization: BLOCKED_PENDING_USER_DECISION`, and `Current metronome Stage: MSO-6`. Run existing CI `npm run validate:debt-gates` in PR context.
+
+Leave the validation branch/worktree available for explicit user review of the generated R-01 plan. Do not start R-01 coding until the user reviews that artifact and explicitly decides to proceed. If the trial changes the overlay plan or implementation, repeat Task 0 or Tasks 5-6 as applicable before promotion.
 
 ## Deliberate Repetition
 
 Only these repeated blocks remain, each because it is an executable boundary:
 
-- The seven overlay PR evidence labels appear in the PR template, validator, and self-test: producer, enforcement, and regression fixture must share the same literal contract.
+- The overlay and four R-01 final-promotion evidence labels appear in the PR template, validator, and self-test: producer, enforcement, and regression fixture must share the same literal contract.
 - The plan path, exact `MSO-6`, and hard-pause markers recur at authority, enforcement, and verification boundaries so stale/wrong evidence fails; the full shared policy is not copied.
 - Role model lines remain in the four role references because model eligibility is genuinely role-specific; shared model/pause/stage prose exists only in the overlay.
-- R-01 output labels appear in its prompt contract and exact assertion because the fresh task must receive a format while the verifier checks values.
+- The R-01 source paths appear in the trial read set and reviewer prompt because planner and independent reviewer must use the same authoritative corpus.
 - Git-visible cleanliness is checked in Task 0 and Task 6 for different processes: independent plan review and isolated acceptance. No shared status protocol or helper is added.
 
-**Self-review result:** The plan changes only workflow surfaces, permits no partial implementation commit, mechanically promotes only exact `MSO-6`, leaves intermediate checkpoints to the monitor, centralizes shared rules in one overlay, contains no lifecycle/status/attestation framework, and keeps R-01 pinned, read-only, Git-visible clean, command-observable, and fail-closed. Production-code diff remains `0 LOC`.
+**Self-review result:** The plan changes only workflow surfaces, permits no partial overlay implementation commit, mechanically promotes only exact `MSO-6`, leaves intermediate checkpoints to the monitor, centralizes shared rules in one overlay, and contains no lifecycle/status/attestation framework. The real R-01 trial uses a fresh writable Sol planner for one plan-only artifact, a hashed validation commit, and a fresh read-only Luna PASS while product coding remains user-blocked. Production-code diff remains `0 LOC`.
