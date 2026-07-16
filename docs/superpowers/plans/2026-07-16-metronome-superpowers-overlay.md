@@ -12,7 +12,7 @@
 
 **Estimated Production-Code Diff:** `0 LOC` under `src/**`.
 
-**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `75b6e13948a88a5209bd1d427da20eafa4407064` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
+**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `f5574e4f3e7e35f110b2068f914411f8679f6832` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
 
 ## Verified Interfaces and Limits
 
@@ -90,7 +90,7 @@ git status --short
 git add docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md
 $staged = @(git diff --cached --name-only)
 if ($staged.Count -ne 1 -or $staged[0] -ne 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md') { throw 'PLAN_BLOCKED: plan-only staging failed' }
-git commit -m "Complete workflow implementation scope guard"
+git commit -m "Unify workflow PR scope guard"
 ```
 
 Use normal hooks and never `--no-verify`. All paused implementation files must remain uncommitted and otherwise unchanged.
@@ -262,21 +262,25 @@ Each role file should show a tiny addition and zero contract deletion relative t
 
 **Allowed workflow PR files:** this plan, `AGENTS.md`, `.agents/skills/metronome-workflow/SKILL.md`, four role files, refactor template, debt map, existing validator/self-test/gate wrapper, and PR template. No R-01 plan, product source, status, package, lock, or workflow file is allowed.
 
-Task 0 already committed this plan. The Task 5 implementation allowlist is the remaining exact file set below; any new working-tree mutation of the plan is forbidden and restarts Task 0 with a new identity/review.
-
 **Step 1: Prove simplification and scope**
 
 ```powershell
-$allowedImplementation = @('AGENTS.md','.agents/skills/metronome-workflow/SKILL.md','skills/metronome_planner.md','skills/metronome_coder.md','skills/metronome_reviewer.md','skills/metronome_chatgpt_review.md','docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md','docs/architecture/debt-gate-map.md','scripts/validate-pr-debt-contract.mjs','scripts/validate-pr-debt-contract.selftest.mjs','scripts/validate-metronome-gates.mjs','.github/pull_request_template.md')
-$trackedImplementation = @(git diff --name-only --no-renames HEAD)
-if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: tracked implementation path diff failed' }
-$untrackedImplementation = @(git ls-files --others --exclude-standard)
-if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: untracked implementation path listing failed' }
-$implementationPaths = @(($trackedImplementation + $untrackedImplementation) | Where-Object { $_ } | ForEach-Object { (($_ -replace '\\', '/') -replace '^\./', '') } | Sort-Object -Unique)
-$forbiddenImplementation = @($implementationPaths | Where-Object { $_ -notin $allowedImplementation })
-if ($forbiddenImplementation.Count -gt 0) { throw "BLOCKED: implementation scope escaped: $($forbiddenImplementation -join ', ')" }
-git diff --stat
-git diff --numstat -- 'src/**'
+$allowedWorkflowPr = @('docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md','AGENTS.md','.agents/skills/metronome-workflow/SKILL.md','skills/metronome_planner.md','skills/metronome_coder.md','skills/metronome_reviewer.md','skills/metronome_chatgpt_review.md','docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md','docs/architecture/debt-gate-map.md','scripts/validate-pr-debt-contract.mjs','scripts/validate-pr-debt-contract.selftest.mjs','scripts/validate-metronome-gates.mjs','.github/pull_request_template.md')
+$committedWorkflow = @(git diff --name-only --no-renames origin/main...HEAD)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: committed workflow path diff failed' }
+$trackedWorkflow = @(git diff --name-only --no-renames HEAD)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: tracked workflow path diff failed' }
+$untrackedWorkflow = @(git ls-files --others --exclude-standard)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: untracked workflow path listing failed' }
+$workflowPrPaths = @(($committedWorkflow + $trackedWorkflow + $untrackedWorkflow) | Where-Object { $_ } | ForEach-Object { (($_ -replace '\\', '/') -replace '^\./', '') } | Sort-Object -Unique)
+$forbiddenWorkflow = @($workflowPrPaths | Where-Object { $_ -notin $allowedWorkflowPr })
+if ($forbiddenWorkflow.Count -gt 0) { throw "BLOCKED: workflow PR scope escaped: $($forbiddenWorkflow -join ', ')" }
+$diffStat = @(git diff --stat)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: workflow diff-stat failed' }
+$diffStat | Write-Output
+$productionDiff = @(git diff --numstat -- 'src/**')
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: production diff check failed' }
+if ($productionDiff.Count -gt 0) { throw "BLOCKED: production files changed`n$($productionDiff -join "`n")" }
 $r01Surfaces = @(
   '.github/pull_request_template.md',
   'scripts/validate-pr-debt-contract.mjs',
@@ -344,7 +348,7 @@ git status --short
 
 ### Task 6 [MSO-6]: Promote and Merge the Workflow PR
 
-1. Push the workflow branch and open/update the dedicated PR. Its diff must contain only the Task 5 allowlist.
+1. Push the workflow branch and open/update the dedicated PR. Rerun Task 5 Step 1 on the exact PR head; its complete committed/tracked/untracked path union must contain only the thirteen paths in Task 5's exact `$allowedWorkflowPr`.
 2. Populate `Debt Gate Evidence` with every existing command/CodeScene result and populate all fourteen `Agent Gate Evidence` labels from Task 2: the existing planner/coder/reviewer/ChatGPT seven plus the overlay path/commit/blob/SHA-256, independent-review policy/verdict, and `Current metronome Stage: MSO-6`. There are no R-01 fields.
 3. Wait for existing CI, including `validate:debt-gates`, to pass on the exact PR head.
 4. Run the required external review through the restored `skills/metronome_chatgpt_review.md` contract against the exact PR diff and CI/CodeScene evidence. Require exact `PASS` or `PASS_WITH_NITS`; unavailable or blocking review means `PLAN_BLOCKED`.
