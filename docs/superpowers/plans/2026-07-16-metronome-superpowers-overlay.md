@@ -12,7 +12,7 @@
 
 **Estimated Production-Code Diff:** `0 LOC` under `src/**`.
 
-**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `2b315a81fc04c13d985110d2063e4aea57b1980d` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
+**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `8d2094daf60f57513552702d81ac17fc234c94fb` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
 
 ## Verified Interfaces and Limits
 
@@ -90,7 +90,7 @@ git status --short
 git add docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md
 $staged = @(git diff --cached --name-only)
 if ($staged.Count -ne 1 -or $staged[0] -ne 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md') { throw 'PLAN_BLOCKED: plan-only staging failed' }
-git commit -m "Close workflow routing and transition gates"
+git commit -m "Close main-first trial identity checks"
 ```
 
 Use normal hooks and never `--no-verify`. All paused implementation files must remain uncommitted and otherwise unchanged.
@@ -349,7 +349,10 @@ Stage the allowed list explicitly, inspect `git diff --cached --name-only`, and 
 
 ```powershell
 git commit -m "Add minimal Metronome Superpowers workflow"
-git status --short
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: workflow implementation commit failed' }
+$implementationStatus = @(git status --porcelain=v2 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: post-implementation status failed' }
+if ($implementationStatus.Count -gt 0) { throw 'BLOCKED: workflow implementation worktree is not clean after commit' }
 ```
 
 ---
@@ -365,8 +368,12 @@ git status --short
 
 ```powershell
 git switch main
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: workflow promotion could not switch to main' }
 git pull --ff-only
-git status --short
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: workflow promotion could not fast-forward main' }
+$mainStatus = @(git status --porcelain=v2 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: workflow promotion main status failed' }
+if ($mainStatus.Count -gt 0) { throw 'PLAN_BLOCKED: workflow promotion did not return to clean main' }
 ```
 
 The final status must be empty. The workflow PR is now complete; its already-merged status cannot depend on the later R-01 trial.
@@ -381,13 +388,24 @@ The workflow PR does not alter the historical R-01 file already present on main;
 ```powershell
 $repo = 'C:\Users\wsuto\metronome'
 $mainCommit = git -C $repo rev-parse main
+if ($LASTEXITCODE -ne 0 -or $mainCommit -notmatch '^[a-f0-9]{40}$') { throw 'R-01 PLAN_BLOCKED: main commit resolution failed' }
 $worktree = 'C:\tmp\metronome-r01-plan-worktree'
 $branch = "codex/r01-plan-$($mainCommit.Substring(0, 12))"
-if (git -C $repo status --porcelain=v2 --untracked-files=all) { throw 'R-01 PLAN_BLOCKED: main is not clean' }
+$mainStatus = @(git -C $repo status --porcelain=v2 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: main status failed' }
+if ($mainStatus.Count -gt 0) { throw 'R-01 PLAN_BLOCKED: main is not clean' }
 if (Test-Path $worktree) { throw 'R-01 PLAN_BLOCKED: plan worktree already exists' }
 git -C $repo show-ref --verify --quiet "refs/heads/$branch"
-if ($LASTEXITCODE -eq 0) { throw 'R-01 PLAN_BLOCKED: plan branch already exists' }
+$branchProbe = $LASTEXITCODE
+if ($branchProbe -notin @(0, 1)) { throw 'R-01 PLAN_BLOCKED: plan branch probe failed' }
+if ($branchProbe -eq 0) { throw 'R-01 PLAN_BLOCKED: plan branch already exists' }
 git -C $repo worktree add -b $branch $worktree $mainCommit
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: plan worktree creation failed' }
+$worktreeStatus = @(git -C $worktree status --porcelain=v2 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: plan worktree status failed' }
+if ($worktreeStatus.Count -gt 0) { throw 'R-01 PLAN_BLOCKED: new plan worktree is not clean' }
+$worktreeHead = git -C $worktree rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $worktreeHead -notmatch '^[a-f0-9]{40}$' -or $worktreeHead -ne $mainCommit) { throw 'R-01 PLAN_BLOCKED: plan worktree base mismatch' }
 ```
 
 **Step 2: Launch a fresh empty-context Sol standard plan agent**
@@ -399,20 +417,31 @@ $worktree = 'C:\tmp\metronome-r01-plan-worktree'
 $codex = 'C:\Users\wsuto\.codex\.sandbox-bin\codex.exe'
 $evidence = 'C:\tmp\metronome-r01-plan-evidence'
 $mainCommit = git -C $worktree rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $mainCommit -notmatch '^[a-f0-9]{40}$') { throw 'R-01 PLAN_BLOCKED: trial base resolution failed' }
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $prompt = @'
 Create the durable complete R-01 staged refactor plan at the repository-prescribed path. Follow persistent repository workflow and planning instructions. Read the authoritative project scan, R-01 target forensics, remediation plan, refactor template, applicable planning/execution skills, and only necessary target/repo-map code. Map every finding to a stage or explicit PLAN_BLOCKED item; choose one-agent reuse or a fresh agent per stage by size; include deletion, allowed-new-surface, net-debt, production-LOC, Code Health, and user-review-before-coding gates. Write only the plan and return exactly PLAN_READY or PLAN_BLOCKED.
 '@
 & $codex exec --model gpt-5.6-sol --config 'model_reasoning_effort="medium"' --config 'service_tier="default"' --strict-config --ignore-user-config --sandbox workspace-write --ephemeral --cd $worktree --output-last-message "$evidence\plan-last.txt" $prompt
 if ($LASTEXITCODE -ne 0 -or (Get-Content -Raw "$evidence\plan-last.txt").Trim() -ne 'PLAN_READY') { throw 'R-01 PLAN_BLOCKED: fresh Sol planner failed' }
-if ((git -C $worktree rev-parse HEAD) -ne $mainCommit) { throw 'R-01 PLAN_BLOCKED: planner created an unexpected commit' }
+$postPlanHead = git -C $worktree rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $postPlanHead -notmatch '^[a-f0-9]{40}$') { throw 'R-01 PLAN_BLOCKED: post-plan HEAD resolution failed' }
+if ($postPlanHead -ne $mainCommit) { throw 'R-01 PLAN_BLOCKED: planner created an unexpected commit' }
 $planPath = 'docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md'
-$changed = @(git -C $worktree status --porcelain=v1 --untracked-files=all | ForEach-Object { $_.Substring(3).Trim('"') })
+$statusLines = @(git -C $worktree status --porcelain=v1 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: plan-only status failed' }
+$changed = @($statusLines | ForEach-Object { $_.Substring(3).Trim('"') })
 if ($changed.Count -ne 1 -or $changed[0] -ne $planPath) { throw 'R-01 PLAN_BLOCKED: trial is not plan-only' }
 git -C $worktree add -- $planPath
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: plan staging failed' }
 git -C $worktree commit -m "Create reviewed R-01 implementation plan"
-if ((git -C $worktree rev-parse HEAD^) -ne $mainCommit) { throw 'R-01 PLAN_BLOCKED: plan commit is not based on merged main' }
-if (git -C $worktree status --porcelain=v2 --untracked-files=all) { throw 'R-01 PLAN_BLOCKED: plan branch is not clean after commit' }
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: plan commit failed' }
+$planParent = git -C $worktree rev-parse HEAD^
+if ($LASTEXITCODE -ne 0 -or $planParent -notmatch '^[a-f0-9]{40}$') { throw 'R-01 PLAN_BLOCKED: plan parent resolution failed' }
+if ($planParent -ne $mainCommit) { throw 'R-01 PLAN_BLOCKED: plan commit is not based on merged main' }
+$postCommitStatus = @(git -C $worktree status --porcelain=v2 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: post-commit status failed' }
+if ($postCommitStatus.Count -gt 0) { throw 'R-01 PLAN_BLOCKED: plan branch is not clean after commit' }
 ```
 
 Use normal hooks, require clean status after commit, and compute the immutable identity:
@@ -421,10 +450,14 @@ Use normal hooks, require clean status after commit, and compute the immutable i
 $worktree = 'C:\tmp\metronome-r01-plan-worktree'
 $planPath = 'docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md'
 $planCommit = git -C $worktree rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $planCommit -notmatch '^[a-f0-9]{40}$') { throw 'R-01 PLAN_BLOCKED: plan commit resolution failed' }
 $planBlob = git -C $worktree rev-parse "HEAD:$planPath"
+if ($LASTEXITCODE -ne 0 -or $planBlob -notmatch '^[a-f0-9]{40}$') { throw 'R-01 PLAN_BLOCKED: plan blob resolution failed' }
 $env:PLAN_SPEC = "$planCommit`:$planPath"
 $planSha256 = node --input-type=module -e 'import {execFileSync} from "node:child_process"; import {createHash} from "node:crypto"; process.stdout.write(createHash("sha256").update(execFileSync("git", ["-C", "C:\\tmp\\metronome-r01-plan-worktree", "show", process.env.PLAN_SPEC])).digest("hex"));'
+$planHashExit = $LASTEXITCODE
 Remove-Item Env:PLAN_SPEC
+if ($planHashExit -ne 0 -or $planSha256 -notmatch '^[a-f0-9]{64}$') { throw 'R-01 PLAN_BLOCKED: plan SHA-256 computation failed' }
 ```
 
 **Step 3: Review and stop for the user**
@@ -437,15 +470,21 @@ $evidence = 'C:\tmp\metronome-r01-plan-evidence'
 $codex = 'C:\Users\wsuto\.codex\.sandbox-bin\codex.exe'
 $planPath = 'docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md'
 $planCommit = git -C $worktree rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $planCommit -notmatch '^[a-f0-9]{40}$') { throw 'R-01 PLAN_BLOCKED: review plan commit resolution failed' }
 $planBlob = git -C $worktree rev-parse "HEAD:$planPath"
+if ($LASTEXITCODE -ne 0 -or $planBlob -notmatch '^[a-f0-9]{40}$') { throw 'R-01 PLAN_BLOCKED: review plan blob resolution failed' }
 $env:PLAN_SPEC = "$planCommit`:$planPath"
 $planSha256 = node --input-type=module -e 'import {execFileSync} from "node:child_process"; import {createHash} from "node:crypto"; process.stdout.write(createHash("sha256").update(execFileSync("git", ["-C", "C:\\tmp\\metronome-r01-plan-worktree", "show", process.env.PLAN_SPEC])).digest("hex"));'
+$planHashExit = $LASTEXITCODE
 Remove-Item Env:PLAN_SPEC
-$before = git -C $worktree status --porcelain=v2 --untracked-files=all
+if ($planHashExit -ne 0 -or $planSha256 -notmatch '^[a-f0-9]{64}$') { throw 'R-01 PLAN_BLOCKED: review plan SHA-256 computation failed' }
+$before = @(git -C $worktree status --porcelain=v2 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: pre-review status failed' }
 $reviewPrompt = "Independently review $planPath at commit $planCommit, blob $planBlob, SHA-256 $planSha256. Read the actual project scan, R-01 forensics, remediation plan, template, and generated plan. Require 100% finding coverage, feasible stages and per-stage agent strategy, deletion/new-surface/net-debt evidence, anti-wrapper/LOC/Code Health guards, no product coding, and an explicit user stop. Do not modify files. Return exactly PASS or CHANGES_REQUIRED."
 & $codex exec --model gpt-5.6-luna --config 'model_reasoning_effort="medium"' --config 'service_tier="default"' --strict-config --ignore-user-config --sandbox read-only --ephemeral --cd $worktree --output-last-message "$evidence\review-last.txt" $reviewPrompt
 if ($LASTEXITCODE -ne 0 -or (Get-Content -Raw "$evidence\review-last.txt").Trim() -ne 'PASS') { throw 'R-01 PLAN_BLOCKED: independent review failed' }
-$after = git -C $worktree status --porcelain=v2 --untracked-files=all
+$after = @(git -C $worktree status --porcelain=v2 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: post-review status failed' }
 if (Compare-Object $before $after) { throw 'R-01 PLAN_BLOCKED: read-only review changed Git-visible status' }
 ```
 
@@ -534,7 +573,28 @@ Independent plan review: PASS (GPT-5.6 Terra/Luna standard)
 User decision: APPROVED
 ```
 
-The coding branch starts from clean `main`, not the plan branch. Before coding, the Terra/Luna agent runs `git cat-file -e <planCommit>:<planPath>`, verifies `git rev-parse <planCommit>:<planPath>` equals the packet blob, and reads the plan with `git show <planCommit>:<planPath>`. Reviewer agents receive the same packet. Keep the local plan branch until the coding PR closes, then delete it; never merge/cherry-pick it and never add CI branch-fetch logic.
+The coding branch starts from clean `main`, not the plan branch. Before coding, substitute the packet values and run:
+
+```powershell
+$planPath = 'docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md'
+$planCommit = '<packet planCommit>'
+$packetPlanBlob = '<packet planBlob>'
+$packetPlanSha256 = '<packet planSha256>'
+if ($planCommit -notmatch '^[a-f0-9]{40}$' -or $packetPlanBlob -notmatch '^[a-f0-9]{40}$' -or $packetPlanSha256 -notmatch '^[a-f0-9]{64}$') { throw 'BLOCKED: malformed immutable plan packet' }
+git cat-file -e "$planCommit`:$planPath"
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: immutable plan commit/path is unavailable' }
+$actualPlanBlob = git rev-parse "$planCommit`:$planPath"
+if ($LASTEXITCODE -ne 0 -or $actualPlanBlob -notmatch '^[a-f0-9]{40}$') { throw 'BLOCKED: immutable plan blob resolution failed' }
+if ($actualPlanBlob -ne $packetPlanBlob) { throw 'BLOCKED: immutable plan blob mismatch' }
+$env:PLAN_SPEC = "$planCommit`:$planPath"
+$actualPlanSha256 = node --input-type=module -e 'import {execFileSync} from "node:child_process"; import {createHash} from "node:crypto"; process.stdout.write(createHash("sha256").update(execFileSync("git", ["show", process.env.PLAN_SPEC])).digest("hex"));'
+$planHashExit = $LASTEXITCODE
+Remove-Item Env:PLAN_SPEC
+if ($planHashExit -ne 0 -or $actualPlanSha256 -notmatch '^[a-f0-9]{64}$') { throw 'BLOCKED: immutable plan git-show/SHA-256 computation failed' }
+if ($actualPlanSha256 -ne $packetPlanSha256) { throw 'BLOCKED: immutable plan SHA-256 mismatch' }
+```
+
+Only after all checks pass may the agent read `git show <planCommit>:<planPath>` and code. Reviewer agents receive the same packet and rerun the same existence/blob/SHA block before review. Keep the local plan branch until the coding PR closes, then delete it; never merge/cherry-pick it and never add CI branch-fetch logic.
 
 ## Final Self-Review
 
@@ -543,6 +603,6 @@ The coding branch starts from clean `main`, not the plan branch. Before coding, 
 - Every enumerated pre-merge R-01 label, parser/fixture identifier, marker, and obsolete status token is absent from workflow validator, self-test, gate markers, PR template, and overlay promotion.
 - Overlay plan identity is derived from tracked `HEAD:<path>` blob/content/SHA only.
 - Full `HEAD` role contracts survive with pointer-only additions.
-- Generated R-01/later plans never merge into `main`; later agents use immutable `git show` handoff.
+- Generated R-01/later plans never merge into `main`; later agents verify commit, blob, and SHA-256 from immutable `git show` bytes before using the handoff.
 - Post-merge trial failure starts a bounded workflow-fix from fresh `origin/main`; no product/R-01 plan content enters it, and a repeated fresh trial plus user approval is required before coding.
 - Production diff remains `0 LOC`, and the paused implementation becomes smaller in mechanism surface.
