@@ -12,7 +12,7 @@
 
 **Estimated Production-Code Diff:** `0 LOC` under `src/**`.
 
-**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `ec791a78fcdeaf7a3e58ed244be9fe0f18315622` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
+**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `6cf779d05fc8331c83836fa782e46afda566c270` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
 
 ## Verified Interfaces and Limits
 
@@ -90,7 +90,7 @@ git status --short
 git add docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md
 $staged = @(git diff --cached --name-only)
 if ($staged.Count -ne 1 -or $staged[0] -ne 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md') { throw 'PLAN_BLOCKED: plan-only staging failed' }
-git commit -m "Cover untracked workflow-fix paths"
+git commit -m "Simplify workflow-fix path guard"
 ```
 
 Use normal hooks and never `--no-verify`. All paused implementation files must remain uncommitted and otherwise unchanged.
@@ -449,58 +449,30 @@ if (git -C $fixWorktree status --porcelain=v2 --untracked-files=all) { throw 'PL
 if ((git -C $fixWorktree rev-parse HEAD) -ne $fixBase) { throw 'PLAN_BLOCKED: workflow-fix is not based on fetched origin/main' }
 ```
 
-The workflow-fix diff is limited to the minimum subset of the exact `$allowed` set below. `src/**`, every product/test/status/package/lock/workflow file, and `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` are forbidden. Under the stated non-malicious-monitor threat model, the monitor also forbids merge/cherry-pick commits from the temporary R-01 branch. Before every fix commit and PR promotion, compare staged, working, and `$fixBase...HEAD` names to the allowlist, require no merge commits, and fail closed on any R-01 plan path:
+The workflow-fix diff is limited to the minimum subset of the exact `$allowed` set below. `src/**`, every product/test/status/package/lock/workflow file, and `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` are forbidden. Under the stated non-malicious-monitor threat model, the monitor also forbids merge/cherry-pick commits from the temporary R-01 branch. Before every fix commit and PR promotion, compare committed branch, tracked working, and untracked names to the allowlist, require no merge commits, and fail closed on any R-01 plan path:
 
 ```powershell
 $allowed = @('AGENTS.md','.agents/skills/metronome-workflow/SKILL.md','skills/metronome_planner.md','skills/metronome_coder.md','skills/metronome_reviewer.md','skills/metronome_chatgpt_review.md','docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md','docs/architecture/debt-gate-map.md','scripts/validate-pr-debt-contract.mjs','scripts/validate-pr-debt-contract.selftest.mjs','scripts/validate-metronome-gates.mjs','.github/pull_request_template.md','docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md')
-$node = Join-Path $repo '.tools\node-v24.17.0-win-x64\node.exe'
-if (-not (Test-Path -LiteralPath $node)) { throw 'PLAN_BLOCKED: repository-local Node runtime is missing' }
-$env:FIX_WORKTREE = $fixWorktree
-$statusParser = @'
-import { execFileSync } from "node:child_process";
-const raw = execFileSync("git", ["-C", process.env.FIX_WORKTREE, "status", "--porcelain=v1", "-z", "--untracked-files=all"]);
-const records = raw.toString("utf8").split("\0");
-const paths = [];
-const add = path => {
-  const normalized = path.replaceAll("\\", "/").replace(/^\.\/+/, "");
-  if (!normalized || normalized.startsWith("/") || /^[A-Za-z]:\//.test(normalized) || normalized.split("/").includes("..")) throw new Error(`unsafe status path: ${path}`);
-  paths.push(normalized);
-};
-for (let index = 0; index < records.length;) {
-  const record = records[index++];
-  if (!record) continue;
-  if (record.length < 4 || record[2] !== " ") throw new Error(`invalid porcelain record: ${JSON.stringify(record)}`);
-  const xy = record.slice(0, 2);
-  add(record.slice(3));
-  if (xy.includes("R") || xy.includes("C")) {
-    const source = records[index++];
-    if (!source) throw new Error("missing rename/copy source path");
-    add(source);
-  }
-}
-process.stdout.write(JSON.stringify([...new Set(paths)].sort()));
-'@
-$statusJson = $statusParser | & $node --input-type=module
-$statusExit = $LASTEXITCODE
-Remove-Item Env:FIX_WORKTREE
-if ($statusExit -ne 0) { throw 'PLAN_BLOCKED: git status porcelain parser failed' }
-$statusPaths = @($statusJson | ConvertFrom-Json)
-$changed = @(
-  $statusPaths
-  git -C $fixWorktree diff --name-only
-  git -C $fixWorktree diff --cached --name-only
-  git -C $fixWorktree diff --name-only "$fixBase...HEAD"
-) |
-  Where-Object { $_ } |
-  ForEach-Object { (($_ -replace '\\', '/') -replace '^\./', '') } |
-  Sort-Object -Unique
+$committed = @(git -C $fixWorktree diff --name-only --no-renames origin/main...HEAD)
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: committed-path diff failed' }
+$tracked = @(git -C $fixWorktree diff --name-only --no-renames HEAD)
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: tracked working-path diff failed' }
+$untracked = @(git -C $fixWorktree ls-files --others --exclude-standard)
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: untracked-path listing failed' }
+$changed = @(($committed + $tracked + $untracked) | Where-Object { $_ } | ForEach-Object {
+  $normalized = (($_ -replace '\\', '/') -replace '^\./', '')
+  if ([string]::IsNullOrWhiteSpace($normalized) -or $normalized -match '^(/|[A-Za-z]:/)' -or (($normalized -split '/') -contains '..')) { throw "PLAN_BLOCKED: unsafe workflow-fix path: $_" }
+  $normalized
+} | Sort-Object -Unique)
 $outside = @($changed | Where-Object { $_ -notin $allowed })
 if ($outside.Count -gt 0) { throw "PLAN_BLOCKED: workflow-fix scope escaped: $($outside -join ', ')" }
 if ($changed -contains 'docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md' -or ($changed | Where-Object { $_ -like 'src/*' })) { throw 'PLAN_BLOCKED: R-01/product content entered workflow-fix' }
-if (git -C $fixWorktree log --merges --format='%H' "$fixBase..HEAD") { throw 'PLAN_BLOCKED: workflow-fix contains a merge commit' }
+$mergeCommits = @(git -C $fixWorktree log --merges --format='%H' "$fixBase..HEAD")
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: merge-history check failed' }
+if ($mergeCommits.Count -gt 0) { throw 'PLAN_BLOCKED: workflow-fix contains a merge commit' }
 ```
 
-The `-z` form is the lossless parse of `git status --porcelain=v1 --untracked-files=all`: ordinary, staged, unstaged, untracked, rename-source, and rename-destination paths all enter `$changed` after repository-relative separator normalization. A malformed/unsafe record, parser failure, or any tracked or untracked path outside `$allowed` is `PLAN_BLOCKED`; this explicitly includes untracked `src/**` and R-01 plan paths.
+The three Git sources cover committed branch changes, staged/unstaged tracked changes, and untracked paths. `--no-renames` exposes rename/copy source and destination as delete/add paths. Every command error, unsafe path, or path outside `$allowed` is `PLAN_BLOCKED`, including untracked `src/**` and R-01 plan paths.
 
 If diagnosis changes this workflow plan, shared contract, evidence schema, or scope, the first fix-branch commit must contain only this plan; recompute its tracked commit/blob/SHA-256, obtain a fresh independent Terra/Luna `PLAN_REVIEW_PASS`, and receive explicit user approval before implementation. A mechanical correction already specified by the unchanged approved plan may reuse that tracked plan identity, but still requires the new diagnosis and independent implementation review.
 
