@@ -12,7 +12,7 @@
 
 **Estimated Production-Code Diff:** `0 LOC` under `src/**`.
 
-**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `f5574e4f3e7e35f110b2068f914411f8679f6832` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
+**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `2b315a81fc04c13d985110d2063e4aea57b1980d` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
 
 ## Verified Interfaces and Limits
 
@@ -60,7 +60,7 @@ Apply these deletions and modifications to the current paused implementation; do
 - `.github/pull_request_template.md`: retain all seven existing planner/coder/reviewer/ChatGPT lines, add the seven workflow-plan promotion lines listed in Task 2, and delete the four obsolete R-01 lines.
 - `scripts/validate-pr-debt-contract.mjs`: delete all R-01 trial parsing/checks. Keep the narrow overlay-control check, but derive current plan blob and SHA-256 only from `HEAD:<planPath>` Git object content, never `git hash-object <working-file>` or `readFileSync(<working-file>)`.
 - `scripts/validate-pr-debt-contract.selftest.mjs`: delete R-01 synthetic fields and negative fixtures. Compute valid plan identity from tracked Git objects and add one regression proving an unstaged working-file mutation cannot change accepted `HEAD:<planPath>` identity.
-- `scripts/validate-metronome-gates.mjs`: delete required-content markers for R-01 trial evidence. Restore all role-file required-content arrays to their `HEAD` contracts and add only the overlay pointer marker.
+- `scripts/validate-metronome-gates.mjs`: delete required-content markers for R-01 trial evidence, add the repo-local overlay skill to the `required` file list, and restore all role-file required-content arrays to their `HEAD` contracts with only the overlay pointer marker added.
 - `.agents/skills/metronome-workflow/SKILL.md`: remove pre-merge R-01 evidence from Promotion; add the main-first/no-plan-in-main rule and the minimal immutable handoff described below.
 - `skills/metronome_planner.md`, `skills/metronome_coder.md`, `skills/metronome_reviewer.md`, `skills/metronome_chatgpt_review.md`: discard the paused summaries, restore full `HEAD` content, then add only the overlay pointer/precedence paragraph after each title.
 - Do not change `src/**`, `docs/v1/status.json`, package manifests/locks, workflows, or `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` in the workflow PR.
@@ -90,7 +90,7 @@ git status --short
 git add docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md
 $staged = @(git diff --cached --name-only)
 if ($staged.Count -ne 1 -or $staged[0] -ne 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md') { throw 'PLAN_BLOCKED: plan-only staging failed' }
-git commit -m "Unify workflow PR scope guard"
+git commit -m "Close workflow routing and transition gates"
 ```
 
 Use normal hooks and never `--no-verify`. All paused implementation files must remain uncommitted and otherwise unchanged.
@@ -166,6 +166,8 @@ Run `node scripts/validate-pr-debt-contract.selftest.mjs`; only that expected as
 
 **Step 1: Preserve the existing contract and add conditional workflow evidence**
 
+Add `/^AGENTS\.md$/v` and `/^\.agents\/skills\/metronome-workflow\/SKILL\.md$/v` to the existing `gateControlFilePatterns`, and add the exact two paths to `overlayControlFiles`. The first array makes either change enter the existing debt/agent contract path; the set makes either change additionally require all seven workflow fields, for the complete fourteen-field contract below. Add required-content presence markers for both regex/path pairs in `scripts/validate-metronome-gates.mjs`.
+
 The final PR body retains the complete existing seven-field role contract and, for overlay-control diffs, adds seven workflow-specific fields. The combined required `Agent Gate Evidence` set is exactly these fourteen labels:
 
 ```text
@@ -193,7 +195,7 @@ Use `git rev-parse HEAD:<planPath>` for the current blob and hash bytes returned
 
 **Step 3: Keep exact self-tests and add tracked-vs-working regression**
 
-Retain the existing first-seven positive and negative assertions. For the seven conditional workflow fields, retain or add one failure for each missing/invalid value, non-ancestor/stale commit, wrong blob/SHA, `MSO-5`, unknown stage, and one fully populated fourteen-field positive `MSO-6` fixture. Delete every R-01 fixture enumerated under Paused-Diff Corrections. Add this behavior:
+Retain the existing first-seven positive and negative assertions. For both `commitAgentsRouterChange(cwd)` and `commitMetronomeWorkflowSkillChange(cwd)`, assert a body missing `Overlay plan path` fails and the fully populated fourteen-field `MSO-6` body passes; these two deterministic pairs prove both paths trigger the complete contract. For the seven conditional workflow fields, retain or add one failure for each missing/invalid value, non-ancestor/stale commit, wrong blob/SHA, `MSO-5`, unknown stage, and one fully populated fourteen-field positive `MSO-6` fixture. Delete every R-01 fixture enumerated under Paused-Diff Corrections. Add this behavior:
 
 1. Build `validBody(cwd)` from `git show HEAD:<planPath>`.
 2. Mutate the plan in the temporary working tree without committing it.
@@ -243,7 +245,9 @@ Do not add R-01 fields, a ledger, helper script, or branch-fetch workflow.
 
 For each role file, reconstruct the complete content from `git show HEAD:<path>` and add only this meaning immediately after the title: read `.agents/skills/metronome-workflow/SKILL.md` first; the full role contract remains in force; the overlay has precedence only for shared workflow/model/pause/promotion rules.
 
-Do not keep the paused summaries. Restore `scripts/validate-metronome-gates.mjs` role required-content markers to `HEAD` exactly, then add only `.agents/skills/metronome-workflow/SKILL.md` as the new marker for each role.
+Do not keep the paused summaries. Restore `scripts/validate-metronome-gates.mjs` role required-content markers to `HEAD` exactly, then add only `.agents/skills/metronome-workflow/SKILL.md` as the new marker for each role. Also add `.agents/skills/metronome-workflow/SKILL.md` to the validator's `required` file array, not just `requiredContent`, so the existing `existsSync` loop emits `Missing required debt gate file: .agents/skills/metronome-workflow/SKILL.md` and exits `1` when absent.
+
+The existing validator has no isolated missing-file fixture or dependency-injection selftest style; do not add one. Its direct `required`/`existsSync` loop is the missing-file negative behavior. Add a deterministic source-presence assertion for the skill path in both `required` and `requiredContent`, then run `validate:debt-gates` to exercise the present-file path.
 
 Keep the current three-line pointers in the refactor template and debt map. They remain focused references and must not repeat overlay policy.
 
@@ -251,6 +255,10 @@ Verify:
 
 ```powershell
 git diff --numstat -- skills/metronome_planner.md skills/metronome_coder.md skills/metronome_reviewer.md skills/metronome_chatgpt_review.md
+$gateSource = Get-Content -Raw scripts/validate-metronome-gates.mjs
+$requiredEnd = $gateSource.IndexOf('const requiredContent')
+if ($requiredEnd -lt 0 -or -not $gateSource.Substring(0, $requiredEnd).Contains("'.agents/skills/metronome-workflow/SKILL.md'")) { throw 'BLOCKED: overlay skill is missing from the required file list' }
+if (-not $gateSource.Substring($requiredEnd).Contains("'.agents/skills/metronome-workflow/SKILL.md': [")) { throw 'BLOCKED: overlay skill required-content entry is missing' }
 & .\scripts\npm-local.ps1 --% run validate:debt-gates
 ```
 
@@ -450,15 +458,24 @@ If plan generation, identity binding, or independent review fails, stop. Keep th
 ```powershell
 $repo = 'C:\Users\wsuto\metronome'
 git -C $repo fetch origin main
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: workflow-fix fetch failed' }
 $fixBase = git -C $repo rev-parse origin/main
+if ($LASTEXITCODE -ne 0 -or $fixBase -notmatch '^[a-f0-9]{40}$') { throw 'PLAN_BLOCKED: origin/main base resolution failed' }
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 $fixBranch = "codex/metronome-workflow-fix-$stamp"
 $fixWorktree = "C:\tmp\metronome-workflow-fix-$stamp"
 git -C $repo show-ref --verify --quiet "refs/heads/$fixBranch"
-if ($LASTEXITCODE -eq 0 -or (Test-Path $fixWorktree)) { throw 'PLAN_BLOCKED: workflow-fix branch/worktree already exists' }
+$branchProbe = $LASTEXITCODE
+if ($branchProbe -notin @(0, 1)) { throw 'PLAN_BLOCKED: workflow-fix branch probe failed' }
+if ($branchProbe -eq 0 -or (Test-Path $fixWorktree)) { throw 'PLAN_BLOCKED: workflow-fix branch/worktree already exists' }
 git -C $repo worktree add -b $fixBranch $fixWorktree $fixBase
-if (git -C $fixWorktree status --porcelain=v2 --untracked-files=all) { throw 'PLAN_BLOCKED: workflow-fix worktree is not clean' }
-if ((git -C $fixWorktree rev-parse HEAD) -ne $fixBase) { throw 'PLAN_BLOCKED: workflow-fix is not based on fetched origin/main' }
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: workflow-fix worktree creation failed' }
+$fixStatus = @(git -C $fixWorktree status --porcelain=v2 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: workflow-fix worktree status failed' }
+if ($fixStatus.Count -gt 0) { throw 'PLAN_BLOCKED: workflow-fix worktree is not clean' }
+$fixHead = git -C $fixWorktree rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $fixHead -notmatch '^[a-f0-9]{40}$') { throw 'PLAN_BLOCKED: workflow-fix HEAD resolution failed' }
+if ($fixHead -ne $fixBase) { throw 'PLAN_BLOCKED: workflow-fix is not based on fetched origin/main' }
 ```
 
 The workflow-fix diff is limited to the minimum subset of the exact `$allowed` set below. `src/**`, every product/test/status/package/lock/workflow file, and `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` are forbidden. Under the stated non-malicious-monitor threat model, the monitor also forbids merge/cherry-pick commits from the temporary R-01 branch. Before every fix commit and PR promotion, compare committed branch, tracked working, and untracked names to the allowlist, require no merge commits, and fail closed on any R-01 plan path:
@@ -492,9 +509,14 @@ Implement only the diagnosed workflow correction. Run the complete Task 5 gate s
 
 ```powershell
 git -C $repo switch main
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: switch to main failed after workflow-fix merge' }
 git -C $repo fetch origin main
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: post-fix main fetch failed' }
 git -C $repo pull --ff-only origin main
-if (git -C $repo status --porcelain=v2 --untracked-files=all) { throw 'PLAN_BLOCKED: main is not clean after workflow-fix merge' }
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: post-fix main fast-forward failed' }
+$mainStatus = @(git -C $repo status --porcelain=v2 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: post-fix main status failed' }
+if ($mainStatus.Count -gt 0) { throw 'PLAN_BLOCKED: main is not clean after workflow-fix merge' }
 ```
 
 After diagnosis evidence is retained, remove the failed temporary plan worktree/branch without applying its artifact anywhere. Repeat Steps 1-3 as a brand-new Sol trial from the newly merged clean `main`. R-01 coding stays blocked until that repeated trial returns `PLAN_READY`, receives fresh Terra/Luna `PASS`, and the user explicitly approves the reviewed immutable plan.
