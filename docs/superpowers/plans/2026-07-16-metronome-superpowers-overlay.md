@@ -12,14 +12,16 @@
 
 **Estimated production-code diff:** `0 LOC` under `src/**`; approximately `+120/-15` lines of workflow/gate code in `scripts/**`; approximately `+210/-25` lines of Markdown/agent configuration. Hard pause if any `src/**` file changes or production LOC is non-zero.
 
-**Plan verdict:** `PLAN_READY` for independent review; coding remains unauthorized until Task 0 passes.
+**Plan verdict:** `PLAN_READY` for independent review; coding remains unauthorized until Task 0 passes. Because this tracked plan changed during review, its prior commit/hash approval is invalid: Task 0 must create a new plan-only commit, recompute commit/blob/SHA-256, and obtain a new independent approval before any overlay work.
 
 ---
 
 ## Verified Interface Evidence
 
-- The independent re-review identifies the installed runtime as `codex-cli 0.144.5` and confirms it emits `thread.started`, `turn.started`, `item.started`, `item.completed`, and `turn.completed`; there are no instruction- or skill-discovery/invocation events.
-- Current-machine command `Get-Command codex` resolves `C:\Program Files\WindowsApps\OpenAI.Codex_26.707.12708.0_x64__2p2nqsd0c76g0\app\resources\codex.exe`. `codex --version` returns `Access is denied` in this sandbox, so this plan does not claim that command independently verified the version.
+- Current-machine command `C:\Users\wsuto\.codex\.sandbox-bin\codex.exe --version` exits `0` with `codex-cli 0.144.5`. The same installed binary's `exec --help` exits `0` and verifies these exact options used below: `--model <MODEL>`, `--config <key=value>` with TOML parsing, `--strict-config`, `--sandbox read-only`, `--ephemeral`, `--ignore-user-config`, `--cd <DIR>`, and `--json`.
+- Current-machine command `C:\Users\wsuto\.codex\.sandbox-bin\codex.exe debug models --bundled` exits `0`. Parsing its JSON verifies model slugs `gpt-5.6-terra` and `gpt-5.6-luna`; each has `default_reasoning_level: medium`, Terra supports `low,medium,high,xhigh,max,ultra`, and Luna supports `low,medium,high,xhigh,max`. The installed user config currently declares `model = "gpt-5.6-sol"`, `model_reasoning_effort = "low"`, and `service_tier = "default"`, so every nested launch below uses `--ignore-user-config` and explicitly supplies the non-Sol model, `model_reasoning_effort="medium"`, and non-fast `service_tier="default"`.
+- A target-environment option probe using `exec --ignore-user-config --strict-config --model gpt-5.6-terra --config 'model_reasoning_effort="medium"' --config 'service_tier="default"' --sandbox read-only --ephemeral --json ...` passed CLI/config parsing and emitted `thread.started` plus `turn.started`; sampling then failed closed with `401 Unauthorized`. This proves the installed option/config syntax, not target-task authentication or successful acceptance; Tasks 0 and 6 still require exit `0` in their execution environment.
+- The independent re-review and installed runtime confirm the CLI emits `thread.started`, `turn.started`, `item.started`, `item.completed`, and `turn.completed`; there are no instruction- or skill-discovery/invocation events.
 - OpenAI's [Codex `exec_events.rs` schema](https://github.com/openai/codex/blob/main/codex-rs/exec/src/exec_events.rs) and [published `codex exec --json` event example](https://github.com/openai/codex/issues/5133) verify the real JSONL shape used below: top-level lifecycle `type`; `item.completed`; and `item.type = command_execution` with `command`, `aggregated_output`, `exit_code`, and `status`. They also show `item.type = agent_message` with `text` and `turn.completed`.
 - No plan step may claim a CLI/API/event/gate field beyond this evidence without first running the actual command in the target environment or citing its official schema. If neither proof exists, verdict is `PLAN_BLOCKED`, not an inferred interface.
 
@@ -47,6 +49,7 @@
 - The overlay may require installed Superpowers skills by name, but must not copy plugin bodies into the repository.
 - `skills/metronome_*.md` remain role-specific references, not discoverable peer workflow frameworks.
 - Plan agents use GPT-5.6 Sol standard. Every coder, reviewer, verification, acceptance, and other subagent uses GPT-5.6 Terra standard or GPT-5.6 Luna standard. No agent uses fast; no non-plan agent uses Sol.
+- Every nested fresh `codex exec` reviewer or acceptance launch must use `--ignore-user-config --strict-config`, explicitly select `--model gpt-5.6-terra` or `--model gpt-5.6-luna`, set `--config 'model_reasoning_effort="medium"' --config 'service_tier="default"'`, and set `--sandbox read-only`. Capture `git status --porcelain=v2 --untracked-files=all` for the entire target worktree immediately before and after; any non-clean status, difference, launch failure, or status-capture failure is `PLAN_BLOCKED`.
 - Small cohesive work selects `superpowers:executing-plans` and reuses one coding agent. Large work with independently reviewable Tasks selects `superpowers:subagent-driven-development` and uses fresh implementation agents.
 - `PLAN_READY` is necessary but insufficient for coding. Before any overlay coding or later R-01 coding, an independent GPT-5.6 Terra standard or GPT-5.6 Luna standard plan reviewer, never fast and never Sol, must return exact `PASS` for the current plan path and SHA-256.
 - Promotion artifacts remain the durable plan file, its exact SHA-256, independent plan-review model/verdict, exact agent verdicts, PR debt evidence, review evidence, and green existing gates. `docs/v1/status.json` is not a workflow ledger.
@@ -61,7 +64,7 @@
 
 - [ ] **Step 1: Create the plan-only tracked commit with normal hooks**
 
-Before any overlay edit, confirm the plan is the only uncommitted file, then create a plan-only commit:
+This plan is already tracked and this review revision invalidates its prior approval. Before any overlay edit, confirm the plan is the only uncommitted file, then create a new plan-only commit through normal hooks; do not amend or reuse the earlier plan commit:
 
 ```powershell
 git status --short
@@ -69,7 +72,7 @@ git add docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md
 git commit -m "docs: plan metronome Superpowers overlay"
 ```
 
-Expected: the existing pre-commit hook runs normally and the commit succeeds without `--no-verify`; afterward `git status --short` is empty. If unrelated work is present, do not stage it. If a normal hook fails, keep the plan uncommitted and resolve the plan/bootstrap failure before review.
+Expected: the existing pre-commit hook runs normally and the new commit succeeds without `--no-verify`; afterward `git status --short` is empty. If unrelated work is present, do not stage, revert, or hide it; the review bootstrap is `PLAN_BLOCKED` until the user supplies a clean worktree. If a normal hook fails, keep the plan uncommitted and resolve the plan/bootstrap failure before review.
 
 - [ ] **Step 2: Bind review inputs to the clean plan commit and file hash**
 
@@ -82,32 +85,51 @@ git rev-parse HEAD:docs/superpowers/plans/2026-07-16-metronome-superpowers-overl
 Get-FileHash -Algorithm SHA256 docs\superpowers\plans\2026-07-16-metronome-superpowers-overlay.md
 ```
 
-Record the full plan commit SHA, Git blob ID, and lowercase file SHA-256. Require `git diff --exit-code HEAD -- docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md` to pass. These values mechanically bind later evidence to the tracked plan; they do not prove reviewer model or independence.
+Record the new full plan commit SHA, Git blob ID, and lowercase file SHA-256; none may reuse the superseded review values. Require `git status --porcelain=v2 --untracked-files=all` to be empty and `git diff --exit-code HEAD -- .` to pass. These values mechanically bind later evidence to the tracked plan; they do not prove reviewer model or independence.
 
 - [ ] **Step 3: Obtain the real independent review artifact and JSONL trace**
 
-The monitor launches a fresh independent plan-review process through its spawn control with GPT-5.6 Terra standard or GPT-5.6 Luna standard, never fast and never Sol, using this verified `codex exec --cd ... --json` form:
+The monitor launches a fresh independent plan-review process through its spawn control. This plan fixes that reviewer to GPT-5.6 Luna standard: installed slug `gpt-5.6-luna`, installed default reasoning effort `medium`, and non-fast `service_tier="default"`. The launch ignores the active Sol/low user config, uses the installed read-only sandbox, and captures the entire repository worktree status before and after:
 
 ```powershell
-codex exec --cd C:\Users\wsuto\metronome --json "Independent plan review only; read-only and do not edit files. Independently run git rev-parse HEAD, git rev-parse HEAD:docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md, Get-FileHash -Algorithm SHA256 on docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md, and read the complete plan. Review feasibility and internal consistency. End with exactly PLAN_REVIEW_PASS or PLAN_REVIEW_CHANGES_REQUIRED." | Tee-Object -FilePath C:\tmp\metronome-superpowers-plan-review\review-events.jsonl
-if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: independent review process failed' }
+$ErrorActionPreference = 'Stop'
+$codex = 'C:\Users\wsuto\.codex\.sandbox-bin\codex.exe'
+$repo = 'C:\Users\wsuto\metronome'
+$evidenceDir = 'C:\tmp\metronome-superpowers-plan-review'
+New-Item -ItemType Directory -Force $evidenceDir
+$statusBefore = @(git -C $repo status --porcelain=v2 --untracked-files=all)
+$statusBeforeExit = $LASTEXITCODE
+Set-Content -LiteralPath "$evidenceDir\worktree-status-before.txt" -Value ([string]::Join("`n", $statusBefore))
+if ($statusBeforeExit -ne 0 -or $statusBefore.Count -ne 0) { throw 'PLAN_BLOCKED: review worktree was not clean before launch' }
+& $codex exec --ignore-user-config --strict-config --model gpt-5.6-luna --config 'model_reasoning_effort="medium"' --config 'service_tier="default"' --sandbox read-only --ephemeral --cd $repo --json "Independent plan review only; read-only and do not edit files. Independently run git rev-parse HEAD, git rev-parse HEAD:docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md, Get-FileHash -Algorithm SHA256 on docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md, and read the complete plan. Review feasibility and internal consistency. End with exactly PLAN_REVIEW_PASS or PLAN_REVIEW_CHANGES_REQUIRED." | Tee-Object -FilePath "$evidenceDir\review-events.jsonl"
+$reviewExit = $LASTEXITCODE
+$statusAfter = @(git -C $repo status --porcelain=v2 --untracked-files=all)
+$statusAfterExit = $LASTEXITCODE
+Set-Content -LiteralPath "$evidenceDir\worktree-status-after.txt" -Value ([string]::Join("`n", $statusAfter))
+if ($statusAfterExit -ne 0 -or [string]::Join("`n", $statusAfter) -cne [string]::Join("`n", $statusBefore)) { throw 'PLAN_BLOCKED: independent review mutated the worktree or status capture failed' }
+if ($reviewExit -ne 0) { throw 'PLAN_BLOCKED: independent review process failed' }
 ```
 
-The model/freshness/independence choice is a monitor guarantee from the spawn call; Codex CLI 0.144.5 JSONL does not cryptographically expose or prove it. The trace must show the reviewer independently ran those commands. Its final message is exactly `PLAN_REVIEW_PASS` or `PLAN_REVIEW_CHANGES_REQUIRED`.
+The exact model/reasoning/service-tier/freshness/independence/read-only launch choice is a monitor guarantee from this spawn call; Codex CLI 0.144.5 JSONL does not cryptographically expose or prove those launch options. The two external status files mechanically capture the full tracked/untracked worktree state, and their exact equality plus initial cleanliness is mandatory. The trace must show the reviewer independently ran the requested commands. Its final message is exactly `PLAN_REVIEW_PASS` or `PLAN_REVIEW_CHANGES_REQUIRED`.
 
-Save the task's raw JSONL to `C:\tmp\metronome-superpowers-plan-review\review-events.jsonl`. Save a small monitor-produced `approval.json` containing only: `planCommit`, `planBlob`, `planSha256`, `planPath`, `reviewThreadId`, `requestedReviewerPolicy`, `freshIndependentSpawnGuaranteedByMonitor`, and `verdict`. The monitor copies `reviewThreadId` from the trace's real `thread.started.thread_id`; it does not invent an attestation signature.
+Save the task's raw JSONL and the two full-worktree status snapshots under `C:\tmp\metronome-superpowers-plan-review\`. Save a small monitor-produced `approval.json` containing only: `planCommit`, `planBlob`, `planSha256`, `planPath`, `reviewThreadId`, `requestedReviewerPolicy`, `freshIndependentSpawnGuaranteedByMonitor`, and `verdict`. Set `requestedReviewerPolicy` to `GPT-5.6 Luna standard` for the fixed command above. The monitor copies `reviewThreadId` from the trace's real `thread.started.thread_id`; it does not invent an attestation signature.
 
 - [ ] **Step 4: Run the executable pre-coding approval assertion**
 
 Use inline PowerShell only; do not add an attestation script or framework. Parse `approval.json` and each JSONL line with `ConvertFrom-Json`. Assert all mechanically provable facts:
 
 ```powershell
+$ErrorActionPreference = 'Stop'
 $planPath = 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md'
 $approval = Get-Content -Raw C:\tmp\metronome-superpowers-plan-review\approval.json | ConvertFrom-Json
 $events = @(Get-Content C:\tmp\metronome-superpowers-plan-review\review-events.jsonl | ForEach-Object { $_ | ConvertFrom-Json })
+$statusBefore = (Get-Content -Raw C:\tmp\metronome-superpowers-plan-review\worktree-status-before.txt).TrimEnd("`r", "`n")
+$statusAfter = (Get-Content -Raw C:\tmp\metronome-superpowers-plan-review\worktree-status-after.txt).TrimEnd("`r", "`n")
 $head = (git rev-parse HEAD).Trim()
 $blob = (git rev-parse "HEAD:$planPath").Trim()
 $sha256 = (Get-FileHash -Algorithm SHA256 $planPath).Hash.ToLowerInvariant()
+$currentStatus = @(git status --porcelain=v2 --untracked-files=all)
+$currentStatusExit = $LASTEXITCODE
 $thread = @($events | Where-Object { $_.type -eq 'thread.started' -and $_.thread_id -eq $approval.reviewThreadId })
 $commands = @($events | Where-Object { $_.type -eq 'item.completed' -and $_.item.type -eq 'command_execution' -and $_.item.status -eq 'completed' -and $_.item.exit_code -eq 0 })
 $commitChecks = @($commands | Where-Object { $_.item.command -match 'git rev-parse HEAD' -and $_.item.aggregated_output -match ([regex]::Escape($approval.planCommit)) })
@@ -115,15 +137,15 @@ $blobChecks = @($commands | Where-Object { $_.item.command -match 'git rev-parse
 $hashChecks = @($commands | Where-Object { $_.item.command -match 'Get-FileHash.+2026-07-16-metronome-superpowers-overlay\.md' -and $_.item.aggregated_output -match ([regex]::Escape($approval.planSha256)) })
 $reads = @($commands | Where-Object { $_.item.command -match '2026-07-16-metronome-superpowers-overlay\.md' -and $_.item.aggregated_output -match 'Metronome Superpowers Overlay Implementation Plan' })
 $verdicts = @($events | Where-Object { $_.type -eq 'item.completed' -and $_.item.type -eq 'agent_message' -and $_.item.text -match '(?m)^PLAN_REVIEW_PASS$' })
-if ($approval.planPath -ne $planPath -or $approval.planCommit -ne $head -or $approval.planBlob -ne $blob -or $approval.planSha256 -ne $sha256 -or $approval.verdict -ne 'PASS' -or $approval.requestedReviewerPolicy -notin @('GPT-5.6 Terra standard','GPT-5.6 Luna standard') -or $approval.freshIndependentSpawnGuaranteedByMonitor -ne $true -or $thread.Count -ne 1 -or $commitChecks.Count -lt 1 -or $blobChecks.Count -lt 1 -or $hashChecks.Count -lt 1 -or $reads.Count -lt 1 -or $verdicts.Count -ne 1) { throw 'PLAN_BLOCKED: independent plan approval missing, stale, or unproven' }
-git diff --exit-code HEAD -- $planPath
+if ($approval.planPath -ne $planPath -or $approval.planCommit -ne $head -or $approval.planBlob -ne $blob -or $approval.planSha256 -ne $sha256 -or $approval.verdict -ne 'PASS' -or $approval.requestedReviewerPolicy -ne 'GPT-5.6 Luna standard' -or $approval.freshIndependentSpawnGuaranteedByMonitor -ne $true -or -not [string]::IsNullOrEmpty($statusBefore) -or -not [string]::IsNullOrEmpty($statusAfter) -or $statusAfter -cne $statusBefore -or $currentStatusExit -ne 0 -or $currentStatus.Count -ne 0 -or $thread.Count -ne 1 -or $commitChecks.Count -lt 1 -or $blobChecks.Count -lt 1 -or $hashChecks.Count -lt 1 -or $reads.Count -lt 1 -or $verdicts.Count -ne 1) { throw 'PLAN_BLOCKED: independent plan approval missing, stale, mutated, or unproven' }
+git diff --exit-code HEAD -- .
 ```
 
-This assertion proves the clean tracked commit/blob/hash, real trace/thread, successful command read of that plan, exact reviewer result, and consistency of the monitor artifact. It only checks the monitor's declared spawn guarantee/model policy; it does not claim the CLI cryptographically proves model choice or independence. Any failure blocks Task 1.
+This assertion proves the clean tracked commit/blob/hash, matching clean full-worktree status snapshots, current clean full-worktree status, real trace/thread, successful command read of that plan, exact reviewer result, and consistency of the monitor artifact. It only checks the monitor's declared spawn guarantee for model, reasoning, service tier, read-only sandbox, freshness, and independence; it does not claim the JSONL cryptographically proves those launch properties. Any failure blocks Task 1.
 
 - [ ] **Step 5: Repeat bootstrap after every plan change**
 
-If this plan changes after approval, stop. Create a new plan-only commit through normal hooks, regenerate commit/blob/SHA-256, launch a new independent Terra/Luna standard review, replace both external evidence files, and rerun Step 4. Never reuse approval for an older plan commit or hash. Apply the same sequence before every later R-01 coding Stage.
+If this plan changes after approval, stop. Create a new plan-only commit through normal hooks, regenerate commit/blob/SHA-256, launch a new independent Terra/Luna standard review with the same explicit config/sandbox/status protocol, replace all external review evidence, and rerun Step 4. Never reuse approval for an older plan commit or hash. This current review revision therefore requires a new plan-only commit and complete repeat review before Task 1. Apply the same sequence before every later R-01 coding Stage.
 
 ### Task 1: RED - Extend Gate Self-Tests for Overlay Control Files
 
@@ -468,22 +490,40 @@ Expected: detached worktree at the candidate SHA. This worktree is acceptance-on
 
 - [ ] **Step 3: Launch an empty-context Codex acceptance agent and capture raw JSONL**
 
-The monitor launches a new task with no inherited conversation and guarantees GPT-5.6 Terra standard or GPT-5.6 Luna standard, never fast and never Sol, through its verified spawn configuration. The CLI trace does not prove that model choice. The prompt must not name `AGENTS.md`, `metronome-workflow`, or either file path:
+The monitor launches a new task with no inherited conversation. This plan fixes acceptance to GPT-5.6 Terra standard using installed slug `gpt-5.6-terra`, installed default reasoning effort `medium`, and non-fast `service_tier="default"`; it ignores the active Sol/low user config and sets the installed read-only sandbox explicitly. The CLI trace does not prove those launch options. The prompt must not name `AGENTS.md`, `metronome-workflow`, or either file path. Capture and compare the entire detached worktree status around the launch:
 
 ```powershell
-New-Item -ItemType Directory -Force C:\tmp\metronome-superpowers-r01-evidence
-codex exec --cd C:\tmp\metronome-superpowers-r01 --json "R-01 fresh-context acceptance. Read only; do not edit files. Follow all repository instructions and applicable skills. Locate the approved implementation plan and determine its current result. Reply with exactly two lines using PLAN: followed by the repository-relative path and RESULT: followed by the verdict. Do not use prior conversation context." | Tee-Object -FilePath C:\tmp\metronome-superpowers-r01-evidence\events.jsonl
-if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: R-01 fresh task failed' }
+$ErrorActionPreference = 'Stop'
+$codex = 'C:\Users\wsuto\.codex\.sandbox-bin\codex.exe'
+$worktree = 'C:\tmp\metronome-superpowers-r01'
+$evidenceDir = 'C:\tmp\metronome-superpowers-r01-evidence'
+New-Item -ItemType Directory -Force $evidenceDir
+$statusBefore = @(git -C $worktree status --porcelain=v2 --untracked-files=all)
+$statusBeforeExit = $LASTEXITCODE
+Set-Content -LiteralPath "$evidenceDir\worktree-status-before.txt" -Value ([string]::Join("`n", $statusBefore))
+if ($statusBeforeExit -ne 0 -or $statusBefore.Count -ne 0) { throw 'PLAN_BLOCKED: R-01 worktree was not clean before launch' }
+& $codex exec --ignore-user-config --strict-config --model gpt-5.6-terra --config 'model_reasoning_effort="medium"' --config 'service_tier="default"' --sandbox read-only --ephemeral --cd $worktree --json "R-01 fresh-context acceptance. Read only; do not edit files. Follow all repository instructions and applicable skills. Locate the approved implementation plan and determine its current result. Reply with exactly two lines using PLAN: followed by the repository-relative path and RESULT: followed by the verdict. Do not use prior conversation context." | Tee-Object -FilePath "$evidenceDir\events.jsonl"
+$acceptanceExit = $LASTEXITCODE
+$statusAfter = @(git -C $worktree status --porcelain=v2 --untracked-files=all)
+$statusAfterExit = $LASTEXITCODE
+Set-Content -LiteralPath "$evidenceDir\worktree-status-after.txt" -Value ([string]::Join("`n", $statusAfter))
+if ($statusAfterExit -ne 0 -or [string]::Join("`n", $statusAfter) -cne [string]::Join("`n", $statusBefore)) { throw 'PLAN_BLOCKED: R-01 mutated the validation worktree or status capture failed' }
+if ($acceptanceExit -ne 0) { throw 'PLAN_BLOCKED: R-01 fresh task failed' }
 ```
 
-Expected: exit `0` and a non-empty external `events.jsonl`, one valid JSON object per line, containing real `thread.started`, `turn.started`, `item.completed`, and `turn.completed` events. If the target environment cannot execute this verified CLI form or preserve its JSONL, mark R-01 `PLAN_BLOCKED`; do not substitute inherited context or simulated evidence.
+Expected: exit `0`; identical empty full-worktree status snapshots; and a non-empty external `events.jsonl`, one valid JSON object per line, containing real `thread.started`, `turn.started`, `item.completed`, and `turn.completed` events. Any mutation, status-capture failure, auth/CLI failure, missing installed plugin under ignored user config, or inability to preserve JSONL makes R-01 `PLAN_BLOCKED`; do not loosen model/config/sandbox flags or substitute inherited context or simulated evidence.
 
 - [ ] **Step 4: Prove router, overlay skill, and plan reads from command executions**
 
 Parse only verified real fields. A read is proven only by a completed, zero-exit `command_execution` whose `command` identifies the file and whose `aggregated_output` contains file-specific content. The final `agent_message` proves only the requested plan result; it does not prove router/skill discovery.
 
 ```powershell
+$ErrorActionPreference = 'Stop'
 $events = @(Get-Content C:\tmp\metronome-superpowers-r01-evidence\events.jsonl | ForEach-Object { $_ | ConvertFrom-Json })
+$statusBefore = (Get-Content -Raw C:\tmp\metronome-superpowers-r01-evidence\worktree-status-before.txt).TrimEnd("`r", "`n")
+$statusAfter = (Get-Content -Raw C:\tmp\metronome-superpowers-r01-evidence\worktree-status-after.txt).TrimEnd("`r", "`n")
+$currentStatus = @(git -C C:\tmp\metronome-superpowers-r01 status --porcelain=v2 --untracked-files=all)
+$currentStatusExit = $LASTEXITCODE
 $thread = @($events | Where-Object { $_.type -eq 'thread.started' -and $_.thread_id })
 $turnStarted = @($events | Where-Object { $_.type -eq 'turn.started' })
 $commands = @($events | Where-Object { $_.type -eq 'item.completed' -and $_.item.type -eq 'command_execution' -and $_.item.status -eq 'completed' -and $_.item.exit_code -eq 0 })
@@ -492,10 +532,10 @@ $skillReads = @($commands | Where-Object { $_.item.command -match '(?i)\.agents[
 $planReads = @($commands | Where-Object { $_.item.command -match 'docs[\\/]superpowers[\\/]plans[\\/]2026-07-16-metronome-superpowers-overlay\.md' -and $_.item.aggregated_output -match 'Metronome Superpowers Overlay Implementation Plan' -and $_.item.aggregated_output -match '\*\*Plan verdict:\*\* `PLAN_READY`' })
 $results = @($events | Where-Object { $_.type -eq 'item.completed' -and $_.item.type -eq 'agent_message' -and $_.item.text -match '(?m)^PLAN: docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay\.md\r?\nRESULT: PLAN_READY$' })
 $turnCompleted = @($events | Where-Object { $_.type -eq 'turn.completed' })
-if ($thread.Count -ne 1 -or $turnStarted.Count -lt 1 -or $routerReads.Count -lt 1 -or $skillReads.Count -lt 1 -or $planReads.Count -lt 1 -or $results.Count -ne 1 -or $turnCompleted.Count -lt 1) { throw 'PLAN_BLOCKED: R-01 trace does not prove fresh router, skill, and plan reads' }
+if (-not [string]::IsNullOrEmpty($statusBefore) -or -not [string]::IsNullOrEmpty($statusAfter) -or $statusAfter -cne $statusBefore -or $currentStatusExit -ne 0 -or $currentStatus.Count -ne 0 -or $thread.Count -ne 1 -or $turnStarted.Count -lt 1 -or $routerReads.Count -lt 1 -or $skillReads.Count -lt 1 -or $planReads.Count -lt 1 -or $results.Count -ne 1 -or $turnCompleted.Count -lt 1) { throw 'PLAN_BLOCKED: R-01 trace/status does not prove a clean fresh router, skill, and plan read' }
 ```
 
-Expected: the real command trace proves reads of root `AGENTS.md`, `.agents/skills/metronome-workflow/SKILL.md`, and the tracked plan, and the final result is exactly the requested path plus `PLAN_READY`. If commands are combined, one completed item may satisfy multiple predicates only when its `command` and `aggregated_output` prove each file independently. Missing/truncated output, prose-only references, malformed JSONL, or any unverified field makes R-01 `PLAN_BLOCKED`; never infer discovery or invocation beyond the proven file reads.
+Expected: the matching clean full-worktree snapshots and current status prove no Git-visible mutation; the real command trace proves reads of root `AGENTS.md`, `.agents/skills/metronome-workflow/SKILL.md`, and the tracked plan; and the final result is exactly the requested path plus `PLAN_READY`. If commands are combined, one completed item may satisfy multiple predicates only when its `command` and `aggregated_output` prove each file independently. Missing/truncated output, prose-only references, malformed JSONL, changed status, or any unverified field makes R-01 `PLAN_BLOCKED`; never infer discovery or invocation beyond the proven file reads.
 
 - [ ] **Step 5: Prove the workflow PR was not contaminated**
 
@@ -517,7 +557,7 @@ git worktree remove C:\tmp\metronome-superpowers-r01
 git worktree prune
 ```
 
-Expected: validation worktree removed; `C:\tmp\metronome-superpowers-r01-evidence\events.jsonl` remains outside both the worktree and repository. No repository file is changed.
+Expected: validation worktree removed; `C:\tmp\metronome-superpowers-r01-evidence\events.jsonl` and the two status snapshots remain outside both the worktree and repository. No repository file is changed.
 
 ## Final Review Checklist
 
@@ -528,7 +568,9 @@ Expected: validation worktree removed; `C:\tmp\metronome-superpowers-r01-evidenc
 - [ ] Existing validator, self-test, pre-commit, CI, PR evidence, CodeScene, and Semgrep enforce promotion.
 - [ ] `docs/v1/status.json` and `package.json` are unchanged; no second framework, status ledger, validator, or script exists.
 - [ ] Plan-only Sol and non-plan Terra/Luna policy is exact; all fast modes are forbidden.
+- [ ] Every nested review/acceptance `codex exec` ignores user config, explicitly pins Terra/Luna, `model_reasoning_effort="medium"`, `service_tier="default"`, and `--sandbox read-only` using installed CLI syntax.
 - [ ] The exact plan SHA-256 has independent Terra/Luna standard `PASS` evidence before overlay coding and every later R-01 coding Stage; `PLAN_READY` alone never promotes coding.
+- [ ] This tracked revision has a new plan-only commit, newly computed blob/SHA-256, new independent review trace, and matching clean before/after full-worktree status snapshots; no prior plan approval is reused.
 - [ ] Every router/overlay/role reference contains the exact stop -> independent Terra/Luna diagnosis -> explicit user decision contract and forbids Sol for diagnosis, fix, or review.
 - [ ] No `src/**` or production LOC changed.
-- [ ] R-01 passed from detached empty context using verified `command_execution` reads of the router, overlay skill, and plan plus the exact plan result; no invented discovery/invocation event or PR artifact exists.
+- [ ] R-01 passed from detached empty context using verified `command_execution` reads of the router, overlay skill, and plan plus the exact plan result; its full worktree status stayed clean and identical; no invented discovery/invocation event or PR artifact exists.
