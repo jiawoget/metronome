@@ -12,7 +12,7 @@
 
 **Estimated Production-Code Diff:** `0 LOC` under `src/**`.
 
-**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `240525362b5849812138340defce3694f96fb61d` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
+**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `dad746945b947030bc1b6fd89dd0a40ac368e84a` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
 
 ## Verified Interfaces and Limits
 
@@ -57,13 +57,23 @@ The real R-01 trial begins only after `MSO-6`, the workflow PR is merged, and th
 
 Apply these deletions and modifications to the current paused implementation; do not add replacement machinery:
 
-- `.github/pull_request_template.md`: delete the four `R-01 trial ...`/`R-01 coding authorization` lines; keep only workflow-plan identity/review and exact `MSO-6` evidence.
+- `.github/pull_request_template.md`: retain all seven existing planner/coder/reviewer/ChatGPT lines, add the seven workflow-plan promotion lines listed in Task 2, and delete the four obsolete R-01 lines.
 - `scripts/validate-pr-debt-contract.mjs`: delete all R-01 trial parsing/checks. Keep the narrow overlay-control check, but derive current plan blob and SHA-256 only from `HEAD:<planPath>` Git object content, never `git hash-object <working-file>` or `readFileSync(<working-file>)`.
 - `scripts/validate-pr-debt-contract.selftest.mjs`: delete R-01 synthetic fields and negative fixtures. Compute valid plan identity from tracked Git objects and add one regression proving an unstaged working-file mutation cannot change accepted `HEAD:<planPath>` identity.
 - `scripts/validate-metronome-gates.mjs`: delete required-content markers for R-01 trial evidence. Restore all role-file required-content arrays to their `HEAD` contracts and add only the overlay pointer marker.
 - `.agents/skills/metronome-workflow/SKILL.md`: remove pre-merge R-01 evidence from Promotion; add the main-first/no-plan-in-main rule and the minimal immutable handoff described below.
 - `skills/metronome_planner.md`, `skills/metronome_coder.md`, `skills/metronome_reviewer.md`, `skills/metronome_chatgpt_review.md`: discard the paused summaries, restore full `HEAD` content, then add only the overlay pointer/precedence paragraph after each title.
 - Do not change `src/**`, `docs/v1/status.json`, package manifests/locks, workflows, or `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` in the workflow PR.
+
+The paused implementation's obsolete pre-merge R-01 surface is exhaustively bounded as follows:
+
+- PR/validator labels: `R-01 trial identity`, `R-01 trial review policy`, `R-01 trial review verdict`, and `R-01 coding authorization`, including all four validator failure messages containing those labels.
+- Validator parser identifiers/fragments: `trialIdentity`, `trialMatch`, `trialMatch.groups.candidate`, `(?<candidate>`, and the synthetic identity fragments `candidate=`, `planCommit=`, `blob=`, and `sha256=`.
+- Required-content/overlay markers: every `requiredContent` entry containing `R-01 trial identity` and the overlay phrase `R-01 trial evidence`.
+- Self-test fixtures: the four R-01 lines in `validBody`, the `line.startsWith('- R-01 trial identity:')` mutation, the R-01 review mutation from `PASS` to `CHANGES_REQUIRED`, and the coding-authorization mutation from `BLOCKED_PENDING_USER_DECISION` to `AUTHORIZED`.
+- Obsolete status/verdict tokens: `BLOCKED_PENDING_USER_DECISION` and `AUTHORIZED` globally on these workflow/gate surfaces; `PASS` and `CHANGES_REQUIRED` are removed only when attached to an R-01 label because both remain valid elsewhere. `MSO-5` and `MSO-unknown` remain required negative final-stage fixtures.
+
+Delete these items; do not rename, repurpose, or retain compatibility parsing for them.
 
 **Expected LOC direction:** Relative to the paused diff (`316` additions, `515` deletions), gate/self-test/template additions must shrink because R-01 machinery is deleted. Role-file deletions must collapse to zero or near zero because full `HEAD` contracts return; each role should show only a tiny positive pointer-only diff. Production LOC stays zero. The only new file remains `.agents/skills/metronome-workflow/SKILL.md`.
 
@@ -80,7 +90,7 @@ git status --short
 git add docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md
 $staged = @(git diff --cached --name-only)
 if ($staged.Count -ne 1 -or $staged[0] -ne 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md') { throw 'PLAN_BLOCKED: plan-only staging failed' }
-git commit -m "Revise overlay plan for main-first R-01 validation"
+git commit -m "Tighten main-first overlay promotion plan"
 ```
 
 Use normal hooks and never `--no-verify`. All paused implementation files must remain uncommitted and otherwise unchanged.
@@ -154,11 +164,18 @@ Run `node scripts/validate-pr-debt-contract.selftest.mjs`; only that expected as
 - Modify: `scripts/validate-metronome-gates.mjs`
 - Modify: `.github/pull_request_template.md`
 
-**Step 1: Keep only workflow evidence**
+**Step 1: Preserve the existing contract and add conditional workflow evidence**
 
-For overlay-control diffs, the existing `Agent Gate Evidence` section contains only:
+The final PR body retains the complete existing seven-field role contract and, for overlay-control diffs, adds seven workflow-specific fields. The combined required `Agent Gate Evidence` set is exactly these fourteen labels:
 
 ```text
+- Planner skill read evidence:
+- Planner skill verdict:
+- Coder skill read evidence:
+- Coder repo map / primitive search:
+- Reviewer skill read evidence:
+- Reviewer verdict:
+- ChatGPT final review prompt/verdict:
 - Overlay plan path:
 - Overlay plan commit:
 - Overlay plan blob:
@@ -168,7 +185,7 @@ For overlay-control diffs, the existing `Agent Gate Evidence` section contains o
 - Current metronome Stage:
 ```
 
-Require the fixed plan path, ancestor plan commit, matching approved/current tracked blob, matching tracked SHA-256, Terra/Luna standard policy, exact `PLAN_REVIEW_PASS`, existing final role verdicts, and exact `MSO-6`. Remove every R-01 field from validator, template, required-content markers, and self-tests.
+Keep `validateAgentGateEvidence` behavior for the first seven: planner/coder/reviewer read evidence names its existing role file; verdicts are exactly `PLAN_READY`, `CODE_READY`, reviewer `PASS|PASS_WITH_NITS`, and ChatGPT `PASS|PASS_WITH_NITS`. For overlay-control diffs, `validateOverlayPromotionEvidence` additionally requires the fixed plan path, ancestor plan commit, matching approved/current tracked blob, matching tracked SHA-256, Terra/Luna standard policy, exact `PLAN_REVIEW_PASS`, and exact `MSO-6`. Non-overlay PRs continue to require the existing seven fields without the seven conditional workflow fields. Remove every R-01 field from validator, template, required-content markers, and self-tests.
 
 **Step 2: Read plan identity only from Git objects**
 
@@ -176,7 +193,7 @@ Use `git rev-parse HEAD:<planPath>` for the current blob and hash bytes returned
 
 **Step 3: Keep exact self-tests and add tracked-vs-working regression**
 
-Retain negative cases for missing evidence, non-ancestor/stale commit, wrong blob/SHA, `MSO-5`, unknown stage, and a positive `MSO-6`. Delete trial-identity/review/coding fixtures. Add this behavior:
+Retain the existing first-seven positive and negative assertions. For the seven conditional workflow fields, retain or add one failure for each missing/invalid value, non-ancestor/stale commit, wrong blob/SHA, `MSO-5`, unknown stage, and one fully populated fourteen-field positive `MSO-6` fixture. Delete every R-01 fixture enumerated under Paused-Diff Corrections. Add this behavior:
 
 1. Build `validBody(cwd)` from `git show HEAD:<planPath>`.
 2. Mutate the plan in the temporary working tree without committing it.
@@ -252,10 +269,43 @@ git diff --name-only origin/main...HEAD
 git diff --name-only
 git diff --stat
 git diff --numstat -- 'src/**'
-if (rg -n "R-01 trial identity|R-01 trial review|R-01 coding authorization" .github/pull_request_template.md scripts/validate-pr-debt-contract.mjs scripts/validate-pr-debt-contract.selftest.mjs scripts/validate-metronome-gates.mjs .agents/skills/metronome-workflow/SKILL.md) { throw 'BLOCKED: obsolete pre-merge R-01 machinery remains' }
+$r01Surfaces = @(
+  '.github/pull_request_template.md',
+  'scripts/validate-pr-debt-contract.mjs',
+  'scripts/validate-pr-debt-contract.selftest.mjs',
+  'scripts/validate-metronome-gates.mjs',
+  '.agents/skills/metronome-workflow/SKILL.md'
+)
+$obsolete = @(
+  'R-01 trial identity',
+  'R-01 trial review policy',
+  'R-01 trial review verdict',
+  'R-01 coding authorization',
+  'trialIdentity',
+  'trialMatch',
+  'trialMatch.groups.candidate',
+  '(?<candidate>',
+  'candidate=',
+  'planCommit=',
+  'blob=',
+  'sha256=',
+  'R-01 trial evidence',
+  "line.startsWith('- R-01 trial identity:')",
+  '- R-01 trial review verdict: PASS',
+  '- R-01 trial review verdict: CHANGES_REQUIRED',
+  '- R-01 coding authorization: BLOCKED_PENDING_USER_DECISION',
+  '- R-01 coding authorization: AUTHORIZED',
+  'BLOCKED_PENDING_USER_DECISION',
+  'AUTHORIZED'
+)
+foreach ($token in $obsolete) {
+  $hits = @(rg -n -F -- $token $r01Surfaces 2>&1)
+  if ($LASTEXITCODE -eq 0) { throw "BLOCKED: obsolete pre-merge R-01 token remains: $token`n$($hits -join "`n")" }
+  if ($LASTEXITCODE -ne 1) { throw "BLOCKED: rg failed while checking: $token" }
+}
 ```
 
-The production command and R-01 search must be empty. Gate/self-test additions must be lower than the paused implementation; role deletions must be gone. Any unexpected growth triggers the central hard pause.
+The production command and every token search must be empty. The broad label checks also eliminate the four validator failure messages and every `requiredContent` occurrence; the exact fixture/status checks prevent stale synthetic self-tests. Gate/self-test additions must be lower than the paused implementation; role deletions must be gone. Any unexpected growth triggers the central hard pause.
 
 **Step 2: Run implementation review and all existing gates**
 
@@ -287,7 +337,7 @@ git status --short
 ### Task 6 [MSO-6]: Promote and Merge the Workflow PR
 
 1. Push the workflow branch and open/update the dedicated PR. Its diff must contain only the Task 5 allowlist.
-2. Populate existing debt/agent evidence with tracked overlay-plan commit/blob/SHA, independent `PLAN_REVIEW_PASS`, coder/reviewer verdicts, all gate results, and `Current metronome Stage: MSO-6`. There are no R-01 fields.
+2. Populate `Debt Gate Evidence` with every existing command/CodeScene result and populate all fourteen `Agent Gate Evidence` labels from Task 2: the existing planner/coder/reviewer/ChatGPT seven plus the overlay path/commit/blob/SHA-256, independent-review policy/verdict, and `Current metronome Stage: MSO-6`. There are no R-01 fields.
 3. Wait for existing CI, including `validate:debt-gates`, to pass on the exact PR head.
 4. Run the required external review through the restored `skills/metronome_chatgpt_review.md` contract against the exact PR diff and CI/CodeScene evidence. Require exact `PASS` or `PASS_WITH_NITS`; unavailable or blocking review means `PLAN_BLOCKED`.
 5. If PR metadata or evidence changes, wait for the edited-event CI rerun. Merge only when implementation review, full gates, CI, CodeScene, and external review all pass.
@@ -379,7 +429,49 @@ $after = git -C $worktree status --porcelain=v2 --untracked-files=all
 if (Compare-Object $before $after) { throw 'R-01 PLAN_BLOCKED: read-only review changed Git-visible status' }
 ```
 
-Then present the generated plan and identity to the user. Do not start coding until the user explicitly approves. If generation or review fails, stop and open a narrow workflow-fix PR from clean main; do not repair the overlay in the plan branch and do not code R-01 there.
+On success, present the generated plan and immutable identity to the user. Do not start coding until the user explicitly approves.
+
+**Failure path: narrow workflow-fix loop**
+
+If plan generation, identity binding, or independent review fails, stop. Keep the failed temporary R-01 branch/artifact out of `main`; never edit, merge, or cherry-pick it. Launch a fresh independent Terra/Luna standard diagnosis against the failed evidence, then create a new fix worktree from freshly fetched `origin/main`:
+
+```powershell
+$repo = 'C:\Users\wsuto\metronome'
+git -C $repo fetch origin main
+$fixBase = git -C $repo rev-parse origin/main
+$stamp = Get-Date -Format 'yyyyMMddHHmmss'
+$fixBranch = "codex/metronome-workflow-fix-$stamp"
+$fixWorktree = "C:\tmp\metronome-workflow-fix-$stamp"
+git -C $repo show-ref --verify --quiet "refs/heads/$fixBranch"
+if ($LASTEXITCODE -eq 0 -or (Test-Path $fixWorktree)) { throw 'PLAN_BLOCKED: workflow-fix branch/worktree already exists' }
+git -C $repo worktree add -b $fixBranch $fixWorktree $fixBase
+if (git -C $fixWorktree status --porcelain=v2 --untracked-files=all) { throw 'PLAN_BLOCKED: workflow-fix worktree is not clean' }
+if ((git -C $fixWorktree rev-parse HEAD) -ne $fixBase) { throw 'PLAN_BLOCKED: workflow-fix is not based on fetched origin/main' }
+```
+
+The workflow-fix diff is limited to the minimum subset of the exact `$allowed` set below. `src/**`, every product/test/status/package/lock/workflow file, and `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` are forbidden. Under the stated non-malicious-monitor threat model, the monitor also forbids merge/cherry-pick commits from the temporary R-01 branch. Before every fix commit and PR promotion, compare staged, working, and `$fixBase...HEAD` names to the allowlist, require no merge commits, and fail closed on any R-01 plan path:
+
+```powershell
+$allowed = @('AGENTS.md','.agents/skills/metronome-workflow/SKILL.md','skills/metronome_planner.md','skills/metronome_coder.md','skills/metronome_reviewer.md','skills/metronome_chatgpt_review.md','docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md','docs/architecture/debt-gate-map.md','scripts/validate-pr-debt-contract.mjs','scripts/validate-pr-debt-contract.selftest.mjs','scripts/validate-metronome-gates.mjs','.github/pull_request_template.md','docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md')
+$changed = @((git -C $fixWorktree diff --name-only), (git -C $fixWorktree diff --cached --name-only), (git -C $fixWorktree diff --name-only "$fixBase...HEAD")) | Where-Object { $_ } | Sort-Object -Unique
+$outside = @($changed | Where-Object { $_ -notin $allowed })
+if ($outside.Count -gt 0) { throw "PLAN_BLOCKED: workflow-fix scope escaped: $($outside -join ', ')" }
+if ($changed -contains 'docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md' -or ($changed | Where-Object { $_ -like 'src/*' })) { throw 'PLAN_BLOCKED: R-01/product content entered workflow-fix' }
+if (git -C $fixWorktree log --merges --format='%H' "$fixBase..HEAD") { throw 'PLAN_BLOCKED: workflow-fix contains a merge commit' }
+```
+
+If diagnosis changes this workflow plan, shared contract, evidence schema, or scope, the first fix-branch commit must contain only this plan; recompute its tracked commit/blob/SHA-256, obtain a fresh independent Terra/Luna `PLAN_REVIEW_PASS`, and receive explicit user approval before implementation. A mechanical correction already specified by the unchanged approved plan may reuse that tracked plan identity, but still requires the new diagnosis and independent implementation review.
+
+Implement only the diagnosed workflow correction. Run the complete Task 5 gate suite and CodeScene, commit with normal hooks, populate all fourteen evidence fields, pass PR CI and the required external review, merge the narrow workflow-fix PR, then return to freshly fetched clean `main`:
+
+```powershell
+git -C $repo switch main
+git -C $repo fetch origin main
+git -C $repo pull --ff-only origin main
+if (git -C $repo status --porcelain=v2 --untracked-files=all) { throw 'PLAN_BLOCKED: main is not clean after workflow-fix merge' }
+```
+
+After diagnosis evidence is retained, remove the failed temporary plan worktree/branch without applying its artifact anywhere. Repeat Steps 1-3 as a brand-new Sol trial from the newly merged clean `main`. R-01 coding stays blocked until that repeated trial returns `PLAN_READY`, receives fresh Terra/Luna `PASS`, and the user explicitly approves the reviewed immutable plan.
 
 **Step 4: Minimal handoff after explicit approval**
 
@@ -399,9 +491,10 @@ The coding branch starts from clean `main`, not the plan branch. Before coding, 
 ## Final Self-Review
 
 - The workflow PR reaches `MSO-6` and merges before any real R-01 trial.
-- No R-01 identity/review/coding field remains in workflow validator, self-test, gate markers, PR template, or overlay promotion.
+- The PR template/validator preserve the existing seven role fields and require the seven additional workflow fields for overlay-control diffs.
+- Every enumerated pre-merge R-01 label, parser/fixture identifier, marker, and obsolete status token is absent from workflow validator, self-test, gate markers, PR template, and overlay promotion.
 - Overlay plan identity is derived from tracked `HEAD:<path>` blob/content/SHA only.
 - Full `HEAD` role contracts survive with pointer-only additions.
 - Generated R-01/later plans never merge into `main`; later agents use immutable `git show` handoff.
-- Post-merge trial failure opens a narrow workflow-fix PR and blocks R-01 coding.
+- Post-merge trial failure starts a bounded workflow-fix from fresh `origin/main`; no product/R-01 plan content enters it, and a repeated fresh trial plus user approval is required before coding.
 - Production diff remains `0 LOC`, and the paused implementation becomes smaller in mechanism surface.
