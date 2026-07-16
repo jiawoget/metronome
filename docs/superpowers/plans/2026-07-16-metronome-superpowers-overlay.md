@@ -12,7 +12,7 @@
 
 **Estimated Production-Code Diff:** `0 LOC` under `src/**`.
 
-**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `6cf779d05fc8331c83836fa782e46afda566c270` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
+**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `75b6e13948a88a5209bd1d427da20eafa4407064` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
 
 ## Verified Interfaces and Limits
 
@@ -90,7 +90,7 @@ git status --short
 git add docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md
 $staged = @(git diff --cached --name-only)
 if ($staged.Count -ne 1 -or $staged[0] -ne 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md') { throw 'PLAN_BLOCKED: plan-only staging failed' }
-git commit -m "Simplify workflow-fix path guard"
+git commit -m "Complete workflow implementation scope guard"
 ```
 
 Use normal hooks and never `--no-verify`. All paused implementation files must remain uncommitted and otherwise unchanged.
@@ -262,11 +262,19 @@ Each role file should show a tiny addition and zero contract deletion relative t
 
 **Allowed workflow PR files:** this plan, `AGENTS.md`, `.agents/skills/metronome-workflow/SKILL.md`, four role files, refactor template, debt map, existing validator/self-test/gate wrapper, and PR template. No R-01 plan, product source, status, package, lock, or workflow file is allowed.
 
+Task 0 already committed this plan. The Task 5 implementation allowlist is the remaining exact file set below; any new working-tree mutation of the plan is forbidden and restarts Task 0 with a new identity/review.
+
 **Step 1: Prove simplification and scope**
 
 ```powershell
-git diff --name-only origin/main...HEAD
-git diff --name-only
+$allowedImplementation = @('AGENTS.md','.agents/skills/metronome-workflow/SKILL.md','skills/metronome_planner.md','skills/metronome_coder.md','skills/metronome_reviewer.md','skills/metronome_chatgpt_review.md','docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md','docs/architecture/debt-gate-map.md','scripts/validate-pr-debt-contract.mjs','scripts/validate-pr-debt-contract.selftest.mjs','scripts/validate-metronome-gates.mjs','.github/pull_request_template.md')
+$trackedImplementation = @(git diff --name-only --no-renames HEAD)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: tracked implementation path diff failed' }
+$untrackedImplementation = @(git ls-files --others --exclude-standard)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: untracked implementation path listing failed' }
+$implementationPaths = @(($trackedImplementation + $untrackedImplementation) | Where-Object { $_ } | ForEach-Object { (($_ -replace '\\', '/') -replace '^\./', '') } | Sort-Object -Unique)
+$forbiddenImplementation = @($implementationPaths | Where-Object { $_ -notin $allowedImplementation })
+if ($forbiddenImplementation.Count -gt 0) { throw "BLOCKED: implementation scope escaped: $($forbiddenImplementation -join ', ')" }
 git diff --stat
 git diff --numstat -- 'src/**'
 $r01Surfaces = @(
@@ -472,7 +480,7 @@ if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: merge-history check failed' }
 if ($mergeCommits.Count -gt 0) { throw 'PLAN_BLOCKED: workflow-fix contains a merge commit' }
 ```
 
-The three Git sources cover committed branch changes, staged/unstaged tracked changes, and untracked paths. `--no-renames` exposes rename/copy source and destination as delete/add paths. Every command error, unsafe path, or path outside `$allowed` is `PLAN_BLOCKED`, including untracked `src/**` and R-01 plan paths.
+The three Git sources cover committed branch changes, staged/unstaged tracked changes, and untracked paths. With `--no-renames`, a rename becomes delete+add, so both changed paths are checked. For a copy, the unchanged source is not a changed path and needs no allowlist check; the new destination is reported and must be allowed. Do not add copy detection. Every command error, unsafe path, or path outside `$allowed` is `PLAN_BLOCKED`, including untracked `src/**` and R-01 plan paths.
 
 If diagnosis changes this workflow plan, shared contract, evidence schema, or scope, the first fix-branch commit must contain only this plan; recompute its tracked commit/blob/SHA-256, obtain a fresh independent Terra/Luna `PLAN_REVIEW_PASS`, and receive explicit user approval before implementation. A mechanical correction already specified by the unchanged approved plan may reuse that tracked plan identity, but still requires the new diagnosis and independent implementation review.
 
