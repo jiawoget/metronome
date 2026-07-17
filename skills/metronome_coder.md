@@ -1,5 +1,7 @@
 # Metronome Coding Skill
 
+Read `.agents/skills/metronome-workflow/SKILL.md` first. The full role contract below remains in force; the overlay takes precedence only for shared workflow, model-routing, pause, and promotion rules.
+
 This coder is a hard gate. Do not edit production code until an approved plan has `PLAN_READY` and includes repo-map evidence, surface accounting, and retired-surface targets.
 
 ## Required Input Packet
@@ -44,7 +46,8 @@ For refactor pipeline plans, do not require a full repo-map search table in the 
    - Domain must not import UI or services.
    - Service repository passthrough must retire at least one direct repository caller.
 
-5. Fill PR body evidence before requesting review.
+5. Return only the current-stage handoff below. The monitor owns preflight,
+   PR evidence, full gates, CodeScene, reviewer, CI, and ChatGPT stages.
 
 ## Forbidden Without Hard Evidence
 
@@ -60,40 +63,18 @@ Do not add:
 - Domain imports from UI or services.
 - Tests that only update expectations while missing behavior-equivalence coverage.
 
-## Required PR Body Evidence
+## Current-Stage Handoff
 
-Fill these sections with concrete rows, not placeholders:
+Required PR Body Evidence is monitor-owned. Return these four concrete groups:
 
-- `Reuse Proof`
-- `Retired Surface`
-- `New Surface`
-- `Boundary Delta`
-- `Debt Gate Evidence`
-- `Agent Gate Evidence`
+1. Implementation files and purpose.
+2. Scope accounting: reuse decision, new-surface result, and boundary delta.
+3. Retired/deleted surface proof, including every refactor `RS-*` item.
+4. Focused tests actually run and their results, including behavior-equivalence
+   coverage when a compatibility surface was retired.
 
-`Reuse Proof` must include search terms, files read, and reuse/extract/no-go decision.
-
-`Retired Surface` must list old helpers, aliases, state fields, service methods, wrappers, or direct imports removed/narrowed. If no retired surface exists, state `Not a debt-reduction PR; no retired surface`.
-
-For refactor pipelines, `Retired Surface` must map back to every `RS-*` item from the plan and include the deletion proof command/result.
-
-`New Surface` must list every new helper/service/type/component or state `No new surface`.
-
-`Agent Gate Evidence` must include `PLAN_READY`, `CODE_READY`, reviewer `PASS` or `PASS_WITH_NITS`, and ChatGPT `PASS` or `PASS_WITH_NITS`.
-
-## Required Verification
-
-Run the smallest useful behavior tests plus the repo gates:
-
-- Behavior-equivalence tests for retired compatibility surface.
-- Focused unit tests for touched behavior.
-- `npm run validate:debt-gates`
-- `npm run lint:debt:changed`
-- `npm run lint:xo:changed`
-- `npm run lint`
-- `npm run typecheck`
-- `npm run test:unit`
-- `npm run build`
+Do not claim or request a reviewer verdict, PR URL/body, CI, ChatGPT,
+monitor-owned CodeScene, or future full-gate evidence.
 
 ## Required Output Schema
 
@@ -112,22 +93,17 @@ CODE_READY / BLOCKED
 | File | Purpose |
 |---|---|
 
-## Reuse Proof Written
+## Scope Accounting
 
 | Need | Existing primitive/library checked | Files read | Decision |
 |---|---|---|---|
 
-## Retired Surface Written
+## Retired/Deleted Surface Proof
 
 | Removed/narrowed surface | Old callers migrated | Replacement |
 |---|---|---|
 
-## New Surface Written
-
-| New surface | Old surface retired | Net result |
-|---|---|---|
-
-## Boundary Delta Written
+## New Surface and Boundary Delta
 
 - UI -> browser adapter direct imports added:
 - UI -> infrastructure imports added:
@@ -135,7 +111,7 @@ CODE_READY / BLOCKED
 - Service passthrough methods added:
 - Repository direct callers reduced:
 
-## Verification
+## Focused Tests
 
 | Command | Result |
 |---|---|
@@ -148,5 +124,5 @@ CODE_READY / BLOCKED
 
 ## Verdict Handling
 
-- `CODE_READY`: request reviewer gate.
-- `BLOCKED`: do not request review until the blocker is fixed.
+- `CODE_READY`: return the handoff to the monitor for preflight.
+- `BLOCKED`: do not request a downstream stage until the blocker is fixed.

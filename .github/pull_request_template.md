@@ -47,3 +47,11 @@ Net surface delta:
 - Reviewer skill read evidence:
 - Reviewer verdict:
 - ChatGPT final review prompt/verdict:
+- Overlay plan path:
+- Overlay plan commit:
+- Overlay plan blob:
+- Overlay plan SHA-256:
+- Independent plan review policy:
+- Independent plan review verdict:
+- Current metronome Stage:
+<!-- Overlay control changes require exactly MSO-5 with PENDING, or MSO-6 with PASS or PASS_WITH_NITS. -->

@@ -22,6 +22,8 @@ const required = [
 	'skills/metronome_coder.md',
 	'skills/metronome_reviewer.md',
 	'skills/metronome_chatgpt_review.md',
+	'AGENTS.md',
+	'.agents/skills/metronome-workflow/SKILL.md',
 	'docs/architecture/debt-gate-map.md',
 ];
 
@@ -32,6 +34,7 @@ const requiredContent = {
 		'Additional Known Debt Patterns',
 	],
 	'skills/metronome_planner.md': [
+		'.agents/skills/metronome-workflow/SKILL.md',
 		'Required Input Packet',
 		'Planning Workflow',
 		'Hard Fail',
@@ -42,6 +45,7 @@ const requiredContent = {
 		'PLAN_READY / BLOCKED',
 	],
 	'skills/metronome_coder.md': [
+		'.agents/skills/metronome-workflow/SKILL.md',
 		'Required Input Packet',
 		'Coding Workflow',
 		'Forbidden Without Hard Evidence',
@@ -50,6 +54,7 @@ const requiredContent = {
 		'CODE_READY / BLOCKED',
 	],
 	'skills/metronome_reviewer.md': [
+		'.agents/skills/metronome-workflow/SKILL.md',
 		'Required Input Packet',
 		'Review Workflow',
 		'CodeScene MCP `analyze_change_set`',
@@ -61,6 +66,7 @@ const requiredContent = {
 		'PASS / PASS_WITH_NITS / CHANGES_REQUIRED',
 	],
 	'skills/metronome_chatgpt_review.md': [
+		'.agents/skills/metronome-workflow/SKILL.md',
 		'Required Plan Review Packet',
 		'Required PR Review Packet',
 		'CodeScene Pre-Review',
@@ -76,12 +82,20 @@ const requiredContent = {
 		'positiveStatusPattern',
 		'blockingEvidencePattern',
 		'exactly PASS or PASS_WITH_NITS',
+		'Overlay plan path',
+		'validateImmutableOverlayPlanIdentity',
+		'MSO-5',
+		'PENDING',
+		'quality_gates: passed',
 	],
 	'scripts/validate-pr-debt-contract.selftest.mjs': [
 		'commitPackageManifestChange',
 		'not passed',
 		'not PASS',
 		'CHANGES_REQUIRED; PASS later',
+		'Overlay plan path',
+		'MSO-5',
+		'PENDING',
 	],
 	'.github/workflows/metronome-debt-gates.yml': [
 		'edited',
@@ -91,6 +105,26 @@ const requiredContent = {
 		'Planner skill read evidence',
 		'Coder skill read evidence',
 		'Reviewer skill read evidence',
+		'Overlay plan path',
+		'Current metronome Stage',
+		'MSO-5',
+		'PENDING',
+	],
+	'AGENTS.md': [
+		'.agents/skills/metronome-workflow/SKILL.md',
+	],
+	'.agents/skills/metronome-workflow/SKILL.md': [
+		'Superpowers Task is the Metronome Stage',
+		'unexpected production LOC growth',
+		'Code Health decline',
+		'scope expansion',
+		'unplanned wrapper/public API',
+		'explicit user decision',
+		'Never route diagnosis, fix, or review to GPT-5.6 Sol',
+		'superpowers:executing-plans',
+		'superpowers:subagent-driven-development',
+		'CodeScene is monitor-owned',
+		'STAGE_BLOCKED',
 	],
 	'docs/architecture/debt-gate-map.md': [
 		'Shared Primitive Rule',
