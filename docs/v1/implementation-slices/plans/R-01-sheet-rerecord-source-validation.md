@@ -27,7 +27,7 @@ PLAN_READY
 ## Scope
 
 - Slice/stage: `R-01-sheet-rerecord-source-validation`
-- In scope: extract Practice Again hydration, ready-source revalidation, and live-segment inspection from `sheet-practice-controls.tsx` into one pure sibling module with three explicit workflow-level entry points; add direct behavior-equivalence tests.
+- In scope: extract Practice Again hydration, two-stage ready-source selection/revalidation, and live-segment inspection from `sheet-practice-controls.tsx` into one pure sibling module with four explicit workflow-level entry points; add direct behavior-equivalence tests.
 - Out of scope: segment selector, start/stop transaction redesign, services, repositories, store, browser adapters, persistence, unrelated test cleanup, and all other CodeScene candidates.
 
 ## Inputs Read
@@ -60,7 +60,7 @@ No generated primitive index was found. The focused repo-map searches below are 
 
 | Search | Command or source | Files found | Decision |
 | --- | --- | --- | --- |
-| Exact duplicated validation surfaces | `rg -n "segmentContextsMatch|getRerecordSourceInvalidReason|hydratePracticeAgainSource|validateRecordAgainSource" src tests` | Only `sheet-practice-controls.tsx`; two callers of `getRerecordSourceInvalidReason`, two live-context branch chains, and three context comparisons | Extract three explicit workflow inspectors backed by private shared primitives; delete/narrow the local copies |
+| Exact duplicated validation surfaces | `rg -n "segmentContextsMatch|getRerecordSourceInvalidReason|hydratePracticeAgainSource|validateRecordAgainSource" src tests` | Only `sheet-practice-controls.tsx`; two callers of `getRerecordSourceInvalidReason`, two live-context branch chains, and three context comparisons | Extract four explicit workflow functions backed by private shared primitives; delete/narrow the local copies |
 | Existing rerecord reason/source policy | `rg -n "SheetPracticeRerecordSource|SheetPracticeRerecordUnavailableReason|source-recording-missing|source-segment-missing|source-segment-invalid|selection-changed" src tests` | Workflow store, controls, selector, workflow-store tests, controls tests | Reuse exported types/actions; do not add a new reason model |
 | Controller/hook/service alternatives | `rg -n "RecordingController|use[A-Za-z]*Recording|recording-controller|rerecord" src/components src/lib src/services src/stores` | Quick recording controller, recordings-review hooks, workflow store, controls | Existing controllers own different workflows; a new async controller is rejected |
 | Direct component boundary | `rg -n "SheetPracticeControls|PracticeSegmentSelectorPanel" src tests` | Viewer parent, controls, selector tests, controls tests | Selector remains an independent debt root and is excluded |
@@ -83,8 +83,9 @@ No generated primitive index was found. The focused repo-map searches below are 
 
 | Proposed shared surface | Old call sites found repo-wide | Old call sites migrated in this PR | Old implementations deleted/narrowed | Debt-reduction claim |
 | --- | ---: | ---: | --- | --- |
-| Private persisted-recording primitive | 3: hydration inline chain plus the mounted and pre-start paths through `getRerecordSourceInvalidReason` | 3 through the two workflow-level inspectors | Delete `getRerecordSourceInvalidReason` and the hydration recording branch chain | Yes: common missing/type/sheet checks have one private implementation; caller-specific context semantics remain explicit |
-| `inspectReadyRerecordSource(...)` | 2: mounted-source effect and pre-start validation | 2 | Replace the mounted helper call and the compound pre-start readiness/recording guard | Yes: both ready-source callers consume the same ready-state and persisted-recording rules |
+| Private persisted-recording primitive | 3: hydration inline chain plus the mounted and pre-start paths through `getRerecordSourceInvalidReason` | 3 through the Practice Again and ready-recording inspectors | Delete `getRerecordSourceInvalidReason` and the hydration recording branch chain | Yes: common missing/type/sheet checks have one private implementation; caller-specific context semantics remain explicit |
+| `selectReadyRerecordSource(...)` | 2: mounted-source early guard and pre-start compound ready guard | 2 | Replace both readiness guards before either caller loads the recording | Yes: both callers preserve the existing select-before-load order and consume the same workflow invariants |
+| `inspectReadyRerecordSourceRecording(...)` | 2: mounted-source and pre-start calls through `getRerecordSourceInvalidReason` | 2 | Delete `getRerecordSourceInvalidReason` after both callers migrate | Yes: both callers consume the same persisted-recording/context rules after loading |
 | `inspectRerecordSourceSegment(...)` | 2: hydration live-segment chain and pre-start live-segment chain | 2 | Delete local `segmentContextsMatch`; narrow both construction/comparison chains to result handling | Yes: duplicate inspection paths are retired; only pre-start supplies `expectedSheetId` so the existing phase-specific sheet check is preserved |
 
 `inspectPracticeAgainRerecordSource(...)` has one production caller and is not claimed as a shared primitive. It is a local workflow collaborator whose purpose is to remove the branch-heavy hydration policy from React while exposing it to direct tests. Its common persisted-recording checks are implemented by the private primitive above.
@@ -94,16 +95,19 @@ No generated primitive index was found. The focused repo-map searches below are 
 | New surface | Why needed | Existing alternative rejected | Old surface retired in same PR |
 | --- | --- | --- | --- |
 | `inspectPracticeAgainRerecordSource(...)` in `sheet-rerecord-source.ts` | Pure hydration-specific recording/context/return-selection inspection without a mode flag or nullable-policy parameter | Keeping the chain in React retains the target method smell; moving it into a service/store violates ownership | Hydration's recording branch chain and return-segment guard |
-| `inspectReadyRerecordSource(...)` in `sheet-rerecord-source.ts` | Pure ready-workflow snapshot plus persisted-recording validation shared by mounted and pre-start paths | A callback-based invalidation helper hides side effects; a hook/controller adds a new orchestration layer for pure policy | `getRerecordSourceInvalidReason` and the compound pre-start ready guard |
+| `selectReadyRerecordSource(...)` in `sheet-rerecord-source.ts` | Pure workflow snapshot selection shared by mounted and pre-start paths before any recording lookup | A combined inspector requires loading before selection and changes stale-state service-call order; keeping the compound guard retains component complexity | Mounted-source early guard and the compound pre-start ready guard |
+| `inspectReadyRerecordSourceRecording(...)` in `sheet-rerecord-source.ts` | Pure persisted-recording/context validation shared after selection and lookup | A callback-based invalidation helper hides side effects; a hook/controller adds an orchestration layer for pure policy | `getRerecordSourceInvalidReason(...)` |
 | `inspectRerecordSourceSegment(...)` in `sheet-rerecord-source.ts` | Pure live conversion/equality with an explicit optional `expectedSheetId` used only by pre-start | No repo primitive exists beyond the required domain converter | Local `segmentContextsMatch` and both duplicated live-segment construction/comparison chains |
 
-The result type, persisted-recording primitive, ready-source selector, and context comparator stay private to the new module. The sibling module is not re-exported through a barrel. Exported production surface increases by one: three local inspectors replace two local helpers. That increase is accepted because it removes three branch-heavy React paths without a mode flag, callback injection, new service, or new business path. `sheet-practice-controls.tsx` must have a net line reduction; unexpected production growth or any fourth exported helper is a stop condition, not a reason to invent a hard single-file LOC limit.
+The result type, persisted-recording primitive, and context comparator stay private to the new module. The sibling module is not re-exported through a barrel. Exported production surface increases by two: four local workflow functions replace two local helpers. That increase is accepted because the two-stage ready contract preserves select-before-load service order and removes three branch-heavy React paths without callback injection, new service, or new business path. `sheet-practice-controls.tsx` must have a net line reduction; unexpected production growth or any fifth exported helper is a stop condition, not a reason to invent a hard single-file LOC limit.
 
 ## Retired Surface Target
 
 | Surface to remove/narrow | Current callers | Replacement | Behavior-equivalence test |
 | --- | --- | --- | --- |
-| Local `getRerecordSourceInvalidReason(...)` | mounted-source validation effect; `validateRecordAgainSource` | `inspectReadyRerecordSource(...)` | new pure unit table for every ready invariant and persisted-recording reason plus existing controls invalid-source cases |
+| Mounted-source early ready guard | mounted-source validation effect | `selectReadyRerecordSource(...)`, with failure returning before `getRecording(...)` | direct ready-invariant unit table plus controls evidence that unavailable state does not load/invalidate |
+| Compound ready guard in `validateRecordAgainSource` | pre-start validation | `selectReadyRerecordSource(...)`, with failure preserving `selection-changed` invalidation and the exact throw | direct ready-invariant unit table plus existing selection-change controls tests |
+| Local `getRerecordSourceInvalidReason(...)` | mounted-source validation effect; `validateRecordAgainSource` | `inspectReadyRerecordSourceRecording(...)` after selected-source lookup | new pure unit table for persisted-recording reasons plus existing controls invalid-source cases |
 | Local `segmentContextsMatch(...)` | local recording helper; hydration; pre-start validation | private equality used by ready and segment inspectors | new equivalent/mismatched context cases plus existing controls tests |
 | Inline recording and return-selection validation in `hydratePracticeAgainSource` | hydration only | `inspectPracticeAgainRerecordSource(...)` | existing Practice Again invalid-source table plus direct pure tests |
 | Inline live-segment construction/comparison in hydration and pre-start validation | two phases | segment inspector result | new pure unit cases plus existing missing/invalid segment controls tests |
@@ -120,8 +124,8 @@ The result type, persisted-recording primitive, ready-source selector, and conte
 
 | Behavior | Test file/type | Why it gates merge |
 | --- | --- | --- |
-| Pure Practice Again, ready-source, and live-segment inspection outcomes | `tests/unit/sheet-rerecord-source.test.ts` | Proves the three extracted replacements without React/store side effects |
-| Existing hydration messages, reasons, ready state, pre-start rejection, and Record Again behavior | `tests/unit/sheet-practice-controls.test.tsx` | Proves behavior equivalence at both old call sites |
+| Pure Practice Again, two-stage ready-source, and live-segment inspection outcomes | `tests/unit/sheet-rerecord-source.test.ts` | Proves the four extracted functions without React/store side effects |
+| Existing hydration messages, reasons, ready state, pre-start rejection, Record Again behavior, and select-before-load ordering | `tests/unit/sheet-practice-controls.test.tsx` | Proves behavior equivalence at the old call sites and prevents stale-state recording lookup |
 | No new forbidden component-layer dependency | `tests/unit/architecture-boundaries.test.ts` | Guards the new sibling module's import direction |
 | Real first-take/Record Again/second-take workflow | existing `tests/e2e/sheet-segment-recording.spec.ts` | Mandatory browser evidence for a recording workflow refactor; test file is rerun, not cleaned up |
 
@@ -179,6 +183,8 @@ Therefore:
 - revision 2 must be independently frozen and reviewed before a new implementation branch exists;
 - the new implementation starts from refreshed `main`, never from the discarded implementation branch.
 
+The first frozen revision-2 draft at commit `1f04f6986acddbc9052df89d6b2afbb75863ce4d` received `PLAN_REVIEW_BLOCKED`. The review found that a combined ready inspector required a loaded recording before the source id could be safely selected, conflicted with the existing no-load-on-stale-state order, left `expectedSheetId` inconsistent with the optional-policy ban, and failed to account for the mentioned ready selector. This version resolves all three findings with an accounted two-stage `selectReadyRerecordSource(...)` → caller lookup → `inspectReadyRerecordSourceRecording(...)` contract and one explicit `expectedSheetId` exception.
+
 ## Revised structural feasibility budget
 
 The revised design is accepted for a second implementation only because it has a concrete path below the failed thresholds:
@@ -186,7 +192,7 @@ The revised design is accepted for a second implementation only because it has a
 | Function | Residual component decisions after migration | Planned CodeScene shape |
 | --- | --- | --- |
 | `hydratePracticeAgainSource` | blank source; Practice Again inspection failure; `no-segment-context` clear mapping; cancellation; live-segment inspection failure; missing-segment active clear | At most 6 component decisions, targeting CC below 8 |
-| `validateRecordAgainSource` | ready-source failure; live-segment failure; missing/wrong-sheet active clear | At most 3 component decisions, targeting CC below 8 |
+| `validateRecordAgainSource` | ready selection failure; ready-recording failure; live-segment failure; missing/wrong-sheet active clear | At most 4 component decisions, targeting CC below 8 |
 | Each new pure function | One named policy with early-return result branches | Individually below CC 8; no aggregate generic inspector |
 
 This is a planning budget, not evidence. CodeScene after implementation remains the authority. If the implementation needs extra branch helpers, callbacks, or serialized dependency tricks to meet it, the design has failed again.
@@ -200,7 +206,7 @@ The component validates the same Record Again source relationship in two phases:
 
 The two call sites need different side effects, but the structural inspection rules are duplicated inside the React component. This raises method complexity and makes it easy for the hydration and start paths to drift.
 
-R-01 extracts only side-effect-free inspection rules. A private persisted-recording primitive carries the genuinely shared checks; three explicit workflow-level inspectors keep Practice Again, ready-source, and live-segment semantics legible. Async service calls, React state, cancellation, workflow-store transitions, messages, capture/session sequencing, and recording start/stop remain in their existing owners.
+R-01 extracts only side-effect-free inspection rules. A private persisted-recording primitive carries the genuinely shared checks; four explicit workflow-level functions keep Practice Again, ready selection, persisted recording, and live-segment semantics legible. Async service calls, React state, cancellation, workflow-store transitions, messages, capture/session sequencing, and recording start/stop remain in their existing owners.
 
 ## Production scope
 
@@ -226,10 +232,11 @@ No other production file is pre-approved. If implementation requires another `sr
 - `tests/unit/sheet-rerecord-source.test.ts`
   - Characterize the extracted pure outcomes directly.
 
-### Preserve; modify only if the extraction changes test wiring
+### Preserve; modify only for extraction wiring or focused order evidence
 
 - `tests/unit/sheet-practice-controls.test.tsx`
   - Keep existing component-level behavior evidence.
+  - Add at most the focused assertion needed to prove stale/unavailable ready state returns before `getRecording(...)`; do not broaden the fixture cleanup.
   - Do not reorganize fixtures, reduce test debt, rename unrelated tests, or broaden coverage outside R-01.
 
 Tests are behavior proof for the production refactor. Test-code cleanup remains deferred to the later tests stage.
@@ -265,7 +272,7 @@ The existing complexity in `startSheetRecording`, `stopSheetRecording`, metronom
 
 ## Helper contract
 
-The new module exposes small discriminated results rather than throwing for expected invalid-source states. The three workflow-level names and responsibilities are part of the revised contract:
+The new module exposes small discriminated results rather than throwing for expected invalid-source states. The four workflow-level names and responsibilities are part of the revised contract:
 
 ```ts
 inspectPracticeAgainRerecordSource({
@@ -281,37 +288,51 @@ inspectPracticeAgainRerecordSource({
   segmentContext: SheetRecordingSegmentContext;
 }>;
 
-inspectReadyRerecordSource({
+selectReadyRerecordSource({
   workflowState,
-  sheetId,
-  recording
+  sheetId
 }: {
   workflowState: Pick<
     SheetPracticeRecordingWorkflowState,
     "sheetId" | "activeSegmentId" | "rerecord"
   >;
   sheetId: string;
+}): RerecordSourceInspection<SheetPracticeRerecordSource>;
+
+inspectReadyRerecordSourceRecording({
+  recording,
+  sheetId,
+  source
+}: {
   recording: ReviewRecording | null;
+  sheetId: string;
+  source: SheetPracticeRerecordSource;
 }): RerecordSourceInspection<SheetPracticeRerecordSource>;
 
 inspectRerecordSourceSegment({
   segment,
   sourceContext,
   expectedSheetId
+}: {
+  segment: PracticeSegment | null;
+  sourceContext: SheetRecordingSegmentContext;
+  expectedSheetId?: string;
 }): RerecordSourceInspection<SheetRecordingSegmentContext>;
 ```
 
 Constraints:
 
-- Keep `RerecordSourceInspection<T>`, the common persisted-recording check, the ready-source selector, and the context comparator private to the module; do not spend additional exported surface on them.
+- Keep `RerecordSourceInspection<T>`, the common persisted-recording check, and the context comparator private to the module; do not spend additional exported surface on them.
 - Preserve the current context-equivalence semantics; do not silently redefine equality.
 - `inspectPracticeAgainRerecordSource(...)` owns hydration-only semantics: missing context reports `no-segment-context`; a nonblank mismatched return segment reports `selection-changed`; success returns the recording's own context.
-- `inspectReadyRerecordSource(...)` owns ready-workflow semantics for both mounted and pre-start callers: a stale workflow sheet/status/source/selection reports `selection-changed`; missing/wrong persisted recording reports the existing recording reason; missing or mismatched persisted context reports `source-segment-invalid`; success returns the current ready source.
+- `selectReadyRerecordSource(...)` is always called before `getRecording(...)`. A stale workflow sheet/status/source/source-sheet/selection reports `selection-changed`; success returns the selected source. Mounted failure returns without invalidating or loading, while pre-start failure preserves its existing invalidation/throw.
+- `inspectReadyRerecordSourceRecording(...)` is called only after selection and lookup. Missing/wrong persisted recording reports the existing recording reason; missing or mismatched persisted context reports `source-segment-invalid`; success returns the same selected source.
 - `inspectRerecordSourceSegment(...)` reports missing/invalid live context for both phases. Pre-start passes `expectedSheetId: sheetId` and preserves `sheet-mismatch`; hydration omits it and preserves its current context-only validation.
 - Do not put async loading in the helper. The component retains `getRecording(...)` and `getSegment(...)` calls so service ownership does not move.
 - Do not put workflow-store actions or message formatting in the helper.
 - Keep caller-specific effects explicit at the call sites. Hydration still chooses `clearRerecordSource(...)` only for `no-segment-context`, clears the active segment only when the live segment is missing, and formats the current message. Pre-start still clears the active segment for missing or wrong-sheet live segments and throws the exact current error.
 - Do not add an `apply...Failure` callback wrapper, inject caller side effects into the pure module, serialize readiness fields with `JSON.stringify`, or use `Object.assign`/spread tricks to hide optional inputs. Ordinary typed object literals and direct result branches are required.
+- `inspectRerecordSourceSegment(...).expectedSheetId` is the sole permitted optional policy input. It is an audited representation of an existing phase difference: hydration omits the property; pre-start passes `sheetId`. No other mode flag, nullable-policy parameter, or optional strategy input is allowed.
 - Keep every new function below CodeScene's complex-method threshold. A helper score increase does not compensate for either target React method remaining a finding.
 
 ## Implementation tasks
@@ -345,8 +366,9 @@ Cover at least these existing outcomes:
 - Practice Again recording has no persisted context → `no-segment-context`;
 - nonblank return segment differs from the persisted context → `selection-changed`;
 - each stale ready invariant—workflow sheet, status, source, source sheet, or active segment—→ `selection-changed`;
-- valid ready invariants delegate persisted recording failures to `source-recording-missing`, `source-not-sheet`, or `sheet-mismatch`;
-- ready-source inspection with a missing or mismatched persisted recording context → `source-segment-invalid`;
+- valid ready invariants return the exact source needed for the subsequent recording lookup;
+- after valid selection, ready-recording inspection returns `source-recording-missing`, `source-not-sheet`, or `sheet-mismatch` for the corresponding persisted-recording failures;
+- ready-recording inspection with a missing or mismatched persisted recording context → `source-segment-invalid`;
 - live segment is missing → `source-segment-missing`;
 - pre-start live segment belongs to another sheet → `sheet-mismatch`;
 - hydration without `expectedSheetId` continues to judge the live segment by context equivalence only;
@@ -366,7 +388,7 @@ Expected red state: the planned helper module or exports do not exist. A syntax,
 
 Create `src/components/sheet-practice/controls/sheet-rerecord-source.ts`.
 
-Move the existing side-effect-free rules from `segmentContextsMatch(...)`, `getRerecordSourceInvalidReason(...)`, hydration's recording/return guard, and the two live-segment chains into the three contracted workflow-level inspectors. Use one private primitive for common persisted-recording existence/type/sheet checks; keep the different context meanings in their named workflow inspectors.
+Move the existing side-effect-free rules from `segmentContextsMatch(...)`, `getRerecordSourceInvalidReason(...)`, hydration's recording/return guard, the pre-start ready guard, and the two live-segment chains into the four contracted workflow-level functions. Use one private primitive for common persisted-recording existence/type/sheet checks; keep the different context meanings in their named workflow inspectors.
 
 Requirements:
 
@@ -403,9 +425,9 @@ Run:
 
 In `sheet-practice-controls.tsx`:
 
-1. In the mounted-source validation effect, replace `getRerecordSourceInvalidReason(...)` with `inspectReadyRerecordSource(...)` using a current workflow-state snapshot.
-2. In `validateRecordAgainSource`, replace the compound readiness/active-selection guard and persisted-recording helper call with the same `inspectReadyRerecordSource(...)` contract.
-3. Keep the existing `getRecording(...)` and `getSegment(...)` calls in the component.
+1. In the mounted-source validation effect, call `selectReadyRerecordSource(...)` first. If selection fails, return without `getRecording(...)` or invalidation; otherwise load by the selected source id and call `inspectReadyRerecordSourceRecording(...)`.
+2. In `validateRecordAgainSource`, call `selectReadyRerecordSource(...)` first. If selection fails, preserve `selection-changed` invalidation and the exact throw; only then load by the selected source id and call `inspectReadyRerecordSourceRecording(...)`.
+3. Keep the existing `getRecording(...)` and `getSegment(...)` calls in the component and preserve their select-before-load ordering.
 4. In `validateRecordAgainSource`, pass `expectedSheetId: sheetId` to the live-segment inspector so the existing wrong-sheet result remains `sheet-mismatch`; hydration does not pass this option.
 5. Preserve current active-segment clearing and workflow invalidation reasons in both callers.
 6. Preserve the exact thrown message consumed by `startSheetRecording`.
@@ -427,9 +449,9 @@ Required CodeScene result:
 - `validateRecordAgainSource` is no longer reported as a complex method;
 - the new helper contains no complex method at or above cyclomatic complexity 8;
 - no existing smell is reported as worsened because complexity was merely moved.
-- `sheet-practice-controls.tsx` has a net line reduction, the helper exports only the three contracted inspectors, and the diff contains none of the banned tactic shapes from the revision trigger.
+- `sheet-practice-controls.tsx` has a net line reduction, the helper exports only the four contracted functions, and the diff contains none of the banned tactic shapes from the revision trigger.
 
-One small corrective extraction inside the two approved production files is allowed if a required result fails, but it must preserve the three-entry-point design and cannot introduce a callback wrapper, readiness serialization, or a new exported surface. If the same CodeScene requirement still fails after that correction, stop with `STAGE_BLOCKED`; do not widen scope.
+One small corrective extraction inside the two approved production files is allowed if a required result fails, but it must preserve the four-entry-point design and cannot introduce a callback wrapper, readiness serialization, or a new exported surface. If the same CodeScene requirement still fails after that correction, stop with `STAGE_BLOCKED`; do not widen scope.
 
 Run targeted verification:
 
@@ -459,8 +481,8 @@ Request GitHub review with `@codex review`. Do not use ChatGPT web review. Treat
 
 R-01 is complete only when all are true:
 
-1. Hydration uses `inspectPracticeAgainRerecordSource(...)`; mounted and pre-start validation both use `inspectReadyRerecordSource(...)`; hydration and pre-start both use `inspectRerecordSourceSegment(...)` with the contracted sheet-check difference.
-2. The inspectors share only private persisted-recording/context primitives; no nullable mode, callback-injected side effect, serialized readiness tuple, dynamic optional-field construction, or fourth exported helper exists.
+1. Hydration uses `inspectPracticeAgainRerecordSource(...)`; mounted and pre-start validation both select with `selectReadyRerecordSource(...)` before loading and then use `inspectReadyRerecordSourceRecording(...)`; hydration and pre-start both use `inspectRerecordSourceSegment(...)` with the contracted sheet-check difference.
+2. The inspectors share only private persisted-recording/context primitives; `expectedSheetId` is the sole audited optional policy input; no nullable mode, callback-injected side effect, serialized readiness tuple, dynamic optional-field construction, or fifth exported helper exists.
 3. Hydration and ready-source callers preserve all supported result reasons, store transitions, messages, service calls, and error behavior, including hydration's `no-segment-context` clear path, ready-source `source-segment-invalid` behavior for missing or mismatched persisted context, and pre-start `sheet-mismatch` for a wrong-sheet live segment.
 4. No new service, repository, controller, store, persistence path, or business path exists.
 5. Only the two approved production files changed or were added; controls has a net line reduction and no hard single-file limit is invented.
