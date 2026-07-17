@@ -56,6 +56,10 @@ const allowedPlanVerdicts = new Set(['PLAN_READY']);
 const allowedCodeVerdicts = new Set(['CODE_READY']);
 const allowedReviewVerdicts = new Set(['PASS', 'PASS_WITH_NITS']);
 const allowedChatGptVerdicts = new Set(['PASS', 'PASS_WITH_NITS']);
+const finalReviewEvidenceLabels = [
+	'Codex final review prompt/verdict',
+	'ChatGPT final review prompt/verdict',
+];
 const overlayPromotionVerdicts = new Map([['MSO-5', new Set(['PENDING'])], ['MSO-6', allowedChatGptVerdicts]]);
 
 const requiredAgentSkillEvidence = [
@@ -394,17 +398,22 @@ function hasExplicitNoRetiredSurface(sectionBody) {
 		&& /\bno retired surface\b/iv.test(sectionText(sectionBody));
 }
 
-function valueAfterColon(sectionBody, label) {
+function valuesAfterColon(sectionBody, label) {
 	const prefix = `- ${label}:`;
-	const lines = sectionText(sectionBody)
+	return sectionText(sectionBody)
 		.split('\n')
-		.filter(candidate => candidate.toLowerCase().startsWith(prefix.toLowerCase()));
+		.filter(candidate => candidate.toLowerCase().startsWith(prefix.toLowerCase()))
+		.map(line => normalizeCell(line.slice(prefix.length)));
+}
 
-	if (lines.length !== 1) {
+function valueAfterColon(sectionBody, label) {
+	const values = valuesAfterColon(sectionBody, label);
+
+	if (values.length !== 1) {
 		return null;
 	}
 
-	return normalizeCell(lines[0].slice(prefix.length));
+	return values[0];
 }
 
 function validateBoundaryDelta(sectionBody) {
@@ -465,6 +474,21 @@ function extractVerdict(sectionBody, label, allowedVerdicts) {
 	return allowedVerdicts.has(normalized);
 }
 
+function extractFinalReviewVerdict(sectionBody, allowedVerdicts) {
+	const evidenceGroups = finalReviewEvidenceLabels
+		.map(label => valuesAfterColon(sectionBody, label));
+	if (evidenceGroups.some(values => values.length > 1)) {
+		return false;
+	}
+
+	const verdicts = evidenceGroups
+		.flat()
+		.filter(value => value !== null && !isPlaceholder(value))
+		.map(value => normalizeCell(value).toUpperCase());
+
+	return verdicts.length === 1 && allowedVerdicts.has(verdicts[0]);
+}
+
 function validateAgentGateEvidence(sectionBody, chatGptVerdicts = allowedChatGptVerdicts) {
 	const failures = [];
 
@@ -486,10 +510,10 @@ function validateAgentGateEvidence(sectionBody, chatGptVerdicts = allowedChatGpt
 		failures.push('Reviewer verdict must be exactly PASS or PASS_WITH_NITS.');
 	}
 
-	if (!extractVerdict(sectionBody, 'ChatGPT final review prompt/verdict', chatGptVerdicts)) {
+	if (!extractFinalReviewVerdict(sectionBody, chatGptVerdicts)) {
 		failures.push(chatGptVerdicts.has('PENDING')
-			? 'ChatGPT final review prompt/verdict must be exactly PENDING, PASS, or PASS_WITH_NITS.'
-			: 'ChatGPT final review prompt/verdict must be exactly PASS or PASS_WITH_NITS.');
+			? 'Exactly one Codex or ChatGPT final review prompt/verdict must be PENDING, PASS, or PASS_WITH_NITS.'
+			: 'Exactly one Codex or ChatGPT final review prompt/verdict must be PASS or PASS_WITH_NITS.');
 	}
 
 	return failures;
@@ -633,11 +657,10 @@ if (!prContext.isPullRequest) {
 	const localRiskyFindings = riskyFindings.filter(finding => localRiskContexts.has(finding.context));
 
 	if (localRiskyFindings.length > 0) {
-		console.error('Local staged/working-tree risky additions require PR debt contract evidence.');
-		process.exit(1);
+		console.log('Local staged/working-tree risky additions require PR debt contract evidence; validation is deferred to pull request context.');
 	}
 
-	console.log('No GitHub PR context found; local source/risk scan passed.');
+	console.log('No GitHub PR context found; local source/risk scan completed.');
 	process.exit(0);
 }
 

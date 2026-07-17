@@ -340,7 +340,7 @@ assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line 
 		),
 	);
 	assert.equal(result.status, 1);
-	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must be exactly PASS or PASS_WITH_NITS/v);
+	assert.match(result.stderr, /Exactly one Codex or ChatGPT final review prompt\/verdict must be PASS or PASS_WITH_NITS/v);
 }
 
 {
@@ -355,7 +355,7 @@ assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line 
 		),
 	);
 	assert.equal(result.status, 1);
-	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must be exactly PASS or PASS_WITH_NITS/v);
+	assert.match(result.stderr, /Exactly one Codex or ChatGPT final review prompt\/verdict must be PASS or PASS_WITH_NITS/v);
 }
 
 {
@@ -378,7 +378,7 @@ assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line 
 		),
 	);
 	assert.equal(result.status, 1);
-	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must be exactly PASS or PASS_WITH_NITS/v);
+	assert.match(result.stderr, /Exactly one Codex or ChatGPT final review prompt\/verdict must be PASS or PASS_WITH_NITS/v);
 }
 
 {
@@ -452,7 +452,7 @@ assertOverlayEvidenceFails(body => replaceLine(body, '- Reviewer verdict: PASS',
 		),
 	);
 	assert.equal(result.status, 1);
-	assert.match(result.stderr, /ChatGPT final review prompt\/verdict must be exactly PASS or PASS_WITH_NITS/v);
+	assert.match(result.stderr, /Exactly one Codex or ChatGPT final review prompt\/verdict must be PASS or PASS_WITH_NITS/v);
 }
 
 {
@@ -461,6 +461,42 @@ assertOverlayEvidenceFails(body => replaceLine(body, '- Reviewer verdict: PASS',
 	const result = runGate(cwd, validBody(cwd));
 	assert.equal(result.status, 0);
 	assert.match(result.stdout, /PR debt contract evidence sections are present and specific/v);
+}
+
+{
+	const cwd = createRepo();
+	commitSourceChange(cwd);
+	const result = runGate(cwd, replaceLine(
+		validBody(cwd),
+		'- ChatGPT final review prompt/verdict: PASS',
+		'- Codex final review prompt/verdict: PASS',
+	));
+	assert.equal(result.status, 0);
+	assert.match(result.stdout, /PR debt contract evidence sections are present and specific/v);
+}
+
+{
+	const cwd = createRepo();
+	commitSourceChange(cwd);
+	const result = runGate(cwd, replaceLine(
+		validBody(cwd),
+		'- ChatGPT final review prompt/verdict: PASS',
+		'- Codex final review prompt/verdict: PASS\n- ChatGPT final review prompt/verdict: PASS',
+	));
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /Exactly one Codex or ChatGPT final review prompt\/verdict/v);
+}
+
+{
+	const cwd = createRepo();
+	commitSourceChange(cwd);
+	const result = runGate(cwd, replaceLine(
+		validBody(cwd),
+		'- ChatGPT final review prompt/verdict: PASS',
+		'- Codex final review prompt/verdict: PASS\n- ChatGPT final review prompt/verdict: PASS\n- ChatGPT final review prompt/verdict: CHANGES_REQUIRED',
+	));
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /Exactly one Codex or ChatGPT final review prompt\/verdict/v);
 }
 
 {
@@ -496,8 +532,13 @@ assertOverlayEvidenceFails(body => replaceLine(body, '- Reviewer verdict: PASS',
 	);
 	git(cwd, ['add', 'src/lib/risky.ts']);
 	const result = runGate(cwd);
-	assert.equal(result.status, 1);
-	assert.match(result.stderr, /Local staged\/working-tree risky additions require PR debt contract evidence/v);
+	assert.equal(result.status, 0);
+	assert.match(result.stdout, /validation is deferred to pull request context/v);
+
+	git(cwd, ['commit', '-m', 'risky source change']);
+	const pullRequestResult = runGate(cwd, '');
+	assert.equal(pullRequestResult.status, 1);
+	assert.match(pullRequestResult.stderr, /Pull request body is empty/v);
 }
 
 console.log('validate-pr-debt-contract selftest passed.');

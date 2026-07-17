@@ -85,6 +85,7 @@ const requiredContent = {
 		'MSO-5',
 		'PENDING',
 		'quality_gates: passed',
+		'Codex final review prompt/verdict',
 	],
 	'scripts/validate-pr-debt-contract.selftest.mjs': [
 		'commitPackageManifestChange',
@@ -94,6 +95,7 @@ const requiredContent = {
 		'Overlay plan path',
 		'MSO-5',
 		'PENDING',
+		'Codex final review prompt/verdict',
 	],
 	'.github/workflows/metronome-debt-gates.yml': [
 		'edited',
@@ -103,6 +105,7 @@ const requiredContent = {
 		'Planner skill read evidence',
 		'Coder skill read evidence',
 		'Reviewer skill read evidence',
+		'Codex final review prompt/verdict',
 		'Overlay plan path',
 		'Current metronome Stage',
 		'MSO-5',

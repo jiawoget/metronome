@@ -36,6 +36,10 @@ Gate-control changes always require PR debt-contract evidence, even when no `src
 - `.codescene/**`
 - `docs/architecture/debt-gate-map.md`
 
+Local pre-commit execution has no pull-request body to validate. It scans staged and working-tree production changes, reports risky primitive/boundary additions, and defers the required debt-contract evidence to pull-request context so the first commit can create that context. This is not a debt-gate bypass: the pull-request workflow must fail closed on missing or invalid evidence before merge, while local Semgrep, XO, lint, typecheck, unit, and build hooks still run normally.
+
+Normal PR evidence may use either `Codex final review prompt/verdict` or the legacy `ChatGPT final review prompt/verdict`, with exactly one non-placeholder verdict. Overlay promotion keeps its explicit ChatGPT stage contract until that workflow is separately revised.
+
 ## Shared Primitive Rule
 
 A PR that extracts a shared primitive, controller, service, presenter, formatter, validator, parser, adapter, or helper is not debt reduction unless it:
