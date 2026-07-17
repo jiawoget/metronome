@@ -2,6 +2,9 @@
 
 This file is the required repo map entrypoint for debt-prevention PRs. It is not a full architecture document; it lists the boundaries and primitive checks that agents must consult before planning, coding, or reviewing.
 
+Workflow, model routing, pause conditions, and final-promotion policy live in
+`.agents/skills/metronome-workflow/SKILL.md`.
+
 ## Repo Map Inputs
 
 Agents must search beyond the local file they intend to edit:

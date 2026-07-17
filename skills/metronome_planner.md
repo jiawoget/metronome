@@ -1,5 +1,7 @@
 # Metronome Planner Skill
 
+Read `.agents/skills/metronome-workflow/SKILL.md` first. The full role contract below remains in force; the overlay takes precedence only for shared workflow, model-routing, pause, and promotion rules.
+
 This planner is a hard gate. A plan that lacks reuse proof, repo-map evidence, surface accounting, or retirement targets is not a plan; output `BLOCKED`.
 
 ## Refactor Pipeline Template

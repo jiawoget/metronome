@@ -1,46 +1,45 @@
 # Metronome Reviewer Skill
 
-This reviewer is a hard gate. Review debt-contract evidence before correctness. Do not trust planner, coder, PR body, or green tests without independent checks.
+Read `.agents/skills/metronome-workflow/SKILL.md` first. The full role contract below remains in force; the overlay takes precedence only for shared workflow, model-routing, pause, and promotion rules.
+
+This reviewer is a hard gate. Review candidate evidence before correctness. Do not trust planner, coder, or green tests without independent checks.
 
 ## Required Input Packet
 
-Before reviewing, collect:
+Before reviewing one exact committed candidate, collect:
 
-- PR URL or local diff range.
-- PR body.
-- Approved plan file.
+- Base and candidate HEAD.
+- Changed-file split and diffstat.
+- Approved immutable plan identity and text.
 - `docs/architecture/debt-gate-map.md`.
-- CodeScene MCP `analyze_change_set` output for the PR branch.
-- Semgrep changed-file output.
-- Verification output.
-- Changed-file list, diffstat, and production/test/docs/scripts/workflow split.
+- Coder current-stage handoff.
+- Monitor preflight, including scope, LOC, deletion, and zero-`src/**` proof.
+- HEAD-bound local-gate output.
+- HEAD-bound CodeScene MCP `analyze_change_set` output with no decline and
+  literal `quality_gates: passed`.
 
-If any input is missing for a production-source or gate-control PR, return `CHANGES_REQUIRED`.
+If any input is missing for a production-source or gate-control PR candidate, return `CHANGES_REQUIRED`.
 
 ## Review Workflow
 
-0. Run pre-review quality gates before reading for correctness.
-   - First run CodeScene through MCP, not a shell script: use `select_project` if project context is unclear, then run MCP `analyze_change_set` with the repository path and base ref.
-   - Shell `npm run lint:codescene:changed` is fallback only when the CodeScene MCP tool is unavailable. If fallback is used, document why MCP could not run and include the fallback command, env source, and output.
-   - A missing shell `CS_ACCESS_TOKEN` is not a reason to skip MCP. Try MCP before declaring CodeScene unavailable.
-   - If any changed file Code Health score declines, return `CHANGES_REQUIRED` and send the work back for rework.
-   - If CodeScene cannot run for a production-source or gate-control PR, return `CHANGES_REQUIRED` unless the user explicitly grants a one-off override.
-   - Next run Semgrep with `npm run lint:debt:changed`.
-   - If Semgrep fails, return `CHANGES_REQUIRED` and send the work back for rework.
-   - Only continue after CodeScene and Semgrep pass.
+0. Validate monitor-owned preflight before reading for correctness.
+   - Confirm candidate HEAD matches every preflight, local-gate, and CodeScene
+     evidence item.
+   - Confirm CodeScene MCP `analyze_change_set` reports no decline and literal
+     `quality_gates: passed`.
+   - Confirm the monitor's Semgrep pre-review and local gates passed.
+   - Missing or failing evidence returns `CHANGES_REQUIRED`; the reviewer does
+     not run CodeScene or other monitor stages.
 
 1. Freeze scope.
-   - Confirm base/head or PR number.
-   - State whether dirty local files are included or ignored.
+   - Confirm base and exact candidate HEAD.
+   - Reject dirty or Git-visible drift from the candidate.
    - Separate production, tests, docs, scripts, and workflow changes.
 
-2. Audit PR body evidence.
-   - `Reuse Proof` has concrete rows.
-   - `Retired Surface` lists removals/narrowing or explicitly says not debt reduction.
-   - `New Surface` lists every new surface or explicitly says none.
-   - `Boundary Delta` has yes/no answers with evidence.
-   - `Debt Gate Evidence` includes passed commands.
-   - `Agent Gate Evidence` includes planner/coder/reviewer skill-read evidence, `PLAN_READY`, `CODE_READY`, reviewer verdict, and ChatGPT verdict.
+2. Audit the immutable plan, coder handoff, and monitor preflight.
+   - Reuse, retired surface, new surface, and boundary claims have concrete evidence.
+   - Coder evidence has no downstream reviewer, PR, CI, ChatGPT, or CodeScene claim.
+   - Scope, LOC, deletion, and exact-HEAD evidence are complete.
 
 3. Repeat independent repo-map search.
    - Search for same-semantics primitives and helpers.
@@ -56,7 +55,7 @@ If any input is missing for a production-source or gate-control PR, return `CHAN
    - Check shared primitive work migrated at least two old call sites and removed/narrowed old implementations, unless repo-wide evidence proves fewer than two old call sites exist.
    - Check net surface delta is shrinks/neutral/grows and matches the PR claim.
 
-5. Verify tests and static gates.
+5. Verify focused tests and monitor-owned gates.
    - Behavior-equivalence coverage exists for retired compatibility surface.
    - Focused tests cover new behavior.
    - Static gates were actually run and passed.
@@ -67,11 +66,10 @@ If any input is missing for a production-source or gate-control PR, return `CHAN
 
 Return `CHANGES_REQUIRED` if any of these are true:
 
-- Missing or placeholder PR body evidence.
-- CodeScene MCP `analyze_change_set` output is missing, fails, or reports any changed source file Code Health decline.
-- Semgrep changed-file gate is missing or fails.
-- Missing planner, coder, or reviewer skill-read evidence.
-- Missing `PLAN_READY`, `CODE_READY`, reviewer verdict, or ChatGPT verdict.
+- Missing or placeholder coder handoff or monitor preflight evidence.
+- CodeScene MCP `analyze_change_set` output is missing, fails, declines, or lacks `quality_gates: passed`.
+- Semgrep pre-review or HEAD-bound local gate is missing or fails.
+- Missing plan identity, independent plan review, planner/coder skill-read evidence, `PLAN_READY`, or `CODE_READY`.
 - Added wrapper/helper/service method/controller/hook/formatter/validator/parser/adapter/repository method without old surface retired/narrowed in the same PR.
 - Refactor/debt PR claims debt reduction while net surface grows.
 - Shared primitive/controller/service/presenter/helper work migrates fewer than two old call sites without repo-wide no-go evidence.
@@ -94,13 +92,13 @@ Use this exact structure:
    Impact:
    Required fix:
 
-## Debt Contract Verification
+## Candidate Evidence Verification
 
 - Reuse Proof verified: yes/no
 - Retired Surface verified: yes/no
 - New Surface budget verified: yes/no
 - Boundary Delta verified: yes/no
-- Agent Gate Evidence verified: yes/no
+- Immutable plan and coder handoff verified: yes/no
 - CodeScene MCP pre-review: pass/fail
 - Semgrep pre-review: pass/fail
 - Net surface delta: shrinks/neutral/grows
@@ -108,7 +106,7 @@ Use this exact structure:
 - Shared primitive two-call-site rule: pass/fail/not applicable
 - Behavior-equivalence tests: pass/fail/not applicable
 
-## Static Gate Status
+## Monitor Gate Status
 
 - Debt contract: pass/fail/not run
 - CodeScene MCP analyze_change_set: pass/fail/not run
@@ -136,6 +134,6 @@ PASS / PASS_WITH_NITS / CHANGES_REQUIRED
 
 ## Verdict Handling
 
-- `PASS`: PR may proceed to ChatGPT final review or merge gate.
-- `PASS_WITH_NITS`: PR may proceed only if nits are non-blocking and no evidence is missing.
-- `CHANGES_REQUIRED`: do not mark ready or merge. Fix blockers and rerun review.
+- `PASS`: return the reviewed candidate to the monitor.
+- `PASS_WITH_NITS`: return the reviewed candidate when nits are non-blocking and no evidence is missing.
+- `CHANGES_REQUIRED`: one repaired candidate must be reviewed by this reviewer with its delta from the rejected candidate.

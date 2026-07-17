@@ -1,5 +1,7 @@
 # Metronome ChatGPT Review Skill
 
+Read `.agents/skills/metronome-workflow/SKILL.md` first. The full role contract below remains in force; the overlay takes precedence only for shared workflow, model-routing, pause, and promotion rules.
+
 This skill is the mandatory external ChatGPT gate for metronome debt-prevention plan and PR review. It defines the required packets, review criteria, shared output contract, and verdict handling.
 
 When also using `metronome-v1-chrome-chatgpt-review`, use this file's plan/PR prompt instead of that skill's generic prompt. A web ChatGPT verdict produced without this debt-contract prompt does not satisfy `Agent Gate Evidence`.
@@ -43,7 +45,7 @@ Hard rules:
 - Plan review may use `PASS_WITH_CHANGES`; PR review must not use it.
 - `PASS_WITH_NITS` is allowed only when no evidence is missing.
 - Do not accept "later cleanup" for retired surface, wrappers, aliases, or compatibility paths.
-- Record the final ChatGPT verdict in the PR body's `Agent Gate Evidence` section.
+- The monitor records the final ChatGPT verdict only after this review passes.
 
 ## Required Plan Review Packet
 
@@ -88,14 +90,13 @@ Send all of this before asking for review:
 
 - PR URL, branch, head SHA, and base branch.
 - Diffstat and changed-file list split into production/tests/docs/scripts/workflows.
-- PR body.
+- Draft PR body with exact `MSO-5` and ChatGPT `PENDING` overlay evidence.
 - Approved plan text or plan path plus relevant excerpt.
-- Local verification output copied from the commands actually run.
-- CodeScene MCP `analyze_change_set` output. CLI CodeScene output is acceptable only when the packet states why MCP was unavailable and records the one-off fallback.
-- Semgrep changed-file output.
-- Reviewer gate output from `skills/metronome_reviewer.md`.
+- Exact-head CI and full local-gate output copied from the commands actually run.
+- Exact-head CodeScene MCP `analyze_change_set` output with no decline and `quality_gates: passed`.
+- Reviewer `PASS` or `PASS_WITH_NITS` output from `skills/metronome_reviewer.md`.
 
-If any item is missing for a production-source or gate-control PR, fix the packet before review.
+Do not require a final ChatGPT verdict in this packet. If any other item is missing for a production-source or gate-control PR, fix the packet before review.
 
 ## PR Review Prompt
 
@@ -113,9 +114,9 @@ If any item is missing for a production-source or gate-control PR, fix the packe
 3. New Surface / Net Surface Delta：每个新 helper/service/type/component 是否有 why-not-reuse 和 same-PR old surface；Net surface delta 是否与 diff 一致。
 4. Shared Primitive Two-Call-Site Rule：shared primitive/controller/service/presenter/helper 是否至少迁移两个旧调用点并让旧实现消失；少于两个时是否有全仓搜索证据且没有声称 debt reduction。
 5. Boundary Delta：是否没有新增 UI -> browser/infrastructure、domain -> UI/service、service passthrough；composition-root 例外是否明确。
-6. Agent Gate Evidence：是否看到 planner/coder/reviewer skill read evidence、PLAN_READY、CODE_READY、reviewer PASS/PASS_WITH_NITS，以及本次 ChatGPT verdict 之前的 reviewer output。
-7. CodeScene Pre-Review：reviewer 是否先用 CodeScene MCP analyze_change_set 运行 branch gate，且 changed source files 没有 Code Health decline；如果只提供 CLI output，是否说明 MCP 不可用和 one-off fallback；如果失败是否拒绝并要求 rework。
-8. Semgrep Pre-Review：lint:debt:changed 是否在 review 前运行且通过；如果失败是否拒绝并要求 rework。
+6. Agent Gate Evidence：draft PR 是否精确为 MSO-5 和 PENDING，并看到 planner/coder/reviewer skill read evidence、PLAN_READY、CODE_READY、reviewer PASS/PASS_WITH_NITS。
+7. CodeScene Pre-Review：是否有 exact-head CodeScene MCP analyze_change_set，且没有 Code Health decline 并包含 quality_gates: passed；如果失败是否拒绝并要求 rework。
+8. Semgrep Pre-Review：monitor 的 lint:debt:changed 是否在 review 前运行且通过；如果失败是否拒绝并要求 rework。
 9. Behavior-Equivalence Tests：是否覆盖 retired compatibility surface；不能只是更新旧测试或 snapshot。
 10. Static Gates：validate:debt-gates、lint:debt:changed、lint:xo:changed、lint、typecheck、test:unit、build 是否真实通过。
 11. Cleanup Integrity：是否没有 later cleanup、兼容旧入口不退休、wrapper 叠 wrapper、或 N/A/TODO/占位证据。
@@ -128,6 +129,6 @@ If any item is missing for a production-source or gate-control PR, fix the packe
 - Plan `PASS`: coding may proceed.
 - Plan `PASS_WITH_CHANGES`: apply required plan changes, resend the full plan, and wait for a new verdict.
 - Plan `CHANGES_REQUIRED`: do not code.
-- PR `PASS`: PR may proceed if local verification and CI are green.
-- PR `PASS_WITH_NITS`: PR may proceed only if nits are non-blocking and no evidence is missing.
-- PR `CHANGES_REQUIRED`: do not mark ready, merge, or continue to the next stage.
+- PR `PASS`: the monitor may replace only the draft overlay evidence with `MSO-6` and this verdict.
+- PR `PASS_WITH_NITS`: the monitor may promote only when nits are non-blocking and no evidence is missing.
+- PR `CHANGES_REQUIRED`: do not advance the draft PR.

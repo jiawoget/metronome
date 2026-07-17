@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import {execFileSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {existsSync, readFileSync} from 'node:fs';
 import process from 'node:process';
 
@@ -19,7 +20,16 @@ const gateControlFilePatterns = [
 	/^\.semgrep\//v,
 	/^\.codescene\//v,
 	/^docs\/architecture\/debt-gate-map\.md$/v,
+	/^AGENTS\.md$/v,
+	/^\.agents\/skills\/metronome-workflow\/SKILL\.md$/v,
 ];
+
+const overlayControlFiles = new Set([
+	'AGENTS.md',
+	'.agents/skills/metronome-workflow/SKILL.md',
+]);
+const overlayPlanPath = 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md';
+const overlayPlanReviewPolicies = new Set(['GPT-5.6 Terra standard', 'GPT-5.6 Luna standard']);
 
 const requiredSections = [
 	'Reuse Proof',
@@ -46,6 +56,7 @@ const allowedPlanVerdicts = new Set(['PLAN_READY']);
 const allowedCodeVerdicts = new Set(['CODE_READY']);
 const allowedReviewVerdicts = new Set(['PASS', 'PASS_WITH_NITS']);
 const allowedChatGptVerdicts = new Set(['PASS', 'PASS_WITH_NITS']);
+const overlayPromotionVerdicts = new Map([['MSO-5', new Set(['PENDING'])], ['MSO-6', allowedChatGptVerdicts]]);
 
 const requiredAgentSkillEvidence = [
 	['Planner skill read evidence', 'skills/metronome_planner.md'],
@@ -385,15 +396,15 @@ function hasExplicitNoRetiredSurface(sectionBody) {
 
 function valueAfterColon(sectionBody, label) {
 	const prefix = `- ${label}:`;
-	const line = sectionText(sectionBody)
+	const lines = sectionText(sectionBody)
 		.split('\n')
-		.find(candidate => candidate.toLowerCase().startsWith(prefix.toLowerCase()));
+		.filter(candidate => candidate.toLowerCase().startsWith(prefix.toLowerCase()));
 
-	if (!line) {
+	if (lines.length !== 1) {
 		return null;
 	}
 
-	return normalizeCell(line.slice(prefix.length));
+	return normalizeCell(lines[0].slice(prefix.length));
 }
 
 function validateBoundaryDelta(sectionBody) {
@@ -434,11 +445,13 @@ function validateCodeSceneEvidence(sectionBody) {
 		return [];
 	}
 
-	return ['Debt Gate Evidence must include CodeScene MCP analyze_change_set output with no decline.'];
+	return ['Debt Gate Evidence must include CodeScene MCP analyze_change_set output with no decline and quality_gates: passed.'];
 }
 
 function isPassingCodeSceneEvidence(evidence) {
-	return isPositiveStatusEvidence(evidence);
+	return isPositiveStatusEvidence(evidence)
+		&& /\bno decline\b/iv.test(evidence)
+		&& /\bquality_gates:\s*passed\b/iv.test(evidence);
 }
 
 function extractVerdict(sectionBody, label, allowedVerdicts) {
@@ -452,7 +465,7 @@ function extractVerdict(sectionBody, label, allowedVerdicts) {
 	return allowedVerdicts.has(normalized);
 }
 
-function validateAgentGateEvidence(sectionBody) {
+function validateAgentGateEvidence(sectionBody, chatGptVerdicts = allowedChatGptVerdicts) {
 	const failures = [];
 
 	for (const [label, expectedPath] of requiredAgentSkillEvidence) {
@@ -473,8 +486,70 @@ function validateAgentGateEvidence(sectionBody) {
 		failures.push('Reviewer verdict must be exactly PASS or PASS_WITH_NITS.');
 	}
 
-	if (!extractVerdict(sectionBody, 'ChatGPT final review prompt/verdict', allowedChatGptVerdicts)) {
-		failures.push('ChatGPT final review prompt/verdict must be exactly PASS or PASS_WITH_NITS.');
+	if (!extractVerdict(sectionBody, 'ChatGPT final review prompt/verdict', chatGptVerdicts)) {
+		failures.push(chatGptVerdicts.has('PENDING')
+			? 'ChatGPT final review prompt/verdict must be exactly PENDING, PASS, or PASS_WITH_NITS.'
+			: 'ChatGPT final review prompt/verdict must be exactly PASS or PASS_WITH_NITS.');
+	}
+
+	return failures;
+}
+
+function validateImmutableOverlayPlanIdentity(sectionBody) {
+	const failures = [];
+	const planCommit = valueAfterColon(sectionBody, 'Overlay plan commit');
+	const planBlob = valueAfterColon(sectionBody, 'Overlay plan blob');
+	const planSha256 = valueAfterColon(sectionBody, 'Overlay plan SHA-256');
+
+	if (valueAfterColon(sectionBody, 'Overlay plan path') !== overlayPlanPath) {
+		failures.push(`Overlay plan path must be exactly ${overlayPlanPath}.`);
+	}
+
+	let isPlanCommitAncestor = false;
+	if (/^[0-9a-f]{40}$/iv.test(planCommit ?? '')) {
+		try {
+			execFileSync('git', ['merge-base', '--is-ancestor', planCommit, 'HEAD'], {stdio: 'ignore'});
+			isPlanCommitAncestor = true;
+		} catch {}
+	}
+
+	if (!isPlanCommitAncestor) {
+		failures.push('Overlay plan commit must be an ancestor of HEAD.');
+	}
+
+	const currentPlanBlob = tryRunGit(['rev-parse', `HEAD:${overlayPlanPath}`]);
+	const approvedPlanBlob = /^[0-9a-f]{40}$/iv.test(planCommit ?? '')
+		? tryRunGit(['rev-parse', `${planCommit}:${overlayPlanPath}`])
+		: '';
+	if (new Set([planBlob, approvedPlanBlob, currentPlanBlob]).size > 1) {
+		failures.push('Overlay plan blob must match the approved commit and current tracked plan.');
+	}
+
+	const currentPlanSha256 = currentPlanBlob
+		? createHash('sha256').update(execFileSync('git', ['show', `HEAD:${overlayPlanPath}`])).digest('hex')
+		: '';
+	if (!/^[0-9a-f]{64}$/iv.test(planSha256 ?? '') || planSha256 !== currentPlanSha256) {
+		failures.push('Overlay plan SHA-256 must match the current tracked plan.');
+	}
+
+	return failures;
+}
+
+function validateOverlayPromotionEvidence(sectionBody) {
+	const stage = valueAfterColon(sectionBody, 'Current metronome Stage');
+	const chatGptVerdict = valueAfterColon(sectionBody, 'ChatGPT final review prompt/verdict');
+	const failures = validateImmutableOverlayPlanIdentity(sectionBody);
+
+	if (!overlayPlanReviewPolicies.has(valueAfterColon(sectionBody, 'Independent plan review policy') ?? '')) {
+		failures.push('Independent plan review policy must be GPT-5.6 Terra standard or GPT-5.6 Luna standard.');
+	}
+
+	if (!extractVerdict(sectionBody, 'Independent plan review verdict', new Set(['PLAN_REVIEW_PASS']))) {
+		failures.push('Independent plan review verdict must be exactly PLAN_REVIEW_PASS.');
+	}
+
+	if (!overlayPromotionVerdicts.get(stage)?.has(chatGptVerdict ?? '')) {
+		failures.push('Overlay promotion evidence must pair MSO-5 with PENDING or MSO-6 with PASS or PASS_WITH_NITS.');
 	}
 
 	return failures;
@@ -485,40 +560,43 @@ function hasSkillReadEvidence(sectionBody, label, expectedPath) {
 	return value !== null && !isPlaceholder(value) && normalizePath(value).includes(expectedPath);
 }
 
-function validateSections(body) {
+function validateSections(body, changedFiles) {
 	const sections = splitSections(body);
+	const missingSections = requiredSections
+		.filter(section => !sections.has(section))
+		.map(section => `Missing section: ${section}`);
+	if (missingSections.length > 0) {
+		return missingSections;
+	}
+
 	const failures = [];
-
-	for (const section of requiredSections) {
-		if (!sections.has(section)) {
-			failures.push(`Missing section: ${section}`);
-		}
-	}
-
-	if (failures.length > 0) {
-		return failures;
-	}
-
+	const agentGateEvidence = sections.get('Agent Gate Evidence').join('\n');
+	const isOverlayControlChange = changedFiles.some(file => overlayControlFiles.has(file));
 	const reuseProof = sections.get('Reuse Proof').join('\n');
-	if (!hasValidRow(reuseProof, 'Need', 4)) {
-		failures.push('Reuse Proof must include at least one filled table row with need, checked primitive/library, files read, and decision.');
-	}
-
 	const retiredSurface = sections.get('Retired Surface').join('\n');
-	if (!hasValidRow(retiredSurface, 'Removed / narrowed surface', 3) && !hasExplicitNoRetiredSurface(retiredSurface)) {
-		failures.push('Retired Surface must list removed/narrowed surface rows or explicitly say this is not a debt-reduction PR with no retired surface.');
-	}
-
 	const newSurface = sections.get('New Surface').join('\n');
-	if (!hasValidRow(newSurface, 'New helper/service/type/component', 3) && !hasExplicitNoNewSurface(newSurface)) {
-		failures.push('New Surface must list new surface rows or explicitly say no new surface.');
-	}
+	const surfaceEvidenceResults = [
+		hasValidRow(reuseProof, 'Need', 4)
+			? []
+			: ['Reuse Proof must include at least one filled table row with need, checked primitive/library, files read, and decision.'],
+		hasValidRow(retiredSurface, 'Removed / narrowed surface', 3) || hasExplicitNoRetiredSurface(retiredSurface)
+			? []
+			: ['Retired Surface must list removed/narrowed surface rows or explicitly say this is not a debt-reduction PR with no retired surface.'],
+		hasValidRow(newSurface, 'New helper/service/type/component', 3) || hasExplicitNoNewSurface(newSurface)
+			? []
+			: ['New Surface must list new surface rows or explicitly say no new surface.'],
+		validateBoundaryDelta(sections.get('Boundary Delta').join('\n')),
+		validateDebtGateEvidence(sections.get('Debt Gate Evidence').join('\n')),
+		validateAgentGateEvidence(
+			agentGateEvidence,
+			isOverlayControlChange ? new Set(['PENDING', ...allowedChatGptVerdicts]) : allowedChatGptVerdicts,
+		),
+	];
+	failures.push(...surfaceEvidenceResults.flat());
 
-	failures.push(
-		...validateBoundaryDelta(sections.get('Boundary Delta').join('\n')),
-		...validateDebtGateEvidence(sections.get('Debt Gate Evidence').join('\n')),
-		...validateAgentGateEvidence(sections.get('Agent Gate Evidence').join('\n')),
-	);
+	if (isOverlayControlChange) {
+		failures.push(...validateOverlayPromotionEvidence(agentGateEvidence));
+	}
 
 	return failures;
 }
@@ -568,7 +646,7 @@ if (prContext.body.trim() === '') {
 	process.exit(1);
 }
 
-const sectionFailures = validateSections(prContext.body);
+const sectionFailures = validateSections(prContext.body, changedDebtContractFiles);
 if (sectionFailures.length > 0) {
 	console.error('PR body debt contract evidence failed:');
 	for (const failure of sectionFailures) {

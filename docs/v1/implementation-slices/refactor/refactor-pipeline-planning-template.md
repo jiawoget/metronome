@@ -3,6 +3,9 @@
 Use this template for CodeScene/refactor/debt-reduction pipelines under
 `docs/v1/implementation-slices/refactor/`.
 
+Read and follow `.agents/skills/metronome-workflow/SKILL.md` first. Refactor
+plans must not prewrite large implementation bodies.
+
 The output is a strict coding handoff. It is not a broad strategy document.
 Do not let the coding agent reinterpret the remediation plan. Do not create
 optional architecture work. Every new surface must be tied to same-PR deletion

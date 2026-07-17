@@ -1,5 +1,8 @@
 # AGENTS
 
+## Repository workflow
+- Before any planning, implementation, diagnosis, review, or promotion task, read and follow `.agents/skills/metronome-workflow/SKILL.md`.
+
 ## Git hooks
 - This repo uses a local `pre-commit` hook for gate checks.
 - Before committing, the hook runs:
