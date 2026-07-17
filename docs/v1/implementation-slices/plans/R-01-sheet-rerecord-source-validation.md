@@ -82,14 +82,14 @@ No generated primitive index was found. The focused repo-map searches below are 
 
 | Proposed shared surface | Old call sites found repo-wide | Old call sites migrated in this PR | Old implementations deleted/narrowed | Debt-reduction claim |
 | --- | ---: | ---: | --- | --- |
-| `inspectRerecordSourceRecording(...)` | 3: hydration inline chain, mounted-source effect through `getRerecordSourceInvalidReason`, pre-start validation through the same helper | 3 | Delete `getRerecordSourceInvalidReason`; delete the hydration recording branch chain | Yes: duplicate inspection paths are retired |
+| `inspectRerecordSourceRecording(...)` | 3: hydration inline chain, mounted-source effect through `getRerecordSourceInvalidReason`, pre-start validation through the same helper | 3 | Hydration passes no expected source and maps `no-segment-context` through its existing clear path; the two ready-source callers pass the workflow source so missing/mismatched persisted context remains `source-segment-invalid`; delete `getRerecordSourceInvalidReason` and the hydration recording branch chain | Yes: duplicate inspection paths are retired without collapsing caller-specific null-context behavior |
 | `inspectRerecordSourceSegment(...)` | 2: hydration live-segment chain and pre-start live-segment chain | 2 | Delete the local `segmentContextsMatch`; narrow both construction/comparison chains to result handling | Yes: duplicate inspection paths are retired |
 
 ## New Surface Budget
 
 | New surface | Why needed | Existing alternative rejected | Old surface retired in same PR |
 | --- | --- | --- | --- |
-| `inspectRerecordSourceRecording(...)` in `sheet-rerecord-source.ts` | One pure result for recording existence/type/sheet/context checks used by both phases | Store owns state; recording service owns capture/persistence; neither should gain validation I/O or policy | `getRerecordSourceInvalidReason` and hydration's duplicate recording branch chain |
+| `inspectRerecordSourceRecording(...)` in `sheet-rerecord-source.ts` | One pure result for recording existence/type/sheet/context checks used by both phases; its nullable expected-source input preserves the ready-source context comparison | Store owns state; recording service owns capture/persistence; neither should gain validation I/O or policy | `getRerecordSourceInvalidReason` and hydration's duplicate recording branch chain |
 | `inspectRerecordSourceSegment(...)` in `sheet-rerecord-source.ts` | One pure result for live context conversion/equality used by both phases | No repo primitive exists beyond the required domain converter | Local `segmentContextsMatch` and both duplicated live-segment construction/comparison chains |
 
 The result type and context comparator stay private to the new module. Production named-surface count is neutral: two exported inspectors replace two local helpers, while duplicated branch bodies shrink.
@@ -98,7 +98,7 @@ The result type and context comparator stay private to the new module. Productio
 
 | Surface to remove/narrow | Current callers | Replacement | Behavior-equivalence test |
 | --- | --- | --- | --- |
-| Local `getRerecordSourceInvalidReason(...)` | mounted-source validation effect; `validateRecordAgainSource` | `inspectRerecordSourceRecording(...)` | new pure unit table plus existing controls invalid-source matrix |
+| Local `getRerecordSourceInvalidReason(...)` | mounted-source validation effect; `validateRecordAgainSource` | `inspectRerecordSourceRecording(...)` with the ready workflow source passed as `expectedSource` | new pure unit table covering missing/mismatched persisted context plus the existing controls invalid-source matrix |
 | Local `segmentContextsMatch(...)` | local recording helper; hydration; pre-start validation | private equality inside `inspectRerecordSourceRecording/Segment(...)` | new equivalent/mismatched context cases plus existing controls tests |
 | Inline recording validation in `hydratePracticeAgainSource` | hydration only | recording inspector result | existing Practice Again invalid-source table |
 | Inline live-segment construction/comparison in hydration and pre-start validation | two phases | segment inspector result | new pure unit cases plus existing missing/invalid segment controls tests |
@@ -233,7 +233,15 @@ The new module should expose small discriminated results rather than throw for e
 ```ts
 inspectRerecordSourceRecording({
   recording,
-  sheetId
+  sheetId,
+  expectedSource
+}: {
+  recording: ReviewRecording | null;
+  sheetId: string;
+  expectedSource: {
+    sheetId: string;
+    segmentContext: SheetRecordingSegmentContext;
+  } | null;
 }): RerecordSourceInspection<{
   recording: ReviewRecording & { type: "sheet" };
   segmentContext: SheetRecordingSegmentContext;
@@ -249,6 +257,7 @@ Constraints:
 
 - Keep `RerecordSourceInspection<T>` and the context comparator private to the module; do not spend additional public surface on them.
 - Preserve the current context-equivalence semantics; do not silently redefine equality.
+- Treat `expectedSource` as an explicit mode boundary. Hydration passes `null`: a recording without its own context reports `no-segment-context`, and a valid recording returns its own context as the candidate source. The mounted-source effect and pre-start validation pass the ready workflow source: a missing recording context or a mismatch against `expectedSource.segmentContext` reports `source-segment-invalid`, while a recording sheet mismatch against either `sheetId` or `expectedSource.sheetId` reports `sheet-mismatch`.
 - Do not put async loading in the helper. The component retains `getRecording(...)` and `getSegment(...)` calls so service ownership does not move.
 - Do not put workflow-store actions or message formatting in the helper.
 - Keep caller-specific behavior where it exists today. In particular, hydration and start validation may map a live-sheet mismatch to different existing reasons; characterization tests must lock those outcomes before extraction.
@@ -281,9 +290,11 @@ Cover at least these existing outcomes:
 - recording is missing → `source-recording-missing`;
 - recording is not a sheet recording → `source-not-sheet`;
 - recording belongs to another sheet → `sheet-mismatch`;
-- recording has no segment context → `no-segment-context`;
+- hydration inspection with `expectedSource: null` and no persisted recording context → `no-segment-context`;
 - required return/active segment differs from the source context → `selection-changed` at the existing caller boundary;
-- persisted recording context differs from the ready workflow source → `source-segment-invalid`;
+- ready-source inspection with a missing persisted recording context → `source-segment-invalid`;
+- ready-source inspection with a persisted recording context that differs from `expectedSource.segmentContext` → `source-segment-invalid`;
+- ready-source inspection with `recording.sheetId !== expectedSource.sheetId` → `sheet-mismatch`;
 - live segment is missing → `source-segment-missing`;
 - live segment cannot form the same recording context → `source-segment-invalid`;
 - valid recording and live segment return the existing segment context;
@@ -301,7 +312,7 @@ Expected red state: the planned helper module or exports do not exist. A syntax,
 
 Create `src/components/sheet-practice/controls/sheet-rerecord-source.ts`.
 
-Move the existing side-effect-free rules from `segmentContextsMatch(...)` and `getRerecordSourceInvalidReason(...)` into small functions. Add the smallest live-segment inspection needed by both call sites.
+Move the existing side-effect-free rules from `segmentContextsMatch(...)` and `getRerecordSourceInvalidReason(...)` into small functions. The recording inspector must implement both explicit modes above rather than infer them from missing data. Add the smallest live-segment inspection needed by both call sites.
 
 Requirements:
 
@@ -322,7 +333,7 @@ Run the new unit file and make it green:
 In `sheet-practice-controls.tsx`:
 
 1. Keep source id normalization, cancellation, service loading, workflow actions, and message updates in `hydratePracticeAgainSource`.
-2. Replace the recording type/sheet/context branch chain with the recording inspection result.
+2. Replace the recording type/sheet/context branch chain with the recording inspection result, passing `expectedSource: null` and preserving hydration's existing `clearRerecordSource(sheetId, "no-segment-context")` mapping for that result.
 3. Replace the live-segment context construction/comparison branch chain with the segment inspection result.
 4. Preserve the current distinction between `clearRerecordSource(...)` and `invalidateRerecordSource(...)`.
 5. Preserve when `setActiveRecordingSegment(...)`, `setRerecordReady(...)`, `setMessage(...)`, and `setErrorMessage(...)` run.
@@ -333,16 +344,17 @@ Run:
 & .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/sheet-rerecord-source.test.ts tests/unit/sheet-practice-controls.test.tsx
 ```
 
-### Task 4: simplify pre-start Record Again validation
+### Task 4: simplify mounted and pre-start Record Again validation
 
 In `sheet-practice-controls.tsx`:
 
-1. Keep the workflow readiness and active-selection guard in `validateRecordAgainSource`.
-2. Keep the existing `getRecording(...)` and `getSegment(...)` calls in the component.
-3. Replace duplicated recording/context inspection with the new helper results.
-4. Preserve current active-segment clearing and workflow invalidation reasons.
-5. Preserve the exact thrown message consumed by `startSheetRecording`.
-6. Do not otherwise restructure `startSheetRecording` in R-01.
+1. In the mounted-source validation effect, replace `getRerecordSourceInvalidReason(...)` with the recording inspector and pass `rerecordSource` as `expectedSource`.
+2. Keep the workflow readiness and active-selection guard in `validateRecordAgainSource`.
+3. Keep the existing `getRecording(...)` and `getSegment(...)` calls in the component.
+4. In `validateRecordAgainSource`, replace duplicated recording/context inspection with the new helper results and pass `source` as `expectedSource` so missing or mismatched persisted context remains `source-segment-invalid`.
+5. Preserve current active-segment clearing and workflow invalidation reasons in both callers.
+6. Preserve the exact thrown message consumed by `startSheetRecording`.
+7. Delete `getRerecordSourceInvalidReason(...)` only after both ready-source callers have migrated; do not otherwise restructure `startSheetRecording` in R-01.
 
 Run the same two targeted unit files again.
 
@@ -391,8 +403,8 @@ Request GitHub review with `@codex review`. Do not use ChatGPT web review. Treat
 
 R-01 is complete only when all are true:
 
-1. Both current Record Again validation phases use the same pure inspection rules.
-2. Hydration and pre-start validation preserve all existing result reasons, store transitions, messages, service calls, and error behavior.
+1. All three current recording-inspection call sites—hydration, mounted-source validation, and pre-start validation—use the same pure inspection rules with the correct explicit expected-source mode.
+2. Hydration and ready-source callers preserve all existing result reasons, store transitions, messages, service calls, and error behavior, including hydration's `no-segment-context` clear path and ready-source `source-segment-invalid` behavior for missing or mismatched persisted context.
 3. No new service, repository, controller, store, persistence path, or business path exists.
 4. Only the two approved production files changed or were added.
 5. Test changes are limited to direct behavior proof.
