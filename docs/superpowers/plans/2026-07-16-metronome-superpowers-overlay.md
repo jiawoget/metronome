@@ -12,7 +12,7 @@
 
 **Estimated Production-Code Diff:** `0 LOC` under `src/**`.
 
-**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `8d2094daf60f57513552702d81ac17fc234c94fb` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
+**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `7faa689fd488292d3aac9fc7f1ffb0daf3401648` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
 
 ## Verified Interfaces and Limits
 
@@ -20,6 +20,7 @@
 - `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna` support medium reasoning. Nested launches set `model_reasoning_effort="medium"` and `service_tier="default"`; never inherit fast or active user configuration.
 - Superpowers `using-superpowers`, `writing-plans`, `executing-plans`, and `subagent-driven-development` source files were verified under the installed plugin cache. Missing sources block the relevant stage.
 - CodeScene exposes `mcp__codescene__analyze_change_set({git_repository_path, base_ref})` with `quality_gates`/`results[].verdict`. Missing or ambiguous no-decline evidence blocks workflow promotion.
+- Installed `gh pr view` supports `--json headRefName,headRefOid`; installed `gh pr merge` supports `--match-head-commit SHA --merge`.
 - Any newly claimed CLI, event, MCP, gate, or plugin interface must be proven by a target command or official schema before use. Otherwise return `PLAN_BLOCKED`.
 
 **Threat model:** Prevent accidental model misrouting, stale evidence, Git-visible tracked/untracked mutations, and workflow drift under a non-malicious monitor. Explicit launch commands and Git identities are operational evidence, not cryptographic proof of model identity or independence. A malicious monitor and ignored-file mutation are out of scope. Cleanliness claims mean Git-visible tracked/untracked cleanliness.
@@ -90,7 +91,7 @@ git status --short
 git add docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md
 $staged = @(git diff --cached --name-only)
 if ($staged.Count -ne 1 -or $staged[0] -ne 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md') { throw 'PLAN_BLOCKED: plan-only staging failed' }
-git commit -m "Close main-first trial identity checks"
+git commit -m "Close workflow promotion identity checks"
 ```
 
 Use normal hooks and never `--no-verify`. All paused implementation files must remain uncommitted and otherwise unchanged.
@@ -113,7 +114,7 @@ $codex = 'C:\Users\wsuto\.codex\.sandbox-bin\codex.exe'
 $evidence = 'C:\tmp\metronome-overlay-plan-review'
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $before = git status --porcelain=v2 --untracked-files=all
-$prompt = "Independently review only $plan at commit $planCommit, blob $planBlob, SHA-256 $planSha256. Verify the main-first workflow PR boundary, tracked-HEAD plan identity, full-role-contract restoration, post-merge no-plan-in-main R-01 trial, immutable handoff, exact tests, and zero production LOC. Do not modify files. Return exactly PLAN_REVIEW_PASS or CHANGES_REQUIRED."
+$prompt = "Independently review only $plan at commit $planCommit, blob $planBlob, SHA-256 $planSha256. Verify fail-closed tested-HEAD checks before workflow push/merge, fresh main identity before initial/repeated R-01 trials, the canonical coder/reviewer immutable-plan command, the main-first workflow PR boundary, tracked-HEAD plan identity, full-role-contract restoration, post-merge no-plan-in-main R-01 trial, exact tests, and zero production LOC. Do not modify files. Return exactly PLAN_REVIEW_PASS or CHANGES_REQUIRED."
 & $codex exec --model gpt-5.6-luna --config 'model_reasoning_effort="medium"' --config 'service_tier="default"' --strict-config --ignore-user-config --sandbox read-only --ephemeral --cd 'C:\Users\wsuto\metronome' --json --output-last-message "$evidence\review-last.txt" $prompt |
   Tee-Object -FilePath "$evidence\review-events.jsonl"
 if ($LASTEXITCODE -ne 0 -or (Get-Content -Raw "$evidence\review-last.txt").Trim() -ne 'PLAN_REVIEW_PASS') { throw 'PLAN_BLOCKED: independent review failed' }
@@ -333,12 +334,19 @@ Use a fresh Terra/Luna reviewer with the restored full `skills/metronome_reviewe
 
 ```powershell
 & .\scripts\npm-local.ps1 --% run validate:debt-gates
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: validate:debt-gates failed' }
 & .\scripts\npm-local.ps1 --% run lint:debt:changed
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: lint:debt:changed failed' }
 & .\scripts\npm-local.ps1 --% run lint:xo:changed
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: lint:xo:changed failed' }
 & .\scripts\npm-local.ps1 --% run lint
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: lint failed' }
 & .\scripts\npm-local.ps1 --% run typecheck
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: typecheck failed' }
 & .\scripts\npm-local.ps1 --% run test:unit
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: test:unit failed' }
 & .\scripts\npm-local.ps1 --% run build
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: build failed' }
 ```
 
 Run verified CodeScene `analyze_change_set` against `origin/main` and require no decline. All commands must pass before the implementation commit.
@@ -359,12 +367,73 @@ if ($implementationStatus.Count -gt 0) { throw 'BLOCKED: workflow implementation
 
 ### Task 6 [MSO-6]: Promote and Merge the Workflow PR
 
-1. Push the workflow branch and open/update the dedicated PR. Rerun Task 5 Step 1 on the exact PR head; its complete committed/tracked/untracked path union must contain only the thirteen paths in Task 5's exact `$allowedWorkflowPr`.
-2. Populate `Debt Gate Evidence` with every existing command/CodeScene result and populate all fourteen `Agent Gate Evidence` labels from Task 2: the existing planner/coder/reviewer/ChatGPT seven plus the overlay path/commit/blob/SHA-256, independent-review policy/verdict, and `Current metronome Stage: MSO-6`. There are no R-01 fields.
-3. Wait for existing CI, including `validate:debt-gates`, to pass on the exact PR head.
-4. Run the required external review through the restored `skills/metronome_chatgpt_review.md` contract against the exact PR diff and CI/CodeScene evidence. Require exact `PASS` or `PASS_WITH_NITS`; unavailable or blocking review means `PLAN_BLOCKED`.
-5. If PR metadata or evidence changes, wait for the edited-event CI rerun. Merge only when implementation review, full gates, CI, CodeScene, and external review all pass.
-6. Return to clean current `main`:
+1. Rerun Task 5 Step 1, every Task 5 Step 2 command, implementation review, and CodeScene on the committed tree. Immediately afterward, require the expected branch, Git-visible tracked/untracked cleanliness, no merge commits relative to freshly fetched `origin/main`, capture the exact tested HEAD, and push only that HEAD:
+
+```powershell
+$expectedWorkflowBranch = 'codex/metronome-superpowers-overlay'
+git fetch origin main
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: pre-push origin/main fetch failed' }
+$currentWorkflowBranch = git branch --show-current
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: pre-push branch resolution failed' }
+if ($currentWorkflowBranch -ne $expectedWorkflowBranch) { throw "PLAN_BLOCKED: expected $expectedWorkflowBranch before push, found $currentWorkflowBranch" }
+$prePushStatus = @(git status --porcelain=v2 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: pre-push status failed' }
+if ($prePushStatus.Count -gt 0) { throw 'PLAN_BLOCKED: workflow worktree is not clean before push' }
+$testedHead = git rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $testedHead -notmatch '^[a-f0-9]{40}$') { throw 'PLAN_BLOCKED: tested workflow HEAD resolution failed' }
+$prePushMerges = @(git log --merges --format='%H' origin/main..HEAD)
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: pre-push merge-history check failed' }
+if ($prePushMerges.Count -gt 0) { throw 'PLAN_BLOCKED: workflow branch contains a merge commit' }
+Write-Output "TESTED_WORKFLOW_HEAD=$testedHead"
+git push --set-upstream origin $expectedWorkflowBranch
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: workflow branch push failed' }
+```
+
+Retain the exact `TESTED_WORKFLOW_HEAD` output in the promotion transcript; do not recompute or replace it after verification.
+
+2. Open/update the dedicated PR, then prove that its branch and head are the tested values. Rerun Task 5 Step 1 against that exact head; its complete committed/tracked/untracked path union must contain only the thirteen paths in Task 5's exact `$allowedWorkflowPr`.
+
+```powershell
+$prJson = gh pr view $expectedWorkflowBranch --json headRefName,headRefOid
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: workflow PR head query failed' }
+try { $pr = $prJson | ConvertFrom-Json -ErrorAction Stop } catch { throw 'PLAN_BLOCKED: workflow PR head response was invalid' }
+if ($pr.headRefName -ne $expectedWorkflowBranch) { throw 'PLAN_BLOCKED: workflow PR branch mismatch' }
+if ($pr.headRefOid -ne $testedHead) { throw 'PLAN_BLOCKED: workflow PR head is not the tested HEAD' }
+```
+
+3. Populate `Debt Gate Evidence` with every existing command/CodeScene result and populate all fourteen `Agent Gate Evidence` labels from Task 2: the existing planner/coder/reviewer/ChatGPT seven plus the overlay path/commit/blob/SHA-256, independent-review policy/verdict, and `Current metronome Stage: MSO-6`. There are no R-01 fields.
+4. Wait for existing CI, including `validate:debt-gates`, to pass on the exact PR head.
+5. Run the required external review through the restored `skills/metronome_chatgpt_review.md` contract against the exact PR diff and CI/CodeScene evidence. Require exact `PASS` or `PASS_WITH_NITS`; unavailable or blocking review means `PLAN_BLOCKED`.
+6. If PR metadata or evidence changes, wait for the edited-event CI rerun. Immediately before merge, substitute the retained tested HEAD, then recheck the expected branch, clean tracked/untracked state, unchanged local and PR heads, and merge-free branch history:
+
+```powershell
+$expectedWorkflowBranch = 'codex/metronome-superpowers-overlay'
+$testedHead = '<exact TESTED_WORKFLOW_HEAD captured after full verification>'
+if ($testedHead -notmatch '^[a-f0-9]{40}$') { throw 'PLAN_BLOCKED: tested workflow HEAD evidence is malformed' }
+git fetch origin main
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: pre-merge origin/main fetch failed' }
+$preMergeBranch = git branch --show-current
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: pre-merge branch resolution failed' }
+if ($preMergeBranch -ne $expectedWorkflowBranch) { throw 'PLAN_BLOCKED: wrong branch before workflow merge' }
+$preMergeStatus = @(git status --porcelain=v2 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: pre-merge status failed' }
+if ($preMergeStatus.Count -gt 0) { throw 'PLAN_BLOCKED: workflow worktree is not clean before merge' }
+$preMergeHead = git rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $preMergeHead -notmatch '^[a-f0-9]{40}$') { throw 'PLAN_BLOCKED: pre-merge HEAD resolution failed' }
+if ($preMergeHead -ne $testedHead) { throw 'PLAN_BLOCKED: local workflow HEAD changed after verification' }
+$preMergeMerges = @(git log --merges --format='%H' origin/main..HEAD)
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: pre-merge history check failed' }
+if ($preMergeMerges.Count -gt 0) { throw 'PLAN_BLOCKED: workflow branch contains a merge commit' }
+$prJson = gh pr view $expectedWorkflowBranch --json headRefName,headRefOid
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: pre-merge PR head query failed' }
+try { $pr = $prJson | ConvertFrom-Json -ErrorAction Stop } catch { throw 'PLAN_BLOCKED: pre-merge PR head response was invalid' }
+if ($pr.headRefName -ne $expectedWorkflowBranch) { throw 'PLAN_BLOCKED: pre-merge PR branch mismatch' }
+if ($pr.headRefOid -ne $testedHead) { throw 'PLAN_BLOCKED: PR head is not the tested workflow HEAD' }
+gh pr merge $expectedWorkflowBranch --match-head-commit $testedHead --merge
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: workflow PR merge failed' }
+```
+
+7. Return to clean current `main`:
 
 ```powershell
 git switch main
@@ -387,8 +456,16 @@ The workflow PR does not alter the historical R-01 file already present on main;
 
 ```powershell
 $repo = 'C:\Users\wsuto\metronome'
+git -C $repo fetch origin main
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: fresh origin/main fetch failed' }
+$currentMainBranch = git -C $repo branch --show-current
+if ($LASTEXITCODE -ne 0) { throw 'R-01 PLAN_BLOCKED: current branch resolution failed' }
+if ($currentMainBranch -ne 'main') { throw "R-01 PLAN_BLOCKED: expected main, found $currentMainBranch" }
 $mainCommit = git -C $repo rev-parse main
-if ($LASTEXITCODE -ne 0 -or $mainCommit -notmatch '^[a-f0-9]{40}$') { throw 'R-01 PLAN_BLOCKED: main commit resolution failed' }
+if ($LASTEXITCODE -ne 0 -or $mainCommit -notmatch '^[a-f0-9]{40}$') { throw 'R-01 PLAN_BLOCKED: local main resolution failed' }
+$originMainCommit = git -C $repo rev-parse origin/main
+if ($LASTEXITCODE -ne 0 -or $originMainCommit -notmatch '^[a-f0-9]{40}$') { throw 'R-01 PLAN_BLOCKED: origin/main resolution failed' }
+if ($mainCommit -ne $originMainCommit) { throw 'R-01 PLAN_BLOCKED: local main is not exactly freshly fetched origin/main' }
 $worktree = 'C:\tmp\metronome-r01-plan-worktree'
 $branch = "codex/r01-plan-$($mainCommit.Substring(0, 12))"
 $mainStatus = @(git -C $repo status --porcelain=v2 --untracked-files=all)
@@ -553,6 +630,14 @@ git -C $repo fetch origin main
 if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: post-fix main fetch failed' }
 git -C $repo pull --ff-only origin main
 if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: post-fix main fast-forward failed' }
+$postFixMainBranch = git -C $repo branch --show-current
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: post-fix current branch resolution failed' }
+if ($postFixMainBranch -ne 'main') { throw 'PLAN_BLOCKED: post-fix trial base is not main' }
+$postFixMainCommit = git -C $repo rev-parse main
+if ($LASTEXITCODE -ne 0 -or $postFixMainCommit -notmatch '^[a-f0-9]{40}$') { throw 'PLAN_BLOCKED: post-fix local main resolution failed' }
+$postFixOriginMainCommit = git -C $repo rev-parse origin/main
+if ($LASTEXITCODE -ne 0 -or $postFixOriginMainCommit -notmatch '^[a-f0-9]{40}$') { throw 'PLAN_BLOCKED: post-fix origin/main resolution failed' }
+if ($postFixMainCommit -ne $postFixOriginMainCommit) { throw 'PLAN_BLOCKED: post-fix local main is not exactly freshly fetched origin/main' }
 $mainStatus = @(git -C $repo status --porcelain=v2 --untracked-files=all)
 if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: post-fix main status failed' }
 if ($mainStatus.Count -gt 0) { throw 'PLAN_BLOCKED: main is not clean after workflow-fix merge' }
@@ -573,7 +658,7 @@ Independent plan review: PASS (GPT-5.6 Terra/Luna standard)
 User decision: APPROVED
 ```
 
-The coding branch starts from clean `main`, not the plan branch. Before coding, substitute the packet values and run:
+The coding branch starts from clean `main`, not the plan branch. The following is the **Canonical Immutable Plan Identity Block**. Before reading the plan, both the coder and every reviewer must independently substitute the packet values, execute this exact block in their own worktree, and retain its exact success line in their task evidence:
 
 ```powershell
 $planPath = 'docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md'
@@ -592,9 +677,11 @@ $planHashExit = $LASTEXITCODE
 Remove-Item Env:PLAN_SPEC
 if ($planHashExit -ne 0 -or $actualPlanSha256 -notmatch '^[a-f0-9]{64}$') { throw 'BLOCKED: immutable plan git-show/SHA-256 computation failed' }
 if ($actualPlanSha256 -ne $packetPlanSha256) { throw 'BLOCKED: immutable plan SHA-256 mismatch' }
+$identityEvidence = "IMMUTABLE_PLAN_IDENTITY_PASS commit=$planCommit blob=$actualPlanBlob sha256=$actualPlanSha256"
+Write-Output $identityEvidence
 ```
 
-Only after all checks pass may the agent read `git show <planCommit>:<planPath>` and code. Reviewer agents receive the same packet and rerun the same existence/blob/SHA block before review. Keep the local plan branch until the coding PR closes, then delete it; never merge/cherry-pick it and never add CI branch-fetch logic.
+Coder command requirement: execute the Canonical Immutable Plan Identity Block and attach its `IMMUTABLE_PLAN_IDENTITY_PASS` line before any coding. Reviewer command requirement: execute that same named block exactly, independently in the reviewer worktree, and attach its own `IMMUTABLE_PLAN_IDENTITY_PASS` line before review. A missing command run, Git/show/hash error, or mismatched line blocks that role. Only then may the role read `git show <planCommit>:<planPath>`. Keep the local plan branch until the coding PR closes, then delete it; never merge/cherry-pick it and never add CI branch-fetch logic.
 
 ## Final Self-Review
 
@@ -604,5 +691,6 @@ Only after all checks pass may the agent read `git show <planCommit>:<planPath>`
 - Overlay plan identity is derived from tracked `HEAD:<path>` blob/content/SHA only.
 - Full `HEAD` role contracts survive with pointer-only additions.
 - Generated R-01/later plans never merge into `main`; later agents verify commit, blob, and SHA-256 from immutable `git show` bytes before using the handoff.
+- Workflow push/merge is locked to the clean, merge-free tested HEAD and the PR head must match it; initial and repeated R-01 trials start only from clean local `main` exactly equal to freshly fetched `origin/main`.
 - Post-merge trial failure starts a bounded workflow-fix from fresh `origin/main`; no product/R-01 plan content enters it, and a repeated fresh trial plus user approval is required before coding.
 - Production diff remains `0 LOC`, and the paused implementation becomes smaller in mechanism surface.
