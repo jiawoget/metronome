@@ -34,9 +34,8 @@ Success requires:
 - Do not implement R-01 product work or modify
   `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` in
   the workflow PR.
-- Do not add a second validator, status ledger, telemetry, attestation,
-  manifest, compatibility wrapper, helper script, branch-fetch workflow, or
-  parallel promotion path.
+- Keep exactly one debt-contract validator. Do not add a duplicate workflow, ledger,
+  polling, compatibility, wrapper, or parallel path, or add telemetry, attestation, manifest, or helper scripts.
 - Do not add CodeScene execution to `.git/hooks/pre-commit`, package scripts
   used by that hook, or its npm/npm.cmd/PowerShell fallback chain.
 - Do not add package, lock, workflow, status, or product-source changes.
@@ -88,10 +87,8 @@ The independent plan reviewer verifies:
 
 - every implementation dependency appears before its consumer;
 - every role receives only evidence available at its stage;
-- the exact workflow allowlist, zero-production-LOC constraint, and deletion
-  requirements are complete;
-- validator responsibility, legal evidence values, required negative tests,
-  promotion states, invalidation, repair, and stop rules are closed;
+- the exact workflow allowlist, zero `src/**`, one debt-contract validator, no duplicate path, and required role/R-01 removals are complete;
+- validator responsibility, legal evidence values, required positive and negative tests, promotion states, invalidation, repair, and stop rules are closed;
 - the post-merge R-01 trial cannot affect workflow PR merge eligibility;
 - no generated R-01 plan can enter `main`.
 
@@ -152,8 +149,8 @@ accepted RED condition. Partial work remains uncommitted.
 5. Require positive CodeScene `analyze_change_set`, no decline, and literal
    `quality_gates: passed` evidence.
 6. Remove all pre-merge R-01 fields, parsing, markers, and fixtures.
-7. Reduce the two diagnosed validator complexity regressions with the minimum
-   local responsibility split.
+7. Reduce the two diagnosed validator complexity regressions with the minimum local
+   responsibility split until both methods are below every applicable CodeScene method-size and complexity threshold.
 8. Pass the validator self-test, debt-gate validator, and monitor-owned
    CodeScene change-set gate before continuing.
 
@@ -174,8 +171,7 @@ accepted RED condition. Partial work remains uncommitted.
 2. Add the same short overlay pointer and precedence statement after each role
    title.
 3. Keep planner behavior otherwise unchanged.
-4. Replace coder future-stage evidence with the four current-stage evidence
-   groups defined under Coding Handoff.
+4. Remove coder circular future-stage requirements and replace them with the four current-stage evidence groups defined under Coding Handoff.
 5. Make the reviewer consume one exact committed candidate and monitor-owned
    preflight/HEAD evidence, with no PR, CI, or ChatGPT dependency.
 6. Make ChatGPT consume the draft `MSO-5`/`PENDING` PR after exact-head CI,
@@ -188,13 +184,13 @@ accepted RED condition. Partial work remains uncommitted.
 
 1. The coder returns exact `CODE_READY` evidence only for implementation,
    scope, deletion, and focused tests.
-2. The monitor proves the exact allowlisted path set, diffstat, LOC direction,
-   deletion of obsolete R-01 surfaces, and zero `src/**` before review.
+2. The monitor records diffstat for growth detection, then proves the exact allowlist,
+   zero `src/**`, one validator, no duplicate path, and required role/R-01 removals before review.
 3. The monitor runs the validator self-test, every existing local gate, and the
    CodeScene pre-commit safeguard against the staged candidate.
 4. The monitor commits exactly the preflighted tree with normal hooks and binds
    a retained candidate HEAD to that tree.
-5. Against unchanged candidate HEAD, the monitor reruns scope/LOC/deletion,
+5. Against unchanged candidate HEAD, the monitor reruns semantic accounting,
    local gates, and CodeScene `analyze_change_set`; CodeScene must report no
    decline and exact `quality_gates: passed`.
 6. Only then does one fresh Terra/Luna implementation reviewer assess the exact
@@ -267,8 +263,7 @@ accepted RED condition. Partial work remains uncommitted.
   review evidence, and legal stage/ChatGPT pairing. Rewrite `validateSections`
   declaratively with one missing-section early return, one surface-evidence
   result list, and one overlay branch. Both diagnosed functions must fall below
-  CodeScene method-size/complexity thresholds. Do not add another helper only
-  to move complexity.
+  every applicable CodeScene method-size and complexity threshold. Do not add another helper only to move complexity.
 - `scripts/validate-pr-debt-contract.selftest.mjs`: construct valid overlay
   identity from tracked Git objects; cover both control paths, both legal
   promotion states, all specified negatives, and working-file mutation versus
@@ -332,19 +327,18 @@ parsing or renamed equivalents.
 | Boundary | Owner | Command or gate name | Required result |
 |---|---|---|---|
 | Revised plan | planning agent | `git diff --check` | pass |
-| Revised plan | planning agent | line count | at most 570 |
-| Revised plan | planning agent | `git diff --numstat` against `HEAD` | deletions exceed additions |
+| Revised plan | planning agent | line count | at most 491 |
 | MSO-2 | coder/monitor | `node scripts/validate-pr-debt-contract.selftest.mjs` | exit 0 |
 | MSO-2 onward | monitor | `npm run validate:debt-gates` | pass |
 | Candidate | monitor | exact allowlist/scope proof | no outside path |
-| Candidate | monitor | diffstat/LOC/deletion proof | zero `src/**`; obsolete surface absent |
+| Candidate | monitor | semantic accounting proof | zero `src/**`; one validator; no duplicate workflow, ledger, polling, compatibility, wrapper, or parallel path; circular role requirements and obsolete R-01 evidence absent |
 | Candidate | monitor | `npm run lint:debt:changed` | pass |
 | Candidate | monitor | `npm run lint:xo:changed` | pass |
 | Candidate | monitor | `npm run lint` | pass |
 | Candidate | monitor | `npm run typecheck` | pass |
 | Candidate | monitor | `npm run test:unit` | pass |
 | Candidate | monitor | `npm run build` | pass |
-| Staged candidate | monitor | CodeScene pre-commit safeguard | pass; no decline |
+| Staged candidate | monitor | CodeScene pre-commit safeguard | pass; no decline; diagnosed validator methods below applicable thresholds |
 | Committed HEAD | monitor | CodeScene `analyze_change_set` | no decline; `quality_gates: passed` |
 | Committed HEAD | reviewer | semantic implementation review | exact `PASS|PASS_WITH_NITS` |
 | Draft PR | CI | existing CI | green on exact reviewed HEAD |
@@ -439,12 +433,14 @@ approval.
 
 - Stop before edits when plan identity, independent review, or user approval is
   missing or stale.
-- Stop before semantic review when scope/LOC/deletion proof, any local gate, the
-  CodeScene pre-commit safeguard, exact candidate binding, HEAD-bound
+- Stop before semantic review when semantic accounting proof, any local gate,
+  the CodeScene pre-commit safeguard, exact candidate binding, HEAD-bound
   `analyze_change_set`, or `quality_gates: passed` is missing or fails.
-- Stop for unexpected production LOC growth, Code Health decline, scope
-  expansion, unplanned wrapper/public API, new file beyond the overlay, or an
-  unverified interface.
+- Net-positive LOC against `main` is not an automatic failure. New unexpected code
+  growth still requires fresh independent Terra/Luna diagnosis and an explicit user decision before work resumes.
+- The present diagnosed growth may proceed under the recorded user decision only if every semantic accounting, test, and CodeScene gate in this plan passes.
+- Stop for Code Health decline, scope expansion, an unplanned wrapper/public
+  API, a new file beyond the overlay, or an unverified interface.
 - The first gate failure may receive one code-edit repair under the same
   approved plan. That edit invalidates every downstream result and restarts
   preflight.
@@ -485,7 +481,6 @@ The coder must not require or claim reviewer verdict, PR URL/body, CI,
 ChatGPT, monitor-owned CodeScene, or future full-gate evidence. The monitor
 adds those only when their dependent stages have actually completed.
 
-Expected direction: the final workflow implementation is smaller than the
-paused mechanism surface, role deletions are limited to circular future-stage
-requirements, pre-merge R-01 machinery is deleted, no compatibility path is
-retained, and `src/**` remains untouched.
+Completion requires the exact allowlist, zero `src/**`, exactly one validator, no
+duplicate workflow, ledger, polling, compatibility, wrapper, or parallel path,
+removal of circular future-stage role requirements and pre-merge R-01 machinery, all required positive and negative tests, no Code Health decline, exact `quality_gates: passed`, and both diagnosed validator methods below every applicable CodeScene threshold.
