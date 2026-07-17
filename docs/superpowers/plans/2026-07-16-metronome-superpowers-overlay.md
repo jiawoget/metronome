@@ -92,6 +92,7 @@ git add docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md
 $staged = @(git diff --cached --name-only)
 if ($staged.Count -ne 1 -or $staged[0] -ne 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md') { throw 'PLAN_BLOCKED: plan-only staging failed' }
 git commit -m "Close workflow promotion identity checks"
+if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: plan commit failed' }
 ```
 
 Use normal hooks and never `--no-verify`. All paused implementation files must remain uncommitted and otherwise unchanged.
@@ -100,11 +101,15 @@ Use normal hooks and never `--no-verify`. All paused implementation files must r
 
 ```powershell
 $plan = 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md'
-$planCommit = git rev-parse HEAD
-$planBlob = git rev-parse "HEAD:$plan"
+$planCommit = git rev-parse --verify HEAD
+if ($LASTEXITCODE -ne 0 -or $planCommit -notmatch '^(?:[0-9a-f]{40}|[0-9a-f]{64})$') { throw 'PLAN_BLOCKED: invalid plan commit identity' }
+$planBlob = git rev-parse --verify "HEAD:$plan"
+if ($LASTEXITCODE -ne 0 -or $planBlob -notmatch '^(?:[0-9a-f]{40}|[0-9a-f]{64})$') { throw 'PLAN_BLOCKED: invalid plan blob identity' }
 $env:PLAN_SPEC = "HEAD:$plan"
 $planSha256 = node --input-type=module -e 'import {execFileSync} from "node:child_process"; import {createHash} from "node:crypto"; process.stdout.write(createHash("sha256").update(execFileSync("git", ["show", process.env.PLAN_SPEC])).digest("hex"));'
+$nodeExit = $LASTEXITCODE
 Remove-Item Env:PLAN_SPEC
+if ($nodeExit -ne 0 -or $planSha256 -notmatch '^[0-9a-f]{64}$') { throw 'PLAN_BLOCKED: invalid plan SHA-256 identity' }
 ```
 
 **Step 3: Launch one fresh independent read-only Luna review**
@@ -128,13 +133,19 @@ The monitor records `planPath`, `planCommit`, `planBlob`, `planSha256`, reviewer
 
 ```powershell
 $approval = Get-Content -Raw 'C:\tmp\metronome-overlay-plan-review\approval.json' | ConvertFrom-Json
+$oidPattern = '^(?:[0-9a-f]{40}|[0-9a-f]{64})$'
+if ($null -eq $approval -or $approval.planPath -ne 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md' -or $approval.planCommit -notmatch $oidPattern -or $approval.planBlob -notmatch $oidPattern -or $approval.planSha256 -notmatch '^[0-9a-f]{64}$' -or [string]::IsNullOrWhiteSpace([string]$approval.reviewerPolicy) -or [string]::IsNullOrWhiteSpace([string]$approval.verdict)) { throw 'PLAN_BLOCKED: empty or malformed approval identity' }
 $null = git merge-base --is-ancestor $approval.planCommit HEAD
 if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: reviewed plan commit is not an ancestor' }
-$headBlob = git rev-parse "HEAD:$($approval.planPath)"
-$approvedBlob = git rev-parse "$($approval.planCommit):$($approval.planPath)"
+$headBlob = git rev-parse --verify "HEAD:$($approval.planPath)"
+if ($LASTEXITCODE -ne 0 -or $headBlob -notmatch $oidPattern) { throw 'PLAN_BLOCKED: invalid current plan blob identity' }
+$approvedBlob = git rev-parse --verify "$($approval.planCommit):$($approval.planPath)"
+if ($LASTEXITCODE -ne 0 -or $approvedBlob -notmatch $oidPattern) { throw 'PLAN_BLOCKED: invalid approved plan blob identity' }
 $env:PLAN_SPEC = "HEAD:$($approval.planPath)"
 $headSha256 = node --input-type=module -e 'import {execFileSync} from "node:child_process"; import {createHash} from "node:crypto"; process.stdout.write(createHash("sha256").update(execFileSync("git", ["show", process.env.PLAN_SPEC])).digest("hex"));'
+$nodeExit = $LASTEXITCODE
 Remove-Item Env:PLAN_SPEC
+if ($nodeExit -ne 0 -or $headSha256 -notmatch '^[0-9a-f]{64}$') { throw 'PLAN_BLOCKED: invalid current plan SHA-256 identity' }
 if ($approval.planBlob -ne $headBlob -or $approval.planBlob -ne $approvedBlob -or $approval.planSha256 -ne $headSha256) { throw 'PLAN_BLOCKED: stale tracked plan approval' }
 if ($approval.reviewerPolicy -notin @('GPT-5.6 Terra standard', 'GPT-5.6 Luna standard') -or $approval.verdict -ne 'PLAN_REVIEW_PASS') { throw 'PLAN_BLOCKED: invalid independent review evidence' }
 if (-not (Test-Path 'C:\tmp\metronome-overlay-plan-review\review-events.jsonl') -or (Get-Content -Raw 'C:\tmp\metronome-overlay-plan-review\review-last.txt').Trim() -ne 'PLAN_REVIEW_PASS') { throw 'PLAN_BLOCKED: missing independent review artifacts' }
@@ -356,6 +367,17 @@ Run verified CodeScene `analyze_change_set` against `origin/main` and require no
 Stage the allowed list explicitly, inspect `git diff --cached --name-only`, and commit with normal hooks:
 
 ```powershell
+$expectedTracked = @(git diff --name-only --no-renames HEAD -- $allowedWorkflowPr)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: expected tracked staging set failed' }
+$expectedUntracked = @(git ls-files --others --exclude-standard -- $allowedWorkflowPr)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: expected untracked staging set failed' }
+$expectedStaged = @(($expectedTracked + $expectedUntracked) | Where-Object { $_ } | ForEach-Object { $_ -replace '\\', '/' } | Sort-Object -Unique)
+git add -- $allowedWorkflowPr
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: workflow allowlist staging failed' }
+$stagedWorkflow = @(git diff --cached --name-only --no-renames)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: staged workflow path listing failed' }
+$stagedWorkflow = @($stagedWorkflow | Where-Object { $_ } | ForEach-Object { $_ -replace '\\', '/' } | Sort-Object -Unique)
+if ($expectedStaged.Count -eq 0 -or $stagedWorkflow.Count -ne $expectedStaged.Count -or (Compare-Object $expectedStaged $stagedWorkflow)) { throw 'BLOCKED: staged workflow paths are not the exact approved set' }
 git commit -m "Add minimal Metronome Superpowers workflow"
 if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: workflow implementation commit failed' }
 $implementationStatus = @(git status --porcelain=v2 --untracked-files=all)
