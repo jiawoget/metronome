@@ -4,7 +4,7 @@
 
 **Goal:** Make the Metronome workflow durable through one mandatory router and one repo-local Superpowers overlay, merge that workflow first, then validate it operationally with a real R-01 planning trial that never merges a refactor plan into `main`.
 
-**Architecture:** Root `AGENTS.md` routes every task to `.agents/skills/metronome-workflow/SKILL.md`. The dedicated workflow PR contains only the durable router, overlay, existing full role contracts with precedence pointers, gate/self-test/template changes, and this workflow plan. It reaches `MSO-6` and merges before the real R-01 trial. Afterward, a fresh Sol plan agent creates R-01 on a temporary plan-only branch; coding and review consume that plan by immutable Git identity without merging or cherry-picking it.
+**Architecture:** Root `AGENTS.md` routes every task to `.agents/skills/metronome-workflow/SKILL.md`. The dedicated workflow PR contains only the durable router, overlay, full role contracts with narrow stage-boundary corrections, gate/self-test/template changes, and this workflow plan. It reaches `MSO-6` and merges before the real R-01 trial. Afterward, a fresh Sol plan agent creates R-01 on a temporary plan-only branch; coding and review consume that plan by immutable Git identity without merging or cherry-picking it.
 
 **Tech Stack:** Markdown, Node.js ESM, existing Git/GitHub Actions gates, PowerShell, `codex-cli 0.144.5`, CodeScene MCP.
 
@@ -12,14 +12,14 @@
 
 **Estimated Production-Code Diff:** `0 LOC` under `src/**`.
 
-**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `7faa689fd488292d3aac9fc7f1ffb0daf3401648` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
+**Plan Verdict:** `PLAN_READY` for a new plan-only commit and independent review. Commit `bfcbdbb8c0eab6ef9b64202d8e67acef0736de53` is superseded. Preserve the paused uncommitted implementation, commit only this revised plan first, and do not resume implementation until Task 0 passes for the new tracked identities.
 
 ## Verified Interfaces and Limits
 
 - `codex-cli 0.144.5`, the required model/config flags, `read-only`/`workspace-write`, `--ephemeral`, `--ignore-user-config`, `--cd`, `--json`, and `--output-last-message` were verified from the installed CLI.
 - `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna` support medium reasoning. Nested launches set `model_reasoning_effort="medium"` and `service_tier="default"`; never inherit fast or active user configuration.
 - Superpowers `using-superpowers`, `writing-plans`, `executing-plans`, and `subagent-driven-development` source files were verified under the installed plugin cache. Missing sources block the relevant stage.
-- CodeScene exposes `mcp__codescene__analyze_change_set({git_repository_path, base_ref})` with `quality_gates`/`results[].verdict`. Missing or ambiguous no-decline evidence blocks workflow promotion.
+- CodeScene exposes monitor-owned MCP pre-commit safeguard and `mcp__codescene__analyze_change_set({git_repository_path, base_ref})` results with `quality_gates`/`results[].verdict`. Missing safeguard evidence, any decline, or anything other than exact `quality_gates: passed` blocks workflow promotion.
 - Installed `gh pr view` supports `--json headRefName,headRefOid`; installed `gh pr merge` supports `--match-head-commit SHA --merge`.
 - Any newly claimed CLI, event, MCP, gate, or plugin interface must be proven by a target command or official schema before use. Otherwise return `PLAN_BLOCKED`.
 
@@ -33,10 +33,13 @@
 4. `PLAN_READY` does not authorize coding. A tracked plan commit, blob, SHA-256, matching independent Terra/Luna `PLAN_REVIEW_PASS`, and explicit user decision are required.
 5. Unexpected production LOC growth, Code Health decline, scope expansion, or an unplanned wrapper/public API means: stop; launch independent GPT-5.6 Terra standard or GPT-5.6 Luna standard diagnosis; resume only after explicit user decision. Never route diagnosis, fix, or review to GPT-5.6 Sol.
 6. Refactor plans name exact files, behavior, tests, and commands without prewriting large implementation bodies.
-7. Workflow promotion reuses the existing validator, pre-commit hook, CI, CodeScene, and PR evidence. No second validator, status ledger, telemetry/attestation framework, manifest, or CI branch-fetch framework is added.
-8. R-01 and later generated refactor plan commits never merge or cherry-pick into `main`. The plan branch is a temporary immutable input, not a product or workflow delivery branch.
+7. The coder owns implementation, scope, deletion proof, and focused tests only. Coder handoff never requires reviewer, ChatGPT, PR, CI, or other future-stage evidence.
+8. The monitor owns fail-closed preflight, exact-candidate commit and binding, CodeScene MCP, reviewer launch, PR/CI/ChatGPT promotion, and invalidation. No failed preflight may enter semantic review.
+9. Any code edit invalidates all downstream CodeScene, implementation-review, CI, and ChatGPT evidence. One repair is allowed under the same approved plan; any repeated failure returns exact `STAGE_BLOCKED`, followed by independent diagnosis and an explicit user decision. A repaired candidate reuses the same implementation reviewer for full-candidate and delta review.
+10. Workflow promotion reuses the existing validator, pre-commit hook, CI, CodeScene, and PR evidence. CodeScene MCP stays monitor-owned and is not added to the Git pre-commit hook. No second validator, status ledger, telemetry/attestation framework, manifest, or CI branch-fetch framework is added.
+11. R-01 and later generated refactor plan commits never merge or cherry-pick into `main`. The plan branch is a temporary immutable input, not a product or workflow delivery branch.
 
-Root `AGENTS.md` is only the mandatory router. The overlay owns shared policy. Each `skills/metronome_*.md` file keeps its complete `HEAD` role contract and receives only a short overlay pointer/precedence statement; do not extract, summarize, or delete existing role-specific rules.
+Root `AGENTS.md` is only the mandatory router. The overlay owns shared policy. Each `skills/metronome_*.md` file keeps its complete `HEAD` role contract and receives a short overlay pointer/precedence statement; only the coder/reviewer/ChatGPT circular stage requirements named in Task 4 are replaced. Do not extract, summarize, or delete unrelated role-specific rules.
 
 ## Workflow Promotion Authority
 
@@ -46,11 +49,11 @@ Root `AGENTS.md` is only the mandatory router. The overlay owns shared policy. E
 | `MSO-1` | RED proves both overlay control files need promotion evidence |
 | `MSO-2` | Existing validator owns final workflow-PR evidence only |
 | `MSO-3` | Mandatory router and minimal overlay are complete |
-| `MSO-4` | Full role contracts are restored with minimal precedence pointers |
-| `MSO-5` | Implementation review, scope audit, hooks, tests, and CodeScene pass |
-| `MSO-6` | Workflow PR CI and required external review pass; workflow PR merges |
+| `MSO-4` | Full role contracts are restored, then only circular cross-stage requirements are replaced |
+| `MSO-5` | Exact candidate passes monitor preflight, is committed, passes HEAD-bound CodeScene/full gates and implementation review, then enters a draft PR with exact ChatGPT `PENDING` so CI can run |
+| `MSO-6` | Exact-head CI passes, ChatGPT returns `PASS` or `PASS_WITH_NITS`, the PR body is edited to final evidence, edited-event CI passes, and the workflow PR merges |
 
-`MSO-0` through `MSO-5` are monitor checkpoints, not repository state. The existing PR validator mechanically accepts overlay control changes only at exact `MSO-6`, bound to the tracked workflow-plan identity, independent workflow-plan review, existing final role verdicts, and gate evidence. It must not require or parse any R-01 plan identity, review, or coding authorization.
+`MSO-0` through `MSO-4` are monitor checkpoints, not repository state. PR promotion has exactly two legal states and no general status ledger: draft `MSO-5` pairs reviewer `PASS|PASS_WITH_NITS` with exact ChatGPT `PENDING`; final `MSO-6` pairs the same reviewer verdict with ChatGPT `PASS|PASS_WITH_NITS`. The existing validator accepts only those pairs for overlay-control changes, binds both to the tracked workflow-plan identity and gate evidence, and must not require or parse any R-01 plan identity, review, or coding authorization.
 
 The real R-01 trial begins only after `MSO-6`, the workflow PR is merged, and the monitor has returned to clean `main`. It is operational validation of the merged workflow, not a retroactive gate for that PR. Failure opens a narrow workflow-fix PR and blocks R-01 coding.
 
@@ -58,12 +61,13 @@ The real R-01 trial begins only after `MSO-6`, the workflow PR is merged, and th
 
 Apply these deletions and modifications to the current paused implementation; do not add replacement machinery:
 
-- `.github/pull_request_template.md`: retain all seven existing planner/coder/reviewer/ChatGPT lines, add the seven workflow-plan promotion lines listed in Task 2, and delete the four obsolete R-01 lines.
-- `scripts/validate-pr-debt-contract.mjs`: delete all R-01 trial parsing/checks. Keep the narrow overlay-control check, but derive current plan blob and SHA-256 only from `HEAD:<planPath>` Git object content, never `git hash-object <working-file>` or `readFileSync(<working-file>)`.
-- `scripts/validate-pr-debt-contract.selftest.mjs`: delete R-01 synthetic fields and negative fixtures. Compute valid plan identity from tracked Git objects and add one regression proving an unstaged working-file mutation cannot change accepted `HEAD:<planPath>` identity.
+- `.github/pull_request_template.md`: retain all seven existing planner/coder/reviewer/ChatGPT lines, add the seven workflow-plan promotion lines listed in Task 2, document only the two legal `MSO-5`/`MSO-6` pairings, and delete the four obsolete R-01 lines.
+- `scripts/validate-pr-debt-contract.mjs`: delete all R-01 trial parsing/checks. Keep one existing validator; extract only cohesive immutable overlay-plan identity validation, derive current plan blob and SHA-256 only from `HEAD:<planPath>` Git object content, accept only the two legal stage/ChatGPT pairs, and require CodeScene `quality_gates: passed`. Do not add a file, compatibility wrapper, or parallel validation path.
+- `scripts/validate-pr-debt-contract.selftest.mjs`: delete R-01 synthetic fields and negative fixtures. Compute valid plan identity from tracked Git objects; add one regression proving an unstaged working-file mutation cannot change accepted `HEAD:<planPath>` identity; add explicit blank-blob, invalid-policy, illegal stage/ChatGPT pairing, and missing-CodeScene-quality-gates negatives.
 - `scripts/validate-metronome-gates.mjs`: delete required-content markers for R-01 trial evidence, add the repo-local overlay skill to the `required` file list, and restore all role-file required-content arrays to their `HEAD` contracts with only the overlay pointer marker added.
 - `.agents/skills/metronome-workflow/SKILL.md`: remove pre-merge R-01 evidence from Promotion; add the main-first/no-plan-in-main rule and the minimal immutable handoff described below.
-- `skills/metronome_planner.md`, `skills/metronome_coder.md`, `skills/metronome_reviewer.md`, `skills/metronome_chatgpt_review.md`: discard the paused summaries, restore full `HEAD` content, then add only the overlay pointer/precedence paragraph after each title.
+- `skills/metronome_planner.md`: discard the paused summary, restore full `HEAD` content, then add only the overlay pointer/precedence paragraph after the title.
+- `skills/metronome_coder.md`, `skills/metronome_reviewer.md`, `skills/metronome_chatgpt_review.md`: restore the full `HEAD` contracts and add the pointer, then apply only the stage-ownership corrections in Task 4. Remove contradictory future-evidence and ordering requirements rather than appending exceptions.
 - Do not change `src/**`, `docs/v1/status.json`, package manifests/locks, workflows, or `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` in the workflow PR.
 
 The paused implementation's obsolete pre-merge R-01 surface is exhaustively bounded as follows:
@@ -72,11 +76,11 @@ The paused implementation's obsolete pre-merge R-01 surface is exhaustively boun
 - Validator parser identifiers/fragments: `trialIdentity`, `trialMatch`, `trialMatch.groups.candidate`, `(?<candidate>`, and the synthetic identity fragments `candidate=`, `planCommit=`, `blob=`, and `sha256=`.
 - Required-content/overlay markers: every `requiredContent` entry containing `R-01 trial identity` and the overlay phrase `R-01 trial evidence`.
 - Self-test fixtures: the four R-01 lines in `validBody`, the `line.startsWith('- R-01 trial identity:')` mutation, the R-01 review mutation from `PASS` to `CHANGES_REQUIRED`, and the coding-authorization mutation from `BLOCKED_PENDING_USER_DECISION` to `AUTHORIZED`.
-- Obsolete status/verdict tokens: `BLOCKED_PENDING_USER_DECISION` and `AUTHORIZED` globally on these workflow/gate surfaces; `PASS` and `CHANGES_REQUIRED` are removed only when attached to an R-01 label because both remain valid elsewhere. `MSO-5` and `MSO-unknown` remain required negative final-stage fixtures.
+- Obsolete status/verdict tokens: `BLOCKED_PENDING_USER_DECISION` and `AUTHORIZED` globally on these workflow/gate surfaces; `PASS` and `CHANGES_REQUIRED` are removed only when attached to an R-01 label because both remain valid elsewhere. `MSO-unknown` remains a required negative fixture; `MSO-5` is positive only with exact ChatGPT `PENDING` and negative with every other ChatGPT value.
 
 Delete these items; do not rename, repurpose, or retain compatibility parsing for them.
 
-**Expected LOC direction:** Relative to the paused diff (`316` additions, `515` deletions), gate/self-test/template additions must shrink because R-01 machinery is deleted. Role-file deletions must collapse to zero or near zero because full `HEAD` contracts return; each role should show only a tiny positive pointer-only diff. Production LOC stays zero. The only new file remains `.agents/skills/metronome-workflow/SKILL.md`.
+**Expected LOC direction:** Relative to the paused diff (`316` additions, `515` deletions), gate/self-test/template additions must shrink because R-01 machinery is deleted. Role-file deletions must collapse to zero or near zero because full `HEAD` contracts return; planner remains pointer-only and the other role diffs stay limited to removing circular evidence requirements and expressing the two legal promotion states. Production LOC stays zero. The only new file remains `.agents/skills/metronome-workflow/SKILL.md`.
 
 ---
 
@@ -119,7 +123,7 @@ $codex = 'C:\Users\wsuto\.codex\.sandbox-bin\codex.exe'
 $evidence = 'C:\tmp\metronome-overlay-plan-review'
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $before = git status --porcelain=v2 --untracked-files=all
-$prompt = "Independently review only $plan at commit $planCommit, blob $planBlob, SHA-256 $planSha256. Verify fail-closed tested-HEAD checks before workflow push/merge, fresh main identity before initial/repeated R-01 trials, the canonical coder/reviewer immutable-plan command, the main-first workflow PR boundary, tracked-HEAD plan identity, full-role-contract restoration, post-merge no-plan-in-main R-01 trial, exact tests, and zero production LOC. Do not modify files. Return exactly PLAN_REVIEW_PASS or CHANGES_REQUIRED."
+$prompt = "Independently review only $plan at commit $planCommit, blob $planBlob, SHA-256 $planSha256. Verify coder-only handoff, monitor preflight before review, exact committed-candidate binding, HEAD-bound CodeScene/full gates before semantic review, two-state MSO-5 PENDING/MSO-6 PASS promotion, one-repair invalidation, smallest validator Code Health correction, no CodeScene hook execution, fresh main identity before initial/repeated R-01 trials, the canonical immutable-plan command, tracked-HEAD plan identity, post-merge no-plan-in-main R-01 trial, exact tests, and zero production LOC. Do not modify files. Return exactly PLAN_REVIEW_PASS or CHANGES_REQUIRED."
 & $codex exec --model gpt-5.6-luna --config 'model_reasoning_effort="medium"' --config 'service_tier="default"' --strict-config --ignore-user-config --sandbox read-only --ephemeral --cd 'C:\Users\wsuto\metronome' --json --output-last-message "$evidence\review-last.txt" $prompt |
   Tee-Object -FilePath "$evidence\review-events.jsonl"
 if ($LASTEXITCODE -ne 0 -or (Get-Content -Raw "$evidence\review-last.txt").Trim() -ne 'PLAN_REVIEW_PASS') { throw 'PLAN_BLOCKED: independent review failed' }
@@ -199,15 +203,19 @@ The final PR body retains the complete existing seven-field role contract and, f
 - Current metronome Stage:
 ```
 
-Keep `validateAgentGateEvidence` behavior for the first seven: planner/coder/reviewer read evidence names its existing role file; verdicts are exactly `PLAN_READY`, `CODE_READY`, reviewer `PASS|PASS_WITH_NITS`, and ChatGPT `PASS|PASS_WITH_NITS`. For overlay-control diffs, `validateOverlayPromotionEvidence` additionally requires the fixed plan path, ancestor plan commit, matching approved/current tracked blob, matching tracked SHA-256, Terra/Luna standard policy, exact `PLAN_REVIEW_PASS`, and exact `MSO-6`. Non-overlay PRs continue to require the existing seven fields without the seven conditional workflow fields. Remove every R-01 field from validator, template, required-content markers, and self-tests.
+Keep `validateAgentGateEvidence` behavior for the first seven: planner/coder/reviewer read evidence names its existing role file; verdicts are exactly `PLAN_READY`, `CODE_READY`, and reviewer `PASS|PASS_WITH_NITS`. Non-overlay PRs continue to require ChatGPT `PASS|PASS_WITH_NITS`. Overlay-control diffs have exactly two legal stage/ChatGPT combinations: exact `MSO-5` plus exact `PENDING`, or exact `MSO-6` plus exact `PASS|PASS_WITH_NITS`. Every cross-pair, unknown stage, suffix, placeholder, or conflicting value fails. `validateOverlayPromotionEvidence` also requires the fixed plan path, ancestor plan commit, matching approved/current tracked blob, matching tracked SHA-256, Terra/Luna standard policy, and exact `PLAN_REVIEW_PASS`. Remove every R-01 field from validator, template, required-content markers, and self-tests.
 
-**Step 2: Read plan identity only from Git objects**
+Preserve the existing CodeScene evidence label, but require its value to contain positive `analyze_change_set` evidence, no decline, and exact positive `quality_gates: passed` evidence. `passed, no decline` without the quality-gates result is insufficient.
 
-Use `git rev-parse HEAD:<planPath>` for the current blob and hash bytes returned by `git show HEAD:<planPath>` for current SHA-256. Compare the declared blob to both `<approvedCommit>:<planPath>` and `HEAD:<planPath>`. Do not call `git hash-object <planPath>` or hash `readFileSync(<planPath>)`.
+**Step 2: Apply the diagnosed smallest Code Health correction**
+
+Keep `scripts/validate-pr-debt-contract.mjs` as the one validator. Extract exactly one cohesive helper for immutable overlay-plan identity validation: fixed path, ancestor commit, approved/current blob equality, and tracked SHA-256. Use `git rev-parse HEAD:<planPath>` for the current blob and hash bytes returned by `git show HEAD:<planPath>` for current SHA-256. Compare the declared blob to both `<approvedCommit>:<planPath>` and `HEAD:<planPath>`. Do not call `git hash-object <planPath>` or hash `readFileSync(<planPath>)`.
+
+After that extraction, simplify `validateOverlayPromotionEvidence` to compose immutable identity, independent-review policy/verdict, and the exact legal stage/ChatGPT pair. Rewrite `validateSections` declaratively with one missing-section early return, one surface-evidence result list, and one overlay branch; do not extract another helper merely to move complexity. Both functions must fall below their diagnosed CodeScene method-size/complexity thresholds. Preserve all existing failure behavior except the intentional two-state and CodeScene-quality-gate changes. Add no compatibility wrapper, class, module, or new file.
 
 **Step 3: Keep exact self-tests and add tracked-vs-working regression**
 
-Retain the existing first-seven positive and negative assertions. For both `commitAgentsRouterChange(cwd)` and `commitMetronomeWorkflowSkillChange(cwd)`, assert a body missing `Overlay plan path` fails and the fully populated fourteen-field `MSO-6` body passes; these two deterministic pairs prove both paths trigger the complete contract. For the seven conditional workflow fields, retain or add one failure for each missing/invalid value, non-ancestor/stale commit, wrong blob/SHA, `MSO-5`, unknown stage, and one fully populated fourteen-field positive `MSO-6` fixture. Delete every R-01 fixture enumerated under Paused-Diff Corrections. Add this behavior:
+Retain the existing first-seven positive and negative assertions. For both `commitAgentsRouterChange(cwd)` and `commitMetronomeWorkflowSkillChange(cwd)`, assert a body missing `Overlay plan path` fails, a fully populated draft `MSO-5`/`PENDING` body passes, and a fully populated final `MSO-6`/`PASS` body passes. These deterministic fixtures prove both paths trigger the complete contract. For the seven conditional workflow fields, retain or add one failure for each missing/invalid value, non-ancestor/stale commit, blank blob, wrong blob/SHA, blank and disallowed independent-review policy, unknown stage, `MSO-5` paired with `PASS`, `MSO-6` paired with `PENDING`, and a verdict with explanatory suffix text. Assert the relevant stderr message for the blank-blob and disallowed-policy cases, not status alone. Update valid CodeScene fixture text to include `quality_gates: passed`, and add a negative proving `passed, no decline` without that field fails. Delete every R-01 fixture enumerated under Paused-Diff Corrections. Add this behavior:
 
 1. Build `validBody(cwd)` from `git show HEAD:<planPath>`.
 2. Mutate the plan in the temporary working tree without committing it.
@@ -223,6 +231,8 @@ node scripts/validate-pr-debt-contract.selftest.mjs
 
 Expected: both exit `0`. Leave the partial implementation uncommitted.
 
+Run CodeScene `analyze_change_set` after the self-tests and require exact `quality_gates: passed`; a score-only or no-decline-only result does not complete `MSO-2`.
+
 ---
 
 ### Task 3 [MSO-3]: Finish the Router and Minimal Main-First Overlay
@@ -231,7 +241,11 @@ Expected: both exit `0`. Leave the partial implementation uncommitted.
 - Modify: `AGENTS.md`
 - Create: `.agents/skills/metronome-workflow/SKILL.md`
 
-Preserve the paused root router and central model/pause/execution rules. Replace the overlay Promotion text so workflow changes reach exact `MSO-6` through workflow-plan approval, implementation review, existing gates, CI, and external review only.
+Preserve the paused root router and central model/pause/execution rules. Replace the overlay Promotion text with the exact stage order: coder current-stage handoff; monitor scope/LOC/deletion proof, all local gates, and MCP pre-commit safeguard; exact-candidate commit; HEAD-bound MCP `analyze_change_set` plus full gates; semantic implementation review; draft `MSO-5`/ChatGPT `PENDING` PR and CI; then ChatGPT review, final `MSO-6` evidence edit, edited-event CI, and merge. State that failed preflight cannot enter semantic review.
+
+Add the shared invalidation rule once in the overlay: any code edit invalidates all downstream CodeScene/reviewer/CI/ChatGPT evidence and restarts at monitor preflight. Permit one repair under the same approved plan and reuse the same implementation reviewer for the full repaired candidate plus delta; a repeated failure returns `STAGE_BLOCKED`, requires independent Terra/Luna diagnosis, and resumes only after explicit user decision. PR-body-only evidence edits do not count as code repair, but still require the existing edited-event CI rerun.
+
+State that CodeScene MCP is monitor-owned. Do not add CodeScene shell execution to `.git/hooks/pre-commit`, package scripts used by that hook, or the hook fallback chain.
 
 Add one concise plan-branch rule:
 
@@ -255,7 +269,15 @@ Do not add R-01 fields, a ledger, helper script, or branch-fetch workflow.
 - Modify: `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md`
 - Modify: `docs/architecture/debt-gate-map.md`
 
-For each role file, reconstruct the complete content from `git show HEAD:<path>` and add only this meaning immediately after the title: read `.agents/skills/metronome-workflow/SKILL.md` first; the full role contract remains in force; the overlay has precedence only for shared workflow/model/pause/promotion rules.
+For each role file, reconstruct the complete content from `git show HEAD:<path>` and add this meaning immediately after the title: read `.agents/skills/metronome-workflow/SKILL.md` first; the full role contract remains in force; the overlay has precedence only for shared workflow/model/pause/promotion rules.
+
+Keep `skills/metronome_planner.md` otherwise unchanged. Apply only these narrow corrections to the other full contracts:
+
+- `skills/metronome_coder.md`: replace PR/future-stage handoff requirements with exactly four current-stage sections: implementation files/purpose; scope including reuse/new-surface/boundary accounting; retired/deleted surface proof; and focused tests actually run. It must not require or claim reviewer verdict, ChatGPT verdict, PR body/URL, CI, monitor CodeScene, or future full-gate evidence. `CODE_READY` returns to the monitor for preflight; it does not request semantic review.
+- `skills/metronome_reviewer.md`: review one exact committed candidate identified by base, HEAD, changed-file split/diffstat, approved immutable plan, coder handoff, monitor preflight output, HEAD-bound CodeScene `analyze_change_set` with `quality_gates: passed`, and HEAD-bound full-gate output. Remove PR URL/body, CI, and ChatGPT from required inputs, workflow, immediate-failure rules, output, and verdict handling. The reviewer independently checks semantics, scope/reuse/deletion/boundaries/tests against that candidate; `PASS|PASS_WITH_NITS` returns to the monitor for draft PR promotion. A repaired candidate goes back to this same reviewer with both the complete new candidate and its delta from the rejected candidate.
+- `skills/metronome_chatgpt_review.md`: keep plan review unchanged. For PR review, require the exact draft `MSO-5` head/body with reviewer pass and exact ChatGPT `PENDING`, plus successful CI and CodeScene/full-gate evidence for that head. Remove the circular requirement that the packet already contain its own final ChatGPT verdict. Its returned `PASS|PASS_WITH_NITS` is then written to the final `MSO-6` body; `CHANGES_REQUIRED` cannot advance.
+
+Remove contradictory old ordering and claims in place. Do not append an exception after text that still requires coder future evidence, reviewer PR/CI/ChatGPT evidence, or final ChatGPT evidence before ChatGPT runs.
 
 Do not keep the paused summaries. Restore `scripts/validate-metronome-gates.mjs` role required-content markers to `HEAD` exactly, then add only `.agents/skills/metronome-workflow/SKILL.md` as the new marker for each role. Also add `.agents/skills/metronome-workflow/SKILL.md` to the validator's `required` file array, not just `requiredContent`, so the existing `existsSync` loop emits `Missing required debt gate file: .agents/skills/metronome-workflow/SKILL.md` and exits `1` when absent.
 
@@ -274,11 +296,11 @@ if (-not $gateSource.Substring($requiredEnd).Contains("'.agents/skills/metronome
 & .\scripts\npm-local.ps1 --% run validate:debt-gates
 ```
 
-Each role file should show a tiny addition and zero contract deletion relative to `HEAD`. Leave Task 1-4 changes uncommitted.
+The planner should show a tiny addition and zero contract deletion relative to `HEAD`; coder/reviewer/ChatGPT changes should be the smallest replacements that remove the circular dependencies above while retaining their debt, correctness, and output contracts. Leave Task 1-4 changes uncommitted.
 
 ---
 
-### Task 5 [MSO-5]: Review, Simplify, Gate, and Commit the Workflow Implementation
+### Task 5 [MSO-5]: Preflight, Commit, Bind, and Review the Exact Candidate
 
 **Allowed workflow PR files:** this plan, `AGENTS.md`, `.agents/skills/metronome-workflow/SKILL.md`, four role files, refactor template, debt map, existing validator/self-test/gate wrapper, and PR template. No R-01 plan, product source, status, package, lock, or workflow file is allowed.
 
@@ -295,11 +317,13 @@ if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: untracked workflow path listing faile
 $workflowPrPaths = @(($committedWorkflow + $trackedWorkflow + $untrackedWorkflow) | Where-Object { $_ } | ForEach-Object { (($_ -replace '\\', '/') -replace '^\./', '') } | Sort-Object -Unique)
 $forbiddenWorkflow = @($workflowPrPaths | Where-Object { $_ -notin $allowedWorkflowPr })
 if ($forbiddenWorkflow.Count -gt 0) { throw "BLOCKED: workflow PR scope escaped: $($forbiddenWorkflow -join ', ')" }
-$diffStat = @(git diff --stat)
-if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: workflow diff-stat failed' }
+$diffStat = @(git diff --stat --no-renames origin/main -- $allowedWorkflowPr)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: exact candidate diff-stat failed' }
 $diffStat | Write-Output
-$productionDiff = @(git diff --numstat -- 'src/**')
-if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: production diff check failed' }
+$candidateNumstat = @(git diff --numstat --no-renames origin/main -- $allowedWorkflowPr)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: exact candidate LOC proof failed' }
+$candidateNumstat | Write-Output
+$productionDiff = @($workflowPrPaths | Where-Object { $_ -like 'src/*' })
 if ($productionDiff.Count -gt 0) { throw "BLOCKED: production files changed`n$($productionDiff -join "`n")" }
 $r01Surfaces = @(
   '.github/pull_request_template.md',
@@ -337,11 +361,30 @@ foreach ($token in $obsolete) {
 }
 ```
 
-The production command and every token search must be empty. The broad label checks also eliminate the four validator failure messages and every `requiredContent` occurrence; the exact fixture/status checks prevent stale synthetic self-tests. Gate/self-test additions must be lower than the paused implementation; role deletions must be gone. Any unexpected growth triggers the central hard pause.
+The exact path union is the scope proof, `$candidateNumstat` is the retained LOC proof, the production list must be empty, and every token search is the deletion proof. The broad label checks also eliminate the four validator failure messages and every `requiredContent` occurrence; the exact fixture/status checks prevent stale synthetic self-tests. Gate/self-test additions must be lower than the paused implementation; role deletions must be limited to the Task 4 circular requirements. Any unexpected growth triggers the central hard pause.
 
-**Step 2: Run implementation review and all existing gates**
+**Step 2: Stage the exact candidate and run monitor preflight**
 
-Use a fresh Terra/Luna reviewer with the restored full `skills/metronome_reviewer.md` contract. Require no findings before proceeding.
+Stage the allowed set explicitly before preflight so every command sees the exact candidate that will be committed. Reuse the existing exact-set calculation, then capture its tree:
+
+```powershell
+$expectedTracked = @(git diff --name-only --no-renames HEAD -- $allowedWorkflowPr)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: expected tracked staging set failed' }
+$expectedUntracked = @(git ls-files --others --exclude-standard -- $allowedWorkflowPr)
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: expected untracked staging set failed' }
+$expectedStaged = @(($expectedTracked + $expectedUntracked) | Where-Object { $_ } | ForEach-Object { $_ -replace '\\', '/' } | Sort-Object -Unique)
+git add -- $allowedWorkflowPr
+if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: workflow allowlist staging failed' }
+$stagedWorkflow = @(git diff --cached --name-only --no-renames | Where-Object { $_ } | ForEach-Object { $_ -replace '\\', '/' } | Sort-Object -Unique)
+if ($expectedStaged.Count -eq 0 -or $stagedWorkflow.Count -ne $expectedStaged.Count -or (Compare-Object $expectedStaged $stagedWorkflow)) { throw 'BLOCKED: staged workflow paths are not the exact approved set' }
+$unstagedAfterStage = @(git diff --name-only --no-renames)
+if ($LASTEXITCODE -ne 0 -or $unstagedAfterStage.Count -gt 0) { throw 'BLOCKED: staged candidate does not include the complete tracked working tree' }
+$candidateTree = git write-tree
+if ($LASTEXITCODE -ne 0 -or $candidateTree -notmatch '^[a-f0-9]{40}$') { throw 'BLOCKED: candidate tree capture failed' }
+Write-Output "PREFLIGHT_CANDIDATE_TREE=$candidateTree"
+```
+
+The monitor reruns Task 5 Step 1 against this staged candidate, runs the validator self-test and every existing local gate, then runs CodeScene MCP `pre_commit_code_health_safeguard`. No semantic reviewer is launched here.
 
 ```powershell
 & .\scripts\npm-local.ps1 --% run validate:debt-gates
@@ -360,36 +403,45 @@ if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: test:unit failed' }
 if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: build failed' }
 ```
 
-Run verified CodeScene `analyze_change_set` against `origin/main` and require no decline. All commands must pass before the implementation commit.
+Also run `node scripts/validate-pr-debt-contract.selftest.mjs` explicitly and require the monitor-owned MCP pre-commit safeguard to pass with no Code Health decline. Do not add CodeScene execution to the Git pre-commit hook. After all preflight checks, require `git write-tree` still equals `$candidateTree` and `git diff --name-only` remains empty. Any failed command or safeguard blocks commit and semantic review.
 
-**Step 3: Commit only the approved workflow files**
+**Step 3: Commit exactly the preflighted candidate**
 
-Stage the allowed list explicitly, inspect `git diff --cached --name-only`, and commit with normal hooks:
+Commit the already-staged candidate with normal hooks. Do not run `git add` again after preflight:
 
 ```powershell
-$expectedTracked = @(git diff --name-only --no-renames HEAD -- $allowedWorkflowPr)
-if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: expected tracked staging set failed' }
-$expectedUntracked = @(git ls-files --others --exclude-standard -- $allowedWorkflowPr)
-if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: expected untracked staging set failed' }
-$expectedStaged = @(($expectedTracked + $expectedUntracked) | Where-Object { $_ } | ForEach-Object { $_ -replace '\\', '/' } | Sort-Object -Unique)
-git add -- $allowedWorkflowPr
-if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: workflow allowlist staging failed' }
-$stagedWorkflow = @(git diff --cached --name-only --no-renames)
-if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: staged workflow path listing failed' }
-$stagedWorkflow = @($stagedWorkflow | Where-Object { $_ } | ForEach-Object { $_ -replace '\\', '/' } | Sort-Object -Unique)
-if ($expectedStaged.Count -eq 0 -or $stagedWorkflow.Count -ne $expectedStaged.Count -or (Compare-Object $expectedStaged $stagedWorkflow)) { throw 'BLOCKED: staged workflow paths are not the exact approved set' }
 git commit -m "Add minimal Metronome Superpowers workflow"
 if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: workflow implementation commit failed' }
+$candidateHead = git rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $candidateHead -notmatch '^[a-f0-9]{40}$') { throw 'BLOCKED: candidate HEAD capture failed' }
+$committedTree = git rev-parse 'HEAD^{tree}'
+if ($LASTEXITCODE -ne 0 -or $committedTree -ne $candidateTree) { throw 'BLOCKED: committed tree differs from preflight candidate' }
 $implementationStatus = @(git status --porcelain=v2 --untracked-files=all)
 if ($LASTEXITCODE -ne 0) { throw 'BLOCKED: post-implementation status failed' }
 if ($implementationStatus.Count -gt 0) { throw 'BLOCKED: workflow implementation worktree is not clean after commit' }
+Write-Output "REVIEW_CANDIDATE_HEAD=$candidateHead"
 ```
+
+**Step 4: Bind CodeScene, full gates, and semantic review to that HEAD**
+
+With `HEAD` still exactly `$candidateHead`, run CodeScene MCP `analyze_change_set` against `origin/main` and require no decline plus exact `quality_gates: passed`. Rerun Task 5 Step 1, `node scripts/validate-pr-debt-contract.selftest.mjs`, and every local gate from Step 2. Check `git rev-parse HEAD` before and after the sequence and reject any mismatch or dirty status.
+
+Only after that HEAD-bound sequence passes, launch one fresh Terra/Luna semantic implementation reviewer using the corrected `skills/metronome_reviewer.md` packet. The reviewer receives the exact base/head, immutable approved plan, coder handoff, scope/LOC/deletion proof, preflight safeguard, HEAD-bound CodeScene/full-gate outputs, changed-file split, and diffstat. It receives no PR body, CI, or ChatGPT evidence. Require exact `PASS` or `PASS_WITH_NITS`; retain the reviewer identity for any permitted repair delta.
+
+**Repair and invalidation rule:** A failed preflight, HEAD-bound gate, reviewer, CI, or ChatGPT gate may trigger at most one code-edit repair under the same approved plan. The first code edit invalidates every prior preflight result and all downstream CodeScene/reviewer/CI/ChatGPT evidence; restart at Step 1, recommit a new exact candidate, and send the full new candidate plus delta to the same implementation reviewer. Any subsequent gate failure after that repair returns exact `STAGE_BLOCKED`; launch independent Terra/Luna diagnosis and wait for explicit user decision. Do not encode repair count or stage history in a repository ledger.
 
 ---
 
 ### Task 6 [MSO-6]: Promote and Merge the Workflow PR
 
-1. Rerun Task 5 Step 1, every Task 5 Step 2 command, implementation review, and CodeScene on the committed tree. Immediately afterward, require the expected branch, Git-visible tracked/untracked cleanliness, no merge commits relative to freshly fetched `origin/main`, capture the exact tested HEAD, and push only that HEAD:
+PR promotion has only the following two legal states. Do not create a third status, transition ledger, or provisional verdict:
+
+| Legal PR state | Required exact evidence | Allowed action |
+|---|---|---|
+| Draft `MSO-5` | reviewer `PASS|PASS_WITH_NITS`; ChatGPT `PENDING`; exact-head preflight, CodeScene, full gates | run CI on the draft PR |
+| Final `MSO-6` | the same exact head has green CI; ChatGPT `PASS|PASS_WITH_NITS`; all earlier evidence remains valid | run edited-event final CI, then merge |
+
+1. Use the exact `$candidateHead` that passed Task 5 Step 4. Rerun only the scope/LOC/deletion proof needed to confirm no drift, then require the expected branch, Git-visible tracked/untracked cleanliness, no merge commits relative to freshly fetched `origin/main`, and push only that retained head:
 
 ```powershell
 $expectedWorkflowBranch = 'codex/metronome-superpowers-overlay'
@@ -401,8 +453,10 @@ if ($currentWorkflowBranch -ne $expectedWorkflowBranch) { throw "PLAN_BLOCKED: e
 $prePushStatus = @(git status --porcelain=v2 --untracked-files=all)
 if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: pre-push status failed' }
 if ($prePushStatus.Count -gt 0) { throw 'PLAN_BLOCKED: workflow worktree is not clean before push' }
-$testedHead = git rev-parse HEAD
-if ($LASTEXITCODE -ne 0 -or $testedHead -notmatch '^[a-f0-9]{40}$') { throw 'PLAN_BLOCKED: tested workflow HEAD resolution failed' }
+$testedHead = '<exact REVIEW_CANDIDATE_HEAD captured in Task 5 Step 3>'
+if ($testedHead -notmatch '^[a-f0-9]{40}$') { throw 'PLAN_BLOCKED: retained workflow HEAD evidence is malformed' }
+$currentHead = git rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $currentHead -ne $testedHead) { throw 'PLAN_BLOCKED: current workflow HEAD differs from reviewed candidate' }
 $prePushMerges = @(git log --merges --format='%H' origin/main..HEAD)
 if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: pre-push merge-history check failed' }
 if ($prePushMerges.Count -gt 0) { throw 'PLAN_BLOCKED: workflow branch contains a merge commit' }
@@ -413,7 +467,7 @@ if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: workflow branch push failed' }
 
 Retain the exact `TESTED_WORKFLOW_HEAD` output in the promotion transcript; do not recompute or replace it after verification.
 
-2. Open/update the dedicated PR, then prove that its branch and head are the tested values. Rerun Task 5 Step 1 against that exact head; its complete committed/tracked/untracked path union must contain only the thirteen paths in Task 5's exact `$allowedWorkflowPr`.
+2. Open or update the dedicated PR as **draft**, then prove that its branch and head are the tested values. Rerun Task 5 Step 1 against that exact head; its complete committed/tracked/untracked path union must contain only the thirteen paths in Task 5's exact `$allowedWorkflowPr`.
 
 ```powershell
 $prJson = gh pr view $expectedWorkflowBranch --json headRefName,headRefOid
@@ -423,10 +477,11 @@ if ($pr.headRefName -ne $expectedWorkflowBranch) { throw 'PLAN_BLOCKED: workflow
 if ($pr.headRefOid -ne $testedHead) { throw 'PLAN_BLOCKED: workflow PR head is not the tested HEAD' }
 ```
 
-3. Populate `Debt Gate Evidence` with every existing command/CodeScene result and populate all fourteen `Agent Gate Evidence` labels from Task 2: the existing planner/coder/reviewer/ChatGPT seven plus the overlay path/commit/blob/SHA-256, independent-review policy/verdict, and `Current metronome Stage: MSO-6`. There are no R-01 fields.
-4. Wait for existing CI, including `validate:debt-gates`, to pass on the exact PR head.
-5. Run the required external review through the restored `skills/metronome_chatgpt_review.md` contract against the exact PR diff and CI/CodeScene evidence. Require exact `PASS` or `PASS_WITH_NITS`; unavailable or blocking review means `PLAN_BLOCKED`.
-6. If PR metadata or evidence changes, wait for the edited-event CI rerun. Immediately before merge, substitute the retained tested HEAD, then recheck the expected branch, clean tracked/untracked state, unchanged local and PR heads, and merge-free branch history:
+3. Populate draft `MSO-5` evidence in dependency order. `Debt Gate Evidence` records the exact-head CodeScene result including `quality_gates: passed` and all local commands. `Agent Gate Evidence` records planner, coder, and implementation-review evidence, the seven overlay-plan identity fields, exact `ChatGPT final review prompt/verdict: PENDING`, and exact `Current metronome Stage: MSO-5`. There are no R-01 fields. Do not claim CI or final ChatGPT evidence yet.
+4. Wait for existing CI, including `validate:debt-gates`, to pass on exact `$testedHead` while the PR remains draft. A CI failure may use the one repair path from Task 5; any code edit resets the PR body to legal draft `MSO-5`/`PENDING` and invalidates all downstream evidence.
+5. After exact-head CI is green, run the required external review through the corrected `skills/metronome_chatgpt_review.md` contract against the exact PR diff, draft body, implementation-review output, CI, CodeScene, and local-gate evidence. Require exact `PASS` or `PASS_WITH_NITS`. `CHANGES_REQUIRED` may use the one repair path if still available; repeated failure returns `STAGE_BLOCKED` and requires diagnosis plus user decision.
+6. Without changing code, edit only the PR evidence to final `MSO-6`: replace exact ChatGPT `PENDING` with the returned exact `PASS|PASS_WITH_NITS`, replace exact stage `MSO-5` with `MSO-6`, and preserve every earlier exact-head field. Mark ready only after this legal final body exists. Wait for the pull-request `edited` event to rerun final CI, including `validate:debt-gates`, on unchanged `$testedHead`; body-only edits do not invalidate code evidence.
+7. After edited-event CI is green, substitute the retained tested HEAD, then recheck the expected branch, clean tracked/untracked state, unchanged local and PR heads, and merge-free branch history:
 
 ```powershell
 $expectedWorkflowBranch = 'codex/metronome-superpowers-overlay'
@@ -455,7 +510,7 @@ gh pr merge $expectedWorkflowBranch --match-head-commit $testedHead --merge
 if ($LASTEXITCODE -ne 0) { throw 'PLAN_BLOCKED: workflow PR merge failed' }
 ```
 
-7. Return to clean current `main`:
+8. Return to clean current `main`:
 
 ```powershell
 git switch main
@@ -643,7 +698,7 @@ The three Git sources cover committed branch changes, staged/unstaged tracked ch
 
 If diagnosis changes this workflow plan, shared contract, evidence schema, or scope, the first fix-branch commit must contain only this plan; recompute its tracked commit/blob/SHA-256, obtain a fresh independent Terra/Luna `PLAN_REVIEW_PASS`, and receive explicit user approval before implementation. A mechanical correction already specified by the unchanged approved plan may reuse that tracked plan identity, but still requires the new diagnosis and independent implementation review.
 
-Implement only the diagnosed workflow correction. Run the complete Task 5 gate suite and CodeScene, commit with normal hooks, populate all fourteen evidence fields, pass PR CI and the required external review, merge the narrow workflow-fix PR, then return to freshly fetched clean `main`:
+Implement only the diagnosed workflow correction. Follow the complete Task 5 exact-candidate pipeline and Task 6 two-state promotion: preflight before review, commit exact candidate, HEAD-bound CodeScene/full gates, implementation-review pass, draft `MSO-5`/ChatGPT `PENDING` CI, post-CI ChatGPT pass, final `MSO-6` evidence edit, edited-event CI, and merge. Then return to freshly fetched clean `main`:
 
 ```powershell
 git -C $repo switch main
@@ -708,10 +763,17 @@ Coder command requirement: execute the Canonical Immutable Plan Identity Block a
 ## Final Self-Review
 
 - The workflow PR reaches `MSO-6` and merges before any real R-01 trial.
-- The PR template/validator preserve the existing seven role fields and require the seven additional workflow fields for overlay-control diffs.
+- The coder handoff contains only implementation/scope/deletion/focused-test evidence; monitor-owned CodeScene, reviewer, PR, CI, and ChatGPT evidence are absent.
+- Monitor preflight proves exact scope/LOC/deletion, all local gates, and MCP pre-commit safeguard before commit or semantic review; failed preflight cannot enter review and CodeScene execution is not added to the Git pre-commit hook.
+- The preflight candidate tree equals the committed tree; `analyze_change_set`, exact `quality_gates: passed`, full gates, and semantic implementation review all bind to the same candidate HEAD.
+- The implementation reviewer requires no PR body, CI, or ChatGPT evidence and the same reviewer handles a repaired full candidate plus delta.
+- The PR template/validator preserve the existing seven role fields, require the seven additional workflow fields for overlay-control diffs, and accept exactly draft `MSO-5`/ChatGPT `PENDING` or final `MSO-6`/ChatGPT `PASS|PASS_WITH_NITS`.
+- Final ChatGPT review runs only after exact-head CI; the final evidence edit triggers and passes edited-event CI before merge.
+- Any code edit invalidates downstream CodeScene/reviewer/CI/ChatGPT evidence; one repair is allowed under the same plan, while repeated failure returns `STAGE_BLOCKED` for diagnosis and user decision without a repository status ledger.
 - Every enumerated pre-merge R-01 label, parser/fixture identifier, marker, and obsolete status token is absent from workflow validator, self-test, gate markers, PR template, and overlay promotion.
 - Overlay plan identity is derived from tracked `HEAD:<path>` blob/content/SHA only.
-- Full `HEAD` role contracts survive with pointer-only additions.
+- The existing validator remains the only validator; only immutable plan identity is extracted, both diagnosed functions fall below CodeScene thresholds, blank-blob/policy/state-pair/quality-gates negatives pass, and no compatibility wrapper or new file is added.
+- Full `HEAD` role contracts survive except for the narrow contradictory stage-boundary requirements explicitly replaced in Task 4.
 - Generated R-01/later plans never merge into `main`; later agents verify commit, blob, and SHA-256 from immutable `git show` bytes before using the handoff.
 - Workflow push/merge is locked to the clean, merge-free tested HEAD and the PR head must match it; initial and repeated R-01 trials start only from clean local `main` exactly equal to freshly fetched `origin/main`.
 - Post-merge trial failure starts a bounded workflow-fix from fresh `origin/main`; no product/R-01 plan content enters it, and a repeated fresh trial plus user approval is required before coding.
