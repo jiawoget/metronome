@@ -53,7 +53,7 @@ Send all of this before asking for review:
 
 - Slice/stage name.
 - Full original plan text.
-- Plan file path under `docs/v1/implementation-slices/plans/`, or for refactor pipelines under `docs/v1/implementation-slices/refactor/`.
+- Plan file path under `docs/v1/implementation-slices/plans/`.
 - `docs/architecture/debt-gate-map.md` content or relevant excerpt.
 - Any known reviewer concern or no-go question.
 

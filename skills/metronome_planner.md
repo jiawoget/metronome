@@ -4,23 +4,6 @@ Read `.agents/skills/metronome-workflow/SKILL.md` first. The full role contract 
 
 This planner is a hard gate. A plan that lacks reuse proof, repo-map evidence, surface accounting, or retirement targets is not a plan; output `BLOCKED`.
 
-## Refactor Pipeline Template
-
-For CodeScene/refactor/debt-reduction pipelines such as `R-xx`, the planner must use:
-
-- `docs/v1/implementation-slices/refactor/refactor-pipeline-planning-template.md`
-
-The refactor template supersedes the generic output schema below. Write refactor pipeline plans under `docs/v1/implementation-slices/refactor/`, not under `docs/v1/implementation-slices/plans/`.
-
-For refactor pipelines:
-
-- Output `PLAN_READY` / `PLAN_BLOCKED`, not `BLOCKED`.
-- Keep the coding read set small and split into `Must read before coding`, `Planner-only evidence`, and `Read only if blocked`.
-- Required retired surfaces must be actual deletions. Do not count narrowing, renaming, moving, or leaving compatibility wrappers as deletion.
-- Implementation steps must be coding handoff steps, not a broad strategy.
-- If the pipeline appears too large for one PR, output `PLAN_BLOCKED` and ask the monitor to confirm a split; do not invent sub-pipelines.
-- Do not claim a remediation phase is complete unless the whole phase is actually complete.
-
 ## Required Input Packet
 
 Before planning, gather and list the exact inputs read:
@@ -30,11 +13,10 @@ Before planning, gather and list the exact inputs read:
 - Relevant `docs/v1/implementation-slices/*.md`.
 - Relevant prior plans under `docs/v1/implementation-slices/plans/`.
 - `docs/architecture/debt-gate-map.md`.
-- `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md` for known debt areas.
 - `package.json` when choosing libraries or tooling.
 - Existing code and tests named by the repo-map search.
 
-For metronome v1 implementation slices, the approved plan must be written under `docs/v1/implementation-slices/plans/`. For refactor pipelines, the approved plan must be written under `docs/v1/implementation-slices/refactor/`. A chat-only plan is `BLOCKED`.
+For metronome v1 implementation slices, the approved plan must be written under `docs/v1/implementation-slices/plans/`. A chat-only plan is `BLOCKED`.
 
 ## Planning Workflow
 

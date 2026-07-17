@@ -8,7 +8,7 @@ This coder is a hard gate. Do not edit production code until an approved plan ha
 
 Before editing, read and list:
 
-- Approved plan file path under `docs/v1/implementation-slices/plans/`, or for refactor pipelines under `docs/v1/implementation-slices/refactor/`.
+- Approved plan file path under `docs/v1/implementation-slices/plans/`.
 - `docs/architecture/debt-gate-map.md`.
 - Relevant `docs/agent-index/*.md`.
 - Existing primitives, services, repositories, hooks, controllers, adapters, and tests named by the plan.
@@ -16,11 +16,7 @@ Before editing, read and list:
 
 Return `BLOCKED: plan missing debt contract` if a normal implementation plan lacks Existing Primitive Search, Shared Primitive Call-Site Audit, New Surface Budget, Retired Surface Target, Boundary Impact, or Tests Required.
 
-For refactor pipeline plans under `docs/v1/implementation-slices/refactor/`, use the refactor template contract instead. Return `BLOCKED: refactor plan missing debt contract` if the plan lacks Pipeline Contract, Coding Read Set, Existing Behavior Contract, Required Retired Surfaces, Allowed New Surface Budget, Implementation Steps, Verification Before Review Handoff, or Final Coding Agent Handoff.
-
 Return `BLOCKED: repo map missing` only for normal implementation plans that do not show repo-map searches.
-
-For refactor pipeline plans, do not require a full repo-map search table in the plan. Require construction evidence instead: concrete `Required Retired Surfaces`, replacement proof, allowed new surface budget, implementation steps, and deletion proof commands.
 
 ## Coding Workflow
 

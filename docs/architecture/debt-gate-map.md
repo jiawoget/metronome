@@ -14,7 +14,6 @@ Agents must search beyond the local file they intend to edit:
 - `scripts/**` when tooling or test helpers are touched
 - `package.json` and lockfiles when package scripts, dependencies, or tool versions are touched
 - `docs/v1/implementation-slices/plans/**` for active slice plans
-- `docs/refactor/src-debt-forensics-2026-07-04/99-remediation-plan.md` for current debt acceptance gates
 
 Required search families:
 
