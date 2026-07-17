@@ -1,4 +1,4 @@
-import xoReact from 'eslint-config-xo-react';
+import eslintReact from '@eslint-react/eslint-plugin';
 
 /** @type {import('xo').FlatXoConfig} */
 const xoConfig = [
@@ -6,6 +6,7 @@ const xoConfig = [
 	{
 		name: 'metronome/global-ignores',
 		ignores: [
+			'.audit/**',
 			'.next/**',
 			'.tools/**',
 			'coverage/**',
@@ -19,8 +20,24 @@ const xoConfig = [
 		],
 	},
 
-	// React support. XO handles TypeScript by default; this adds React/JSX rules.
-	...xoReact(),
+	// React 19 support using rules that natively target ESLint 10.
+	{
+		...eslintReact.configs['recommended-typescript'],
+		name: 'metronome/react',
+		files: [
+			'src/**/*.{jsx,tsx}',
+			'tests/**/*.{jsx,tsx}',
+		],
+		rules: {
+			...eslintReact.configs['recommended-typescript'].rules,
+			// XO treats recommended React findings as warnings; this gate accounts
+			// for the existing occurrences and rejects every new occurrence.
+			'@eslint-react/naming-convention-id-name': 'error',
+			'@eslint-react/no-array-index-key': 'error',
+			'@eslint-react/no-unnecessary-use-prefix': 'error',
+			'@eslint-react/use-state': 'error',
+		},
+	},
 
 	{
 		name: 'metronome/source',
@@ -33,15 +50,25 @@ const xoConfig = [
 		semicolon: true,
 		prettier: 'compat',
 		rules: {
-			// Existing project style uses double quotes. Avoid quote-only churn.
-			quotes: ['error', 'double', {avoidEscape: true}],
-
-			// TypeScript/React project conventions.
-			'react/prop-types': 'off',
-			'react/react-in-jsx-scope': 'off',
-
 			// The project intentionally uses null in domain/result types.
 			'unicorn/no-null': 'off',
+			'@typescript-eslint/no-restricted-types': ['error', {
+				types: {
+					object: {
+						message: 'The `object` type is hard to use. Use `Record<string, unknown>` instead.',
+						fixWith: 'Record<string, unknown>',
+					},
+					Buffer: {
+						message: 'Use Uint8Array instead of the Node.js-specific Buffer type.',
+						suggest: ['Uint8Array'],
+					},
+					'[]': 'The empty array type only permits empty arrays. Use SomeType[] instead.',
+					'[[]]': 'This only permits one empty array. Use SomeType[][] instead.',
+					'[[[]]]': 'Use SomeType[][][] instead.',
+					'[[[[]]]]': 'Do not use deeply nested empty tuple types.',
+					'[[[[[]]]]]': 'Do not use deeply nested empty tuple types.',
+				},
+			}],
 
 			// Let TypeScript/Next resolver own path alias correctness.
 			'import-x/no-unresolved': 'off',
@@ -50,23 +77,20 @@ const xoConfig = [
 			'unicorn/prevent-abbreviations': 'off',
 
 			// General guardrails that overlap lightly with CodeScene.
-			complexity: ['warn', 14],
-			'max-depth': ['warn', 4],
-			'max-lines-per-function': ['warn', {
+			complexity: ['error', 14],
+			'max-depth': ['error', 4],
+			'max-lines': ['error', {
+				max: 1500,
+				skipComments: true,
+			}],
+			'max-lines-per-function': ['error', {
 				max: 90,
 				skipBlankLines: true,
 				skipComments: true,
 				IIFEs: true,
 			}],
-		},
-	},
-
-	{
-		name: 'metronome/scripts',
-		files: ['scripts/**/*.{js,mjs,ts}'],
-		rules: {
-			'react/forward-ref-uses-ref': 'off',
-			'react/prop-types': 'off',
+			'max-nested-callbacks': ['error', 4],
+			'max-params': ['error', {max: 4}],
 		},
 	},
 
@@ -174,8 +198,22 @@ const xoConfig = [
 			'tests/**/*.{ts,tsx}',
 		],
 		rules: {
+			'max-lines': ['error', 1500],
 			'max-lines-per-function': 'off',
 			'max-depth': 'off',
+		},
+	},
+
+	{
+		name: 'metronome/repo-style-final',
+		files: [
+			'src/**/*.{ts,tsx}',
+			'tests/**/*.{ts,tsx}',
+			'scripts/**/*.{js,mjs,ts}',
+		],
+		rules: {
+			// Keep this after prettier: compat, which otherwise restores single quotes.
+			'@stylistic/quotes': ['error', 'double', {avoidEscape: true}],
 		},
 	},
 ];

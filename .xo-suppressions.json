@@ -1,0 +1,4689 @@
+{
+  "next-env.d.ts": {
+    "@typescript-eslint/triple-slash-reference": {
+      "count": 2
+    }
+  },
+  "scripts/run-codescene-debt-changed.mjs": {
+    "@stylistic/quotes": {
+      "count": 36
+    }
+  },
+  "scripts/run-metronome-semgrep-changed.mjs": {
+    "@stylistic/quotes": {
+      "count": 25
+    }
+  },
+  "scripts/run-next-build-stable-env.mjs": {
+    "n/prefer-global/process": {
+      "count": 11
+    },
+    "unicorn/no-process-exit": {
+      "count": 1
+    }
+  },
+  "scripts/run-next-dev-stable-env.mjs": {
+    "n/prefer-global/process": {
+      "count": 6
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/prefer-ternary": {
+      "count": 1
+    }
+  },
+  "scripts/run-next-e2e-server.mjs": {
+    "n/prefer-global/process": {
+      "count": 17
+    },
+    "no-void": {
+      "count": 2
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/no-process-exit": {
+      "count": 6
+    }
+  },
+  "scripts/run-playwright-stable-env.mjs": {
+    "n/prefer-global/process": {
+      "count": 12
+    },
+    "no-await-in-loop": {
+      "count": 2
+    },
+    "no-promise-executor-return": {
+      "count": 2
+    },
+    "no-void": {
+      "count": 2
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/no-process-exit": {
+      "count": 3
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    },
+    "unicorn/relative-url-style": {
+      "count": 1
+    }
+  },
+  "scripts/run-xo-changed.mjs": {
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    }
+  },
+  "scripts/stabilize-next-env.mjs": {
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/no-top-level-side-effects": {
+      "count": 1
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 1
+    }
+  },
+  "scripts/validate-metronome-gates.mjs": {
+    "@stylistic/quotes": {
+      "count": 129
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/prefer-continue": {
+      "count": 2
+    }
+  },
+  "scripts/validate-pr-debt-contract.mjs": {
+    "@stylistic/quotes": {
+      "count": 190
+    }
+  },
+  "scripts/validate-pr-debt-contract.selftest.mjs": {
+    "@stylistic/quotes": {
+      "count": 213
+    }
+  },
+  "src/app/layout.tsx": {
+    "import-x/order": {
+      "count": 3
+    }
+  },
+  "src/app/recordings/page.tsx": {
+    "unicorn/name-replacements": {
+      "count": 1
+    }
+  },
+  "src/app/sheet-practice/[sheetId]/page.tsx": {
+    "unicorn/filename-case": {
+      "count": 1
+    }
+  },
+  "src/app/sheet-practice/page.tsx": {
+    "unicorn/name-replacements": {
+      "count": 1
+    }
+  },
+  "src/components/app-shell/app-shell.tsx": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 6
+    },
+    "@typescript-eslint/no-deprecated": {
+      "count": 1
+    },
+    "@typescript-eslint/no-dynamic-delete": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 5
+    },
+    "func-name-matching": {
+      "count": 2
+    },
+    "func-names": {
+      "count": 2
+    },
+    "import-x/no-duplicates": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "prefer-destructuring": {
+      "count": 3
+    },
+    "unicorn/consistent-conditional-object-spread": {
+      "count": 3
+    },
+    "unicorn/prefer-global-this": {
+      "count": 38
+    }
+  },
+  "src/components/app-shell/command-palette-commands.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/prefer-logical-operator-over-ternary": {
+      "count": 1
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 1
+    },
+    "unicorn/switch-case-braces": {
+      "count": 1
+    }
+  },
+  "src/components/app-shell/command-palette.tsx": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "@typescript-eslint/switch-exhaustiveness-check": {
+      "count": 1
+    },
+    "import-x/no-duplicates": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "regexp/prefer-w": {
+      "count": 1
+    },
+    "regexp/sort-character-class-elements": {
+      "count": 3
+    },
+    "regexp/use-ignore-case": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/prefer-at": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 2
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 1
+    },
+    "unicorn/switch-case-braces": {
+      "count": 5
+    }
+  },
+  "src/components/home/continue-practice-navigation.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 3
+    },
+    "@typescript-eslint/switch-exhaustiveness-check": {
+      "count": 1
+    },
+    "unicorn/switch-case-braces": {
+      "count": 2
+    }
+  },
+  "src/components/home/home-dashboard.tsx": {
+    "@eslint-react/no-array-index-key": {
+      "count": 1
+    },
+    "@eslint-react/use-state": {
+      "count": 1
+    },
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 4
+    },
+    "@typescript-eslint/no-deprecated": {
+      "count": 1
+    },
+    "@typescript-eslint/no-restricted-types": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 11
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 1
+    },
+    "@typescript-eslint/switch-exhaustiveness-check": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 3
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 3
+    },
+    "no-void": {
+      "count": 1
+    },
+    "prefer-destructuring": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/no-negated-condition": {
+      "count": 2
+    },
+    "unicorn/no-non-function-verb-prefix": {
+      "count": 2
+    },
+    "unicorn/no-unnecessary-global-this": {
+      "count": 1
+    },
+    "unicorn/switch-case-braces": {
+      "count": 20
+    }
+  },
+  "src/components/home/session-comparison-panel.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/preflight/preflight-shell.tsx": {
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/components/quick-metronome/latest-quick-recording.tsx": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 3
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 1
+    },
+    "arrow-body-style": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    },
+    "unicorn/prefer-global-this": {
+      "count": 2
+    }
+  },
+  "src/components/quick-metronome/quick-metronome-experience.tsx": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 2
+    },
+    "arrow-body-style": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-void": {
+      "count": 1
+    },
+    "unicorn/no-negated-condition": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    },
+    "unicorn/prefer-promise-try": {
+      "count": 1
+    }
+  },
+  "src/components/recordings-review/recording-artifact-review.tsx": {
+    "@eslint-react/no-array-index-key": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/no-duplicates": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "unicorn/no-negated-condition": {
+      "count": 1
+    }
+  },
+  "src/components/recordings-review/recording-comparison-panel.tsx": {
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 4
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 6
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    }
+  },
+  "src/components/recordings-review/recordings-review-experience.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 22
+    },
+    "@typescript-eslint/no-deprecated": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 4
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 21
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 3
+    },
+    "import-x/no-duplicates": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 5
+    },
+    "no-implicit-coercion": {
+      "count": 7
+    },
+    "no-restricted-syntax": {
+      "count": 6
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 4
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    }
+  },
+  "src/components/recordings-review/use-recordings-review-controller.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 4
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 3
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 3
+    },
+    "unicorn/prefer-global-this": {
+      "count": 2
+    },
+    "unicorn/prefer-promise-try": {
+      "count": 1
+    }
+  },
+  "src/components/recordings-review/waveform-comparison-panel.tsx": {
+    "@eslint-react/no-array-index-key": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "src/components/settings/settings-experience.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-void": {
+      "count": 7
+    }
+  },
+  "src/components/sheet-library/sheet-library-experience.tsx": {
+    "@eslint-react/no-array-index-key": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 14
+    },
+    "@typescript-eslint/no-dynamic-delete": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 9
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "no-void": {
+      "count": 7
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/no-negated-array-predicate": {
+      "count": 1
+    },
+    "unicorn/no-negated-condition": {
+      "count": 1
+    },
+    "unicorn/prefer-includes-over-repeated-comparisons": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/controls/bar-count-in-control.tsx": {
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 2
+    },
+    "unicorn/no-negated-condition": {
+      "count": 1
+    },
+    "unicorn/prefer-logical-operator-over-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/controls/labeled-select.tsx": {
+    "@typescript-eslint/array-type": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/controls/metronome-settings-panel.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 5
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/prefer-early-return": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/controls/practice-status-panel.tsx": {
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/controls/segment-tempo-apply-control.tsx": {
+    "unicorn/switch-case-braces": {
+      "count": 4
+    }
+  },
+  "src/components/sheet-practice/controls/sheet-metronome-preset-control.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 3
+    },
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 1
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 5
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-void": {
+      "count": 4
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 2
+    }
+  },
+  "src/components/sheet-practice/controls/sheet-metronome-preset-row.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/controls/sheet-metronome-preset-save-form.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 3
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/controls/sheet-practice-controls.tsx": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 4
+    },
+    "@typescript-eslint/no-useless-default-assignment": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 3
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 10
+    },
+    "@typescript-eslint/use-unknown-in-catch-callback-variable": {
+      "count": 2
+    },
+    "arrow-body-style": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 3
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    },
+    "no-void": {
+      "count": 3
+    },
+    "prefer-destructuring": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 6
+    },
+    "unicorn/no-declarations-before-early-exit": {
+      "count": 1
+    },
+    "unicorn/no-negated-condition": {
+      "count": 1
+    },
+    "unicorn/prefer-early-return": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 8
+    },
+    "unicorn/prefer-promise-try": {
+      "count": 1
+    },
+    "unicorn/switch-case-braces": {
+      "count": 9
+    }
+  },
+  "src/components/sheet-practice/controls/transport-actions-panel.tsx": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/markers/error-marker-panel.tsx": {
+    "@eslint-react/no-unnecessary-use-prefix": {
+      "count": 1
+    },
+    "@eslint-react/set-state-in-render": {
+      "count": 3
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 3
+    },
+    "@typescript-eslint/no-deprecated": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 4
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/no-declarations-before-early-exit": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 2
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 2
+    }
+  },
+  "src/components/sheet-practice/measure-grid/measure-grid-calibration-panel.tsx": {
+    "@eslint-react/naming-convention-id-name": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 4
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 8
+    },
+    "complexity": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-void": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/no-negated-condition": {
+      "count": 2
+    },
+    "unicorn/prefer-number-is-safe-integer": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/recording/latest-sheet-recording.tsx": {
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/reference/reference-panel.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 7
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 10
+    },
+    "complexity": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
+    },
+    "no-void": {
+      "count": 5
+    },
+    "prefer-destructuring": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/no-declarations-before-early-exit": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 2
+    },
+    "unicorn/prefer-global-this": {
+      "count": 7
+    },
+    "unicorn/prefer-includes-over-repeated-comparisons": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/segments/practice-segment-selector-panel.tsx": {
+    "@eslint-react/naming-convention-id-name": {
+      "count": 1
+    },
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 7
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 15
+    },
+    "complexity": {
+      "count": 4
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "no-void": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 2
+    },
+    "unicorn/no-negated-array-predicate": {
+      "count": 1
+    },
+    "unicorn/no-negated-condition": {
+      "count": 1
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 2
+    },
+    "unicorn/prefer-logical-operator-over-ternary": {
+      "count": 1
+    },
+    "unicorn/switch-case-braces": {
+      "count": 4
+    }
+  },
+  "src/components/sheet-practice/viewer/pdf-sheet-renderer.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/name-replacements": {
+      "count": 1
+    },
+    "unicorn/prefer-url-href": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/viewer/sheet-page-jump.tsx": {
+    "@typescript-eslint/consistent-type-imports": {
+      "count": 1
+    },
+    "@typescript-eslint/no-deprecated": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 3
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/viewer/sheet-page-thumbnails.tsx": {
+    "@next/next/no-img-element": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    }
+  },
+  "src/components/sheet-practice/viewer/sheet-viewer-experience.tsx": {
+    "@next/next/no-img-element": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 12
+    },
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 1
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/no-duplicates": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 2
+    },
+    "unicorn/name-replacements": {
+      "count": 1
+    },
+    "unicorn/no-declarations-before-early-exit": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 1
+    }
+  },
+  "src/components/ui/button.tsx": {
+    "@typescript-eslint/consistent-type-definitions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/components/ui/card.tsx": {
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/domain/music/duration.ts": {
+    "unicorn/switch-case-braces": {
+      "count": 3
+    }
+  },
+  "src/domain/music/time-signature.ts": {
+    "unicorn/prefer-number-is-safe-integer": {
+      "count": 2
+    }
+  },
+  "src/domain/practice/bar-count-in.ts": {
+    "@stylistic/no-mixed-operators": {
+      "count": 2
+    },
+    "@typescript-eslint/no-deprecated": {
+      "count": 1
+    },
+    "@typescript-eslint/no-restricted-types": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/domain/practice/continue-practice.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 16
+    },
+    "complexity": {
+      "count": 1
+    },
+    "regexp/no-unused-capturing-group": {
+      "count": 2
+    },
+    "regexp/prefer-named-capture-group": {
+      "count": 2
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-for-each": {
+      "count": 1
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    },
+    "unicorn/switch-case-braces": {
+      "count": 4
+    }
+  },
+  "src/domain/practice/format.ts": {
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    }
+  },
+  "src/domain/practice/index.ts": {
+    "@typescript-eslint/consistent-type-exports": {
+      "count": 1
+    }
+  },
+  "src/domain/practice/measure-grid/index.ts": {
+    "@stylistic/no-mixed-operators": {
+      "count": 2
+    },
+    "@typescript-eslint/no-deprecated": {
+      "count": 4
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/domain/practice/recent-activity.ts": {
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 11
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-declarations-before-early-exit": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 2
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    },
+    "unicorn/switch-case-braces": {
+      "count": 5
+    }
+  },
+  "src/domain/practice/rules.ts": {
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 23
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 2
+    },
+    "no-implicit-coercion": {
+      "count": 1
+    },
+    "regexp/prefer-named-capture-group": {
+      "count": 3
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 2
+    },
+    "unicorn/no-array-reduce": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    },
+    "unicorn/no-declarations-before-early-exit": {
+      "count": 1
+    },
+    "unicorn/prefer-number-is-safe-integer": {
+      "count": 4
+    },
+    "unicorn/prefer-spread": {
+      "count": 2
+    }
+  },
+  "src/domain/practice/segments/index.ts": {
+    "@typescript-eslint/no-deprecated": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/domain/practice/session-comparison.ts": {
+    "@typescript-eslint/no-shadow": {
+      "count": 9
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 19
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 2
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    },
+    "unicorn/prefer-includes-over-repeated-comparisons": {
+      "count": 1
+    }
+  },
+  "src/domain/practice/session-history-groups.ts": {
+    "@typescript-eslint/naming-convention": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 16
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    }
+  },
+  "src/domain/practice/sheet-metronome-presets.ts": {
+    "@typescript-eslint/no-deprecated": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/domain/practice/validation.ts": {
+    "@typescript-eslint/no-deprecated": {
+      "count": 9
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/domain/reference/index.ts": {
+    "@typescript-eslint/consistent-type-exports": {
+      "count": 1
+    }
+  },
+  "src/domain/reference/validation.ts": {
+    "@typescript-eslint/no-deprecated": {
+      "count": 9
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 3
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 4
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 2
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/consistent-existence-index-check": {
+      "count": 1
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 1
+    }
+  },
+  "src/domain/settings/types.ts": {
+    "unicorn/prefer-export-from": {
+      "count": 2
+    }
+  },
+  "src/domain/settings/validation.ts": {
+    "@typescript-eslint/no-deprecated": {
+      "count": 3
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/prefer-includes-over-repeated-comparisons": {
+      "count": 1
+    }
+  },
+  "src/domain/sheet/filters.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "src/domain/sheet/routes.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/name-replacements": {
+      "count": 4
+    }
+  },
+  "src/domain/sheet/validation.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 4
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "no-control-regex": {
+      "count": 1
+    },
+    "regexp/no-control-character": {
+      "count": 2
+    },
+    "regexp/prefer-character-class": {
+      "count": 1
+    },
+    "regexp/prefer-d": {
+      "count": 1
+    },
+    "regexp/sort-character-class-elements": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 3
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 1
+    },
+    "unicorn/prefer-unicode-code-point-escapes": {
+      "count": 1
+    }
+  },
+  "src/hooks/use-command-palette-continue-targets.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "unicorn/prefer-promise-try": {
+      "count": 1
+    }
+  },
+  "src/hooks/use-practice-session-dashboard.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 10
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/audio/browser-audio-decode-adapter.ts": {
+    "@typescript-eslint/consistent-type-definitions": {
+      "count": 1
+    },
+    "@typescript-eslint/naming-convention": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 2
+    }
+  },
+  "src/infrastructure/audio/browser-recording-capture.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 5
+    },
+    "no-restricted-syntax": {
+      "count": 2
+    },
+    "unicorn/no-for-each": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/audio/tone-metronome-adapter.ts": {
+    "@typescript-eslint/naming-convention": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "object-shorthand": {
+      "count": 15
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 2
+    },
+    "unicorn/no-for-each": {
+      "count": 2
+    },
+    "unicorn/prefer-spread": {
+      "count": 2
+    }
+  },
+  "src/infrastructure/bilibili/deterministic-bilibili-search-adapter.ts": {
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/bilibili/fetch-bilibili-search-adapter.ts": {
+    "@typescript-eslint/naming-convention": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 3
+    },
+    "regexp/no-super-linear-move": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 2
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 2
+    },
+    "unicorn/prefer-url-href": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/db/browser-measure-grid-service.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/consistent-conditional-object-spread": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/db/browser-practice-segment-service.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 4
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/consistent-conditional-object-spread": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 2
+    }
+  },
+  "src/infrastructure/db/browser-practice-session-service.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "unicorn/prefer-includes-over-repeated-comparisons": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/db/browser-settings-local-data-service.ts": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "src/infrastructure/db/browser-settings-service.ts": {
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/db/browser-sheet-metronome-preset-service.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 4
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/consistent-conditional-object-spread": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/db/global-practice-session-repository.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 4
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 5
+    },
+    "complexity": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
+    },
+    "prefer-destructuring": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/db/practice-goal-repository.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/consistent-conditional-object-spread": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    },
+    "unicorn/no-typeof-undefined": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 5
+    }
+  },
+  "src/infrastructure/db/practice-session-repository.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/consistent-conditional-object-spread": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 2
+    },
+    "unicorn/prefer-global-this": {
+      "count": 5
+    }
+  },
+  "src/infrastructure/db/recording-artifact-repository.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 3
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/explicit-length-check": {
+      "count": 1
+    },
+    "unicorn/no-declarations-before-early-exit": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/db/recording-history-metadata-repository.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "no-implicit-coercion": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/files/sheet-import-adapter.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 6
+    },
+    "no-implicit-coercion": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 2
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    },
+    "unicorn/prefer-url-href": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/files/sheet-library-repository.ts": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/reference/browser-reference-service.ts": {
+    "@typescript-eslint/consistent-type-definitions": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/reference/local-audio-inspection-adapter.ts": {
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/reference/local-reference-audio-player.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/consistent-class-member-order": {
+      "count": 1
+    },
+    "unicorn/prefer-early-return": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 3
+    }
+  },
+  "src/infrastructure/reference/reference-repository.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 5
+    },
+    "unicorn/prefer-minimal-ternary": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/sheet-viewer/browser-sheet-viewer-adapter.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 5
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 5
+    },
+    "no-await-in-loop": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 2
+    },
+    "unicorn/prefer-url-href": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/sheet-viewer/browser-sheet-viewer-service.ts": {
+    "n/prefer-global/process": {
+      "count": 1
+    },
+    "unicorn/no-global-object-property-assignment": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 1
+    }
+  },
+  "src/lib/navigation.ts": {
+    "import-x/no-duplicates": {
+      "count": 2
+    }
+  },
+  "src/lib/quick-metronome/control.ts": {
+    "@stylistic/no-mixed-operators": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    },
+    "unicorn/prefer-number-coercion": {
+      "count": 1
+    },
+    "unicorn/switch-case-braces": {
+      "count": 4
+    }
+  },
+  "src/lib/quick-metronome/demo-recording.ts": {
+    "@stylistic/no-mixed-operators": {
+      "count": 2
+    },
+    "no-bitwise": {
+      "count": 11
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    },
+    "unicorn/prefer-code-point": {
+      "count": 1
+    }
+  },
+  "src/lib/quick-metronome/pre-start-countdown.ts": {
+    "@stylistic/no-mixed-operators": {
+      "count": 2
+    },
+    "unicorn/prefer-number-is-safe-integer": {
+      "count": 1
+    }
+  },
+  "src/lib/quick-metronome/recording-controller.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "@typescript-eslint/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "preserve-caught-error": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    }
+  },
+  "src/lib/quick-metronome/use-bpm-draft.ts": {
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/lib/quick-metronome/use-metronome-settings-state.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "src/lib/quick-metronome/use-metronome-transport.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "arrow-body-style": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 5
+    }
+  },
+  "src/lib/recording-navigation-guard.ts": {
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 2
+    }
+  },
+  "src/lib/recordings-review/artifact-details.ts": {
+    "no-implicit-coercion": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/no-negated-array-predicate": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    }
+  },
+  "src/lib/recordings-review/artifact-review-controller.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "@typescript-eslint/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "prefer-destructuring": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 2
+    },
+    "unicorn/prefer-early-return": {
+      "count": 2
+    },
+    "unicorn/prefer-global-this": {
+      "count": 2
+    },
+    "unicorn/prefer-promise-try": {
+      "count": 1
+    }
+  },
+  "src/lib/recordings-review/artifact-storage.ts": {
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/no-non-function-verb-prefix": {
+      "count": 1
+    },
+    "unicorn/prefer-set-methods": {
+      "count": 1
+    }
+  },
+  "src/lib/recordings-review/audio-export.ts": {
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 3
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 8
+    },
+    "complexity": {
+      "count": 1
+    },
+    "no-control-regex": {
+      "count": 1
+    },
+    "regexp/no-control-character": {
+      "count": 2
+    },
+    "regexp/no-super-linear-move": {
+      "count": 3
+    },
+    "regexp/sort-character-class-elements": {
+      "count": 17
+    },
+    "require-unicode-regexp": {
+      "count": 7
+    },
+    "unicorn/escape-case": {
+      "count": 2
+    },
+    "unicorn/explicit-length-check": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/prefer-includes-over-repeated-comparisons": {
+      "count": 1
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 7
+    },
+    "unicorn/prefer-unicode-code-point-escapes": {
+      "count": 2
+    }
+  },
+  "src/lib/recordings-review/audio-mime.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/prefer-split-limit": {
+      "count": 1
+    }
+  },
+  "src/lib/recordings-review/browser-audio-download-adapter.ts": {
+    "unicorn/prefer-dom-node-append": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 1
+    }
+  },
+  "src/lib/recordings-review/error-markers.ts": {
+    "@typescript-eslint/no-deprecated": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-type-error": {
+      "count": 1
+    }
+  },
+  "src/lib/recordings-review/history.ts": {
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 6
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/first": {
+      "count": 2
+    },
+    "import-x/newline-after-import": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-logical-operator-over-ternary": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    }
+  },
+  "src/lib/recordings-review/recording-history-operations.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/consistent-conditional-object-spread": {
+      "count": 1
+    },
+    "unicorn/prefer-simplified-conditions": {
+      "count": 1
+    }
+  },
+  "src/lib/recordings-review/recording-history-snapshot.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/no-non-function-verb-prefix": {
+      "count": 1
+    },
+    "unicorn/prefer-set-methods": {
+      "count": 1
+    }
+  },
+  "src/lib/recordings-review/recording-organization-metadata.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 12
+    },
+    "no-control-regex": {
+      "count": 1
+    },
+    "regexp/no-control-character": {
+      "count": 2
+    },
+    "regexp/sort-character-class-elements": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 2
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 4
+    },
+    "unicorn/escape-case": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-declarations-before-early-exit": {
+      "count": 2
+    },
+    "unicorn/no-unnecessary-boolean-comparison": {
+      "count": 2
+    },
+    "unicorn/prefer-array-from-map": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 2
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 1
+    },
+    "unicorn/prefer-type-error": {
+      "count": 1
+    },
+    "unicorn/prefer-unicode-code-point-escapes": {
+      "count": 3
+    }
+  },
+  "src/lib/recordings-review/repository.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 11
+    },
+    "complexity": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
+    },
+    "prefer-object-has-own": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 2
+    },
+    "unicorn/consistent-conditional-object-spread": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    },
+    "unicorn/no-declarations-before-early-exit": {
+      "count": 1
+    },
+    "unicorn/no-negated-array-predicate": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 9
+    }
+  },
+  "src/lib/recordings-review/take-groups.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 9
+    },
+    "prefer-destructuring": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    }
+  },
+  "src/lib/recordings-review/take-history-summary.ts": {
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "prefer-destructuring": {
+      "count": 1
+    }
+  },
+  "src/lib/recordings-review/take-selection-metadata.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 17
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-array-from-map": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 2
+    }
+  },
+  "src/lib/recordings-review/waveform-comparison-sources.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "prefer-destructuring": {
+      "count": 3
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/lib/recordings-review/wavesurfer-adapter.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 6
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "prefer-destructuring": {
+      "count": 1
+    },
+    "unicorn/consistent-class-member-order": {
+      "count": 1
+    },
+    "unicorn/explicit-length-check": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 4
+    },
+    "unicorn/prefer-global-this": {
+      "count": 3
+    }
+  },
+  "src/lib/sheet-practice/recording-service.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "preserve-caught-error": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-declarations-before-early-exit": {
+      "count": 2
+    }
+  },
+  "src/services/audio-analysis/decode.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    }
+  },
+  "src/services/audio-analysis/silence.ts": {
+    "@typescript-eslint/prefer-for-of": {
+      "count": 1
+    },
+    "unicorn/no-for-loop": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 2
+    }
+  },
+  "src/services/measure-grid/index.ts": {
+    "@typescript-eslint/consistent-type-exports": {
+      "count": 1
+    }
+  },
+  "src/services/metronome/browser-countdown-executor.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 3
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 2
+    },
+    "unicorn/consistent-class-member-order": {
+      "count": 1
+    },
+    "unicorn/no-for-each": {
+      "count": 1
+    },
+    "unicorn/no-unnecessary-splice": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    }
+  },
+  "src/services/metronome/browser-metronome-service.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/consistent-class-member-order": {
+      "count": 1
+    },
+    "unicorn/prefer-else-if": {
+      "count": 1
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 3
+    },
+    "unicorn/prefer-global-this": {
+      "count": 1
+    },
+    "unicorn/switch-case-braces": {
+      "count": 8
+    }
+  },
+  "src/services/metronome/browser.ts": {
+    "unicorn/prefer-export-from": {
+      "count": 2
+    }
+  },
+  "src/services/metronome/index.ts": {
+    "import-x/newline-after-import": {
+      "count": 1
+    }
+  },
+  "src/services/practice-goals/browser-service.ts": {
+    "unicorn/prefer-export-from": {
+      "count": 1
+    }
+  },
+  "src/services/practice-goals/index.ts": {
+    "@typescript-eslint/consistent-type-exports": {
+      "count": 1
+    }
+  },
+  "src/services/practice-goals/service.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 4
+    }
+  },
+  "src/services/practice-segments/index.ts": {
+    "@typescript-eslint/consistent-type-exports": {
+      "count": 1
+    }
+  },
+  "src/services/practice-segments/service.ts": {
+    "unicorn/prefer-array-some": {
+      "count": 1
+    }
+  },
+  "src/services/practice-session/index.ts": {
+    "@typescript-eslint/consistent-type-exports": {
+      "count": 1
+    }
+  },
+  "src/services/practice-session/service.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 6
+    },
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 3
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 5
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 33
+    },
+    "@typescript-eslint/switch-exhaustiveness-check": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
+    },
+    "unicorn/consistent-conditional-object-spread": {
+      "count": 4
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    },
+    "unicorn/prefer-array-from-map": {
+      "count": 2
+    },
+    "unicorn/prefer-direct-iteration": {
+      "count": 2
+    },
+    "unicorn/prefer-spread": {
+      "count": 4
+    },
+    "unicorn/switch-case-braces": {
+      "count": 5
+    }
+  },
+  "src/services/recording/browser.ts": {
+    "unicorn/prefer-export-from": {
+      "count": 1
+    }
+  },
+  "src/services/recordings-review/index.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 2
+    }
+  },
+  "src/services/reference/browser.ts": {
+    "unicorn/prefer-export-from": {
+      "count": 1
+    }
+  },
+  "src/services/reference/index.ts": {
+    "@typescript-eslint/consistent-type-exports": {
+      "count": 1
+    }
+  },
+  "src/services/reference/service.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 4
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 4
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/services/settings/index.ts": {
+    "@typescript-eslint/consistent-type-exports": {
+      "count": 1
+    }
+  },
+  "src/services/sheet-library/index.ts": {
+    "@typescript-eslint/consistent-type-exports": {
+      "count": 1
+    }
+  },
+  "src/services/sheet-library/service.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 6
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "src/services/sheet-library/types.ts": {
+    "@typescript-eslint/no-restricted-types": {
+      "count": 1
+    }
+  },
+  "src/services/sheet-metronome-presets/index.ts": {
+    "@typescript-eslint/consistent-type-exports": {
+      "count": 1
+    }
+  },
+  "src/services/sheet-metronome-presets/service.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-unnecessary-global-this": {
+      "count": 1
+    },
+    "unicorn/prefer-array-some": {
+      "count": 1
+    }
+  },
+  "src/services/sheet-viewer/browser-hooks.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "no-restricted-imports": {
+      "count": 1
+    },
+    "unicorn/prefer-early-return": {
+      "count": 1
+    },
+    "unicorn/prefer-type-literal-last": {
+      "count": 1
+    }
+  },
+  "src/services/sheet-viewer/index.ts": {
+    "@typescript-eslint/consistent-type-exports": {
+      "count": 1
+    }
+  },
+  "src/services/sheet-viewer/manual-page-turn-timer.ts": {
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    }
+  },
+  "src/services/sheet-viewer/service.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/no-for-each": {
+      "count": 2
+    }
+  },
+  "src/services/sheet-viewer/thumbnails.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "src/services/sheet-viewer/types.ts": {
+    "unicorn/prefer-type-literal-last": {
+      "count": 1
+    }
+  },
+  "src/stores/sheet-practice-recording-workflow-store.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 11
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/prefer-includes-over-repeated-comparisons": {
+      "count": 1
+    }
+  },
+  "tests/e2e/app-shell-home.spec.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 9
+    },
+    "@typescript-eslint/naming-convention": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 5
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 10
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 7
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "n/prefer-global/process": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 6
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "regexp/letter-case": {
+      "count": 16
+    },
+    "require-unicode-regexp": {
+      "count": 54
+    },
+    "unicorn/isolated-functions": {
+      "count": 9
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 10
+    },
+    "unicorn/prefer-global-this": {
+      "count": 3
+    }
+  },
+  "tests/e2e/fixtures/audio.ts": {
+    "@stylistic/no-mixed-operators": {
+      "count": 2
+    },
+    "@typescript-eslint/naming-convention": {
+      "count": 2
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 5
+    },
+    "@typescript-eslint/prefer-for-of": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 8
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "unicorn/isolated-functions": {
+      "count": 4
+    },
+    "unicorn/no-for-loop": {
+      "count": 2
+    },
+    "unicorn/no-non-function-verb-prefix": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 5
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 2
+    },
+    "unicorn/prefer-code-point": {
+      "count": 2
+    },
+    "unicorn/prefer-global-this": {
+      "count": 5
+    }
+  },
+  "tests/e2e/fixtures/recordings-review.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/naming-convention": {
+      "count": 12
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 2
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/isolated-functions": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 2
+    }
+  },
+  "tests/e2e/fixtures/sheets.ts": {
+    "import-x/order": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    }
+  },
+  "tests/e2e/fixtures/storage.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "@typescript-eslint/naming-convention": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 6
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unsafe-return": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 3
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 1
+    },
+    "unicorn/isolated-functions": {
+      "count": 7
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 3
+    },
+    "unicorn/prefer-global-this": {
+      "count": 3
+    }
+  },
+  "tests/e2e/measure-grid-calibration.spec.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 2
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 2
+    },
+    "unicorn/isolated-functions": {
+      "count": 4
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 2
+    }
+  },
+  "tests/e2e/practice-segment-selector.spec.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 4
+    },
+    "regexp/letter-case": {
+      "count": 37
+    },
+    "require-unicode-regexp": {
+      "count": 12
+    },
+    "unicorn/isolated-functions": {
+      "count": 5
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 2
+    }
+  },
+  "tests/e2e/practice-session.spec.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/naming-convention": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 7
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 5
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 3
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/isolated-functions": {
+      "count": 7
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 5
+    },
+    "unicorn/prefer-global-this": {
+      "count": 5
+    }
+  },
+  "tests/e2e/quick-metronome.spec.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/naming-convention": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 16
+    },
+    "@typescript-eslint/no-unsafe-return": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-for-of": {
+      "count": 1
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 5
+    },
+    "func-names": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "regexp/letter-case": {
+      "count": 8
+    },
+    "regexp/no-useless-range": {
+      "count": 1
+    },
+    "regexp/prefer-d": {
+      "count": 2
+    },
+    "require-unicode-regexp": {
+      "count": 13
+    },
+    "unicorn/isolated-functions": {
+      "count": 7
+    },
+    "unicorn/no-for-loop": {
+      "count": 1
+    },
+    "unicorn/no-useless-promise-resolve-reject": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 4
+    },
+    "unicorn/prefer-global-this": {
+      "count": 17
+    }
+  },
+  "tests/e2e/recordings-review.spec.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/array-type": {
+      "count": 6
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 6
+    },
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 44
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 9
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 44
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 2
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 5
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 8
+    },
+    "regexp/letter-case": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 13
+    },
+    "unicorn/dom-node-dataset": {
+      "count": 2
+    },
+    "unicorn/isolated-functions": {
+      "count": 9
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 5
+    },
+    "unicorn/no-non-function-verb-prefix": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 9
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 2
+    },
+    "unicorn/prefer-array-from-map": {
+      "count": 2
+    },
+    "unicorn/prefer-global-this": {
+      "count": 16
+    },
+    "unicorn/prefer-spread": {
+      "count": 2
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 1
+    }
+  },
+  "tests/e2e/reference-system.spec.ts": {
+    "@stylistic/no-mixed-operators": {
+      "count": 2
+    },
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 2
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "n/prefer-global/buffer": {
+      "count": 1
+    },
+    "regexp/letter-case": {
+      "count": 6
+    },
+    "require-unicode-regexp": {
+      "count": 5
+    },
+    "unicorn/isolated-functions": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 2
+    },
+    "unicorn/prefer-global-this": {
+      "count": 3
+    },
+    "unicorn/prefer-native-coercion-functions": {
+      "count": 2
+    }
+  },
+  "tests/e2e/settings-local-data.spec.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 6
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 6
+    },
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 6
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 7
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 12
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 8
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
+    },
+    "unicorn/isolated-functions": {
+      "count": 6
+    },
+    "unicorn/no-return-array-push": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 12
+    },
+    "unicorn/prefer-object-define-properties": {
+      "count": 1
+    }
+  },
+  "tests/e2e/sheet-library.spec.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 3
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 6
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 6
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 4
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 8
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "no-implicit-coercion": {
+      "count": 2
+    },
+    "require-unicode-regexp": {
+      "count": 11
+    },
+    "unicorn/isolated-functions": {
+      "count": 2
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 2
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 4
+    }
+  },
+  "tests/e2e/sheet-practice-controls.spec.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 4
+    },
+    "regexp/letter-case": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 11
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/isolated-functions": {
+      "count": 20
+    },
+    "unicorn/max-nested-calls": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 2
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 38
+    },
+    "unicorn/prefer-string-raw": {
+      "count": 4
+    }
+  },
+  "tests/e2e/sheet-practice-integration.spec.ts": {
+    "@typescript-eslint/array-type": {
+      "count": 2
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "no-await-in-loop": {
+      "count": 2
+    },
+    "require-unicode-regexp": {
+      "count": 7
+    },
+    "unicorn/isolated-functions": {
+      "count": 13
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 7
+    }
+  },
+  "tests/e2e/sheet-practice-session.spec.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 4
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 3
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/isolated-functions": {
+      "count": 7
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 4
+    },
+    "unicorn/prefer-global-this": {
+      "count": 6
+    }
+  },
+  "tests/e2e/sheet-recording-review.spec.ts": {
+    "@typescript-eslint/array-type": {
+      "count": 4
+    },
+    "@typescript-eslint/naming-convention": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 5
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 6
+    },
+    "@typescript-eslint/no-unsafe-return": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 2
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 4
+    },
+    "unicorn/dom-node-dataset": {
+      "count": 2
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    },
+    "unicorn/prefer-array-from-map": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 7
+    },
+    "unicorn/prefer-number-coercion": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    },
+    "unicorn/prefer-string-raw": {
+      "count": 1
+    }
+  },
+  "tests/e2e/sheet-segment-recording.spec.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/naming-convention": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 3
+    },
+    "@typescript-eslint/non-nullable-type-assertion-style": {
+      "count": 2
+    },
+    "no-await-in-loop": {
+      "count": 11
+    },
+    "require-unicode-regexp": {
+      "count": 2
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 6
+    },
+    "unicorn/prefer-structured-clone": {
+      "count": 1
+    }
+  },
+  "tests/e2e/sheet-viewer.spec.ts": {
+    "@stylistic/no-mixed-operators": {
+      "count": 2
+    },
+    "@stylistic/padding-line-between-statements": {
+      "count": 8
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 13
+    },
+    "@typescript-eslint/no-restricted-types": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-return": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "count": 8
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 12
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "no-await-in-loop": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "prefer-destructuring": {
+      "count": 3
+    },
+    "require-unicode-regexp": {
+      "count": 4
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 2
+    },
+    "unicorn/isolated-functions": {
+      "count": 24
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 5
+    },
+    "unicorn/no-for-each": {
+      "count": 1
+    },
+    "unicorn/no-global-object-property-assignment": {
+      "count": 2
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 2
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 11
+    },
+    "unicorn/prefer-global-this": {
+      "count": 11
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    }
+  },
+  "tests/unit/app-shell.test.tsx": {
+    "import-x/order": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 2
+    },
+    "unicorn/prefer-global-this": {
+      "count": 6
+    }
+  },
+  "tests/unit/architecture-boundaries.test.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/array-type": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "n/prefer-global/process": {
+      "count": 1
+    },
+    "regexp/no-super-linear-move": {
+      "count": 1
+    },
+    "regexp/prefer-named-capture-group": {
+      "count": 3
+    },
+    "regexp/sort-character-class-elements": {
+      "count": 2
+    },
+    "regexp/strict": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 58
+    },
+    "unicorn/prefer-direct-iteration": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 3
+    }
+  },
+  "tests/unit/audio-analysis-service.test.ts": {
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/max-nested-calls": {
+      "count": 2
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 2
+    }
+  },
+  "tests/unit/bar-count-in-domain.test.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 23
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 3
+    }
+  },
+  "tests/unit/bilibili-search-adapter.test.ts": {
+    "@typescript-eslint/no-base-to-string": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/prefer-response-static-json": {
+      "count": 3
+    }
+  },
+  "tests/unit/browser-settings-local-data-service.test.ts": {
+    "import-x/first": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "tests/unit/command-palette-commands.test.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 5
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "tests/unit/continue-practice-navigation.test.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "tests/unit/continue-practice-targets.test.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "tests/unit/countdown-executor.test.ts": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 3
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 6
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "require-unicode-regexp": {
+      "count": 3
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    }
+  },
+  "tests/unit/factories/recordings-review.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 2
+    },
+    "@typescript-eslint/naming-convention": {
+      "count": 1
+    },
+    "@typescript-eslint/no-restricted-types": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "prefer-object-has-own": {
+      "count": 1
+    },
+    "unicorn/consistent-conditional-object-spread": {
+      "count": 2
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    }
+  },
+  "tests/unit/fake-tone-metronome-adapter.ts": {
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 5
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 4
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 7
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 2
+    }
+  },
+  "tests/unit/fixtures/audio-context.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 1
+    }
+  },
+  "tests/unit/home-dashboard.test.tsx": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 22
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 2
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "prefer-destructuring": {
+      "count": 7
+    },
+    "regexp/letter-case": {
+      "count": 8
+    },
+    "require-unicode-regexp": {
+      "count": 17
+    },
+    "unicorn/prefer-promise-with-resolvers": {
+      "count": 5
+    }
+  },
+  "tests/unit/home-recent-activity-source.test.ts": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 2
+    }
+  },
+  "tests/unit/measure-grid-calibration.test.tsx": {
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-return": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/no-non-function-verb-prefix": {
+      "count": 1
+    }
+  },
+  "tests/unit/measure-grid-repository.test.ts": {
+    "import-x/order": {
+      "count": 2
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 6
+    }
+  },
+  "tests/unit/measure-grid.test.ts": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 13
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    }
+  },
+  "tests/unit/music-domain.test.ts": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    }
+  },
+  "tests/unit/navigation-config.test.ts": {
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "tests/unit/practice-goal-repository.test.ts": {
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 2
+    },
+    "unicorn/prefer-global-this": {
+      "count": 3
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 5
+    }
+  },
+  "tests/unit/practice-goal-service.test.ts": {
+    "import-x/order": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 1
+    },
+    "n/prefer-global/process": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 3
+    },
+    "unicorn/prefer-array-from-map": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    }
+  },
+  "tests/unit/practice-segment-domain.test.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 2
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 6
+    },
+    "unicorn/prefer-structured-clone": {
+      "count": 1
+    }
+  },
+  "tests/unit/practice-segment-repository.test.ts": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 14
+    }
+  },
+  "tests/unit/practice-segment-selector.test.tsx": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 14
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-return": {
+      "count": 6
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 4
+    },
+    "unicorn/no-non-function-verb-prefix": {
+      "count": 4
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 2
+    },
+    "unicorn/prefer-global-this": {
+      "count": 1
+    },
+    "unicorn/prefer-minimal-ternary": {
+      "count": 2
+    },
+    "unicorn/prefer-promise-with-resolvers": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    }
+  },
+  "tests/unit/practice-session-duration-rules.test.ts": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 5
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "unicorn/max-nested-calls": {
+      "count": 7
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 12
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 2
+    }
+  },
+  "tests/unit/practice-session-events.test.ts": {
+    "import-x/order": {
+      "count": 3
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 2
+    }
+  },
+  "tests/unit/practice-session-history-groups.test.ts": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    }
+  },
+  "tests/unit/practice-session-repository.test.ts": {
+    "import-x/order": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 2
+    },
+    "unicorn/prefer-global-this": {
+      "count": 2
+    }
+  },
+  "tests/unit/practice-session-service.test.ts": {
+    "@typescript-eslint/array-type": {
+      "count": 2
+    },
+    "@typescript-eslint/non-nullable-type-assertion-style": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 3
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 50
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 5
+    },
+    "unicorn/prefer-spread": {
+      "count": 2
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 2
+    }
+  },
+  "tests/unit/pre-start-countdown.test.ts": {
+    "import-x/order": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 3
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 16
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 3
+    }
+  },
+  "tests/unit/preflight-shell.test.tsx": {
+    "import-x/order": {
+      "count": 1
+    },
+    "regexp/letter-case": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 2
+    }
+  },
+  "tests/unit/quick-metronome-control.test.ts": {
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 4
+    }
+  },
+  "tests/unit/quick-metronome-metronome-service.test.ts": {
+    "@stylistic/no-mixed-operators": {
+      "count": 2
+    },
+    "@typescript-eslint/array-type": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "no-await-in-loop": {
+      "count": 2
+    },
+    "unicorn/no-return-array-push": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 4
+    }
+  },
+  "tests/unit/quick-metronome-recording-analysis.test.ts": {
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "tests/unit/quick-metronome-session.test.ts": {
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 12
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "n/prefer-global/buffer": {
+      "count": 1
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 4
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 18
+    },
+    "unicorn/prefer-global-this": {
+      "count": 7
+    },
+    "unicorn/prefer-iterator-to-array": {
+      "count": 2
+    }
+  },
+  "tests/unit/quick-metronome-transport.test.tsx": {
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 6
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 13
+    }
+  },
+  "tests/unit/recording-artifact-review.test.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "@typescript-eslint/naming-convention": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 1
+    },
+    "func-names": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "prefer-destructuring": {
+      "count": 3
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    }
+  },
+  "tests/unit/recordings-review-artifact-storage.test.ts": {
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 6
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 18
+    },
+    "unicorn/prefer-iterator-to-array": {
+      "count": 1
+    }
+  },
+  "tests/unit/recordings-review-audio-export.test.ts": {
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "regexp/sort-character-class-elements": {
+      "count": 4
+    },
+    "require-unicode-regexp": {
+      "count": 5
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    }
+  },
+  "tests/unit/recordings-review-experience.test.tsx": {
+    "@typescript-eslint/consistent-type-imports": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-nested-callbacks": {
+      "count": 10
+    },
+    "regexp/letter-case": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 9
+    },
+    "unicorn/max-nested-calls": {
+      "count": 4
+    },
+    "unicorn/no-optional-chaining-on-undeclared-variable": {
+      "count": 3
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    },
+    "unicorn/prefer-promise-with-resolvers": {
+      "count": 1
+    }
+  },
+  "tests/unit/recordings-review-history.test.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 3
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 34
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 5
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 1
+    }
+  },
+  "tests/unit/recordings-review-repository.test.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 14
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 19
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/max-nested-calls": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 6
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 22
+    }
+  },
+  "tests/unit/recordings-review-take-groups.test.ts": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 2
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 2
+    }
+  },
+  "tests/unit/recordings-review-take-history-summary.test.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 1
+    }
+  },
+  "tests/unit/recordings-review-waveform-comparison-sources.test.ts": {
+    "@typescript-eslint/promise-function-async": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 3
+    },
+    "no-await-in-loop": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 3
+    },
+    "unicorn/prefer-global-this": {
+      "count": 1
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 1
+    }
+  },
+  "tests/unit/reference-domain.test.ts": {
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 1
+    }
+  },
+  "tests/unit/reference-panel.test.tsx": {
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 9
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "no-promise-executor-return": {
+      "count": 3
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 6
+    },
+    "unicorn/prefer-global-this": {
+      "count": 4
+    }
+  },
+  "tests/unit/reference-service.test.ts": {
+    "@typescript-eslint/non-nullable-type-assertion-style": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    },
+    "unicorn/no-for-each": {
+      "count": 1
+    },
+    "unicorn/prefer-iterator-helpers": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 2
+    }
+  },
+  "tests/unit/session-comparison.test.ts": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "regexp/prefer-named-capture-group": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    }
+  },
+  "tests/unit/settings-experience.test.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "tests/unit/settings-service.test.ts": {
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "tests/unit/setup.ts": {
+    "import-x/no-unassigned-import": {
+      "count": 2
+    }
+  },
+  "tests/unit/sheet-library-domain.test.ts": {
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/prefer-unicode-code-point-escapes": {
+      "count": 6
+    }
+  },
+  "tests/unit/sheet-library-experience.test.tsx": {
+    "@typescript-eslint/strict-void-return": {
+      "count": 1
+    },
+    "import-x/first": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "require-unicode-regexp": {
+      "count": 2
+    },
+    "unicorn/no-for-each": {
+      "count": 1
+    },
+    "unicorn/prefer-promise-with-resolvers": {
+      "count": 1
+    }
+  },
+  "tests/unit/sheet-library-repository.test.ts": {
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "tests/unit/sheet-library-service.test.ts": {
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 4
+    },
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 3
+    },
+    "unicorn/no-object-as-default-parameter": {
+      "count": 1
+    },
+    "unicorn/prefer-global-this": {
+      "count": 1
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    }
+  },
+  "tests/unit/sheet-metronome-preset-domain.test.ts": {
+    "import-x/order": {
+      "count": 2
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 4
+    }
+  },
+  "tests/unit/sheet-metronome-preset-repository.test.ts": {
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 4
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "unicorn/max-nested-calls": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-negated-condition": {
+      "count": 1
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 6
+    }
+  },
+  "tests/unit/sheet-metronome-preset-service.test.ts": {
+    "import-x/order": {
+      "count": 2
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 6
+    }
+  },
+  "tests/unit/sheet-practice-controls.test.tsx": {
+    "@stylistic/no-mixed-operators": {
+      "count": 2
+    },
+    "@stylistic/padding-line-between-statements": {
+      "count": 2
+    },
+    "@typescript-eslint/array-type": {
+      "count": 1
+    },
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "@typescript-eslint/consistent-type-imports": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 8
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unsafe-return": {
+      "count": 1
+    },
+    "@typescript-eslint/promise-function-async": {
+      "count": 3
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 7
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 8
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 2
+    },
+    "object-shorthand": {
+      "count": 5
+    },
+    "regexp/letter-case": {
+      "count": 124
+    },
+    "require-unicode-regexp": {
+      "count": 47
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 5
+    },
+    "unicorn/no-for-each": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 19
+    },
+    "unicorn/prefer-global-this": {
+      "count": 11
+    },
+    "unicorn/prefer-minimal-ternary": {
+      "count": 1
+    },
+    "unicorn/prefer-promise-with-resolvers": {
+      "count": 2
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
+    },
+    "unicorn/prefer-string-raw": {
+      "count": 2
+    },
+    "unicorn/prefer-string-repeat": {
+      "count": 1
+    }
+  },
+  "tests/unit/sheet-practice-error-markers.test.tsx": {
+    "import-x/order": {
+      "count": 1
+    },
+    "require-unicode-regexp": {
+      "count": 5
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    },
+    "unicorn/prefer-global-this": {
+      "count": 1
+    }
+  },
+  "tests/unit/sheet-practice-recording-workflow-store.test.ts": {
+    "import-x/order": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    }
+  },
+  "tests/unit/sheet-practice-recording.test.ts": {
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "object-shorthand": {
+      "count": 6
+    },
+    "unicorn/consistent-boolean-name": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 4
+    },
+    "unicorn/prefer-global-this": {
+      "count": 1
+    }
+  },
+  "tests/unit/sheet-viewer-assisted-page-turning.test.tsx": {
+    "import-x/first": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "require-unicode-regexp": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 3
+    }
+  },
+  "tests/unit/sheet-viewer-measure-grid-timestamp.test.tsx": {
+    "import-x/first": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "object-shorthand": {
+      "count": 1
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 2
+    }
+  },
+  "tests/unit/sheet-viewer-page-jump.test.tsx": {
+    "@stylistic/padding-line-between-statements": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 1
+    }
+  },
+  "tests/unit/sheet-viewer-service.test.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "unicorn/no-object-as-default-parameter": {
+      "count": 2
+    },
+    "unicorn/numeric-separators-style": {
+      "count": 1
+    },
+    "unicorn/prefer-global-number-constants": {
+      "count": 9
+    }
+  },
+  "tests/unit/sheet-viewer-thumbnails-ui.test.tsx": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 2
+    },
+    "@typescript-eslint/strict-void-return": {
+      "count": 4
+    },
+    "import-x/first": {
+      "count": 2
+    },
+    "import-x/order": {
+      "count": 2
+    },
+    "unicorn/prefer-promise-with-resolvers": {
+      "count": 1
+    }
+  },
+  "tests/unit/use-command-palette-continue-targets.test.tsx": {
+    "import-x/order": {
+      "count": 1
+    },
+    "no-void": {
+      "count": 1
+    },
+    "unicorn/prefer-promise-with-resolvers": {
+      "count": 1
+    }
+  }
+}
