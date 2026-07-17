@@ -396,15 +396,15 @@ function hasExplicitNoRetiredSurface(sectionBody) {
 
 function valueAfterColon(sectionBody, label) {
 	const prefix = `- ${label}:`;
-	const line = sectionText(sectionBody)
+	const lines = sectionText(sectionBody)
 		.split('\n')
-		.find(candidate => candidate.toLowerCase().startsWith(prefix.toLowerCase()));
+		.filter(candidate => candidate.toLowerCase().startsWith(prefix.toLowerCase()));
 
-	if (!line) {
+	if (lines.length !== 1) {
 		return null;
 	}
 
-	return normalizeCell(line.slice(prefix.length));
+	return normalizeCell(lines[0].slice(prefix.length));
 }
 
 function validateBoundaryDelta(sectionBody) {

@@ -215,6 +215,7 @@ function assertOverlayEvidenceFails(changeBody) {
 assertOverlayEvidenceFails(body => replaceLine(body, '- Current metronome Stage: MSO-6', '- Current metronome Stage: MSO-unknown'));
 assertOverlayEvidenceFails(body => replaceLine(body, '- Current metronome Stage: MSO-6', '- Current metronome Stage: MSO-6 later'));
 assertOverlayEvidenceFails(body => replaceLine(body, '- Current metronome Stage: MSO-6', '- Current metronome Stage: MSO-5'));
+assertOverlayEvidenceFails(body => replaceLine(body, '- Current metronome Stage: MSO-6', '- Current metronome Stage: MSO-6\n- Current metronome Stage: MSO-5'));
 assertOverlayEvidenceFails(body => replaceLine(body, '- ChatGPT final review prompt/verdict: PASS', '- ChatGPT final review prompt/verdict: PENDING'));
 assertOverlayEvidenceFails(body => replaceLine(body, '- ChatGPT final review prompt/verdict: PASS', '- ChatGPT final review prompt/verdict: PASS later'));
 assertOverlayEvidenceFails(body => replaceLine(body, '- Independent plan review verdict: PLAN_REVIEW_PASS', '- Independent plan review verdict:'));
@@ -243,6 +244,7 @@ assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line 
 
 assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line => line.startsWith('- Overlay plan blob:')), `- Overlay plan blob: ${'0'.repeat(40)}`));
 assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line => line.startsWith('- Overlay plan SHA-256:')), `- Overlay plan SHA-256: ${'0'.repeat(64)}`));
+assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line => line.startsWith('- Overlay plan SHA-256:')), `${body.split('\n').find(line => line.startsWith('- Overlay plan SHA-256:'))}\n- Overlay plan SHA-256: ${'0'.repeat(64)}`));
 {
 	const cwd = createRepo();
 	commitAgentsRouterChange(cwd);
@@ -251,7 +253,14 @@ assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line 
 	assert.match(result.stderr, /Independent plan review policy must be GPT-5\.6 Terra standard or GPT-5\.6 Luna standard\./v);
 }
 
-assertOverlayEvidenceFails(body => replaceLine(body, '- Independent plan review policy: GPT-5.6 Luna standard', '- Independent plan review policy: GPT-5.6 Sol standard'));
+{
+	const cwd = createRepo();
+	commitAgentsRouterChange(cwd);
+	const result = runGate(cwd, replaceLine(validBody(cwd), '- Independent plan review policy: GPT-5.6 Luna standard', '- Independent plan review policy: GPT-5.6 Sol standard'));
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /Independent plan review policy must be GPT-5\.6 Terra standard or GPT-5\.6 Luna standard\./v);
+}
+
 {
 	const cwd = createRepo();
 	commitAgentsRouterChange(cwd);
@@ -428,6 +437,8 @@ assertOverlayEvidenceFails(body => replaceLine(body, '- Independent plan review 
 	assert.equal(result.status, 1);
 	assert.match(result.stderr, /Reviewer verdict must be exactly PASS or PASS_WITH_NITS/v);
 }
+
+assertOverlayEvidenceFails(body => replaceLine(body, '- Reviewer verdict: PASS', '- Reviewer verdict: PASS\n- Reviewer verdict: CHANGES_REQUIRED'));
 
 {
 	const cwd = createRepo();
