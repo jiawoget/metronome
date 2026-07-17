@@ -708,13 +708,13 @@
       "count": 1
     },
     "@typescript-eslint/prefer-optional-chain": {
-      "count": 3
+      "count": 1
     },
     "@typescript-eslint/promise-function-async": {
       "count": 1
     },
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 10
+      "count": 5
     },
     "@typescript-eslint/use-unknown-in-catch-callback-variable": {
       "count": 2
@@ -723,25 +723,19 @@
       "count": 1
     },
     "complexity": {
-      "count": 3
+      "count": 2
     },
     "import-x/order": {
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 2
-    },
-    "no-restricted-syntax": {
       "count": 1
     },
     "no-void": {
       "count": 3
     },
-    "prefer-destructuring": {
-      "count": 1
-    },
     "unicorn/consistent-boolean-name": {
-      "count": 6
+      "count": 5
     },
     "unicorn/no-declarations-before-early-exit": {
       "count": 1
