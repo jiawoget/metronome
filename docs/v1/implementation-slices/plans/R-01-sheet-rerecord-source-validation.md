@@ -56,7 +56,7 @@ PLAN_READY
 | Discarded v2 patch `f125bdc5071aec41a7d92ae65a29b49c9bcd4fb1` | Establish that CodeScene improvement alone did not prove behavior/surface correctness |
 | Revision-3 commit `96ef9bb289021e756d1db59ab284f8baddb1df2b` review | Establish that moving private local functions behind new exports grows external production surface |
 | Independent zero-export CodeScene diagnosis | Establish one-file feasibility, file-level risk, and the need to remove the physical net-line-reduction hard gate |
-| Green characterization commit `45161a9` and discarded-v2 CodeScene correction | Prove 89 component tests on legacy behavior and that repeated throw statements must be retired to keep pre-start validation below the complex-method threshold |
+| Fetchable green characterization commit `77ca1af32d62fb338806de377bdf4a365af7a65c` and discarded-v2 CodeScene correction | This is the rebased, content-equivalent replacement for local commit `45161a9`: both the parent and resulting `tests/unit/sheet-practice-controls.test.tsx` blobs compare equal. It proves 89 component tests on legacy behavior and that repeated throw statements must be retired to keep pre-start validation below the complex-method threshold |
 | Merged XO 4 gate PR `#124` and unsuppressed target scan | Prove revision 5 reaches 1,588 lines and would require a new `max-lines` suppression, while the sibling-module candidate passes XO without adding or increasing any suppression count |
 
 ### XO 4 boundary evidence
@@ -261,7 +261,7 @@ First prove `77ca1af32d62fb338806de377bdf4a365af7a65c` changes `tests/unit/sheet
 
 ### Task 1: green behavior characterization lock
 
-Use the already-green mounted/pre-start/empty-id service-order cases from commit `45161a9`, then run the complete controls unit file. Every new assertion must pass against the untouched legacy implementation: these tests characterize existing behavior for a structural-only refactor, so an honest RED state is neither expected nor permitted.
+Use the already-green mounted/pre-start/empty-id service-order cases from fetchable commit `77ca1af32d62fb338806de377bdf4a365af7a65c`, then run the complete controls unit file. Every new assertion must pass against the untouched legacy implementation: these tests characterize existing behavior for a structural-only refactor, so an honest RED state is neither expected nor permitted.
 
 Record the passing characterization count before editing production code. After each extraction step, rerun the same file and keep it green. A failing characterization means the extraction changed behavior and must be corrected before continuing. If a test requires exporting a helper, observing private structure, adding a test-only production seam, or inventing new behavior, stop; the zero-external-surface contract takes priority and the case must be exercised through the component.
 
