@@ -65,8 +65,8 @@ PLAN_READY
 | --- | --- | --- |
 | Rule limit | `rg -n 'max-lines' xo.config.js` | XO 4 enforces `max-lines: 1500` |
 | Revision-5 single-file candidate | Blob `e4e389ed3e033e30eab1d81948cd22cc7a976ab0`; raw XO command `node node_modules/xo/dist/cli.js --suppressions-location C:\tmp\r01-empty-xo-suppressions.json --reporter json src/components/sheet-practice/controls/sheet-practice-controls.tsx` after materializing that candidate | `max-lines` at line `1588`; raw report `57` errors. Reject adding a `max-lines` suppression |
-| Revision-6 split candidate | Commit `faeeedc0`; `git show '<treeish>:<path>' \| C:\Windows\System32\find.exe /v /c '""'` for the controls and sibling paths | Controls `1,356` physical lines; sibling `274` physical lines. Both remain below their fixed limits |
-| Changed-file XO gate | `& .\scripts\npm-local.ps1 --% run lint:xo:changed` on committed `faeeedc0` | Passed full 311-file scan; sibling has zero raw XO finding; target suppression entries only decrease/delete |
+| Revision-6 split candidate | Commit `faeeedc044ff517908637c46438263ad2fcd5270` on `origin/codex/r01-reviewed-patch-source`; `git show '<treeish>:<path>' \| C:\Windows\System32\find.exe /v /c '""'` for the controls and sibling paths | Controls `1,356` physical lines; sibling `274` physical lines. Both remain below their fixed limits |
+| Changed-file XO gate | `& .\scripts\npm-local.ps1 --% run lint:xo:changed` on committed `faeeedc044ff517908637c46438263ad2fcd5270` | Passed full 311-file scan; sibling has zero raw XO finding; target suppression entries only decrease/delete |
 
 The empty suppression input above is the literal JSON object `{}`. It is used only to expose raw findings; it is not a repository configuration change.
 
@@ -255,9 +255,9 @@ Only downward/deletion changes for `src/components/sheet-practice/controls/sheet
 
 ### Task 0: clean branch and baseline
 
-After this revision is merged, fetch `origin/main`, prove a clean primary checkout, and create `codex/r01-rerecord-source-validation` from the exact refreshed main commit. Do not rebase or switch to any earlier R01 implementation branch. Treat commits `77ca1af3` and `faeeedc0` only as immutable patch sources.
+After this revision is merged, fetch `origin/main` and `origin/codex/r01-reviewed-patch-source`, prove a clean primary checkout, and create `codex/r01-rerecord-source-validation` from the exact refreshed main commit. Do not base, rebase, or switch to the patch-source branch or any earlier R01 implementation branch. Treat full commits `77ca1af32d62fb338806de377bdf4a365af7a65c` and `faeeedc044ff517908637c46438263ad2fcd5270` only as immutable patch sources. Before cherry-picking, require `origin/codex/r01-reviewed-patch-source` to resolve to the production commit and require the characterization commit to be its ancestor; a missing/mismatched ref blocks execution.
 
-First prove `77ca1af3` changes `tests/unit/sheet-practice-controls.test.tsx` and no production file, cherry-pick only that characterization commit, and verify the branch still has zero `src/**` diff from refreshed main. Record controls CodeScene score `6.22` and findings, then run the controls unit file as a green 89-test baseline against untouched production code. Only after that baseline passes may `faeeedc0` be cherry-picked to apply the production refactor and downward XO-ledger changes. This order is fail-closed: the production patch must never be present during the legacy characterization run.
+First prove `77ca1af32d62fb338806de377bdf4a365af7a65c` changes `tests/unit/sheet-practice-controls.test.tsx` and no production file, cherry-pick only that characterization commit, and verify the branch still has zero `src/**` diff from refreshed main. Record controls CodeScene score `6.22` and findings, then run the controls unit file as a green 89-test baseline against untouched production code. Only after that baseline passes may `faeeedc044ff517908637c46438263ad2fcd5270` be cherry-picked to apply the production refactor and downward XO-ledger changes. This order is fail-closed: the production patch must never be present during the legacy characterization run.
 
 ### Task 1: green behavior characterization lock
 
