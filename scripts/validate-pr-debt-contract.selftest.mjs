@@ -201,14 +201,14 @@ function assertOverlayEvidenceFails(changeBody) {
 {
 	const cwd = createRepo();
 	commitAgentsRouterChange(cwd);
-	const result = runGate(cwd, replaceLine(validBody(cwd), `- Overlay plan path: docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md`, '- Overlay plan path:'));
+	const result = runGate(cwd, replaceLine(validBody(cwd), '- Overlay plan path: docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md', '- Overlay plan path:'));
 	assert.equal(result.status, 1, 'AGENTS.md change must require overlay promotion evidence');
 }
 
 {
 	const cwd = createRepo();
 	commitMetronomeWorkflowSkillChange(cwd);
-	const result = runGate(cwd, replaceLine(validBody(cwd), `- Overlay plan path: docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md`, '- Overlay plan path:'));
+	const result = runGate(cwd, replaceLine(validBody(cwd), '- Overlay plan path: docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md', '- Overlay plan path:'));
 	assert.equal(result.status, 1, 'metronome-workflow skill change must require overlay promotion evidence');
 }
 
@@ -230,6 +230,7 @@ assertOverlayEvidenceFails(body => replaceLine(body, '- Independent plan review 
 	));
 	assert.equal(result.status, 1, 'a valid non-ancestor overlay plan commit must fail');
 }
+
 assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line => line.startsWith('- Overlay plan commit:')), '- Overlay plan commit: malformed'));
 assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line => line.startsWith('- Overlay plan commit:')), `- Overlay plan commit: ${'0'.repeat(40)}`));
 {
@@ -239,6 +240,7 @@ assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line 
 	assert.equal(result.status, 1);
 	assert.match(result.stderr, /Overlay plan blob must match the approved commit and current tracked plan\./v);
 }
+
 assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line => line.startsWith('- Overlay plan blob:')), `- Overlay plan blob: ${'0'.repeat(40)}`));
 assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line => line.startsWith('- Overlay plan SHA-256:')), `- Overlay plan SHA-256: ${'0'.repeat(64)}`));
 {
@@ -248,6 +250,7 @@ assertOverlayEvidenceFails(body => replaceLine(body, body.split('\n').find(line 
 	assert.equal(result.status, 1);
 	assert.match(result.stderr, /Independent plan review policy must be GPT-5\.6 Terra standard or GPT-5\.6 Luna standard\./v);
 }
+
 assertOverlayEvidenceFails(body => replaceLine(body, '- Independent plan review policy: GPT-5.6 Luna standard', '- Independent plan review policy: GPT-5.6 Sol standard'));
 {
 	const cwd = createRepo();

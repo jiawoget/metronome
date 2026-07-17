@@ -506,18 +506,19 @@ function validateImmutableOverlayPlanIdentity(sectionBody) {
 	}
 
 	let isPlanCommitAncestor = false;
-	if (/^[a-f0-9]{40}$/iv.test(planCommit ?? '')) {
+	if (/^[0-9a-f]{40}$/iv.test(planCommit ?? '')) {
 		try {
 			execFileSync('git', ['merge-base', '--is-ancestor', planCommit, 'HEAD'], {stdio: 'ignore'});
 			isPlanCommitAncestor = true;
 		} catch {}
 	}
+
 	if (!isPlanCommitAncestor) {
 		failures.push('Overlay plan commit must be an ancestor of HEAD.');
 	}
 
 	const currentPlanBlob = tryRunGit(['rev-parse', `HEAD:${overlayPlanPath}`]);
-	const approvedPlanBlob = /^[a-f0-9]{40}$/iv.test(planCommit ?? '')
+	const approvedPlanBlob = /^[0-9a-f]{40}$/iv.test(planCommit ?? '')
 		? tryRunGit(['rev-parse', `${planCommit}:${overlayPlanPath}`])
 		: '';
 	if (new Set([planBlob, approvedPlanBlob, currentPlanBlob]).size > 1) {
@@ -527,7 +528,7 @@ function validateImmutableOverlayPlanIdentity(sectionBody) {
 	const currentPlanSha256 = currentPlanBlob
 		? createHash('sha256').update(execFileSync('git', ['show', `HEAD:${overlayPlanPath}`])).digest('hex')
 		: '';
-	if (!/^[a-f0-9]{64}$/iv.test(planSha256 ?? '') || planSha256 !== currentPlanSha256) {
+	if (!/^[0-9a-f]{64}$/iv.test(planSha256 ?? '') || planSha256 !== currentPlanSha256) {
 		failures.push('Overlay plan SHA-256 must match the current tracked plan.');
 	}
 
