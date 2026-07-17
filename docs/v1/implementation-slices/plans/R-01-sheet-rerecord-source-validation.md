@@ -255,7 +255,9 @@ Only downward/deletion changes for `src/components/sheet-practice/controls/sheet
 
 ### Task 0: clean branch and baseline
 
-After this revision is merged, fetch `origin/main`, prove a clean primary checkout, and rebase the already fresh `codex/r01-sheet-rerecord-source-validation-v6` implementation commits onto the exact refreshed main commit. The branch was originally created from `90b4fdaf`, the main commit containing revision 5 and merged XO 4 PR `#124`; do not recreate from or switch back to an older R01 branch. Prove the characterization commit changes `tests/unit/sheet-practice-controls.test.tsx` and no production file. Record controls CodeScene score `6.22` and findings, then run the controls unit file as a green 89-test baseline.
+After this revision is merged, fetch `origin/main`, prove a clean primary checkout, and create `codex/r01-rerecord-source-validation` from the exact refreshed main commit. Do not rebase or switch to any earlier R01 implementation branch. Treat commits `77ca1af3` and `faeeedc0` only as immutable patch sources.
+
+First prove `77ca1af3` changes `tests/unit/sheet-practice-controls.test.tsx` and no production file, cherry-pick only that characterization commit, and verify the branch still has zero `src/**` diff from refreshed main. Record controls CodeScene score `6.22` and findings, then run the controls unit file as a green 89-test baseline against untouched production code. Only after that baseline passes may `faeeedc0` be cherry-picked to apply the production refactor and downward XO-ledger changes. This order is fail-closed: the production patch must never be present during the legacy characterization run.
 
 ### Task 1: green behavior characterization lock
 
