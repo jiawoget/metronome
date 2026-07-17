@@ -1000,6 +1000,261 @@ describe("sheet practice controls segment recording context", () => {
     expect(recordingService.service.startCapture).toHaveBeenCalledOnce();
   });
 
+  it.each([
+    {
+      name: "the active segment differs",
+      activeSegmentId: "segment-beta",
+      sourceSheetId: "sheet-alpha",
+      recordingId: "recording-alpha",
+      expectedLookup: true,
+      expectedStatus: "ready",
+      expectedReason: null
+    },
+    {
+      name: "the source sheet differs",
+      activeSegmentId: "segment-alpha",
+      sourceSheetId: "sheet-beta",
+      recordingId: "recording-alpha",
+      expectedLookup: true,
+      expectedStatus: "invalid",
+      expectedReason: "sheet-mismatch"
+    },
+    {
+      name: "the source recording id is empty",
+      activeSegmentId: "segment-alpha",
+      sourceSheetId: "sheet-alpha",
+      recordingId: "",
+      expectedLookup: false,
+      expectedStatus: "ready",
+      expectedReason: null
+    }
+  ])(
+    "preserves mounted ready-source ordering when $name",
+    async ({
+      activeSegmentId,
+      sourceSheetId,
+      recordingId,
+      expectedLookup,
+      expectedStatus,
+      expectedReason
+    }) => {
+      const segment = createTestSegment();
+      const segmentContext = createSheetRecordingSegmentContext(segment);
+      const recordingService = createInspectableSheetRecordingService({
+        initialRecordings: [
+          createReviewRecordingForControls({
+            id: "recording-alpha",
+            segmentContext
+          })
+        ]
+      });
+
+      render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={72}
+          defaultTimeSignature="4/4"
+          createSheetRecordingService={() => recordingService.service}
+          sessionService={createIdleSessionService()}
+          measureGridService={createMeasureGridService(createTestGrid())}
+          practiceSegmentService={createPracticeSegmentService([segment])}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+      });
+      vi.mocked(recordingService.service.getRecording).mockClear();
+
+      await act(async () => {
+        useSheetPracticeRecordingWorkflowStore.setState({
+          sheetId: "sheet-alpha",
+          activeSegmentId,
+          status: "idle",
+          error: null,
+          rerecord: {
+            status: "ready",
+            source: {
+              recordingId,
+              sheetId: sourceSheetId,
+              segmentContext
+            },
+            unavailableReason: null,
+            error: null
+          }
+        });
+      });
+
+      if (expectedLookup) {
+        await waitFor(() => {
+          expect(recordingService.service.getRecording).toHaveBeenCalledWith(recordingId);
+        });
+      } else {
+        expect(recordingService.service.getRecording).not.toHaveBeenCalled();
+      }
+
+      await waitFor(() => {
+        expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+          status: expectedStatus,
+          unavailableReason: expectedReason
+        });
+      });
+    }
+  );
+
+  it.each([
+    {
+      name: "the active segment changes",
+      activeSegmentId: "segment-beta",
+      sourceSheetId: "sheet-alpha"
+    },
+    {
+      name: "the source sheet changes",
+      activeSegmentId: "segment-alpha",
+      sourceSheetId: "sheet-beta"
+    }
+  ])(
+    "rejects Record again before lookup when $name",
+    async ({ activeSegmentId, sourceSheetId }) => {
+      const segment = createTestSegment();
+      const segmentContext = createSheetRecordingSegmentContext(segment);
+      const recordingService = createInspectableSheetRecordingService({
+        initialRecordings: [
+          createReviewRecordingForControls({
+            id: "recording-alpha",
+            segmentContext
+          })
+        ]
+      });
+
+      render(
+        <SheetPracticeControls
+          sheetId="sheet-alpha"
+          sheetName="Alpha"
+          defaultBpm={72}
+          defaultTimeSignature="4/4"
+          createSheetRecordingService={() => recordingService.service}
+          sessionService={createIdleSessionService()}
+          measureGridService={createMeasureGridService(createTestGrid())}
+          practiceSegmentService={createPracticeSegmentService([segment])}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+      });
+      await act(async () => {
+        useSheetPracticeRecordingWorkflowStore.setState({
+          sheetId: "sheet-alpha",
+          activeSegmentId: "segment-alpha",
+          status: "idle",
+          error: null,
+          rerecord: {
+            status: "ready",
+            source: {
+              recordingId: "recording-alpha",
+              sheetId: "sheet-alpha",
+              segmentContext
+            },
+            unavailableReason: null,
+            error: null
+          }
+        });
+      });
+
+      const recordAgainButton = await screen.findByRole("button", {
+        name: "Record again"
+      });
+      vi.mocked(recordingService.service.getRecording).mockClear();
+
+      await act(async () => {
+        useSheetPracticeRecordingWorkflowStore.setState((state) => ({
+          ...state,
+          activeSegmentId,
+          rerecord: {
+            ...state.rerecord,
+            source: state.rerecord.source
+              ? {
+                  ...state.rerecord.source,
+                  sheetId: sourceSheetId
+                }
+              : null
+          }
+        }));
+        recordAgainButton.click();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Record again is not available for this segment.")).toBeVisible();
+      });
+      expect(recordingService.service.getRecording).not.toHaveBeenCalled();
+      expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+        status: "invalid",
+        source: null,
+        unavailableReason: "selection-changed"
+      });
+    }
+  );
+
+  it("looks up an empty source recording id during pre-start validation", async () => {
+    const user = userEvent.setup();
+    const segment = createTestSegment();
+    const segmentContext = createSheetRecordingSegmentContext(segment);
+    const recordingService = createInspectableSheetRecordingService();
+
+    render(
+      <SheetPracticeControls
+        sheetId="sheet-alpha"
+        sheetName="Alpha"
+        defaultBpm={72}
+        defaultTimeSignature="4/4"
+        createSheetRecordingService={() => recordingService.service}
+        sessionService={createIdleSessionService()}
+        measureGridService={createMeasureGridService(createTestGrid())}
+        practiceSegmentService={createPracticeSegmentService([segment])}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+    });
+    await act(async () => {
+      useSheetPracticeRecordingWorkflowStore.setState({
+        sheetId: "sheet-alpha",
+        activeSegmentId: "segment-alpha",
+        status: "idle",
+        error: null,
+        rerecord: {
+          status: "ready",
+          source: {
+            recordingId: "",
+            sheetId: "sheet-alpha",
+            segmentContext
+          },
+          unavailableReason: null,
+          error: null
+        }
+      });
+    });
+
+    const recordAgainButton = await screen.findByRole("button", {
+      name: "Record again"
+    });
+    vi.mocked(recordingService.service.getRecording).mockClear();
+    await user.click(recordAgainButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Record again is not available for this segment.")).toBeVisible();
+    });
+    expect(recordingService.service.getRecording).toHaveBeenCalledWith("");
+    expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+      status: "invalid",
+      source: null,
+      unavailableReason: "source-recording-missing"
+    });
+  });
+
   it("hydrates Practice Again from a validated source recording after client repositories are available", async () => {
     const grid = createTestGrid();
     const segment = createTestSegment();
