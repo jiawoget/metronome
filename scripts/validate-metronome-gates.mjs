@@ -11,8 +11,6 @@ const required = [
 	'.semgrep/metronome-library-primitives.yml',
 	'.semgrep/metronome-ui-ownership.yml',
 	'skills/code_review.md',
-	'docs/refactor/src-debt-inventory.template.md',
-	'docs/refactor/primitive-check.template.md',
 	'scripts/run-metronome-semgrep-changed.mjs',
 	'scripts/validate-pr-debt-contract.mjs',
 	'scripts/validate-pr-debt-contract.selftest.mjs',

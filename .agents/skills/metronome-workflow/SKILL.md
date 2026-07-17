@@ -51,8 +51,3 @@ Any code edit invalidates preflight and downstream evidence. One repair restarts
 preflight; a second failure is `STAGE_BLOCKED` pending independent Terra/Luna
 diagnosis and explicit user decision. Do not record intermediate stages.
 
-Generated R-01/later refactor plan commits never merge or cherry-pick into
-`main`. Retain a plan branch only through its coding/review lifecycle; the
-monitor passes the immutable plan path, commit, blob, SHA-256, review verdict,
-and user decision directly to later agents. Coding branches start from clean
-`main` and read the plan with `git show <planCommit>:<planPath>`.
