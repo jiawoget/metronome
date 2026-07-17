@@ -46,6 +46,7 @@ Net surface delta:
 - Coder repo map / primitive search:
 - Reviewer skill read evidence:
 - Reviewer verdict:
+- Codex final review prompt/verdict:
 - ChatGPT final review prompt/verdict:
 - Overlay plan path:
 - Overlay plan commit:
