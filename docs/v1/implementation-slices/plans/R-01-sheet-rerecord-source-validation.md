@@ -6,11 +6,11 @@
 
 - Plan id: `R-01-sheet-rerecord-source-validation`
 - Lifecycle: `revision-proposed`
-- Revision: `4`
+- Revision: `5`
 - Planning output only; this file does not authorize business-code changes
 - Candidate source: CodeScene project `82175`, job `6845237`
 - Boundary decision: `docs/refactor/src-debt-forensics-2026-07-17/02-sheet-practice-boundary-review.md`
-- Supersedes revision 3 after exact-HEAD review rejected its two new module exports as net external production-surface growth
+- Supersedes revision 4 before production editing because its fixed private-helper budget omitted the already-proven repeated-throw extraction needed for the pre-start CodeScene target
 
 `PLAN_READY` is the planner verdict only. Coding may start only after the tracked plan commit has an immutable identity and an independent `PLAN_REVIEW_PASS` under the Metronome workflow.
 
@@ -55,6 +55,7 @@ PLAN_READY
 | Discarded v2 patch `f125bdc5071aec41a7d92ae65a29b49c9bcd4fb1` | Establish that CodeScene improvement alone did not prove behavior/surface correctness |
 | Revision-3 commit `96ef9bb289021e756d1db59ab284f8baddb1df2b` review | Establish that moving private local functions behind new exports grows external production surface |
 | Independent zero-export CodeScene diagnosis | Establish one-file feasibility, file-level risk, and the need to remove the physical net-line-reduction hard gate |
+| Green characterization commit `45161a9` and discarded-v2 CodeScene correction | Prove 89 component tests on legacy behavior and that repeated throw statements must be retired to keep pre-start validation below the complex-method threshold |
 
 ## Repo Map Evidence
 
@@ -87,6 +88,8 @@ Revision 3 corrected the behavior matrix and reduced the module exports to two. 
 
 Revision 4 therefore keeps the refactor inside one production file with zero new exports. It also drops the physical net-line-reduction hard requirement: moving policy into readable private functions in the same file may hold or slightly grow LOC. Unaccounted production growth, CodeScene decline, or a complex replacement helper still fails closed.
 
+Revision 4 stopped after its green characterization step, before any production edit. Six new caller-level cases passed on the legacy implementation, bringing the controls file to 89 passing tests. Before production work, the monitor re-applied the discarded-v2 CodeScene evidence: the successful correction had to replace repeated identical throws because CodeScene counts those jump statements in `validateRecordAgainSource`. Revision 4 fixed the budget at eight private functions and prohibited any corrective helper, so its contract could not honestly authorize the known necessary extraction. Revision 5 adds only that private throw helper and its exact retirement target; the zero-export, one-production-file, behavior, and test contracts are otherwise unchanged.
+
 ## Debt root
 
 The component correctly owns I/O and side effects, but source-integrity policy is branch-heavy across three phases:
@@ -95,7 +98,7 @@ The component correctly owns I/O and side effects, but source-integrity policy i
 2. The mounted effect revalidates a ready source without enforcing the current selection.
 3. Pre-start validation enforces the current selection before Record Again begins.
 
-Mounted and pre-start deliberately have different preconditions. Revision 4 shares only their genuine base checks and uses phase-specific private selectors; it does not force them through a common result policy.
+Mounted and pre-start deliberately have different preconditions. Revision 5 shares only their genuine base checks and uses phase-specific private selectors; it does not force them through a common result policy.
 
 ## Behavior contract and service ordering
 
@@ -132,6 +135,7 @@ All result types and functions remain unexported top-level declarations in `shee
 | `inspectReadyRerecordSourceRecording(...)` | Source-sheet and persisted-context equivalence after lookup | `getRerecordSourceInvalidReason(...)` |
 | `inspectRerecordSourceSegment(...)` | Phase-discriminated missing/sheet/conversion/equality checks | Hydration and pre-start live-segment chains |
 | `segmentContextsMatch(...)` | Exact existing JSON comparison | Existing helper retained/moved, not duplicated |
+| `throwRecordAgainUnavailable(...)` | Throw the exact existing pre-start error after caller-owned invalidation | Repeated identical throw expressions in `validateRecordAgainSource` |
 
 The two selectors may call `selectWorkflowReadySource(...)`; they must not return a nullable policy for the caller to interpret. `inspectRerecordSourceSegment(...)` takes an explicit discriminated input:
 
@@ -147,6 +151,7 @@ Constraints:
 - no generic operation router; callers invoke the phase-specific private function directly;
 - no callback injection, nullable/optional policy, boolean mode flag, `Object.assign`, spread-based policy construction, readiness serialization, factory/object-method wrapper, or dynamic dispatch;
 - no I/O, store action, React state, message formatting, or expected-state throw inside inspection helpers;
+- `throwRecordAgainUnavailable(...)` is the only permitted throwing helper; it performs no invalidation or other side effect and preserves the exact error text;
 - every new/narrowed private function remains below CodeScene CC 8;
 - caller-specific effects remain explicit.
 
@@ -160,7 +165,7 @@ Constraints:
 
 ## New Surface Budget
 
-Every private function in the contract has a same-PR retirement/narrowing target in the table above. Runtime external production surface remains unchanged at zero; no importable entry point is added. Private callable surface is budgeted by the eight-for-eight mapping, including the existing comparator as retained rather than new.
+Every private function in the contract has a same-PR retirement/narrowing target in the table above. Runtime external production surface remains unchanged at zero; no importable entry point is added. Private callable surface is budgeted by the nine-for-nine mapping, including the existing comparator as retained rather than new and the throw helper replacing repeated executable throw surfaces.
 
 If an extra helper is needed, an old surface must be named and independently accepted before coding continues. A helper introduced only to lower a metric is unbudgeted surface and blocks the stage.
 
@@ -175,6 +180,7 @@ If an extra helper is needed, an old surface must be named and independently acc
 | Hydration live conversion/comparison chain | segment inspector | Target method handles result effects only |
 | Pre-start live conversion/comparison chain | segment inspector | Target method handles result effects only |
 | Duplicate context comparator | retained single private comparator | `rg` finds exactly one definition |
+| Repeated `throw new Error("Record again is not available for this segment.")` expressions | `throwRecordAgainUnavailable(...)` | `rg` finds the exact message only in the private helper; pre-start failure branches call it |
 
 ## Production and test scope
 
@@ -217,11 +223,11 @@ Do not add a helper test file because private implementation details are not a p
 
 ### Task 0: clean branch and baseline
 
-After this revision is merged, fetch `origin/main`, prove a clean primary checkout, and create `codex/r01-sheet-rerecord-source-validation-v4` from the exact refreshed main commit. Do not reuse any older R01 branch. Record controls CodeScene score `6.22` and findings, then run the existing controls unit file as a green baseline.
+After this revision is merged, fetch `origin/main`, prove a clean primary checkout, and create `codex/r01-sheet-rerecord-source-validation-v5` from the exact refreshed main commit. Do not base it on or switch back to an older R01 branch. Apply only the test-file diff from green characterization commit `45161a9` after confirming that commit changes `tests/unit/sheet-practice-controls.test.tsx` and no production file. Record controls CodeScene score `6.22` and findings, then run the controls unit file as a green 89-test baseline.
 
 ### Task 1: green behavior characterization lock
 
-Add the missing mounted/pre-start/empty-id service-order cases to `sheet-practice-controls.test.tsx` before production changes, then run the complete controls unit file. Every new assertion must pass against the untouched legacy implementation: these tests characterize existing behavior for a structural-only refactor, so an honest RED state is neither expected nor permitted.
+Use the already-green mounted/pre-start/empty-id service-order cases from commit `45161a9`, then run the complete controls unit file. Every new assertion must pass against the untouched legacy implementation: these tests characterize existing behavior for a structural-only refactor, so an honest RED state is neither expected nor permitted.
 
 Record the passing characterization count before editing production code. After each extraction step, rerun the same file and keep it green. A failing characterization means the extraction changed behavior and must be corrected before continuing. If a test requires exporting a helper, observing private structure, adding a test-only production seam, or inventing new behavior, stop; the zero-external-surface contract takes priority and the case must be exercised through the component.
 
@@ -231,7 +237,7 @@ Add only the budgeted private result types/functions. Migrate hydration while ke
 
 ### Task 3: migrate mounted and pre-start paths
 
-Use the two phase-specific selectors directly. Preserve the lookup-order matrix, use the ready-recording inspector only after lookup, migrate both live-segment chains, and delete/narrow every required old surface. Run controls and architecture unit tests.
+Use the two phase-specific selectors directly. Preserve the lookup-order matrix, use the ready-recording inspector only after lookup, migrate both live-segment chains, and route the repeated exact pre-start error through `throwRecordAgainUnavailable(...)` only after caller-owned invalidation. Delete/narrow every required old surface. Run controls and architecture unit tests.
 
 ### Task 4: CodeScene and structural gate
 
@@ -247,13 +253,13 @@ Required result:
 - all required retired surfaces are absent;
 - any production LOC growth is fully accounted to the fixed private-helper ledger.
 
-One small correction inside controls is allowed. It cannot add a helper, export, file, callback wrapper, or policy option. If the same CodeScene requirement still fails, stop and revise the plan again.
+One small correction inside controls is allowed. It cannot add a tenth private helper, export, file, callback wrapper, or policy option. If the same CodeScene requirement still fails, stop and revise the plan again.
 
 ### Task 5: repository verification and promotion
 
 Run targeted lint/tests, architecture tests, full unit tests, typecheck, build, and the existing E2E. Let the normal pre-commit hook run; do not use `--no-verify`.
 
-If `validate:debt-gates` refuses the first implementation commit solely because it requires PR/reviewer evidence that cannot exist before a commit, do not fabricate an event, stale review, empty-PR review, or evidence string. Treat that as a separate workflow-gate defect. Repair it in a separately scoped and reviewed prerequisite PR, or stop for explicit authorization; never hide it inside R-01.
+The former first-commit/PR-evidence circularity was repaired separately in merged PR `#122`; local execution reports/defer PR-only evidence while PR context remains fail-closed. Any different debt-gate failure must be diagnosed normally and must not be bypassed.
 
 Open the implementation PR with exact scope, retirement, CodeScene before/after, test, hook, and E2E evidence. Request `@codex review`; do not use ChatGPT web review. Resolve actionable feedback, require CI green, merge, and return the primary checkout to clean updated `main`.
 
@@ -284,10 +290,10 @@ Open the implementation PR with exact scope, retirement, CodeScene before/after,
 
 R-01 is complete only when all are true:
 
-1. Revision 4 has immutable plan identity and independent `PLAN_REVIEW_PASS` before coding.
+1. Revision 5 has immutable plan identity and independent `PLAN_REVIEW_PASS` before coding.
 2. The implementation branch is fresh from the main commit containing the approved revision.
 3. Only controls changes in production; no new export/file/public type or external callable surface exists.
-4. Every private helper matches the fixed budget and every required old surface is deleted/narrowed.
+4. Every private helper matches the fixed nine-function budget, including the sole exact-error throw helper, and every required old surface is deleted/narrowed.
 5. Mounted/pre-start behavior and lookup order match the matrix, including active mismatch, source-sheet mismatch, and empty recording id.
 6. Hydration/live-segment reasons, store transitions, messages, cancellation, and exact errors remain equivalent.
 7. Test changes are caller-level behavior proof only; no helper export or test-only production seam exists.
