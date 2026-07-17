@@ -4,33 +4,24 @@
 
 ### Objective
 
-Merge one workflow/gate PR that makes the existing Metronome debt workflow
-durable through the root router, the repo-local Superpowers overlay, corrected
-role boundaries, and the existing validator. Only after that PR reaches
-`MSO-6` and merges may the monitor run the real R-01 planning trial.
+Merge one workflow/gate PR that makes the existing Metronome debt workflow durable through the root router, the repo-local Superpowers overlay, corrected role boundaries, and the existing validator. Only after that PR reaches `MSO-6` and merges may the monitor run the real R-01 planning trial.
 
-This is an explicitly approved blocked-stage replan. The plan defines durable
-dependencies, evidence, ownership, invalidation, and stop conditions. The
-monitor owns runtime commands, polling, run IDs, transcripts, temporary paths,
-branch mechanics, and other ephemeral proof.
+This is an explicitly approved blocked-stage replan. The plan defines durable dependencies, evidence, ownership, invalidation, and stop conditions.
+The monitor owns runtime commands, polling, run IDs, transcripts, temporary paths, branch mechanics, and other ephemeral proof.
 
 Success requires:
 
 - a mandatory `AGENTS.md` route to `.agents/skills/metronome-workflow/SKILL.md`;
 - Sol-only planning and Terra/Luna-only coding, diagnosis, and review;
-- an immutable tracked workflow-plan identity plus independent plan review and
-  explicit user approval before implementation resumes;
-- current-stage-only coder evidence followed by monitor preflight, exact-HEAD
-  gates, semantic implementation review, CI, and external ChatGPT review;
+- an immutable tracked workflow-plan identity plus independent plan review and explicit user approval before implementation resumes;
+- current-stage-only coder evidence followed by monitor preflight, exact-HEAD gates, semantic implementation review, CI, and external ChatGPT review;
 - exactly two legal overlay PR evidence states, `MSO-5` and `MSO-6`;
-- workflow/gate merge before R-01, with no generated R-01 plan commit merged or
-  cherry-picked into `main`;
+- workflow/gate merge before R-01, with no generated R-01 plan commit merged or cherry-picked into `main`;
 - zero changed files under `src/**`.
 
 ### Non-Goals
 
-- Do not implement, resume, or modify the paused workflow implementation while
-  revising this plan.
+- Do not implement, resume, or modify the paused workflow implementation while revising this plan.
 - Do not implement R-01 product work or modify
   `docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md` in
   the workflow PR.
@@ -179,6 +170,20 @@ accepted RED condition. Partial work remains uncommitted.
 7. Keep the refactor template and debt map as pointer-only references.
 8. Restore role-file required-content markers to `HEAD`, adding only the
    overlay pointer marker and required overlay file checks.
+
+### MSO-4R: One-Time Authorized Validator Repair
+
+The approved implementation stage exhausted its one repair and returned `STAGE_BLOCKED`. CodeScene first reported complexity 11 in `validateImmutableOverlayPlanIdentity` plus two complex-condition findings; the permitted repair removed both findings and reduced complexity to 10.
+The second CodeScene result still had `quality_gates: failed` because introduced complexity 10 is at the threshold and must be below it. The existing validator self-test, `validate:debt-gates`, and Git diff check pass.
+
+- The user's explicit decision authorizes exactly one new, separately planned implementation attempt in this stage.
+- Write scope is only `scripts/validate-pr-debt-contract.mjs`; target only `validateImmutableOverlayPlanIdentity`.
+- Preserve behavior and all current tests; do not edit tests.
+- Add no helper merely to move complexity and no validator, wrapper, compatibility path, abstraction, file, or mechanism.
+- Baseline candidate accounting is Git +465/-144, net +321, with the same 12-file allowlist and zero `src/**`; final net growth must not exceed +321 and reduction is preferred.
+- Acceptance requires method complexity below 10, no new CodeScene findings, no Code Health decline, and exact `quality_gates: passed`, followed by every existing gate.
+- This stage has exactly one implementation attempt. Any failure returns exact `STAGE_BLOCKED` and requires a new user decision.
+- Every earlier workflow invariant remains unchanged.
 
 ### MSO-5: Form and Review the Exact Candidate
 
