@@ -47,6 +47,12 @@ import {
   createSheetPracticeControlInitialState,
   formatUnsupportedTimeSignatureMessage
 } from "@/components/sheet-practice/controls/practice-control-state";
+import {
+  inspectPracticeAgainSource,
+  inspectReadyRerecordSourceRecording,
+  inspectRerecordSourceSegment,
+  selectReadyRerecordSource
+} from "@/components/sheet-practice/controls/rerecord-source-validation";
 import { PracticeStatusPanel } from "@/components/sheet-practice/controls/practice-status-panel";
 import { TransportActionsPanel } from "@/components/sheet-practice/controls/transport-actions-panel";
 import type {
@@ -55,7 +61,6 @@ import type {
   SheetPracticeControlsProps
 } from "@/components/sheet-practice/controls/types";
 import {
-  type SheetPracticeRerecordSource,
   type SheetPracticeRerecordUnavailableReason,
   useSheetPracticeRecordingWorkflowStore
 } from "@/stores/sheet-practice-recording-workflow-store";
@@ -108,11 +113,8 @@ function formatBarCountInTickDetail(tick: BarCountInCountdownTick | null) {
   return `${sourceLabel} beat ${tick.beatNumber}`;
 }
 
-function segmentContextsMatch(
-  left: SheetRecordingSegmentContext,
-  right: SheetRecordingSegmentContext
-) {
-  return JSON.stringify(left) === JSON.stringify(right);
+function throwRecordAgainUnavailable(): never {
+  throw new Error("Record again is not available for this segment.");
 }
 
 function formatRerecordUnavailableMessage(
@@ -176,37 +178,6 @@ function getSessionWriteFailureMessage(error: unknown) {
   return error instanceof Error && error.message.trim()
     ? error.message
     : "Practice session could not be saved after stopping.";
-}
-
-function getRerecordSourceInvalidReason({
-  recording,
-  sheetId,
-  source
-}: {
-  recording: ReviewRecording | null;
-  sheetId: string;
-  source: SheetPracticeRerecordSource;
-}): SheetPracticeRerecordUnavailableReason | null {
-  if (!recording) {
-    return "source-recording-missing";
-  }
-
-  if (recording.type !== "sheet") {
-    return "source-not-sheet";
-  }
-
-  if (recording.sheetId !== sheetId || recording.sheetId !== source.sheetId) {
-    return "sheet-mismatch";
-  }
-
-  if (
-    !recording.segmentContext ||
-    !segmentContextsMatch(recording.segmentContext, source.segmentContext)
-  ) {
-    return "source-segment-invalid";
-  }
-
-  return null;
 }
 
 export function SheetPracticeControls({
@@ -322,9 +293,6 @@ export function SheetPracticeControls({
   const rerecordSource = useSheetPracticeRecordingWorkflowStore(
     (state) => state.rerecord.source
   );
-  const rerecordSourceRecordingId = useSheetPracticeRecordingWorkflowStore(
-    (state) => state.rerecord.source?.recordingId ?? null
-  );
   const isSheetRecording = recordingState === "recording";
   const isRecordingActive = isSheetRecording || recordingHarnessActive;
   const selectedRecordingSegmentId =
@@ -427,10 +395,9 @@ export function SheetPracticeControls({
 
   useEffect(() => {
     let cancelled = false;
+    const normalizedSourceRecordingId = sourceRecordingId?.trim();
 
     async function hydratePracticeAgainSource() {
-      const normalizedSourceRecordingId = sourceRecordingId?.trim() ?? "";
-
       if (!normalizedSourceRecordingId) {
         clearRerecordSource(sheetId, "no-source-recording");
         return;
@@ -440,41 +407,25 @@ export function SheetPracticeControls({
         normalizedSourceRecordingId
       );
 
-      if (!sourceRecording) {
-        invalidateRerecordSource(sheetId, "source-recording-missing");
-        setMessage(formatRerecordUnavailableMessage("source-recording-missing"));
+      const sourceInspection = inspectPracticeAgainSource({
+        recording: sourceRecording,
+        returnSegmentId,
+        sheetId
+      });
+
+      if (sourceInspection.kind === "missing-context") {
+        clearRerecordSource(sheetId, sourceInspection.reason);
+        setMessage(formatRerecordUnavailableMessage(sourceInspection.reason));
         return;
       }
 
-      if (sourceRecording.type !== "sheet") {
-        invalidateRerecordSource(sheetId, "source-not-sheet");
-        setMessage(formatRerecordUnavailableMessage("source-not-sheet"));
+      if (sourceInspection.kind === "invalid") {
+        invalidateRerecordSource(sheetId, sourceInspection.reason);
+        setMessage(formatRerecordUnavailableMessage(sourceInspection.reason));
         return;
       }
 
-      if (sourceRecording.sheetId !== sheetId) {
-        invalidateRerecordSource(sheetId, "sheet-mismatch");
-        setMessage(formatRerecordUnavailableMessage("sheet-mismatch"));
-        return;
-      }
-
-      const sourceSegmentContext = sourceRecording.segmentContext;
-
-      if (!sourceSegmentContext) {
-        clearRerecordSource(sheetId, "no-segment-context");
-        setMessage(formatRerecordUnavailableMessage("no-segment-context"));
-        return;
-      }
-
-      if (
-        returnSegmentId &&
-        returnSegmentId.trim() &&
-        returnSegmentId.trim() !== sourceSegmentContext.segmentId
-      ) {
-        invalidateRerecordSource(sheetId, "selection-changed");
-        setMessage(formatRerecordUnavailableMessage("selection-changed"));
-        return;
-      }
+      const { recording, sourceContext: sourceSegmentContext } = sourceInspection;
 
       const liveSegment = await practiceSegmentService.getSegment(
         sheetId,
@@ -485,32 +436,25 @@ export function SheetPracticeControls({
         return;
       }
 
-      if (!liveSegment) {
+      const segmentInspection = inspectRerecordSourceSegment({
+        kind: "hydration",
+        segment: liveSegment,
+        sourceContext: sourceSegmentContext
+      });
+
+      if (segmentInspection.kind === "missing") {
         setActiveRecordingSegment(sheetId, null);
-        invalidateRerecordSource(sheetId, "source-segment-missing");
-        setMessage(formatRerecordUnavailableMessage("source-segment-missing"));
-        return;
       }
 
-      let liveSegmentContext: SheetRecordingSegmentContext;
-
-      try {
-        liveSegmentContext = createSheetRecordingSegmentContext(liveSegment);
-      } catch {
-        invalidateRerecordSource(sheetId, "source-segment-invalid");
-        setMessage(formatRerecordUnavailableMessage("source-segment-invalid"));
-        return;
-      }
-
-      if (!segmentContextsMatch(liveSegmentContext, sourceSegmentContext)) {
-        invalidateRerecordSource(sheetId, "source-segment-invalid");
-        setMessage(formatRerecordUnavailableMessage("source-segment-invalid"));
+      if (segmentInspection.kind !== "valid") {
+        invalidateRerecordSource(sheetId, segmentInspection.reason);
+        setMessage(formatRerecordUnavailableMessage(segmentInspection.reason));
         return;
       }
 
       setActiveRecordingSegment(sheetId, sourceSegmentContext.segmentId);
       setRerecordReady(sheetId, {
-        recordingId: sourceRecording.id,
+        recordingId: recording.id,
         sheetId,
         segmentContext: sourceSegmentContext
       });
@@ -549,34 +493,34 @@ export function SheetPracticeControls({
   ]);
 
   useEffect(() => {
-    if (
-      activeRecordingWorkflowSheetId !== sheetId ||
-      rerecordStatus !== "ready" ||
-      !rerecordSource ||
-      !rerecordSourceRecordingId
-    ) {
+    const sourceSelection = selectReadyRerecordSource({
+      kind: "mounted",
+      sheetId,
+      workflowState: useSheetPracticeRecordingWorkflowStore.getState()
+    });
+
+    if (sourceSelection.kind === "invalid") {
       return;
     }
 
     const sourceRecording = sheetRecordingService.getRecording(
-      rerecordSourceRecordingId
+      sourceSelection.value.recordingId
     );
-    const invalidReason = getRerecordSourceInvalidReason({
+    const recordingInspection = inspectReadyRerecordSourceRecording({
       recording: sourceRecording,
       sheetId,
-      source: rerecordSource
+      source: sourceSelection.value
     });
 
-    if (!invalidReason) {
+    if (recordingInspection.kind === "valid") {
       return;
     }
 
-    invalidateRerecordSource(sheetId, invalidReason);
+    invalidateRerecordSource(sheetId, recordingInspection.reason);
   }, [
     activeRecordingWorkflowSheetId,
     invalidateRerecordSource,
     rerecordSource,
-    rerecordSourceRecordingId,
     rerecordStatus,
     sheetRecordingService,
     sheetId
@@ -999,29 +943,28 @@ export function SheetPracticeControls({
 
   async function validateRecordAgainSource() {
     const workflowState = useSheetPracticeRecordingWorkflowStore.getState();
-    const source = workflowState.rerecord.source;
+    const sourceSelection = selectReadyRerecordSource({
+      kind: "pre-start",
+      sheetId,
+      workflowState
+    });
 
-    if (
-      workflowState.sheetId !== sheetId ||
-      workflowState.rerecord.status !== "ready" ||
-      !source ||
-      source.sheetId !== sheetId ||
-      workflowState.activeSegmentId !== source.segmentContext.segmentId
-    ) {
+    if (sourceSelection.kind === "invalid") {
       invalidateRerecordSource(sheetId, "selection-changed");
-      throw new Error("Record again is not available for this segment.");
+      throwRecordAgainUnavailable();
     }
 
+    const source = sourceSelection.value;
     const sourceRecording = sheetRecordingService.getRecording(source.recordingId);
-    const invalidReason = getRerecordSourceInvalidReason({
+    const recordingInspection = inspectReadyRerecordSourceRecording({
       recording: sourceRecording,
       sheetId,
       source
     });
 
-    if (invalidReason) {
-      invalidateRerecordSource(sheetId, invalidReason);
-      throw new Error("Record again is not available for this segment.");
+    if (recordingInspection.kind === "invalid") {
+      invalidateRerecordSource(sheetId, recordingInspection.reason);
+      throwRecordAgainUnavailable();
     }
 
     const selectedSegment = await practiceSegmentService.getSegment(
@@ -1029,30 +972,23 @@ export function SheetPracticeControls({
       source.segmentContext.segmentId
     );
 
-    if (selectedSegment === null) {
+    const segmentInspection = inspectRerecordSourceSegment({
+      kind: "pre-start",
+      segment: selectedSegment,
+      sheetId,
+      sourceContext: source.segmentContext
+    });
+
+    if (
+      segmentInspection.kind === "missing" ||
+      segmentInspection.kind === "sheet-mismatch"
+    ) {
       setActiveRecordingSegment(sheetId, null);
-      invalidateRerecordSource(sheetId, "source-segment-missing");
-      throw new Error("Record again is not available for this segment.");
     }
 
-    if (selectedSegment.sheetId !== sheetId) {
-      setActiveRecordingSegment(sheetId, null);
-      invalidateRerecordSource(sheetId, "sheet-mismatch");
-      throw new Error("Record again is not available for this segment.");
-    }
-
-    let liveSegmentContext: SheetRecordingSegmentContext;
-
-    try {
-      liveSegmentContext = createSheetRecordingSegmentContext(selectedSegment);
-    } catch {
-      invalidateRerecordSource(sheetId, "source-segment-invalid");
-      throw new Error("Record again is not available for this segment.");
-    }
-
-    if (!segmentContextsMatch(liveSegmentContext, source.segmentContext)) {
-      invalidateRerecordSource(sheetId, "source-segment-invalid");
-      throw new Error("Record again is not available for this segment.");
+    if (segmentInspection.kind !== "valid") {
+      invalidateRerecordSource(sheetId, segmentInspection.reason);
+      throwRecordAgainUnavailable();
     }
 
     return source.segmentContext;
