@@ -32,6 +32,7 @@ const requiredContent = {
 		"unchanged baseline finding",
 		"new staged finding",
 		"unstaged drift",
+		"untracked candidate shadow",
 		"Semgrep changed-file selftest passed.",
 	],
 	'skills/code_review.md': [

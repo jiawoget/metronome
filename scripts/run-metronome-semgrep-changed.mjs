@@ -12,6 +12,10 @@ function hasCommand(command) {
 	return result.status === 0;
 }
 
+function isInIndex(file) {
+	return spawnSync("git", ["cat-file", "-e", `:${file}`], {stdio: "ignore"}).status === 0;
+}
+
 const semgrepBin = process.env.SEMGREP_BIN || 'semgrep';
 const semgrepChangedFilePattern = /\.(?:[cm]?js|jsx|[cm]?ts|tsx)$/v;
 
@@ -47,6 +51,17 @@ const unstagedFiles = new Set(
 		.filter(Boolean),
 );
 const filesWithUnstagedChanges = candidateFiles.filter(file => unstagedFiles.has(file));
+const untrackedCandidateShadows = candidateFiles.filter(file => existsSync(file) && !isInIndex(file));
+
+if (untrackedCandidateShadows.length > 0) {
+	console.error("Semgrep cannot verify staged deletions or renames shadowed by untracked working-tree files:");
+	for (const file of untrackedCandidateShadows) {
+		console.error(`- ${file}`);
+	}
+
+	console.error("Remove or move those files before running the Semgrep gate.");
+	process.exit(1);
+}
 
 if (filesWithUnstagedChanges.length > 0) {
 	console.error("Semgrep cannot verify the committed/staged snapshot while its inputs have unstaged changes:");

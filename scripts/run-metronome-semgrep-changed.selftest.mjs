@@ -130,4 +130,26 @@ withRepo(({ cwd, baseline }) => {
   );
 });
 
+withRepo(({ cwd, baseline }) => {
+  git(cwd, ["rm", "src/example.ts"]);
+  write(
+    cwd,
+    "src/example.ts",
+    "dangerousCall();\nexport const shadow = true;\n"
+  );
+  const result = runRunner(cwd, baseline);
+
+  assert.notEqual(result.status, 0, "untracked candidate shadow must fail");
+  assert.match(
+    result.stderr,
+    /untracked working-tree files/v,
+    "untracked candidate shadow must explain the snapshot conflict"
+  );
+  assert.match(
+    result.stderr,
+    /src\/example\.ts/v,
+    "untracked candidate shadow must name the candidate file"
+  );
+});
+
 console.log("Semgrep changed-file selftest passed.");
