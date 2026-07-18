@@ -941,7 +941,10 @@ function validateImmutablePlanIdentity(sectionBody, config) {
 		failures.push(config.commitError);
 	}
 
-	if (!config.blobPattern.test(identity.blob ?? "") || identity.blob !== approvedPlanBlob || identity.blob !== currentPlanBlob) {
+	if (
+		!config.blobPattern.test(identity.blob ?? "")
+		|| new Set([identity.blob, approvedPlanBlob, currentPlanBlob]).size !== 1
+	) {
 		failures.push(config.blobError);
 	}
 
