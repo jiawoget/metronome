@@ -26,7 +26,10 @@ function write(cwd, file, content) {
   writeFileSync(fullPath, content, "utf8");
 }
 
-function createRepo() {
+function createRepo({
+  sourceFile = "src/example.ts",
+  sourceContent = "dangerousCall();\nexport const value = 1;\n"
+} = {}) {
   const cwd = mkdtempSync(path.join(tmpdir(), "metronome-semgrep-changed-"));
 
   git(cwd, ["init"]);
@@ -38,7 +41,7 @@ function createRepo() {
     ".semgrep/probe.yml",
     "rules:\n  - id: probe.dangerous-call\n    languages: [typescript]\n    severity: ERROR\n    message: probe\n    pattern: dangerousCall(...)\n"
   );
-  write(cwd, "src/example.ts", "dangerousCall();\nexport const value = 1;\n");
+  write(cwd, sourceFile, sourceContent);
   git(cwd, ["add", "-A"]);
   git(cwd, ["commit", "-m", "baseline"]);
 
@@ -142,7 +145,7 @@ withRepo(({ cwd, baseline }) => {
   assert.notEqual(result.status, 0, "untracked candidate shadow must fail");
   assert.match(
     result.stderr,
-    /untracked working-tree files/v,
+    /untracked or ignored working-tree files/v,
     "untracked candidate shadow must explain the snapshot conflict"
   );
   assert.match(
@@ -151,5 +154,64 @@ withRepo(({ cwd, baseline }) => {
     "untracked candidate shadow must name the candidate file"
   );
 });
+
+{
+  const repo = createRepo();
+  try {
+    write(repo.cwd, ".gitignore", "src/example.ts\n");
+    git(repo.cwd, ["add", ".gitignore"]);
+    git(repo.cwd, ["commit", "-m", "ignore source path"]);
+    const baseline = git(repo.cwd, ["rev-parse", "HEAD"]);
+    git(repo.cwd, ["rm", "src/example.ts"]);
+    write(
+      repo.cwd,
+      "src/example.ts",
+      "dangerousCall();\nexport const shadow = true;\n"
+    );
+    const result = runRunner(repo.cwd, baseline);
+
+    assert.notEqual(result.status, 0, "ignored candidate shadow must fail");
+    assert.match(
+      result.stderr,
+      /untracked or ignored working-tree files/v,
+      "ignored candidate shadow must explain the snapshot conflict"
+    );
+    assert.match(
+      result.stderr,
+      /src\/example\.ts/v,
+      "ignored candidate shadow must name the candidate file"
+    );
+  } finally {
+    rmSync(repo.cwd, { recursive: true, force: true });
+  }
+}
+
+{
+  const repo = createRepo({
+    sourceFile: "src/Foo.ts",
+    sourceContent: "export const value = 1;\n"
+  });
+  try {
+    git(repo.cwd, ["config", "core.ignorecase", "true"]);
+    git(repo.cwd, ["mv", "src/Foo.ts", "src/Foo.tmp"]);
+    git(repo.cwd, ["mv", "src/Foo.tmp", "src/foo.ts"]);
+    const result = runRunner(repo.cwd, repo.baseline);
+    const output = combinedOutput(result);
+
+    assert.equal(result.status, 0, `case-only rename must pass:\n${output}`);
+    assert.match(
+      result.stdout,
+      /src\/foo\.ts/v,
+      "case-only rename must scan the exact indexed path"
+    );
+    assert.doesNotMatch(
+      result.stdout,
+      /src\/Foo\.ts/v,
+      "case-only rename must not scan the deleted old spelling"
+    );
+  } finally {
+    rmSync(repo.cwd, { recursive: true, force: true });
+  }
+}
 
 console.log("Semgrep changed-file selftest passed.");

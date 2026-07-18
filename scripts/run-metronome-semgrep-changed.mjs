@@ -16,6 +16,12 @@ function isInIndex(file) {
 	return spawnSync("git", ["cat-file", "-e", `:${file}`], {stdio: "ignore"}).status === 0;
 }
 
+function isUntrackedOrIgnored(file) {
+	const literalPathspec = `:(literal)${file}`;
+	return runGit(["ls-files", "--others", "--exclude-standard", "--", literalPathspec]) !== ""
+		|| runGit(["ls-files", "--others", "--ignored", "--exclude-standard", "--", literalPathspec]) !== "";
+}
+
 const semgrepBin = process.env.SEMGREP_BIN || 'semgrep';
 const semgrepChangedFilePattern = /\.(?:[cm]?js|jsx|[cm]?ts|tsx)$/v;
 
@@ -51,10 +57,14 @@ const unstagedFiles = new Set(
 		.filter(Boolean),
 );
 const filesWithUnstagedChanges = candidateFiles.filter(file => unstagedFiles.has(file));
-const untrackedCandidateShadows = candidateFiles.filter(file => existsSync(file) && !isInIndex(file));
+const indexBackedCandidates = candidateFiles.filter(file => isInIndex(file));
+const indexBackedCandidateSet = new Set(indexBackedCandidates);
+const untrackedCandidateShadows = candidateFiles.filter(file =>
+	!indexBackedCandidateSet.has(file) && existsSync(file) && isUntrackedOrIgnored(file),
+);
 
 if (untrackedCandidateShadows.length > 0) {
-	console.error("Semgrep cannot verify staged deletions or renames shadowed by untracked working-tree files:");
+	console.error("Semgrep cannot verify staged deletions or renames shadowed by untracked or ignored working-tree files:");
 	for (const file of untrackedCandidateShadows) {
 		console.error(`- ${file}`);
 	}
@@ -73,7 +83,7 @@ if (filesWithUnstagedChanges.length > 0) {
 	process.exit(1);
 }
 
-const changed = candidateFiles.filter(file => existsSync(file));
+const changed = indexBackedCandidates.filter(file => existsSync(file));
 
 if (changed.length === 0) {
 	console.log('No changed JavaScript or TypeScript files to scan.');

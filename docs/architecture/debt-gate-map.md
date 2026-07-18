@@ -73,7 +73,8 @@ The code review agent must run gates in this order before normal review:
    - If CodeScene cannot run for a production-source or gate-control PR, review is blocked unless the user explicitly grants a one-off override.
 2. Semgrep changed-file gate.
    - Candidates are the de-duplicated union of JavaScript/TypeScript files changed between the merge base and `HEAD` plus files currently staged in the index.
-   - If a candidate also has unstaged changes, or an untracked file shadows a staged deletion or rename, the gate fails before scanning because the committed/staged snapshot is ambiguous.
+   - Only exact paths present in the Git index are scanned, so deleted paths and the old spelling of case-only renames are excluded.
+   - If a candidate also has unstaged changes, or Git classifies a working-tree file as an untracked or ignored shadow of a staged deletion or rename, the gate fails before scanning because the committed/staged snapshot is ambiguous.
    - The runner uses Semgrep's merge-base comparison to keep existing findings visible but non-blocking while rejecting net-new findings; all configured rules and severities remain active.
    - `npm run lint:debt:changed` must pass.
    - Any Semgrep failure is `CHANGES_REQUIRED`.
