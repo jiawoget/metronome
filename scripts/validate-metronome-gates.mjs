@@ -12,6 +12,7 @@ const required = [
 	'.semgrep/metronome-ui-ownership.yml',
 	'skills/code_review.md',
 	'scripts/run-metronome-semgrep-changed.mjs',
+	"scripts/run-metronome-semgrep-changed.selftest.mjs",
 	'scripts/validate-pr-debt-contract.mjs',
 	'scripts/validate-pr-debt-contract.selftest.mjs',
 	'.github/workflows/metronome-debt-gates.yml',
@@ -26,6 +27,16 @@ const required = [
 ];
 
 const requiredContent = {
+	"scripts/run-metronome-semgrep-changed.selftest.mjs": [
+		"staged-only candidate",
+		"unchanged baseline finding",
+		"new staged finding",
+		"unstaged drift",
+		"untracked candidate shadow",
+		"ignored candidate shadow",
+		"case-only rename",
+		"Semgrep changed-file selftest passed.",
+	],
 	'skills/code_review.md': [
 		'canonical hard-gate workflow',
 		'skills/metronome_reviewer.md',
@@ -179,6 +190,11 @@ if (failed) {
 }
 
 console.log('Metronome debt gate package files are present.');
+
+const semgrepSelftestResult = spawnSync(process.execPath, ["scripts/run-metronome-semgrep-changed.selftest.mjs"], {stdio: "inherit"});
+if (semgrepSelftestResult.status !== 0) {
+	process.exit(semgrepSelftestResult.status ?? 1);
+}
 
 const selftestResult = spawnSync(process.execPath, ['scripts/validate-pr-debt-contract.selftest.mjs'], {stdio: 'inherit'});
 if (selftestResult.status !== 0) {
