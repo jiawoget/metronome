@@ -3,10 +3,23 @@
 
 ## Reuse Proof
 
-| Need | Existing primitive/library checked | Files read | Decision |
-|---|---|---|---|
+| Capability ID | Need | Class | Source kind | Exact source / version | Exact API / probe | Files read | Decision | No-fit / policy evidence |
+|---|---|---|---|---|---|---|---|---|
 
-Shared primitive call-site migration:
+### Capability Implementation Map
+
+| Capability ID | Changed files / symbols | Tests / probes |
+|---|---|---|
+
+Capability plan path:
+Capability plan commit:
+Capability plan blob:
+Capability plan SHA-256:
+
+Local-policy approval tokens belong in their capability rows. For every
+local-policy row, include the matching immutable `LOCAL_POLICY_APPROVED` evidence
+in `Agent Gate Evidence`. Record actual passed implementation probes; a failed
+probe blocks and never permits silent local fallback.
 
 ## Retired Surface
 

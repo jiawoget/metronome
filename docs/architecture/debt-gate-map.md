@@ -40,6 +40,30 @@ Local pre-commit execution has no pull-request body to validate. It scans staged
 
 Normal PR evidence may use either `Codex final review prompt/verdict` or the legacy `ChatGPT final review prompt/verdict`, with exactly one non-placeholder verdict. Overlay promotion keeps its explicit ChatGPT stage contract until that workflow is separately revised.
 
+## Capability Admission Gate
+
+The existing `scripts/validate-pr-debt-contract.mjs` is the sole structural
+capability validator. Plan admission runs read-only before `PLAN_READY` with
+`node scripts/validate-pr-debt-contract.mjs --plan-input docs/v1/implementation-slices/plans/<plan>.md`;
+PR validation reads `Reuse Proof` on the candidate head. Neither mode writes,
+uses the network, runs probes, or executes commands copied from evidence.
+
+The canonical table plus exact `Capability Delivery Map` / `Capability Implementation Map`,
+decision relations, OSS/platform admission, Open GSD v1.7.0 read-only adapter,
+`provider_fallback`, and Pack F restrictions live in
+`docs/v1/implementation-slices/rules/external-library-first.md`. The validator
+enforces their structural shape, ID equality, source/probe markers, composition,
+and immutable capability-plan/approval identity. It cannot establish semantic
+fit, coverage, thinness, no-fit sufficiency, map truth, or diff conformance;
+independent review must fail closed on those concerns.
+
+Plan local-policy rows remain `approval: pending-plan-review` until immutable
+review emits matching `LOCAL_POLICY_APPROVED` lines with `PLAN_REVIEW_PASS`.
+Missing capability evidence reports `PLAN_BLOCKED` plus `BLOCKER_CODE <code>`;
+implementation-review evidence reports `CHANGES_REQUIRED` plus
+`FINDING_CODE <code>`. These secondary codes do not alter overlay or verdict
+contracts.
+
 ## Shared Primitive Rule
 
 A PR that extracts a shared primitive, controller, service, presenter, formatter, validator, parser, adapter, or helper is not debt reduction unless it:

@@ -1,76 +1,95 @@
 # Metronome Coding Skill
 
-Read `.agents/skills/metronome-workflow/SKILL.md` first. The full role contract below remains in force; the overlay takes precedence only for shared workflow, model-routing, pause, and promotion rules.
+Read `.agents/skills/metronome-workflow/SKILL.md` first. The full role contract below remains in force; the overlay takes precedence for shared workflow, model routing, pause, and promotion rules.
 
-This coder is a hard gate. Do not edit production code until an approved plan has `PLAN_READY` and includes repo-map evidence, surface accounting, and retired-surface targets.
+This coder is a hard gate for every task. Do not edit production code until an approved immutable plan has `PLAN_READY`, matching immutable plan identity, independent `PLAN_REVIEW_PASS`, and the reviewed capability table and delivery map. The coder implements that reviewed decision; it does not rediscover a substitute architecture or silently change a source.
 
 ## Required Input Packet
 
 Before editing, read and list:
 
-- Approved plan file path under `docs/v1/implementation-slices/plans/`.
+- Approved plan path under `docs/v1/implementation-slices/plans/` and its immutable commit, blob, and SHA-256.
+- The reviewed `## Existing Primitive Search` table and `### Capability Delivery Map`, with the exact stable capability-ID set.
+- Independent `PLAN_REVIEW_PASS` and one matching `LOCAL_POLICY_APPROVED <Cxx> <planCommit> <planBlob> <planSha256>` line for every local-policy row.
 - `docs/architecture/debt-gate-map.md`.
 - Relevant `docs/agent-index/*.md`.
-- Existing primitives, services, repositories, hooks, controllers, adapters, and tests named by the plan.
-- `package.json` when library reuse is relevant.
+- Existing primitives, services, repositories, hooks, controllers, adapters, and tests named by the reviewed plan.
+- `package.json`, lockfile, and installed-package material only when the reviewed source requires them.
 
-Return `BLOCKED: plan missing debt contract` if a normal implementation plan lacks Existing Primitive Search, Shared Primitive Call-Site Audit, New Surface Budget, Retired Surface Target, Boundary Impact, or Tests Required.
-
-Return `BLOCKED: repo map missing` only for normal implementation plans that do not show repo-map searches.
+Return top-level `BLOCKED` with `BLOCKER_CODE reviewed-capability-table-missing` when a plan lacks the reviewed table/map or immutable review evidence. Return top-level `BLOCKED` with `BLOCKER_CODE capability-plan-identity-mismatch` when its path, commit, blob, SHA-256, approval lines, or table does not exactly match the reviewed immutable plan.
 
 ## Coding Workflow
 
-1. Re-run the repo-map search locally.
-   - Search for `normalize*`, `format*`, `validate*`, `resolve*`, `select*`, `build*`, `create*`.
-   - Search for old aliases, compatibility fields, wrappers, direct repository callers, and old entrypoints named by the plan.
-   - Search in `src/**`, `tests/**`, relevant `scripts/**`, and relevant docs/plans.
+### 1. Revalidate the reviewed admission decision
 
-2. Choose the first valid implementation option:
-   - Reuse an existing repo primitive.
-   - Reuse an already-installed library.
-   - Extract a narrow shared primitive and delete/narrow old implementations in the same PR.
-   - Add a local helper only with explicit no-go evidence.
+1. Re-run the repo-map search named by the plan, including same-semantics primitives, old aliases, compatibility fields, wrappers, direct callers, and relevant `src/**`, `tests/**`, scripts, and docs/plans.
+2. Re-run every selected-source probe in the exact implementation environment. Record the exact resolved version, export, API, observed behavior, and passed result.
+3. Stop before implementation and return `BLOCKED` with `BLOCKER_CODE capability-probe-mismatch` if the reviewed version, export, API, behavior, or probe result differs.
+4. A failed non-local source never permits a local helper, handwritten equivalent, substituted package, or changed API. Return the mismatch to plan review; only a reviewed immutable plan revision may select another source.
 
-3. Retire old surface while coding.
-   - Do not leave old wrappers, aliases, compatibility fields, or direct paths active unless the PR says it is not debt reduction and explains why.
-   - Shared primitive/controller/service/presenter/helper work must migrate at least two old call sites and delete/narrow old implementations unless repo-wide search proves fewer than two old call sites exist.
-   - For refactor pipelines, surfaces listed under `Required Retired Surfaces` must actually be deleted. Renaming, moving, narrowing, or leaving compatibility wrappers is not completion unless the plan is explicitly `PLAN_BLOCKED`.
+### 2. Implement only the reviewed composition
 
-4. Keep boundaries intact.
-   - Business UI must not default to browser services.
-   - UI/hooks must not import infrastructure.
-   - Domain must not import UI or services.
-   - Service repository passthrough must retire at least one direct repository caller.
+1. Reuse the reviewed repository, installed, OSS, or platform primitive directly where the table says `direct-use`.
+2. Keep `thin-policy` and `local-policy` code product-specific, explicit, and composed around the referenced generic `Cxx` capability. Policy may constrain the selected primitive but must not reimplement a generic operation.
+3. A local-policy implementation must preserve `policy-boundary:`, its reviewed `composes:` target (or `none`), `generic-operation: none`, and the matching immutable approval identity. Missing or stale approval is `BLOCKED` with `BLOCKER_CODE local-policy-approval-mismatch`.
+4. A `local-no-fit` generic implementation is allowed only exactly where the reviewed table has all four repo/installed/OSS/platform no-fit results. Do not broaden it into a new shared helper or abstraction without a reviewed plan revision.
+5. Map every changed behavior and its supporting test/probe to one or more reviewed capability IDs. A plan decision of `direct-use` forbids a handmade equivalent helper.
 
-5. Return only the current-stage handoff below. The monitor owns preflight,
-   PR evidence, full gates, CodeScene, reviewer, CI, and ChatGPT stages.
+### 3. Preserve surface and boundaries
+
+- Retire old wrappers, aliases, compatibility fields, and direct paths named by the plan; do not defer known cleanup.
+- A shared primitive/controller/service/presenter/helper must migrate at least two old call sites and delete/narrow old implementations unless the plan proves fewer than two old call sites and makes no debt-reduction claim.
+- Business UI must not default to browser services; UI/hooks must not import infrastructure; domain must not import UI/services; a service repository passthrough must retire at least one direct repository caller.
+- Behavior-equivalence coverage is required when retiring compatibility surface. Run focused tests for non-trivial logic and browser/E2E verification for UI, recording, or media workflows when the plan requires them.
 
 ## Forbidden Without Hard Evidence
 
-Do not add:
+Without a reviewed immutable plan revision, do not add or substitute:
 
+- A local helper, wrapper, parser, normalizer, formatter, validator, resolver, selector, builder, or creator after a selected non-local source fails.
+- A package/version/export/API not present in the immutable reviewed table.
+- Product-policy code that performs a generic parse, normalization, validation, formatting, conversion, or other reimplementation hidden behind policy language.
 - A wrapper while leaving the old wrapper or direct path active.
 - A service method that only returns `repository.*(...)` without retiring a direct caller.
-- A new `normalize*`, `format*`, `validate*`, `resolve*`, `select*`, `build*`, or `create*` helper without Reuse Proof.
-- Singular/plural compatibility state such as `target` plus `targets`.
-- Alias actions such as `onSaveX` plus `saveX`.
-- UI defaults bound to browser services.
-- UI imports from infrastructure.
-- Domain imports from UI or services.
-- Tests that only update expectations while missing behavior-equivalence coverage.
+- Singular/plural compatibility state, alias actions, UI browser-service defaults, UI infrastructure imports, domain UI/service imports, or tests that merely update expectations without required behavior-equivalence coverage.
 
-## Current-Stage Handoff
+## Required PR Body Evidence Source
 
-Required PR Body Evidence is monitor-owned. Return these four concrete groups:
+Required PR body evidence remains monitor-owned. The coder supplies exact source data for the monitor to copy into `## Reuse Proof`; it does not claim a PR verdict, PR URL/body completion, CI, ChatGPT, CodeScene, or a downstream reviewer result.
+
+Return these five concrete groups:
 
 1. Implementation files and purpose.
-2. Scope accounting: reuse decision, new-surface result, and boundary delta.
-3. Retired/deleted surface proof, including every refactor `RS-*` item.
-4. Focused tests actually run and their results, including behavior-equivalence
-   coverage when a compatibility surface was retired.
+2. Scope accounting: reviewed capability decision, new-surface result, and boundary delta.
+3. Retired/deleted surface proof, including every planned retired surface.
+4. Exact source probes and focused tests actually run, with actual results.
+5. The monitor-consumable capability PR evidence below.
 
-Do not claim or request a reviewer verdict, PR URL/body, CI, ChatGPT,
-monitor-owned CodeScene, or future full-gate evidence.
+The fifth group must reproduce the exact reviewed capability source selections with actual implementation probes, not plan placeholders:
+
+```md
+## Capability PR Evidence for Monitor
+
+Capability plan path: docs/v1/implementation-slices/plans/<plan>.md
+Capability plan commit: <lowercase 40-hex>
+Capability plan blob: <lowercase 40-hex>
+Capability plan SHA-256: <lowercase 64-hex>
+
+## Reuse Proof
+
+| Capability ID | Need | Class | Source kind | Exact source / version | Exact API / probe | Files read | Decision | No-fit / policy evidence |
+|---|---|---|---|---|---|---|---|---|
+
+For every local-policy row, use exactly:
+approval: <Cxx>@<lowercase 40-hex commit>/<lowercase 40-hex blob>/<lowercase 64-hex sha256>
+
+### Capability Implementation Map
+
+| Capability ID | Changed files / symbols | Tests / probes |
+|---|---|---|
+```
+
+The implementation map has non-empty cells, the exact same C-ID set as `Reuse Proof`, and covers every changed behavior and supporting test/probe. The monitor validates the PR evidence and tracked plan/approval identity without executing probes; the independent reviewer decides source fit, policy thinness, map truth, hidden handmade equivalents, diff conformance, and test correctness.
 
 ## Required Output Schema
 
@@ -79,19 +98,23 @@ monitor-owned CodeScene, or future full-gate evidence.
 
 CODE_READY / BLOCKED
 
+When the verdict is BLOCKED, add this exact next line:
+BLOCKER_CODE <stable-code>
+
 ## Skill Evidence
 
 - Skill file read: skills/metronome_coder.md
 - Debt gate map read: docs/architecture/debt-gate-map.md
+- Immutable reviewed capability plan read: <path>@<commit>/<blob>/<sha256>
 
 ## Files Changed
 
-| File | Purpose |
-|---|---|
+| File | Purpose | Capability IDs |
+|---|---|---|
 
 ## Scope Accounting
 
-| Need | Existing primitive/library checked | Files read | Decision |
+| Capability ID | Reviewed source/decision | Exact probe rerun | Implementation result |
 |---|---|---|---|
 
 ## Retired/Deleted Surface Proof
@@ -109,8 +132,25 @@ CODE_READY / BLOCKED
 
 ## Focused Tests
 
-| Command | Result |
-|---|---|
+| Command | Result | Capability IDs |
+|---|---|---|
+
+## Capability PR Evidence for Monitor
+
+Capability plan path: docs/v1/implementation-slices/plans/<plan>.md
+Capability plan commit: <lowercase 40-hex>
+Capability plan blob: <lowercase 40-hex>
+Capability plan SHA-256: <lowercase 64-hex>
+
+## Reuse Proof
+
+| Capability ID | Need | Class | Source kind | Exact source / version | Exact API / probe | Files read | Decision | No-fit / policy evidence |
+|---|---|---|---|---|---|---|---|---|
+
+### Capability Implementation Map
+
+| Capability ID | Changed files / symbols | Tests / probes |
+|---|---|---|
 
 ## Blockers
 
@@ -120,5 +160,5 @@ CODE_READY / BLOCKED
 
 ## Verdict Handling
 
-- `CODE_READY`: return the handoff to the monitor for preflight.
-- `BLOCKED`: do not request a downstream stage until the blocker is fixed.
+- `CODE_READY`: return only the current-stage handoff and monitor-consumable evidence for preflight.
+- `BLOCKED`: do not edit around the mismatch or request a downstream stage. Use a stable `BLOCKER_CODE`, repair through the reviewed plan when required, and restart from the exact immutable evidence.

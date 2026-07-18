@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import {execFileSync} from 'node:child_process';
-import {createHash} from 'node:crypto';
-import {existsSync, readFileSync} from 'node:fs';
-import process from 'node:process';
+import {execFileSync} from "node:child_process";
+import {createHash} from "node:crypto";
+import {existsSync, readFileSync} from "node:fs";
+import process from "node:process";
 
 const sourceFilePattern = /^src\/.*\.(?:ts|tsx)$/v;
 const ignoredFilePattern = /(?:^|\/)__tests__\/|(?:\.test|\.spec)\.(?:ts|tsx)$/v;
@@ -25,69 +25,103 @@ const gateControlFilePatterns = [
 ];
 
 const overlayControlFiles = new Set([
-	'AGENTS.md',
-	'.agents/skills/metronome-workflow/SKILL.md',
+	"AGENTS.md",
+	".agents/skills/metronome-workflow/SKILL.md",
 ]);
-const overlayPlanPath = 'docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md';
-const overlayPlanReviewPolicies = new Set(['GPT-5.6 Terra standard', 'GPT-5.6 Luna standard']);
+const overlayPlanPath = "docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md";
+const overlayPlanReviewPolicies = new Set(["GPT-5.6 Terra standard", "GPT-5.6 Luna standard"]);
+
+const capabilityHeaders = [
+	"Capability ID",
+	"Need",
+	"Class",
+	"Source kind",
+	"Exact source / version",
+	"Exact API / probe",
+	"Files read",
+	"Decision",
+	"No-fit / policy evidence",
+];
+const capabilityStages = {
+	plan: {
+		section: "Existing Primitive Search",
+		mapHeading: "Capability Delivery Map",
+		mapHeaders: ["Capability ID", "Planned files / symbols", "Planned tests / probes"],
+	},
+	pr: {
+		section: "Reuse Proof",
+		mapHeading: "Capability Implementation Map",
+		mapHeaders: ["Capability ID", "Changed files / symbols", "Tests / probes"],
+	},
+};
+const capabilityIdPattern = /^C\d{2,}$/v;
+const capabilityClasses = new Set(["generic", "product-policy"]);
+const capabilitySourceKinds = new Set(["repo", "installed", "oss", "platform", "local"]);
+const capabilityDecisions = new Set(["direct-use", "thin-policy", "local-no-fit", "local-policy"]);
+const nonLocalSourceKinds = new Set(["repo", "installed", "oss", "platform"]);
+const localNoFitEvidenceLabels = ["repo:", "installed:", "oss:", "platform:"];
+const repoSourcePattern = /^(?!.*(?:^|\/)\.\.?(?:\/|#))[.0-9A-Za-z][\w\u{2D}.\/@]*#[$A-Z_a-z][\w$]*(?:\.[$A-Z_a-z][\w$]*)*$/v;
+const packageSourcePattern = /^(?:@[0-9A-Za-z][\u{2D}.0-9A-Za-z]*\/)?[0-9A-Za-z][\u{2D}.0-9A-Za-z]*@\d+\.\d+\.\d+#[\w$][\w$\u{2D}.\/]*$/v;
+const platformSourcePattern = /^https:\/\/[^\s#]+#[^\s#]+$/v;
+const capabilityPlanPathPattern = /^docs\/v1\/implementation-slices\/plans\/(?:[^\/]+\/)*[^\/]+\.md$/v;
 
 const requiredSections = [
-	'Reuse Proof',
-	'Retired Surface',
-	'New Surface',
-	'Boundary Delta',
-	'Debt Gate Evidence',
-	'Agent Gate Evidence',
+	"Reuse Proof",
+	"Retired Surface",
+	"New Surface",
+	"Boundary Delta",
+	"Debt Gate Evidence",
+	"Agent Gate Evidence",
 ];
 
 const requiredCommands = [
-	'npm run validate:debt-gates',
-	'npm run lint:debt:changed',
-	'npm run lint:xo:changed',
-	'npm run lint',
-	'npm run typecheck',
-	'npm run test:unit',
-	'npm run build',
+	"npm run validate:debt-gates",
+	"npm run lint:debt:changed",
+	"npm run lint:xo:changed",
+	"npm run lint",
+	"npm run typecheck",
+	"npm run test:unit",
+	"npm run build",
 ];
 
-const codeSceneMcpEvidenceLabel = 'CodeScene MCP `analyze_change_set`';
+const codeSceneMcpEvidenceLabel = "CodeScene MCP `analyze_change_set`";
 
-const allowedPlanVerdicts = new Set(['PLAN_READY']);
-const allowedCodeVerdicts = new Set(['CODE_READY']);
-const allowedReviewVerdicts = new Set(['PASS', 'PASS_WITH_NITS']);
-const allowedChatGptVerdicts = new Set(['PASS', 'PASS_WITH_NITS']);
+const allowedPlanVerdicts = new Set(["PLAN_READY"]);
+const allowedCodeVerdicts = new Set(["CODE_READY"]);
+const allowedReviewVerdicts = new Set(["PASS", "PASS_WITH_NITS"]);
+const allowedChatGptVerdicts = new Set(["PASS", "PASS_WITH_NITS"]);
 const finalReviewEvidenceLabels = [
-	'Codex final review prompt/verdict',
-	'ChatGPT final review prompt/verdict',
+	"Codex final review prompt/verdict",
+	"ChatGPT final review prompt/verdict",
 ];
-const overlayPromotionVerdicts = new Map([['MSO-5', new Set(['PENDING'])], ['MSO-6', allowedChatGptVerdicts]]);
+const overlayPromotionVerdicts = new Map([["MSO-5", new Set(["PENDING"])], ["MSO-6", allowedChatGptVerdicts]]);
 
 const requiredAgentSkillEvidence = [
-	['Planner skill read evidence', 'skills/metronome_planner.md'],
-	['Coder skill read evidence', 'skills/metronome_coder.md'],
-	['Reviewer skill read evidence', 'skills/metronome_reviewer.md'],
+	["Planner skill read evidence", "skills/metronome_planner.md"],
+	["Coder skill read evidence", "skills/metronome_coder.md"],
+	["Reviewer skill read evidence", "skills/metronome_reviewer.md"],
 ];
-const debtContractDiffFilter = 'ACMRD';
+const debtContractDiffFilter = "ACMRD";
 const positiveStatusPattern = /^(?:passed|success)\b/iv;
 const blockingEvidencePattern = /\bnot\b|\bfails?\b|\bfailed\b|\bfailures?\b|\berrors?\b|\bblocked\b|\bchanges_required\b|\bchanges required\b/iv;
 
 function runGit(args) {
-	return execFileSync('git', args, {encoding: 'utf8'}).trim();
+	return execFileSync("git", args, {encoding: "utf8"}).trim();
 }
 
 function tryRunGit(args) {
 	try {
 		return runGit(args);
 	} catch {
-		return '';
+		return "";
 	}
 }
 
 function getMergeBase() {
-	const baseRef = process.env.BASE_REF || process.env.GITHUB_BASE_REF || 'origin/main';
+	const baseRef = process.env.BASE_REF || process.env.GITHUB_BASE_REF || "origin/main";
 
-	for (const candidate of [baseRef, 'origin/main']) {
-		const mergeBase = tryRunGit(['merge-base', candidate, 'HEAD']);
+	for (const candidate of [baseRef, "origin/main"]) {
+		const mergeBase = tryRunGit(["merge-base", candidate, "HEAD"]);
 		if (mergeBase) {
 			return mergeBase;
 		}
@@ -97,7 +131,7 @@ function getMergeBase() {
 }
 
 function normalizePath(file) {
-	return file.trim().replaceAll('\\', '/');
+	return file.trim().replaceAll("\\", "/");
 }
 
 function isProductionSourceFile(file) {
@@ -135,14 +169,14 @@ function getPrContext() {
 	}
 
 	try {
-		const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+		const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
 		if (!event.pull_request) {
 			return {isPullRequest: false, body: null};
 		}
 
 		return {
 			isPullRequest: true,
-			body: typeof event.pull_request.body === 'string' ? event.pull_request.body : '',
+			body: typeof event.pull_request.body === "string" ? event.pull_request.body : "",
 		};
 	} catch (error) {
 		console.error(`Could not read GitHub pull request body: ${error instanceof Error ? error.message : String(error)}`);
@@ -153,30 +187,30 @@ function getPrContext() {
 function getScanContexts(mergeBase, prContext) {
 	if (prContext.isPullRequest) {
 		if (!mergeBase) {
-			console.error('Could not determine merge base for pull request debt contract scan.');
+			console.error("Could not determine merge base for pull request debt contract scan.");
 			process.exit(1);
 		}
 
 		return [{
-			name: 'pull request diff',
-			diffArgs: ['diff', '--unified=0', mergeBase, 'HEAD', '--'],
-			files: parseFiles(tryRunGit(['diff', '--name-only', `--diff-filter=${debtContractDiffFilter}`, mergeBase, 'HEAD'])),
+			name: "pull request diff",
+			diffArgs: ["diff", "--unified=0", mergeBase, "HEAD", "--"],
+			files: parseFiles(tryRunGit(["diff", "--name-only", `--diff-filter=${debtContractDiffFilter}`, mergeBase, "HEAD"])),
 			requiresPrBody: true,
 		}];
 	}
 
-	const stagedFiles = parseFiles(tryRunGit(['diff', '--cached', '--name-only', `--diff-filter=${debtContractDiffFilter}`]));
-	const workingTreeFiles = parseFiles(tryRunGit(['diff', '--name-only', `--diff-filter=${debtContractDiffFilter}`]));
+	const stagedFiles = parseFiles(tryRunGit(["diff", "--cached", "--name-only", `--diff-filter=${debtContractDiffFilter}`]));
+	const workingTreeFiles = parseFiles(tryRunGit(["diff", "--name-only", `--diff-filter=${debtContractDiffFilter}`]));
 	const committedBranchFiles = mergeBase
-		? parseFiles(tryRunGit(['diff', '--name-only', `--diff-filter=${debtContractDiffFilter}`, mergeBase, 'HEAD']))
+		? parseFiles(tryRunGit(["diff", "--name-only", `--diff-filter=${debtContractDiffFilter}`, mergeBase, "HEAD"]))
 		: [];
 
 	const contexts = [];
 
 	if (stagedFiles.length > 0) {
 		contexts.push({
-			name: 'staged diff',
-			diffArgs: ['diff', '--cached', '--unified=0', '--'],
+			name: "staged diff",
+			diffArgs: ["diff", "--cached", "--unified=0", "--"],
 			files: stagedFiles,
 			requiresPrBody: false,
 			requireNoRiskyAdditions: true,
@@ -185,8 +219,8 @@ function getScanContexts(mergeBase, prContext) {
 
 	if (workingTreeFiles.length > 0) {
 		contexts.push({
-			name: 'working tree diff',
-			diffArgs: ['diff', '--unified=0', '--'],
+			name: "working tree diff",
+			diffArgs: ["diff", "--unified=0", "--"],
 			files: workingTreeFiles,
 			requiresPrBody: false,
 			requireNoRiskyAdditions: true,
@@ -195,8 +229,8 @@ function getScanContexts(mergeBase, prContext) {
 
 	if (contexts.length === 0 && committedBranchFiles.length > 0) {
 		contexts.push({
-			name: 'committed branch diff',
-			diffArgs: ['diff', '--unified=0', mergeBase, 'HEAD', '--'],
+			name: "committed branch diff",
+			diffArgs: ["diff", "--unified=0", mergeBase, "HEAD", "--"],
 			files: committedBranchFiles,
 			requiresPrBody: false,
 			requireNoRiskyAdditions: false,
@@ -218,17 +252,17 @@ function getDiffLines(context, file) {
 			continue;
 		}
 
-		if (line.startsWith('+++')) {
+		if (line.startsWith("+++")) {
 			continue;
 		}
 
-		if (line.startsWith('+')) {
+		if (line.startsWith("+")) {
 			lines.push({file, line: newLineNumber, text: line});
 			newLineNumber += 1;
 			continue;
 		}
 
-		if (!line.startsWith('-') && newLineNumber > 0) {
+		if (!line.startsWith("-") && newLineNumber > 0) {
 			newLineNumber += 1;
 		}
 	}
@@ -251,28 +285,28 @@ function getRiskKind(file, text) {
 	const withoutPlus = text.slice(1);
 
 	if (isPrimitiveHelper(text)) {
-		return 'primitive-like helper added';
+		return "primitive-like helper added";
 	}
 
 	if (
-		file.startsWith('src/services/')
+		file.startsWith("src/services/")
 		&& /\breturn\s+(?:await\s+)?(?:this\.)?\w*repository\.\w+\(/iv.test(withoutPlus)
 	) {
-		return 'service repository passthrough added';
+		return "service repository passthrough added";
 	}
 
 	if (
 		/^src\/(?:components|hooks)\//v.test(file)
 		&& /=\s*browser[A-Z]\w*Service\b/v.test(withoutPlus)
 	) {
-		return 'browser service default added';
+		return "browser service default added";
 	}
 
 	if (
 		/^src\/(?:app|components|domain|hooks)\//v.test(file)
 		&& /from\s+["']@\/infrastructure\//v.test(withoutPlus)
 	) {
-		return 'infrastructure import added outside infrastructure';
+		return "infrastructure import added outside infrastructure";
 	}
 
 	return null;
@@ -304,7 +338,7 @@ function splitSections(body) {
 	let currentHeading = null;
 
 	for (const line of body.split(/\r?\n/v)) {
-		if (line.startsWith('## ')) {
+		if (line.startsWith("## ")) {
 			currentHeading = line.slice(3).trim();
 			sections.set(currentHeading, []);
 			continue;
@@ -318,18 +352,24 @@ function splitSections(body) {
 	return sections;
 }
 
+function countSectionHeading(body, heading) {
+	return body.split(/\r?\n/v)
+		.filter(line => line.startsWith("## ") && line.slice(3).trim() === heading)
+		.length;
+}
+
 function stripComments(value) {
-	let output = '';
+	let output = "";
 	let index = 0;
 
 	while (index < value.length) {
-		const start = value.indexOf('<!--', index);
+		const start = value.indexOf("<!--", index);
 		if (start === -1) {
 			return output + value.slice(index);
 		}
 
 		output += value.slice(index, start);
-		const end = value.indexOf('-->', start + 4);
+		const end = value.indexOf("-->", start + 4);
 		if (end === -1) {
 			return output;
 		}
@@ -341,12 +381,12 @@ function stripComments(value) {
 }
 
 function normalizeCell(value) {
-	return value.trim().replaceAll('`', '').replaceAll(/\s+/gv, ' ');
+	return value.trim().replaceAll("`", "").replaceAll(/\s+/gv, " ");
 }
 
 function isPlaceholder(value) {
 	const normalized = normalizeCell(value).toLowerCase();
-	return ['', '.', '-', 'n/a', 'na', 'none', 'todo', 'tbd', 'placeholder', 'not run'].includes(normalized);
+	return ["", ".", "-", "n/a", "na", "none", "todo", "tbd", "placeholder", "not run"].includes(normalized);
 }
 
 function isPositiveStatusEvidence(value) {
@@ -362,11 +402,11 @@ function parseTable(sectionBody) {
 	return stripComments(sectionBody)
 		.split(/\r?\n/v)
 		.map(line => line.trim())
-		.filter(line => line.startsWith('|') && line.endsWith('|'))
+		.filter(line => line.startsWith("|") && line.endsWith("|"))
 		.filter(line => !/^\|\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|$/v.test(line))
 		.map(line => line
 			.slice(1, -1)
-			.split('|')
+			.split("|")
 			.map(cell => normalizeCell(cell)));
 }
 
@@ -374,6 +414,316 @@ function getDataRows(sectionBody, firstHeaderCell) {
 	return parseTable(sectionBody)
 		.filter(row => row.length > 0)
 		.filter(row => normalizeCell(row[0]).toLowerCase() !== firstHeaderCell.toLowerCase());
+}
+
+function hasExactCells(actual, expected) {
+	return actual.length === expected.length
+		&& actual.every((cell, index) => cell === expected[index]);
+}
+
+function escapePattern(value) {
+	return value.replaceAll(/[$\(\)*+.?\[\\\]^\{\|\}]/gv, String.raw`\$&`);
+}
+
+function evidenceValues(value, label) {
+	const pattern = new RegExp(String.raw`(?:^|;)\s*${escapePattern(label)}\s*:\s*([^;]+)`, "giv");
+	return value.matchAll(pattern).map(match => normalizeCell(match[1])).toArray();
+}
+
+function hasEvidenceValue(value, label) {
+	return evidenceValues(value, label).some(candidate => !isPlaceholder(candidate));
+}
+
+function hasExactEvidenceValue(value, label, expected) {
+	const values = evidenceValues(value, label);
+	return values.length === 1 && values[0] === expected;
+}
+
+function splitMapSection(sectionBody, heading) {
+	const pattern = new RegExp(String.raw`^### ${escapePattern(heading)}\s*$`, "gmv");
+	const matches = sectionBody.matchAll(pattern).toArray();
+	if (matches.length !== 1) {
+		return {main: sectionBody, map: null};
+	}
+
+	const match = matches[0];
+	return {
+		main: sectionBody.slice(0, match.index),
+		map: sectionBody.slice(match.index + match[0].length),
+	};
+}
+
+function inspectCapabilityTable(sectionBody, headers, name) {
+	const table = parseTable(sectionBody);
+	const headerCount = table.filter(row => hasExactCells(row, headers)).length;
+	const failures = [];
+	if (!hasExactCells(table[0] ?? [], headers) || headerCount !== 1) {
+		failures.push(`${name} must use its exact header.`);
+	}
+
+	const rows = table.slice(1);
+	if (rows.length === 0) {
+		failures.push(`${name} must include at least one capability row.`);
+	}
+
+	for (const row of rows) {
+		if (row.length !== headers.length) {
+			failures.push(`${name} rows must contain exactly ${headers.length} cells.`);
+			continue;
+		}
+
+		if (row.some(cell => isPlaceholder(cell))) {
+			failures.push(`${name} rows must not contain placeholder cells.`);
+		}
+	}
+
+	return {failures, rows};
+}
+
+function inspectCapabilityIds(rows, name) {
+	const failures = [];
+	const ids = new Set();
+	for (const row of rows) {
+		const id = row[0] ?? "";
+		if (!capabilityIdPattern.test(id)) {
+			failures.push(`${name} capability IDs must match Cxx.`);
+			continue;
+		}
+
+		if (ids.has(id)) {
+			failures.push(`${name} capability IDs must be unique.`);
+		}
+
+		ids.add(id);
+	}
+
+	return {failures, ids};
+}
+
+function hasSameIdSet(left, right) {
+	return left.size === right.size && [...left].every(id => right.has(id));
+}
+
+function isValidCapabilitySource(sourceKind, source) {
+	if (sourceKind === "repo") {
+		return repoSourcePattern.test(source);
+	}
+
+	if (sourceKind === "installed" || sourceKind === "oss") {
+		return packageSourcePattern.test(source);
+	}
+
+	if (sourceKind === "platform") {
+		return platformSourcePattern.test(source);
+	}
+
+	return sourceKind === "local" && source.startsWith("local:") && repoSourcePattern.test(source.slice("local:".length));
+}
+
+function compositionTarget(evidence, allowNone) {
+	const values = evidenceValues(evidence, "composes");
+	if (values.length !== 1) {
+		return null;
+	}
+
+	const target = values[0];
+	return capabilityIdPattern.test(target) || (allowNone && target === "none") ? target : null;
+}
+
+function getCapabilityRowValues(row) {
+	return {
+		id: row[0],
+		classification: row[2],
+		sourceKind: row[3],
+		source: row[4],
+		apiProbe: row[5],
+		decision: row[7],
+		evidence: row[8],
+	};
+}
+
+function validateCapabilityBasics(row) {
+	const {id, classification, sourceKind, source, apiProbe, decision} = getCapabilityRowValues(row);
+	const failures = [];
+	if (!capabilityClasses.has(classification)) {
+		failures.push(`Capability ${id} has an invalid class.`);
+	}
+
+	if (!capabilitySourceKinds.has(sourceKind)) {
+		failures.push(`Capability ${id} has an invalid source kind.`);
+	}
+
+	if (!capabilityDecisions.has(decision)) {
+		failures.push(`Capability ${id} has an invalid decision.`);
+	}
+
+	if (!isValidCapabilitySource(sourceKind, source)) {
+		failures.push(`Capability ${id} has an invalid exact source / version.`);
+	}
+
+	if (!hasEvidenceValue(apiProbe, "API") || !hasEvidenceValue(apiProbe, "Probe")) {
+		failures.push(`Capability ${id} must include non-empty API: and Probe: evidence.`);
+	}
+
+	return failures;
+}
+
+function validateDirectUseCapability(row) {
+	const {id, classification, sourceKind, evidence} = getCapabilityRowValues(row);
+	const failures = [];
+	if (classification !== "generic" || !nonLocalSourceKinds.has(sourceKind)) {
+		failures.push(`Capability ${id} direct-use must be a non-local generic source.`);
+	}
+
+	if (evidence !== "N/A - selected source fits") {
+		failures.push(`Capability ${id} direct-use must use exact selected-source evidence.`);
+	}
+
+	return {failures, compositionTarget: null};
+}
+
+function validateThinPolicyCapability(row) {
+	const {id, classification, sourceKind, evidence} = getCapabilityRowValues(row);
+	const target = compositionTarget(evidence, false);
+	const failures = [];
+	if (classification !== "product-policy" || !nonLocalSourceKinds.has(sourceKind)) {
+		failures.push(`Capability ${id} thin-policy must be a non-local product-policy source.`);
+	}
+
+	const hasCompositionEvidence = hasEvidenceValue(evidence, "policy-boundary") && target !== null;
+	if (!hasCompositionEvidence) {
+		failures.push(`Capability ${id} thin-policy requires policy-boundary and composes: Cxx evidence.`);
+	}
+
+	return {failures, compositionTarget: hasCompositionEvidence ? target : null};
+}
+
+function validateLocalNoFitCapability(row) {
+	const {id, classification, sourceKind, evidence} = getCapabilityRowValues(row);
+	const failures = [];
+	if (classification !== "generic" || sourceKind !== "local") {
+		failures.push(`Capability ${id} local-no-fit must be a local generic source.`);
+	}
+
+	for (const sourceLabel of localNoFitEvidenceLabels) {
+		const sourceName = sourceLabel.slice(0, -1);
+		if (!hasEvidenceValue(evidence, sourceName)) {
+			failures.push(`Capability ${id} local-no-fit requires ${sourceLabel} evidence.`);
+		}
+	}
+
+	return {failures, compositionTarget: null};
+}
+
+function validateLocalPolicyApproval(id, evidence, stage, identity) {
+	const approval = evidenceValues(evidence, "approval");
+	if (stage === "plan") {
+		return approval.length === 1 && approval[0] === "pending-plan-review"
+			? []
+			: [`Capability ${id} local-policy requires approval: pending-plan-review in plan mode.`];
+	}
+
+	if (stage === "pr") {
+		const expectedApproval = identity === null ? null : `${id}@${identity.commit}/${identity.blob}/${identity.sha256}`;
+		const hasMatchingApproval = approval.length === 1
+			&& /^C\d{2,}@[0-9a-f]{40}\/[0-9a-f]{40}\/[0-9a-f]{64}$/v.test(approval[0])
+			&& approval[0] === expectedApproval;
+		return hasMatchingApproval
+			? []
+			: [`Capability ${id} local-policy approval must match its tracked capability plan identity.`];
+	}
+
+	return [];
+}
+
+function validateLocalPolicyCapability(row, stage, identity) {
+	const {id, classification, sourceKind, evidence} = getCapabilityRowValues(row);
+	const target = compositionTarget(evidence, true);
+	const failures = [];
+	if (classification !== "product-policy" || sourceKind !== "local") {
+		failures.push(`Capability ${id} local-policy must be a local product-policy source.`);
+	}
+
+	const hasValidPolicyEvidence = hasEvidenceValue(evidence, "policy-boundary")
+		&& target !== null
+		&& hasExactEvidenceValue(evidence, "generic-operation", "none");
+	if (!hasValidPolicyEvidence) {
+		failures.push(`Capability ${id} local-policy requires policy-boundary, composition, and generic-operation: none evidence.`);
+	}
+
+	failures.push(...validateLocalPolicyApproval(id, evidence, stage, identity));
+	return {failures, compositionTarget: hasValidPolicyEvidence && target !== "none" ? target : null};
+}
+
+function validateCapabilityDecision(row, stage, identity) {
+	switch (getCapabilityRowValues(row).decision) {
+		case "direct-use": {
+			return validateDirectUseCapability(row);
+		}
+
+		case "thin-policy": {
+			return validateThinPolicyCapability(row);
+		}
+
+		case "local-no-fit": {
+			return validateLocalNoFitCapability(row);
+		}
+
+		case "local-policy": {
+			return validateLocalPolicyCapability(row, stage, identity);
+		}
+
+		default: {
+			return {failures: [], compositionTarget: null};
+		}
+	}
+}
+
+function validateCapabilityRows(rows, stage, identity) {
+	const failures = [];
+	const capabilities = new Map(rows.map(row => [row[0], row]));
+	const compositionTargets = [];
+
+	for (const row of rows) {
+		const [id] = row;
+		const decisionValidation = validateCapabilityDecision(row, stage, identity);
+		failures.push(...validateCapabilityBasics(row), ...decisionValidation.failures);
+		if (decisionValidation.compositionTarget !== null) {
+			compositionTargets.push({id, target: decisionValidation.compositionTarget});
+		}
+	}
+
+	for (const {id, target} of compositionTargets) {
+		if (capabilities.get(target)?.[2] !== "generic") {
+			failures.push(`Capability ${id} must compose an existing generic capability.`);
+		}
+	}
+
+	return failures;
+}
+
+function validateReuseProof(sectionBody, stage, identity = null) {
+	const schema = capabilityStages[stage];
+	const {main, map} = splitMapSection(sectionBody, schema.mapHeading);
+	const capabilityTable = inspectCapabilityTable(main, capabilityHeaders, `${stage} capability table`);
+	const mapTable = map === null
+		? {failures: [`${stage} evidence must include ### ${schema.mapHeading}.`], rows: []}
+		: inspectCapabilityTable(map, schema.mapHeaders, `${stage} capability map`);
+	const capabilityIds = inspectCapabilityIds(capabilityTable.rows, `${stage} capability table`);
+	const mapIds = inspectCapabilityIds(mapTable.rows, `${stage} capability map`);
+	const failures = [
+		...capabilityTable.failures,
+		...mapTable.failures,
+		...capabilityIds.failures,
+		...mapIds.failures,
+		...validateCapabilityRows(capabilityTable.rows, stage, identity),
+	];
+
+	if (!hasSameIdSet(capabilityIds.ids, mapIds.ids)) {
+		failures.push(`${stage} capability table and map must contain the same capability ID set.`);
+	}
+
+	return failures;
 }
 
 function hasValidRow(sectionBody, firstHeaderCell, minimumCells) {
@@ -386,7 +736,7 @@ function sectionText(sectionBody) {
 		.split(/\r?\n/v)
 		.map(line => line.trim())
 		.filter(Boolean)
-		.join('\n');
+		.join("\n");
 }
 
 function hasExplicitNoNewSurface(sectionBody) {
@@ -401,7 +751,7 @@ function hasExplicitNoRetiredSurface(sectionBody) {
 function valuesAfterColon(sectionBody, label) {
 	const prefix = `- ${label}:`;
 	return sectionText(sectionBody)
-		.split('\n')
+		.split("\n")
 		.filter(candidate => candidate.toLowerCase().startsWith(prefix.toLowerCase()))
 		.map(line => normalizeCell(line.slice(prefix.length)));
 }
@@ -416,12 +766,26 @@ function valueAfterColon(sectionBody, label) {
 	return values[0];
 }
 
+function valuesAfterPlainColon(sectionBody, label) {
+	const prefix = `${label}:`;
+	return stripComments(sectionBody)
+		.split(/\r?\n/v)
+		.map(line => line.trim())
+		.filter(line => line.startsWith(prefix))
+		.map(line => normalizeCell(line.slice(prefix.length)));
+}
+
+function valueAfterPlainColon(sectionBody, label) {
+	const values = valuesAfterPlainColon(sectionBody, label);
+	return values.length === 1 ? values[0] : null;
+}
+
 function validateBoundaryDelta(sectionBody) {
 	const requiredLabels = [
-		'UI -> browser adapter direct imports added',
-		'Domain -> UI/service imports added',
-		'Service passthrough methods added',
-		'Repository direct callers reduced',
+		"UI -> browser adapter direct imports added",
+		"Domain -> UI/service imports added",
+		"Service passthrough methods added",
+		"Repository direct callers reduced",
 	];
 
 	const missing = requiredLabels.filter(label => {
@@ -431,7 +795,7 @@ function validateBoundaryDelta(sectionBody) {
 
 	return missing.length === 0
 		? []
-		: [`Boundary Delta is missing yes/no answers for: ${missing.join(', ')}`];
+		: [`Boundary Delta is missing yes/no answers for: ${missing.join(", ")}`];
 }
 
 function validateDebtGateEvidence(sectionBody) {
@@ -442,7 +806,7 @@ function validateDebtGateEvidence(sectionBody) {
 
 	const failures = [];
 	if (missing.length > 0) {
-		failures.push(`Debt Gate Evidence must include positive passed/success output for: ${missing.join(', ')}`);
+		failures.push(`Debt Gate Evidence must include positive passed/success output for: ${missing.join(", ")}`);
 	}
 
 	return [...failures, ...validateCodeSceneEvidence(sectionBody)];
@@ -454,7 +818,7 @@ function validateCodeSceneEvidence(sectionBody) {
 		return [];
 	}
 
-	return ['Debt Gate Evidence must include CodeScene MCP analyze_change_set output with no decline and quality_gates: passed.'];
+	return ["Debt Gate Evidence must include CodeScene MCP analyze_change_set output with no decline and quality_gates: passed."];
 }
 
 function isPassingCodeSceneEvidence(evidence) {
@@ -498,82 +862,147 @@ function validateAgentGateEvidence(sectionBody, chatGptVerdicts = allowedChatGpt
 		}
 	}
 
-	if (!extractVerdict(sectionBody, 'Planner skill verdict', allowedPlanVerdicts)) {
-		failures.push('Planner skill verdict must be exactly PLAN_READY.');
+	if (!extractVerdict(sectionBody, "Planner skill verdict", allowedPlanVerdicts)) {
+		failures.push("Planner skill verdict must be exactly PLAN_READY.");
 	}
 
-	if (!extractVerdict(sectionBody, 'Coder repo map / primitive search', allowedCodeVerdicts)) {
-		failures.push('Coder repo map / primitive search must be exactly CODE_READY.');
+	if (!extractVerdict(sectionBody, "Coder repo map / primitive search", allowedCodeVerdicts)) {
+		failures.push("Coder repo map / primitive search must be exactly CODE_READY.");
 	}
 
-	if (!extractVerdict(sectionBody, 'Reviewer verdict', allowedReviewVerdicts)) {
-		failures.push('Reviewer verdict must be exactly PASS or PASS_WITH_NITS.');
+	if (!extractVerdict(sectionBody, "Reviewer verdict", allowedReviewVerdicts)) {
+		failures.push("Reviewer verdict must be exactly PASS or PASS_WITH_NITS.");
 	}
 
 	if (!extractFinalReviewVerdict(sectionBody, chatGptVerdicts)) {
-		failures.push(chatGptVerdicts.has('PENDING')
-			? 'Exactly one Codex or ChatGPT final review prompt/verdict must be PENDING, PASS, or PASS_WITH_NITS.'
-			: 'Exactly one Codex or ChatGPT final review prompt/verdict must be PASS or PASS_WITH_NITS.');
+		failures.push(chatGptVerdicts.has("PENDING")
+			? "Exactly one Codex or ChatGPT final review prompt/verdict must be PENDING, PASS, or PASS_WITH_NITS."
+			: "Exactly one Codex or ChatGPT final review prompt/verdict must be PASS or PASS_WITH_NITS.");
 	}
 
 	return failures;
+}
+
+function readImmutablePlanIdentity(sectionBody, config) {
+	return {
+		path: config.getValue(sectionBody, config.pathLabel),
+		commit: config.getValue(sectionBody, config.commitLabel),
+		blob: config.getValue(sectionBody, config.blobLabel),
+		sha256: config.getValue(sectionBody, config.sha256Label),
+	};
+}
+
+function isPlanCommitAncestor(commit, commitPattern) {
+	if (!commitPattern.test(commit ?? "")) {
+		return false;
+	}
+
+	try {
+		execFileSync("git", ["merge-base", "--is-ancestor", commit, "HEAD"], {stdio: "ignore"});
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function getCurrentPlanBlob(path, pathIsValid) {
+	return pathIsValid ? tryRunGit(["rev-parse", `HEAD:${path}`]) : "";
+}
+
+function getApprovedPlanBlob(identity, config, pathIsValid) {
+	if (!pathIsValid || !config.commitPattern.test(identity.commit ?? "")) {
+		return "";
+	}
+
+	return tryRunGit(["rev-parse", `${identity.commit}:${identity.path}`]);
+}
+
+function getCurrentPlanSha256(path, currentPlanBlob) {
+	if (!currentPlanBlob) {
+		return "";
+	}
+
+	return createHash("sha256").update(execFileSync("git", ["show", `HEAD:${path}`])).digest("hex");
+}
+
+function validateImmutablePlanIdentity(sectionBody, config) {
+	const identity = readImmutablePlanIdentity(sectionBody, config);
+	const failures = [];
+	const pathIsValid = config.isValidPath(identity.path);
+	const isAncestor = isPlanCommitAncestor(identity.commit, config.commitPattern);
+	const currentPlanBlob = getCurrentPlanBlob(identity.path, pathIsValid);
+	const approvedPlanBlob = getApprovedPlanBlob(identity, config, pathIsValid);
+	const currentPlanSha256 = getCurrentPlanSha256(identity.path, currentPlanBlob);
+	if (!pathIsValid) {
+		failures.push(config.pathError);
+	}
+
+	if (!isAncestor) {
+		failures.push(config.commitError);
+	}
+
+	if (!config.blobPattern.test(identity.blob ?? "") || identity.blob !== approvedPlanBlob || identity.blob !== currentPlanBlob) {
+		failures.push(config.blobError);
+	}
+
+	if (!config.sha256Pattern.test(identity.sha256 ?? "") || identity.sha256 !== currentPlanSha256) {
+		failures.push(config.sha256Error);
+	}
+
+	return {identity, failures};
 }
 
 function validateImmutableOverlayPlanIdentity(sectionBody) {
-	const failures = [];
-	const planCommit = valueAfterColon(sectionBody, 'Overlay plan commit');
-	const planBlob = valueAfterColon(sectionBody, 'Overlay plan blob');
-	const planSha256 = valueAfterColon(sectionBody, 'Overlay plan SHA-256');
+	return validateImmutablePlanIdentity(sectionBody, {
+		pathLabel: "Overlay plan path",
+		commitLabel: "Overlay plan commit",
+		blobLabel: "Overlay plan blob",
+		sha256Label: "Overlay plan SHA-256",
+		getValue: valueAfterColon,
+		isValidPath: value => value === overlayPlanPath,
+		commitPattern: /^[0-9a-f]{40}$/iv,
+		blobPattern: /^[0-9a-f]{40}$/iv,
+		sha256Pattern: /^[0-9a-f]{64}$/iv,
+		pathError: `Overlay plan path must be exactly ${overlayPlanPath}.`,
+		commitError: "Overlay plan commit must be an ancestor of HEAD.",
+		blobError: "Overlay plan blob must match the approved commit and current tracked plan.",
+		sha256Error: "Overlay plan SHA-256 must match the current tracked plan.",
+	}).failures;
+}
 
-	if (valueAfterColon(sectionBody, 'Overlay plan path') !== overlayPlanPath) {
-		failures.push(`Overlay plan path must be exactly ${overlayPlanPath}.`);
-	}
-
-	let isPlanCommitAncestor = false;
-	if (/^[0-9a-f]{40}$/iv.test(planCommit ?? '')) {
-		try {
-			execFileSync('git', ['merge-base', '--is-ancestor', planCommit, 'HEAD'], {stdio: 'ignore'});
-			isPlanCommitAncestor = true;
-		} catch {}
-	}
-
-	if (!isPlanCommitAncestor) {
-		failures.push('Overlay plan commit must be an ancestor of HEAD.');
-	}
-
-	const currentPlanBlob = tryRunGit(['rev-parse', `HEAD:${overlayPlanPath}`]);
-	const approvedPlanBlob = /^[0-9a-f]{40}$/iv.test(planCommit ?? '')
-		? tryRunGit(['rev-parse', `${planCommit}:${overlayPlanPath}`])
-		: '';
-	if (new Set([planBlob, approvedPlanBlob, currentPlanBlob]).size > 1) {
-		failures.push('Overlay plan blob must match the approved commit and current tracked plan.');
-	}
-
-	const currentPlanSha256 = currentPlanBlob
-		? createHash('sha256').update(execFileSync('git', ['show', `HEAD:${overlayPlanPath}`])).digest('hex')
-		: '';
-	if (!/^[0-9a-f]{64}$/iv.test(planSha256 ?? '') || planSha256 !== currentPlanSha256) {
-		failures.push('Overlay plan SHA-256 must match the current tracked plan.');
-	}
-
-	return failures;
+function validateCapabilityPlanIdentity(sectionBody) {
+	return validateImmutablePlanIdentity(sectionBody, {
+		pathLabel: "Capability plan path",
+		commitLabel: "Capability plan commit",
+		blobLabel: "Capability plan blob",
+		sha256Label: "Capability plan SHA-256",
+		getValue: valueAfterPlainColon,
+		isValidPath: value => capabilityPlanPathPattern.test(value ?? ""),
+		commitPattern: /^[0-9a-f]{40}$/v,
+		blobPattern: /^[0-9a-f]{40}$/v,
+		sha256Pattern: /^[0-9a-f]{64}$/v,
+		pathError: "Capability plan path must be under docs/v1/implementation-slices/plans/.",
+		commitError: "Capability plan commit must be a lowercase ancestor of HEAD.",
+		blobError: "Capability plan blob must match the approved commit and current tracked plan.",
+		sha256Error: "Capability plan SHA-256 must match the current tracked plan.",
+	});
 }
 
 function validateOverlayPromotionEvidence(sectionBody) {
-	const stage = valueAfterColon(sectionBody, 'Current metronome Stage');
-	const chatGptVerdict = valueAfterColon(sectionBody, 'ChatGPT final review prompt/verdict');
+	const stage = valueAfterColon(sectionBody, "Current metronome Stage");
+	const chatGptVerdict = valueAfterColon(sectionBody, "ChatGPT final review prompt/verdict");
 	const failures = validateImmutableOverlayPlanIdentity(sectionBody);
 
-	if (!overlayPlanReviewPolicies.has(valueAfterColon(sectionBody, 'Independent plan review policy') ?? '')) {
-		failures.push('Independent plan review policy must be GPT-5.6 Terra standard or GPT-5.6 Luna standard.');
+	if (!overlayPlanReviewPolicies.has(valueAfterColon(sectionBody, "Independent plan review policy") ?? "")) {
+		failures.push("Independent plan review policy must be GPT-5.6 Terra standard or GPT-5.6 Luna standard.");
 	}
 
-	if (!extractVerdict(sectionBody, 'Independent plan review verdict', new Set(['PLAN_REVIEW_PASS']))) {
-		failures.push('Independent plan review verdict must be exactly PLAN_REVIEW_PASS.');
+	if (!extractVerdict(sectionBody, "Independent plan review verdict", new Set(["PLAN_REVIEW_PASS"]))) {
+		failures.push("Independent plan review verdict must be exactly PLAN_REVIEW_PASS.");
 	}
 
-	if (!overlayPromotionVerdicts.get(stage)?.has(chatGptVerdict ?? '')) {
-		failures.push('Overlay promotion evidence must pair MSO-5 with PENDING or MSO-6 with PASS or PASS_WITH_NITS.');
+	if (!overlayPromotionVerdicts.get(stage)?.has(chatGptVerdict ?? "")) {
+		failures.push("Overlay promotion evidence must pair MSO-5 with PENDING or MSO-6 with PASS or PASS_WITH_NITS.");
 	}
 
 	return failures;
@@ -594,26 +1023,30 @@ function validateSections(body, changedFiles) {
 	}
 
 	const failures = [];
-	const agentGateEvidence = sections.get('Agent Gate Evidence').join('\n');
+	if (countSectionHeading(body, "Reuse Proof") !== 1) {
+		failures.push("Reuse Proof must appear exactly once.");
+	}
+
+	const agentGateEvidence = sections.get("Agent Gate Evidence").join("\n");
 	const isOverlayControlChange = changedFiles.some(file => overlayControlFiles.has(file));
-	const reuseProof = sections.get('Reuse Proof').join('\n');
-	const retiredSurface = sections.get('Retired Surface').join('\n');
-	const newSurface = sections.get('New Surface').join('\n');
+	const reuseProof = sections.get("Reuse Proof").join("\n");
+	const capabilityPlanIdentity = validateCapabilityPlanIdentity(reuseProof);
+	const retiredSurface = sections.get("Retired Surface").join("\n");
+	const newSurface = sections.get("New Surface").join("\n");
 	const surfaceEvidenceResults = [
-		hasValidRow(reuseProof, 'Need', 4)
+		validateReuseProof(reuseProof, "pr", capabilityPlanIdentity.identity),
+		capabilityPlanIdentity.failures,
+		hasValidRow(retiredSurface, "Removed / narrowed surface", 3) || hasExplicitNoRetiredSurface(retiredSurface)
 			? []
-			: ['Reuse Proof must include at least one filled table row with need, checked primitive/library, files read, and decision.'],
-		hasValidRow(retiredSurface, 'Removed / narrowed surface', 3) || hasExplicitNoRetiredSurface(retiredSurface)
+			: ["Retired Surface must list removed/narrowed surface rows or explicitly say this is not a debt-reduction PR with no retired surface."],
+		hasValidRow(newSurface, "New helper/service/type/component", 3) || hasExplicitNoNewSurface(newSurface)
 			? []
-			: ['Retired Surface must list removed/narrowed surface rows or explicitly say this is not a debt-reduction PR with no retired surface.'],
-		hasValidRow(newSurface, 'New helper/service/type/component', 3) || hasExplicitNoNewSurface(newSurface)
-			? []
-			: ['New Surface must list new surface rows or explicitly say no new surface.'],
-		validateBoundaryDelta(sections.get('Boundary Delta').join('\n')),
-		validateDebtGateEvidence(sections.get('Debt Gate Evidence').join('\n')),
+			: ["New Surface must list new surface rows or explicitly say no new surface."],
+		validateBoundaryDelta(sections.get("Boundary Delta").join("\n")),
+		validateDebtGateEvidence(sections.get("Debt Gate Evidence").join("\n")),
 		validateAgentGateEvidence(
 			agentGateEvidence,
-			isOverlayControlChange ? new Set(['PENDING', ...allowedChatGptVerdicts]) : allowedChatGptVerdicts,
+			isOverlayControlChange ? new Set(["PENDING", ...allowedChatGptVerdicts]) : allowedChatGptVerdicts,
 		),
 	];
 	failures.push(...surfaceEvidenceResults.flat());
@@ -625,6 +1058,69 @@ function validateSections(body, changedFiles) {
 	return failures;
 }
 
+function isRepositoryRelativePath(value) {
+	const normalized = normalizePath(value);
+	return normalized !== ""
+		&& !normalized.startsWith("/")
+		&& !/^[A-Za-z]:/v.test(normalized)
+		&& !normalized.split("/").includes("..");
+}
+
+function getPlanInputRequest() {
+	const args = process.argv.slice(2);
+	if (args.length === 0) {
+		return null;
+	}
+
+	if (args.length !== 2 || args[0] !== "--plan-input") {
+		return {error: "Usage: validate-pr-debt-contract.mjs --plan-input <repo-relative-plan-path>"};
+	}
+
+	return {path: args[1]};
+}
+
+function validatePlanInput(path) {
+	if (!isRepositoryRelativePath(path)) {
+		return ["Plan input path must be repository-relative."];
+	}
+
+	let planBody = "";
+	try {
+		planBody = readFileSync(path, "utf8");
+	} catch (error) {
+		return [`Could not read plan input: ${error instanceof Error ? error.message : String(error)}`];
+	}
+
+	const sectionHeading = capabilityStages.plan.section;
+	const sectionCount = countSectionHeading(planBody, sectionHeading);
+	if (sectionCount !== 1) {
+		return [sectionCount === 0
+			? "Plan input must include ## Existing Primitive Search."
+			: "Plan input must include exactly one ## Existing Primitive Search."];
+	}
+
+	const section = splitSections(planBody).get(sectionHeading);
+	return validateReuseProof(section.join("\n"), "plan");
+}
+
+const planInputRequest = getPlanInputRequest();
+if (planInputRequest !== null) {
+	const failures = planInputRequest.error === undefined
+		? validatePlanInput(planInputRequest.path)
+		: [planInputRequest.error];
+	if (failures.length > 0) {
+		console.error("Plan capability evidence failed:");
+		for (const failure of failures) {
+			console.error(`- ${failure}`);
+		}
+
+		process.exit(1);
+	}
+
+	console.log("Plan capability evidence is present and specific.");
+	process.exit(0);
+}
+
 const prContext = getPrContext();
 const mergeBase = getMergeBase();
 const scanContexts = getScanContexts(mergeBase, prContext)
@@ -634,7 +1130,7 @@ const changedDebtContractFiles = uniqueFiles(scanContexts.flatMap(context => con
 const riskyFindings = scanRiskyAdditions(scanContexts);
 
 if (changedDebtContractFiles.length === 0) {
-	console.log('No changed production source or gate-control files require debt contract evidence.');
+	console.log("No changed production source or gate-control files require debt contract evidence.");
 	process.exit(0);
 }
 
@@ -644,7 +1140,7 @@ for (const context of scanContexts) {
 }
 
 if (riskyFindings.length > 0) {
-	console.log('Risky additions that require explicit PR evidence:');
+	console.log("Risky additions that require explicit PR evidence:");
 	for (const finding of riskyFindings) {
 		console.log(`- ${finding.kind}: ${finding.file}:${finding.line} (${finding.context})`);
 	}
@@ -657,21 +1153,21 @@ if (!prContext.isPullRequest) {
 	const localRiskyFindings = riskyFindings.filter(finding => localRiskContexts.has(finding.context));
 
 	if (localRiskyFindings.length > 0) {
-		console.log('Local staged/working-tree risky additions require PR debt contract evidence; validation is deferred to pull request context.');
+		console.log("Local staged/working-tree risky additions require PR debt contract evidence; validation is deferred to pull request context.");
 	}
 
-	console.log('No GitHub PR context found; local source/risk scan completed.');
+	console.log("No GitHub PR context found; local source/risk scan completed.");
 	process.exit(0);
 }
 
-if (prContext.body.trim() === '') {
-	console.error('Pull request body is empty. Debt contract evidence is required for production source or gate-control changes.');
+if (prContext.body.trim() === "") {
+	console.error("Pull request body is empty. Debt contract evidence is required for production source or gate-control changes.");
 	process.exit(1);
 }
 
 const sectionFailures = validateSections(prContext.body, changedDebtContractFiles);
 if (sectionFailures.length > 0) {
-	console.error('PR body debt contract evidence failed:');
+	console.error("PR body debt contract evidence failed:");
 	for (const failure of sectionFailures) {
 		console.error(`- ${failure}`);
 	}
@@ -679,4 +1175,4 @@ if (sectionFailures.length > 0) {
 	process.exit(1);
 }
 
-console.log('PR debt contract evidence sections are present and specific.');
+console.log("PR debt contract evidence sections are present and specific.");
