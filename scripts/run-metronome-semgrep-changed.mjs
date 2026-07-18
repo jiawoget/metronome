@@ -29,12 +29,36 @@ try {
 	}
 }
 
-const changed = runGit(['diff', '--name-only', '--diff-filter=ACMR', mergeBase, 'HEAD'])
+const committedFiles = runGit(["diff", "--name-only", "--no-renames", "--diff-filter=ACMRD", mergeBase, "HEAD"])
 	.split(/\r?\n/v)
 	.map(line => line.trim())
-	.filter(Boolean)
+	.filter(Boolean);
+const stagedFiles = runGit(["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=ACMRD"])
+	.split(/\r?\n/v)
+	.map(line => line.trim())
+	.filter(Boolean);
+const candidateFiles = [...new Set([...committedFiles, ...stagedFiles])]
 	.filter(file => semgrepChangedFilePattern.test(file))
-	.filter(file => existsSync(file));
+	.toSorted((first, second) => first.localeCompare(second));
+const unstagedFiles = new Set(
+	runGit(["diff", "--name-only", "--no-renames", "--diff-filter=ACMRD"])
+		.split(/\r?\n/v)
+		.map(line => line.trim())
+		.filter(Boolean),
+);
+const filesWithUnstagedChanges = candidateFiles.filter(file => unstagedFiles.has(file));
+
+if (filesWithUnstagedChanges.length > 0) {
+	console.error("Semgrep cannot verify the committed/staged snapshot while its inputs have unstaged changes:");
+	for (const file of filesWithUnstagedChanges) {
+		console.error(`- ${file}`);
+	}
+
+	console.error("Stage or stash those changes before running the Semgrep gate.");
+	process.exit(1);
+}
+
+const changed = candidateFiles.filter(file => existsSync(file));
 
 if (changed.length === 0) {
 	console.log('No changed JavaScript or TypeScript files to scan.');
@@ -58,7 +82,7 @@ for (const file of changed) {
 
 const result = spawnSync(
 	semgrepBin,
-	['--config', '.semgrep', '--error', ...changed],
+	["scan", "--config", ".semgrep", "--error", "--baseline-commit", mergeBase, ...changed],
 	{stdio: 'inherit'},
 );
 
