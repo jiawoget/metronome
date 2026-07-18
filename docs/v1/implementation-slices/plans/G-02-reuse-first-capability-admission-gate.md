@@ -4,32 +4,19 @@
 
 **Goal:** Strengthen the existing Reuse Proof, roles, and validator into one universal reuse-before-local capability admission gate for every future task.
 
-**Architecture:** Keep the existing Metronome workflow, role packets, PR Reuse Proof, and debt-contract validator. Make planner discovery and PR evidence use one capability table, validate its structural contract in the existing validator, and reserve semantic fit, coverage, thinness, and implementation-conformance decisions for independent review.
+**Architecture:** Keep the existing Metronome workflow, role packets, PR Reuse Proof, and debt-contract validator. Add a read-only plan-input mode to that validator, make plan and PR evidence use one capability table plus stage-specific delivery maps, and reserve semantic fit, coverage, thinness, immutable approval, and diff conformance for independent review.
 
 ## Goal
 
-- Require every future task to decompose requested behavior into capability atoms before architecture or local implementation is selected.
-- Prefer a proven repository, installed-package, mature OSS, or platform primitive whenever it fits.
-- Permit local generic implementation only after bounded repository, installed-package, and external evidence proves no fit.
-- Permit local product policy only when its boundary is explicit, it does not reimplement a generic primitive, and an independent reviewer approves it.
-- Bind every selected non-local capability to an exact source, exact version where applicable, exact API, and passed runtime or research probe.
-- Carry the same capability IDs and decisions through planning, coding, PR evidence, diff review, and promotion; fail closed on missing, stale, contradictory, or diff-inconsistent evidence.
+Every future task atomizes behavior before architecture, prefers proven repository/installed/OSS/platform primitives, and admits local generic code only after four-source no-fit evidence. Local product policy must be explicit, non-reimplementing, and independently approved. Exact sources, versions, APIs, probes, stable capability IDs, delivery maps, and diff decisions carry from plan through promotion and fail closed on missing, stale, contradictory, or mismatched evidence.
 
 ## Non-Goals
 
-- No OpenSpec, graph, codemap, database, index, manifest, ledger, telemetry store, or `.planning/**` writes.
-- No second workflow, validator, status file, duplicated policy block, dependency, lockfile, or `src/**` change.
-- No global GSD install and no edit to `.agents/skills/metronome-workflow/SKILL.md`.
-- No claim of full GSD execution, native typed-agent/worktree support, or Context7 availability.
-- No probe execution by the machine validator, package-legitimacy-as-approval claim, or architecture design during capability atomization.
+No OpenSpec, graph, codemap, database, index, manifest, ledger, telemetry store, or `.planning/**` writes. No second workflow, validator, status, duplicated policy, dependency, lockfile, `src/**`, global GSD install, or overlay-skill edit. No full-GSD/native typed-agent/native worktree/Context7 claim. The validator never executes probes; package legitimacy is not approval; Pass A does not design architecture.
 
 ## Current Contract Evidence
 
-The existing contract can fail for unrelated plan or PR incompleteness, but it does not yet bind reuse admission to: (a) exact installed version, export, source, and runtime or research probe; (b) direct use of a generic primitive plus only provably thin product policy; and (c) mandatory online mature-OSS search, exact API verification, passed probe, and no silent local fallback after repository and installed-package misses.
-
-Therefore a structurally complete legacy Reuse Proof can still admit a handmade generic helper, a guessed package interface, an unprobed source, or a local fallback that was never compared with mature external candidates.
-
-G-02 closes those admission gaps by strengthening the existing proof and existing roles. It does not add another review path.
+The current contract may block unrelated incompleteness but lacks: (a) exact installed version/export/source/probe binding; (b) direct generic reuse plus provably thin policy; and (c) mandatory mature-OSS/platform search, exact API/probe evidence, and no silent local fallback after repo/installed misses. It can therefore admit handmade helpers, guessed APIs, unprobed sources, or unresearched fallback. G-02 strengthens existing proof, roles, and validator without another review path.
 
 ## Existing Primitive Search
 
@@ -38,34 +25,35 @@ G-02 applies its proposed contract to itself. `C01` through `C04` are implementa
 | Capability ID | Need | Class | Source kind | Exact source / version | Exact API / probe | Files read | Decision | No-fit / policy evidence |
 |---|---|---|---|---|---|---|---|---|
 | `C01` | Parse and structurally validate the canonical reuse-evidence table | `generic` | `repo` | `scripts/validate-pr-debt-contract.mjs#parseTable` | `API: parseTable(sectionBody) with getDataRows(sectionBody, firstHeaderCell)`; `Probe: existing validate-pr-debt-contract selftest passed on 2026-07-18` | `scripts/validate-pr-debt-contract.mjs`; `scripts/validate-pr-debt-contract.selftest.mjs` | `direct-use` | `N/A - selected source fits` |
-| `C02` | Keep reuse admission inside the existing immutable-plan and promotion lifecycle | `product-policy` | `repo` | `.agents/skills/metronome-workflow/SKILL.md#Promotion` | `API: PLAN_READY -> immutable plan identity -> independent PLAN_REVIEW_PASS -> implementation and promotion`; `Probe: validate:debt-gates passed on 2026-07-18, including changed-file and PR-contract selftests` | `.agents/skills/metronome-workflow/SKILL.md`; `docs/architecture/debt-gate-map.md`; `scripts/validate-metronome-gates.mjs` | `thin-policy` | `policy-boundary: G-02 adds reuse admission within the existing lifecycle and does not duplicate lifecycle, status, or overlay control` |
+| `C02` | Keep reuse admission inside the existing immutable-plan and promotion lifecycle | `product-policy` | `repo` | `.agents/skills/metronome-workflow/SKILL.md#Promotion` | `API: PLAN_READY -> immutable plan identity -> independent PLAN_REVIEW_PASS -> implementation and promotion`; `Probe: validate:debt-gates passed on 2026-07-18, including changed-file and PR-contract selftests` | `.agents/skills/metronome-workflow/SKILL.md`; `docs/architecture/debt-gate-map.md`; `scripts/validate-metronome-gates.mjs` | `thin-policy` | `policy-boundary: G-02 adds reuse admission within the existing lifecycle and does not duplicate lifecycle, status, or overlay control`; `composes: C01` |
 | `C03` | Route uncovered generic atoms into bounded external documentation research | `generic` | `oss` | `@opengsd/gsd-core@1.7.0#planResearch` | `API: planResearch({ecosystem, config, questions, cwd, homeDir})`; `Probe: read-only pilot passed on 2026-07-18 and returned websearch plus context7 routes; unavailable context7 was recorded as provider_fallback to official web documentation` | local v1.7.0 `agents/gsd-phase-researcher.md`; `gsd-core/bin/lib/research-provider.cjs`; [official v1.7.0 release](https://github.com/open-gsd/gsd-core/releases/tag/v1.7.0) | `direct-use` | `N/A - selected source fits` |
 | `C04` | Screen a researched package for obvious package-identity risk without treating the signal as API-fit approval | `generic` | `oss` | `@opengsd/gsd-core@1.7.0#package-legitimacy` | `API: gsd-tools query package-legitimacy check --ecosystem npm <package>`; `Probe: read-only pilot passed on 2026-07-18; tonal returned OK while @tonaljs/tonal returned SUS no-repository` | local v1.7.0 `gsd-core/bin/gsd-tools.cjs`; GSD package-legitimacy output; official Tonal package documentation | `direct-use` | `N/A - selected source fits` |
 | `C05` | Parse an exact chord symbol without a local chord parser | `generic` | `oss` | `tonal@6.4.3#Chord.get` | `API: Chord.get(name: string) -> Chord`; `Probe: tonal@6.4.3 returned non-empty Cmaj7/B with tonic C, bass B, and notes B/C/E/G` | [official Tonal chord documentation](https://tonaljs.github.io/tonal/docs/groups/chords); temporary package `package.json`, declarations, and runtime export | `direct-use` | `N/A - selected source fits` |
 | `C06` | Transpose a chord symbol without local interval and spelling logic | `generic` | `oss` | `tonal@6.4.3#Chord.transpose` | `API: Chord.transpose(chordName: string, intervalName: string) -> string`; `Probe: tonal@6.4.3 returned Bb7b9 for Eb7b9 transposed by 5P` | [official Tonal chord documentation](https://tonaljs.github.io/tonal/docs/groups/chords); temporary package declarations and runtime export | `direct-use` | `N/A - selected source fits` |
 | `C07` | Normalize note spellings without a local note-name normalizer | `generic` | `oss` | `tonal@6.4.3#Note.names` | `API: Note.names(values) -> string[]`; `Probe: tonal@6.4.3 normalized fx and bb to F## and Bb while discarding invalid input` | [official Tonal note documentation](https://tonaljs.github.io/tonal/docs/basics/notes); temporary package declarations and runtime export | `direct-use` | `N/A - selected source fits` |
 
-The pilot proves the adapter can move from a semantic question to current official documentation, an exact package/version/export, a risk signal, and a runtime probe. It does not authorize adding `tonal` to Metronome; a future product requirement must still establish that its own capability atom needs these APIs and must pass the normal plan review.
+### Capability Delivery Map
+
+| Capability ID | Planned files / symbols | Planned tests / probes |
+|---|---|---|
+| `C01` | `scripts/validate-pr-debt-contract.mjs#validateReuseProof`; existing `parseTable`, `getDataRows`, and immutable-plan identity checks; `scripts/validate-pr-debt-contract.selftest.mjs`; `scripts/validate-metronome-gates.mjs`; `.github/pull_request_template.md` | Plan-input and PR-mode malformed-table, relation, approval, identity, and map selftests |
+| `C02` | `skills/metronome_planner.md`; `skills/metronome_coder.md`; `skills/metronome_reviewer.md`; `skills/metronome_chatgpt_review.md`; `docs/architecture/debt-gate-map.md` | Plan-input invocation marker, immutable approval/identity checks, and lifecycle pressure outputs |
+| `C03` | `skills/metronome_planner.md`; `skills/metronome_coder.md`; `skills/metronome_reviewer.md`; `skills/metronome_chatgpt_review.md`; `docs/v1/implementation-slices/rules/external-library-first.md`; `.github/pull_request_template.md` | `provider_fallback` contract markers and PS-02 bounded OSS/platform research result |
+| `C04` | `skills/metronome_planner.md`; `skills/metronome_reviewer.md`; `skills/metronome_chatgpt_review.md`; `docs/v1/implementation-slices/rules/external-library-first.md` | Package-legitimacy pilot evidence and semantic-review separation checks |
+| `C05` | `docs/v1/implementation-slices/plans/G-02-reuse-first-capability-admission-gate.md#C05` (plan evidence only; no product delivery) | Recorded `tonal@6.4.3#Chord.get` research probe |
+| `C06` | `docs/v1/implementation-slices/plans/G-02-reuse-first-capability-admission-gate.md#C06` (plan evidence only; no product delivery) | Recorded `tonal@6.4.3#Chord.transpose` research probe |
+| `C07` | `docs/v1/implementation-slices/plans/G-02-reuse-first-capability-admission-gate.md#C07` (plan evidence only; no product delivery) | Recorded `tonal@6.4.3#Note.names` research probe |
+
+The pilot proves exact official-source/API/probe routing; it does not authorize adding `tonal` to Metronome.
 
 ## Global Invariants
 
-- One capability model governs plan evidence and PR evidence.
-- `Existing Primitive Search` and PR `Reuse Proof` use the exact same table header and row relations.
-- Every capability row has one stable unique capability ID matching `C\d{2,}`.
-- Every behavior introduced or changed by the diff maps to at least one declared capability ID.
-- Capability IDs are not renumbered between the reviewed plan and the implementation PR.
-- Generic primitives are selected before product-policy composition is designed.
-- A non-local candidate is not selected on name, popularity, prose, or type shape alone; it has a passed probe before `PLAN_READY`.
-- PR evidence describes an actual passed probe against the exact implemented source and API.
-- Local fallback is never implicit.
-- A local generic implementation requires explicit repository, installed-package, and external no-fit evidence.
-- A local product-policy implementation requires an explicit policy boundary and independent approval.
-- A thin policy may compose, parameterize, sequence, or constrain a generic primitive; it may not recreate that primitive.
-- Machine checks validate deterministic structure only.
-- Independent reviewers own semantic fit, coverage, thinness, no-fit sufficiency, and diff-to-decision conformance.
-- The monitor owns deterministic repository, lockfile, installed-source/type, probe, bounded-research, and normalization evidence.
-- No research agent writes an artifact or communicates through a direct researcher mesh.
-- Existing workflow promotion and exact-head invalidation rules remain unchanged.
+- One capability table governs plan/PR evidence; stage maps use exact headers and the same stable unique `C\d{2,}` ID set, with every changed behavior mapped.
+- Generic selection precedes policy design; non-local selection needs exact passed plan/PR probes, and local generic selection needs repo/installed/OSS/platform no-fit evidence.
+- Policy declares composition and may constrain but never recreate a primitive; local policy also has `generic-operation: none` and stage-correct approval.
+- Machine checks only deterministic shape. Reviewers own fit, coverage, thinness, no-fit sufficiency, approval semantics/freshness, maps, and diff conformance.
+- The monitor owns deterministic discovery, probes, bounded research, normalization, and read-only plan-input validation before `PLAN_READY`; research writes nothing and has no direct mesh.
+- Existing promotion and exact-head invalidation remain unchanged; local fallback is never implicit.
 
 ## Exact Implementation Allowlist
 
@@ -97,19 +85,36 @@ The implementation stage must stop before editing if satisfying the contract app
 
 The example row illustrates shape only. Real rows must contain task-specific evidence and may not copy its placeholder content.
 
+The existing validator gains read-only `--plan-input <plan-path>` for `## Existing Primitive Search` plus `Capability Delivery Map`; existing PR mode validates `## Reuse Proof` plus `Capability Implementation Map`. Neither mode writes, networks, executes user-provided commands, or runs probes; PR mode may reuse the validator's fixed read-only Git commands for tracked identity checks.
+
+### Delivery Map Schemas
+
+Inside plan `## Existing Primitive Search`, the second table has heading `Capability Delivery Map` and this exact header:
+
+| Capability ID | Planned files / symbols | Planned tests / probes |
+|---|---|---|
+
+Inside PR `## Reuse Proof`, the second table has heading `Capability Implementation Map` and this exact header:
+
+| Capability ID | Changed files / symbols | Tests / probes |
+|---|---|---|
+
+Each map has non-empty cells, unique `C\d{2,}` IDs, and exact ID-set equality with its stage's main capability table. The validator checks those properties; reviewers check that mapped files, symbols, tests, probes, and diff behavior are truthful and complete.
+
+The same PR `Reuse Proof` section also carries the reviewed task-plan identity as four exact single-value lines:
+
+- `Capability plan path: docs/v1/implementation-slices/plans/<plan>.md`
+- `Capability plan commit: <lowercase 40-hex>`
+- `Capability plan blob: <lowercase 40-hex>`
+- `Capability plan SHA-256: <lowercase 64-hex>`
+
+PR mode reuses and generalizes the existing immutable-overlay-plan identity checks instead of creating a parallel identity validator. The capability plan path must remain under `docs/v1/implementation-slices/plans/`; its commit must be an ancestor of `HEAD`; its blob must match both `<commit>:<path>` and `HEAD:<path>`; and its SHA-256 must match Git object bytes. This makes a well-formed but stale approval structurally detectable.
+
 ### Column Contract
 
-| Column | Required contract |
-|---|---|
-| Capability ID | Unique within the table; exact pattern `C\d{2,}` |
-| Need | One behavior-level capability atom, stated without architecture |
-| Class | Exact enum `generic` or `product-policy` |
-| Source kind | Exact enum `repo`, `installed`, `oss`, `platform`, or `local` |
-| Exact source / version | Source encoding defined below; no ranges or unresolved aliases |
-| Exact API / probe | Contains both `API:` and `Probe:` markers with non-empty values |
-| Files read | Exact repository, package, type, source, or official-document evidence inspected |
-| Decision | Exact enum `direct-use`, `thin-policy`, `local-no-fit`, or `local-policy` |
-| No-fit / policy evidence | Exact relation-dependent evidence defined below |
+- `Capability ID`: unique `C\d{2,}`; `Need`: architecture-free atom; `Class`: `generic|product-policy`; `Source kind`: `repo|installed|oss|platform|local`.
+- `Exact source / version`: encoding below; `Exact API / probe`: non-empty `API:` and `Probe:`; `Files read`: exact inspected evidence.
+- `Decision`: `direct-use|thin-policy|local-no-fit|local-policy`; final cell obeys the relation table.
 
 ### Source Encoding
 
@@ -125,47 +130,41 @@ Package versions are exact `x.y.z` values, never ranges, tags, branches, `latest
 
 ### API And Probe Encoding
 
-- Every `Exact API / probe` cell contains both `API:` and `Probe:`.
-- `API:` identifies the exact export, signature, command surface, or platform API used for the capability.
-- `Probe:` identifies a passed research or runtime check against that exact source and API.
-- A documentation read without an executable or otherwise direct compatibility check is not a passed probe.
-- A type-only inspection is supporting evidence but does not replace the selected-source probe.
-- Before `PLAN_READY`, selected non-local rows record the passed research probe.
-- In a PR, selected non-local rows record the actual passed implementation probe.
-- Probe commands and transient outputs remain monitor evidence; the plan records the normalized outcome, not a runtime runbook.
-- The machine validator checks the presence and shape of the `API:` and `Probe:` markers but never executes either value.
+- `API:` names the exact export/signature/command/platform API; `Probe:` names a passed direct research/runtime check. Docs or types alone are insufficient.
+- Selected non-local rows record passed research probes before `PLAN_READY` and actual passed implementation probes in PR evidence.
+- Commands/output remain monitor evidence; plans normalize outcomes. The validator checks marker shape and never executes probes.
 
 ## Decision Relations
 
 | Decision | Required class | Required source kind | Required evidence relation |
 |---|---|---|---|
 | `direct-use` | `generic` | non-local: `repo`, `installed`, `oss`, or `platform` | Evidence is exactly `N/A - selected source fits` |
-| `thin-policy` | `product-policy` | non-local: `repo`, `installed`, `oss`, or `platform` | Evidence contains `policy-boundary:` and identifies the narrow product rule around the selected generic primitive |
-| `local-no-fit` | `generic` | `local` | Evidence contains non-empty `repo:`, `installed:`, and `external:` no-fit results |
-| `local-policy` | `product-policy` | `local` | Evidence contains `policy-boundary:`, states that no generic primitive is reimplemented, and records independent approval |
+| `thin-policy` | `product-policy` | non-local: `repo`, `installed`, `oss`, or `platform` | Evidence contains `policy-boundary:` and `composes: Cxx`, referencing an existing `generic` row |
+| `local-no-fit` | `generic` | `local` | Evidence contains non-empty `repo:`, `installed:`, `oss:`, and `platform:` no-fit results |
+| `local-policy` | `product-policy` | `local` | Evidence contains `policy-boundary:`, `composes: Cxx` or `composes: none`, `generic-operation: none`, and the stage-correct `approval:` marker |
 
-`direct-use` and `thin-policy` are never local; the former is generic and the latter product policy. `local-no-fit` is only generic and includes all three search classes. `local-policy` cannot hide a generic primitive, and its approval comes from the independent reviewer. One row cannot combine decisions; a behavior with generic and product-policy parts uses separate, traceably composed rows.
+`direct-use` and `thin-policy` are never local; the former is generic and the latter product policy. `local-no-fit` is only generic and includes all four search classes. Exact `platform: inapplicable - <reason>` is structurally allowed when no official platform API applies, and the reviewer judges the reason. Every `composes: Cxx` target exists in the same table and is `generic`. `local-policy` cannot hide a generic primitive. One row cannot combine decisions; generic and product-policy parts use separate, traceably composed rows.
+
+### Local-Policy Approval Lifecycle
+
+1. Plan mode requires exact `approval: pending-plan-review`; it is not approval. Structural success permits `PLAN_READY`, never coding.
+2. Immutable review emits one `LOCAL_POLICY_APPROVED <Cxx> <planCommit> <planBlob> <planSha256>` per local-policy row plus `PLAN_REVIEW_PASS`.
+3. Commit/blob are lowercase 40-hex and SHA-256 lowercase 64-hex; C-ID equals the row. PR evidence carries the exact capability plan identity lines and uses `approval: <Cxx>@<40hex commit>/<40hex blob>/<64hex sha256>`.
+4. PR mode validates the tracked capability plan identity, token format/same-row ID, and exact token-to-plan identity equality. Reviewers match the independent approval output and check semantics. Any missing, stale, mismatched, or revised identity blocks and requires new approval.
 
 ## Machine Versus Semantic Enforcement
 
 | Concern | Machine validator | Planner / monitor | Independent reviewer |
 |---|---|---|---|
-| Exact table header | Enforce | Produce | Confirm unchanged |
-| Non-empty required cells | Enforce | Produce | Inspect meaning |
-| Unique `C\d{2,}` IDs | Enforce | Assign | Re-derive coverage |
-| Enum values | Enforce | Select | Challenge correctness |
-| Decision/class/source relations | Enforce | Apply | Assess semantic truth |
-| Exact package semver shape | Enforce | Resolve version | Confirm source matches evidence |
-| `API:` and `Probe:` markers | Enforce | Capture passed evidence | Assess probe relevance |
-| Required no-fit markers | Enforce | Capture searches | Assess search sufficiency |
-| `policy-boundary:` marker | Enforce | Define boundary | Assess policy thinness |
-| Probe execution | Never execute | Monitor executes | Inspect actual evidence |
-| API fit | Shape only | Demonstrate | Decide semantic fit |
-| Capability completeness | Cannot infer | Planner atomizes | Re-derive independently |
-| No-fit sufficiency | Marker presence only | Bound search | Decide whether alternatives were fairly tested |
-| Diff matches decision | Cannot infer | Coder maps changes | Compare every behavior to capability IDs |
-| No hidden reimplementation | Cannot infer | Coder avoids it | Inspect call paths and helper bodies |
-| Package legitimacy | Never treat as approval | Record only as risk signal | Separate from fit, license, and OSV decisions |
+| Stage section, headers, cells, IDs, map equality | Enforce | Produce/map | Re-derive coverage/truth |
+| Enums, relations, source/semver shape | Enforce | Select/resolve | Assess semantic truth/fit |
+| API/probe and four no-fit markers | Enforce markers | Capture evidence | Assess relevance/sufficiency/applicability |
+| Policy boundary/composition | Enforce generic target | Define | Assess thinness/no reimplementation |
+| Plan pending-approval marker | Enforce exact value | Emit before review | Treat only as pending |
+| Capability plan identity / PR approval token | Enforce tracked Git identity, format, same-row ID, and equality | Bind reviewed identity | Match approval output and semantics |
+| Probe execution/API fit | Never execute; shape only | Execute/demonstrate | Inspect/decide fit |
+| Completeness/no-fit/diff/reimplementation | Cannot infer | Atomize/search/map/avoid | Re-derive and inspect |
+| Package legitimacy | Never approval | Risk signal only | Separate fit/license/OSV review |
 
 The validator must not pretend structural evidence proves semantic reuse. A structurally valid but semantically false table is a reviewer failure and must block promotion.
 
@@ -190,14 +189,14 @@ The validator must not pretend structural evidence proves semantic reuse. A stru
 ### External Research Admission
 
 1. Only uncovered generic atoms proceed to online external research.
-2. External research is mandatory after both repository and installed-package misses; the planner cannot silently choose local code.
+2. After repository and installed-package misses, research is mandatory across mature OSS candidates and applicable official platform APIs; the planner cannot silently choose local code.
 3. Research uses the official Open GSD v1.7.0 researcher protocol through the compatibility adapter.
-4. At most two research lanes may run.
-5. Each lane evaluates at most two mature OSS candidates.
-6. A lane stops immediately when an exact fitting candidate passes its research probe.
+4. At most two lanes total may run across OSS and platform research.
+5. Each lane evaluates at most two candidates, including official platform APIs where applicable.
+6. All research stops immediately when an exact fitting candidate passes its probe.
 7. Research verifies the exact version, export, API, official source, and probe result, then returns ephemeral output only to the monitor.
 8. The monitor normalizes accepted evidence into the sole plan; researchers do not communicate directly with each other or the planner.
-9. If no candidate fits, external evidence records bounded candidates and exact no-fit reasons before local generic code is admissible.
+9. If no candidate fits, evidence records `oss:` and `platform:` results; platform may be exactly `platform: inapplicable - <reason>` when justified.
 
 ### Pass B: Architecture And Selection
 
@@ -205,8 +204,9 @@ The validator must not pretend structural evidence proves semantic reuse. A stru
 2. The planner chooses `direct-use`, `thin-policy`, `local-no-fit`, or `local-policy` per capability row.
 3. Architecture is designed around the admitted sources rather than around a preselected local abstraction.
 4. Selected non-local candidates must already have a passed research probe.
-5. The planner maps planned files, behaviors, and tests to capability IDs.
-6. Any missing source, API, probe, no-fit evidence, or policy boundary yields `PLAN_BLOCKED`.
+5. The planner emits the exact `Capability Delivery Map`; local-policy rows contain `approval: pending-plan-review` because immutable review has not yet occurred.
+6. The monitor invokes existing-validator plan-input mode against the candidate plan and returns its read-only result to the planner.
+7. The planner may emit `PLAN_READY` only after exit `0`; missing source, API, probe, map, composition, no-fit, policy, or stage-correct approval evidence yields `PLAN_BLOCKED` plus `BLOCKER_CODE <code>`.
 
 ### Independent Plan Review
 
@@ -214,8 +214,9 @@ The validator must not pretend structural evidence proves semantic reuse. A stru
 2. The reviewer checks source fit, evidence relevance, generic-versus-policy classification, thinness, and no-fit sufficiency.
 3. The reviewer rejects a locally proposed generic primitive if any fitting admitted source was skipped.
 4. The reviewer rejects product-policy language that disguises generic implementation.
-5. The reviewer gives explicit independent approval for every `local-policy` row or blocks the plan.
-6. Normal immutable plan identity and promotion requirements remain in force.
+5. For every approved local-policy row, the reviewer emits `LOCAL_POLICY_APPROVED <Cxx> <planCommit> <planBlob> <planSha256>` and verifies composition, `generic-operation: none`, and policy thinness.
+6. `PLAN_REVIEW_PASS` is valid only when every local-policy row has exactly one matching immutable approval line; otherwise review blocks.
+7. Normal immutable plan identity and promotion requirements remain in force; pending plan evidence never pretends approval already exists.
 
 ### Coding And PR Evidence
 
@@ -224,9 +225,9 @@ The validator must not pretend structural evidence proves semantic reuse. A stru
 3. A version, export, API, behavior, or probe mismatch blocks coding and returns to plan review.
 4. The coder cannot replace a failed non-local candidate with a local helper without a reviewed plan revision.
 5. The coder maps every changed behavior and supporting test to one or more capability IDs.
-6. PR `Reuse Proof` reproduces the exact schema and records actual passed implementation probes.
-7. The independent implementation reviewer maps every behavior in the diff back to capability IDs and decisions.
-8. A plan marked `direct-use` whose diff introduces a handmade equivalent helper is blocked even if its table passes machine validation.
+6. PR `Reuse Proof` reproduces the exact schema, actual passed probes, tracked capability plan identity, and immutable local-policy approval tokens; `Capability Implementation Map` maps the identical C-ID set to changed files, symbols, tests, and probes.
+7. PR mode validates both tables plus tracked plan/approval identity without executing probes; the independent implementation reviewer matches the approval output and checks semantic mapping, diff behavior, and test correctness.
+8. A plan marked `direct-use` whose diff introduces a handmade equivalent helper receives `CHANGES_REQUIRED` plus `FINDING_CODE reuse-decision-mismatch`, even if machine validation passes.
 
 ## GSD Compatibility And Context Controls
 
@@ -239,150 +240,164 @@ The validator must not pretend structural evidence proves semantic reuse. A stru
 - Research findings supply evidence only and do not override the planner or independent reviewer.
 - Package legitimacy is a risk signal only and is not API-fit proof, license approval, security approval, or OSV approval.
 
+## Pressure Scenario Fixtures
+
+Each fixed packet contains `Packet ID`, `Stage`, `Immutable envelope`, `Capability table`, stage delivery map, optional `Candidate diff snippet`, `Expected role`, `Expected top-level token`, and `Expected code`. GREEN execution substitutes the actual tracked G-02 plan commit/blob/SHA-256 and actual candidate HEAD in the immutable envelope; all scenario rows and snippets below remain literal.
+
+Roles add one machine-stable secondary line without changing top-level verdict enums: planners use `BLOCKER_CODE <code>` after `PLAN_BLOCKED`; implementation reviewers use `FINDING_CODE <code>` after `CHANGES_REQUIRED`.
+
+### PS-01 Installed Primitive Bypassed
+
+Packet fields: `Packet ID: PS-01`; `Stage: plan selection`; `Immutable envelope: exact tracked G-02 plan commit/blob/SHA-256; no diff`; `Expected role: planner`; `Expected output: PLAN_BLOCKED`; `Expected code: BLOCKER_CODE reuse-existing`.
+
+| Capability ID | Need | Class | Source kind | Exact source / version | Exact API / probe | Files read | Decision | No-fit / policy evidence |
+|---|---|---|---|---|---|---|---|---|
+| `C80` | Split a time signature into numerator and denominator | `generic` | `local` | `local:app/time-signature.ts#splitTimeSignature` | `API: splitTimeSignature(value)`; `Probe: local examples return 7 and 8 for 7/8` | lockfile; `node_modules/@tonaljs/time-signature` export/types/source | `local-no-fit` | `repo: no fit`; `installed: @tonaljs/time-signature@4.9.0#get fits; get('7/8') returned empty false, name 7/8, type irregular, upper 7, lower 8, additive []`; `oss: not reached`; `platform: inapplicable - pure parsing capability` |
+
+| Capability ID | Planned files / symbols | Planned tests / probes |
+|---|---|---|
+| `C80` | `app/time-signature.ts#splitTimeSignature` | Local split-parser examples |
+
+### PS-02 External Research Missing
+
+Packet fields: `Packet ID: PS-02`; `Stage: plan selection`; `Immutable envelope: exact tracked G-02 plan commit/blob/SHA-256; no diff`; `Expected role: planner`; `Expected output: PLAN_BLOCKED`; `Expected code: BLOCKER_CODE external-research-missing`.
+
+| Capability ID | Need | Class | Source kind | Exact source / version | Exact API / probe | Files read | Decision | No-fit / policy evidence |
+|---|---|---|---|---|---|---|---|---|
+| `C81` | Create a ZIP archive | `generic` | `local` | `local:app/archive.ts#createZip` | `API: createZip(entries)`; `Probe: proposed local ZIP fixture passes` | repository search; lockfile; installed package types | `local-no-fit` | `repo: no fit`; `installed: no fit` |
+
+| Capability ID | Planned files / symbols | Planned tests / probes |
+|---|---|---|
+| `C81` | `app/archive.ts#createZip` | ZIP round-trip fixture |
+
+### PS-03 Local Policy Unapproved
+
+Packet fields: `Packet ID: PS-03`; `Stage: plan selection`; `Immutable envelope: exact tracked G-02 plan commit/blob/SHA-256; no diff`; `Expected role: planner`; `Expected output: PLAN_BLOCKED`; `Expected code: BLOCKER_CODE local-policy-unapproved`.
+
+| Capability ID | Need | Class | Source kind | Exact source / version | Exact API / probe | Files read | Decision | No-fit / policy evidence |
+|---|---|---|---|---|---|---|---|---|
+| `C82` | Enforce a product whitelist while parsing and normalizing its entries locally | `product-policy` | `local` | `local:app/whitelist.ts#isAllowed` | `API: isAllowed(rawEntry)`; `Probe: mixed-case comma-list examples pass` | product rule; repository search | `local-policy` | `policy-boundary: product whitelist`; `composes: none`; `generic-operation: none` |
+
+| Capability ID | Planned files / symbols | Planned tests / probes |
+|---|---|---|
+| `C82` | `app/whitelist.ts#isAllowed`, including split/trim/lowercase parsing | Mixed-case comma-list policy examples |
+
+### PS-04 Reviewed Decision Mismatches Diff
+
+Packet fields: `Packet ID: PS-04`; `Stage: implementation review`; `Immutable envelope: exact approved G-02 plan commit/blob/SHA-256 and current candidate HEAD`; `Expected role: independent implementation reviewer`; `Expected output: CHANGES_REQUIRED`; `Expected code: FINDING_CODE reuse-decision-mismatch`.
+
+| Capability ID | Need | Class | Source kind | Exact source / version | Exact API / probe | Files read | Decision | No-fit / policy evidence |
+|---|---|---|---|---|---|---|---|---|
+| `C83` | Parse a time signature | `generic` | `installed` | `@tonaljs/time-signature@4.9.0#get` | `API: get(value)`; `Probe: dist/index.d.ts exports get/parse/names and get('7/8') returned empty false, name 7/8, type irregular, upper 7, lower 8, additive []` | lockfile; installed `dist/index.d.ts`; runtime export | `direct-use` | `N/A - selected source fits` |
+
+| Capability ID | Changed files / symbols | Tests / probes |
+|---|---|---|
+| `C83` | `app/time-signature.ts#splitTimeSignature` | Candidate parser examples |
+
+Candidate diff snippet:
+
+```diff
++ const splitTimeSignature = value => value.split('/').map(Number);
+```
+
+RED baseline: before the role repairs, existing roles did not guarantee these exact codes or outcomes, even when they happened to block a packet for unrelated incompleteness. Such incidental blocking is not a RED pass.
+
+GREEN execution: the monitor sends each literal packet to a fresh role agent with the exact immutable plan identity and, for PS-04, exact current HEAD. The monitor records each full unedited output in the existing PR `Agent Gate Evidence`; it creates no fixture, transcript, status, or evidence file.
+
 ## Exact TDD Implementation Tasks
 
 ### Task 0: Promote This Immutable Plan Only
 
-**File:** `docs/v1/implementation-slices/plans/G-02-reuse-first-capability-admission-gate.md`
+**File/capabilities:** this plan; `C01` through `C07`.
 
-**Capabilities:** `C01` through `C07`
-
-- [ ] Commit only this plan file.
-- [ ] Record the plan commit, Git blob, and SHA-256.
-- [ ] Obtain independent Terra/Luna `PLAN_REVIEW_PASS` against those identities.
-- [ ] Do not begin implementation until the normal plan-promotion boundary is satisfied.
-- [ ] Return to a clean implementation base before Task 1.
+- [ ] Commit only this plan; record commit/blob/SHA-256; obtain matching Terra/Luna `PLAN_REVIEW_PASS`; do not implement before promotion; return to a clean base.
 
 ### Task 1: Add Reuse-Proof Selftest RED Cases First
 
-**File:** `scripts/validate-pr-debt-contract.selftest.mjs`
+**File/capability:** `scripts/validate-pr-debt-contract.selftest.mjs`; `C01`.
 
-**Capability:** `C01`
-
-- [ ] Add a legacy four-column Reuse Proof case and require failure.
-- [ ] Add a case missing one required column and require failure.
-- [ ] Add a duplicate capability-ID case and require failure.
-- [ ] Add invalid class, source-kind, and decision enum cases and require failure.
-- [ ] Add invalid decision/class/source relation cases and require failure.
+- [ ] Add plan-input main/map fixtures beside PR main/map fixtures; RED legacy-four-column, malformed header/row, missing column/cell/ID, duplicate/unknown ID, and unequal ID-set cases in both modes.
+- [ ] RED bad enums/relations, missing composition, and unknown/non-generic composition targets.
 - [ ] Add an installed or OSS source with ranged semver and require failure.
-- [ ] Add a row missing `API:` and a row missing `Probe:` and require both to fail.
-- [ ] Add a `local-no-fit` row missing each of `repo:`, `installed:`, and `external:` and require failure.
-- [ ] Add a `thin-policy` or `local-policy` row missing `policy-boundary:` and require failure.
-- [ ] Preserve all existing selftest cases and pass tokens.
-- [ ] Run the focused selftest and record RED because the existing validator admits the new malformed cases.
+- [ ] RED missing `API:` or `Probe:`.
+- [ ] Add `local-no-fit` rows missing each of `repo:`, `installed:`, `oss:`, and `platform:`; add one exact `platform: inapplicable - <reason>` GREEN control.
+- [ ] RED local-policy missing boundary/composition/`generic-operation: none`; plan absent/malformed pending approval; PR absent/malformed/mismatched-C-ID approval.
+- [ ] RED missing/malformed/non-ancestor/stale capability plan identity and a well-formed local-policy approval token whose commit/blob/SHA-256 differs from the declared current capability plan identity.
+- [ ] Preserve existing cases/tokens; record RED because no plan gate or guaranteed PR relation/approval/map checks exist.
 
-### Task 2: Implement The Minimal Structural Validator
+### Task 2: Implement Plan And PR Modes In The Existing Structural Validator
 
-**Files:** `scripts/validate-pr-debt-contract.mjs`; `scripts/validate-pr-debt-contract.selftest.mjs`
+**Files/capability:** validator and selftest; `C01`.
 
-**Capability:** `C01`
-
-- [ ] Add `validateReuseProof` inside the existing validator.
-- [ ] Reuse the existing `parseTable` and `getDataRows` helpers.
-- [ ] Require the exact nine-column header.
-- [ ] Require non-empty cells and unique `C\d{2,}` IDs.
-- [ ] Enforce the class, source-kind, and decision enums.
-- [ ] Enforce the decision/class/source relation matrix.
-- [ ] Enforce exact installed and OSS semantic-version shape with no ranges.
-- [ ] Enforce source encodings for repository, installed, OSS, platform, and local rows.
-- [ ] Enforce non-empty `API:` and `Probe:` markers.
-- [ ] Enforce exact direct-use evidence and required no-fit or policy markers.
-- [ ] Keep the validator deterministic and side-effect free.
-- [ ] Do not execute probes, access the network, infer semantic fit, or inspect implementation behavior.
-- [ ] Run the focused selftest and record GREEN for all old and new cases.
+- [ ] Add mode-aware `validateReuseProof`, reusing `parseTable`/`getDataRows`; add read-only `--plan-input <plan-path>` extraction while retaining PR mode.
+- [ ] Validate stage main/map headers, cells, unique IDs, exact ID-set equality, enums, relations, exact semver/source encodings, and API/probe markers.
+- [ ] Enforce direct-use evidence, four no-fit markers, composition targets, policy markers, and stage approval format/same-row C-ID.
+- [ ] Plan accepts only pending approval; PR accepts only an immutable token equal to a valid tracked capability plan identity. Reuse/generalize the existing immutable identity checks; never write, network, execute probes, infer fit, or inspect behavior.
+- [ ] Run all plan/PR fixtures GREEN, then run this plan through plan-input mode as bootstrap integration evidence.
 
 ### Task 3: Wire The Existing Gate Package
 
-**Files:** `scripts/validate-metronome-gates.mjs`; `docs/architecture/debt-gate-map.md`
+**Files/capabilities:** gate validator and debt map; `C01`, `C02`.
 
-**Capabilities:** `C01`, `C02`
-
-- [ ] Extend existing required-content markers for the shared schema and validator path.
-- [ ] Keep the current validator and selftest entrypoints; add no second validator.
-- [ ] Document the machine-versus-semantic enforcement boundary.
-- [ ] Document that the gate checks table shape and relations but never runs probes.
-- [ ] Document the independent review requirement for fit, thinness, no-fit sufficiency, and diff conformance.
-- [ ] Verify the existing gate-package validator fails if the new contract is disconnected.
+- [ ] Extend existing markers for plan mode, both maps, capability plan identity, composition, platform evidence, approval lifecycle, stable codes, and validator path; add no validator/entrypoint.
+- [ ] Document machine/semantic and plan/review timing boundaries, no probe execution, and semantic-review duties; prove disconnection fails.
 
 ### Task 4: Update The Shared Rule And PR Template
 
-**Files:** `docs/v1/implementation-slices/rules/external-library-first.md`; `.github/pull_request_template.md`
+**Files/capabilities:** external rule and PR template; `C01` through `C04`.
 
-**Capabilities:** `C01` through `C04`
-
-- [ ] Replace the legacy Reuse Proof shape with the exact shared nine-column schema.
-- [ ] State the source encodings, decision relations, and probe timing requirements once in the existing rule.
-- [ ] Require mandatory online mature-OSS research after repository and installed misses for uncovered generic atoms.
-- [ ] State that a failed selected-source probe blocks rather than authorizes local fallback.
-- [ ] Keep the PR template concise while requiring actual passed probes and exact capability IDs.
-- [ ] Add no duplicate workflow policy or status field.
+- [ ] Put shared table/map schemas, source/composition/approval/map/probe rules, and mandatory OSS/platform research in the existing rule.
+- [ ] Keep the PR template concise but require actual probes, tracked capability plan identity, immutable approvals, and exact IDs/map; failed probes block; add no workflow/status duplicate.
 
 ### Task 5: Strengthen The Four Existing Roles
 
-**Files:** `skills/metronome_planner.md`; `skills/metronome_coder.md`; `skills/metronome_reviewer.md`; `skills/metronome_chatgpt_review.md`
+**Files/capabilities:** four existing role files; `C02` through `C04`.
 
-**Capabilities:** `C02` through `C04`
+- [ ] Add Pass A; monitor repo/lock/installed/probe discovery; GSD v1.7.0 adapter; OSS/platform two-lane/two-candidate/stop-on-fit research; ephemeral sole-plan normalization; no mesh.
+- [ ] Add planner Pass B, `Capability Delivery Map`, monitor plan-input invocation, and `PLAN_BLOCKED` stable code field.
+- [ ] Add independent reviewer re-derivation and exact immutable local-policy approval lines alongside `PLAN_REVIEW_PASS`.
+- [ ] Add coder probe reruns/mismatch block/no fallback, PR capability-plan identity/approvals/implementation map, and implementation/ChatGPT identity/fit/freshness/map/test/hidden-equivalent checks with `FINDING_CODE`.
+- [ ] Preserve overlay and top-level verdict enums.
 
-- [ ] Add planner Pass A atomization without architecture.
-- [ ] Add monitor-owned deterministic repository, lockfile, installed type/source, and probe discovery.
-- [ ] Add bounded external research through the official Open GSD v1.7.0 researcher compatibility adapter.
-- [ ] Add the two-lane, two-candidate-per-lane, stop-on-fit bounds.
-- [ ] Add ephemeral normalization into the sole plan and prohibit direct agent mesh.
-- [ ] Add planner Pass B selection and capability-to-file/test mapping.
-- [ ] Add independent reviewer re-derivation and explicit local-policy approval.
-- [ ] Add coder probe reruns, mismatch blocking, behavior mapping, and no-silent-local-fallback behavior.
-- [ ] Add implementation-review mapping of every diff behavior to a capability ID.
-- [ ] Add ChatGPT review checks for semantic fit and hidden handmade equivalents.
-- [ ] Preserve the overlay as the sole workflow contract and do not edit it.
+### Task 6: Execute The Fixed Pressure Packets
 
-### Task 6: Re-Run Pressure Cases As GREEN Gate Evidence
+**Files/capabilities:** only allowlisted selftest/role/rule corrections; `C01` through `C07`.
 
-**Files:** Only allowlisted validator selftest or role/rule evidence files if a planned assertion needs correction.
-
-**Capabilities:** `C01` through `C07`
-
-- [ ] Pressure case 1: a direct fitting repository or installed generic primitive exists, but the plan proposes a local wrapper; require the process to block the local decision.
-- [ ] Pressure case 2: repository and installed searches miss, but external mature-OSS research is absent or unprobed; require the process to block `local-no-fit`.
-- [ ] Pressure case 3: a local product-policy row lacks independent approval or reimplements a generic primitive; require the process to block `local-policy`.
-- [ ] Handmade mismatch: the plan says `direct-use`, but the implementation diff adds an equivalent handmade helper; require independent implementation review to block.
-- [ ] Confirm structural selftests cover only the machine-detectable portions and role-review fixtures or exact review evidence cover semantic portions.
-- [ ] Record all three original RED pressure cases as GREEN blocking evidence after the contract changes.
+- [ ] Preserve RED baseline; send unchanged PS-01..04 to fresh agents with exact immutable/current-head envelopes.
+- [ ] Require the four exact verdict/code pairs; record full outputs only in existing PR `Agent Gate Evidence`, with no new file.
+- [ ] Use selftests for structure and fresh-role outputs for semantics.
 
 ### Task 7: Full Verification And Independent Review
 
-**Capabilities:** `C01` through `C07`
+**Capabilities:** `C01` through `C07`.
 
-- [ ] Confirm the exact diff contains only the implementation allowlist.
-- [ ] Confirm no dependency, lockfile, `src/**`, `.planning/**`, workflow duplicate, validator duplicate, status artifact, graph, codemap, or database change exists.
+- [ ] Confirm only allowlisted paths and no dependency/lock/`src`/`.planning`/duplicate/status/graph/codemap/database change.
 - [ ] Run the focused PR debt-contract selftest.
+- [ ] Run plan-input mode against the exact immutable plan and PR mode against exact current-head evidence.
 - [ ] Run the existing debt-gate package validation.
-- [ ] Run changed-file Semgrep and XO gates.
-- [ ] Run repository lint, typecheck, unit tests, and build.
+- [ ] Run changed Semgrep/XO, lint, typecheck, unit tests, and build.
 - [ ] Commit through the normal hook without `--no-verify`.
-- [ ] Run CodeScene change-set analysis and require no decline.
-- [ ] Obtain independent Terra/Luna semantic review on the exact committed candidate.
-- [ ] Require current-head CI and external review under the existing promotion workflow.
+- [ ] Require no CodeScene decline, exact-commit Terra/Luna review, current-head CI, and external review.
 
 ## Acceptance Criteria
 
-1. Every future plan `Existing Primitive Search` and PR `Reuse Proof` uses the exact shared nine-column schema.
-2. The existing validator rejects legacy four-column, missing-column, duplicate-ID, bad-enum, bad-relation, ranged-semver, missing-marker, and missing-evidence cases.
-3. Capability IDs are unique, stable, and match `C\d{2,}`.
-4. Selected package sources name exact versions and exports; repository, platform, and local sources use their required exact forms.
-5. Every API/probe cell contains a real `API:` and `Probe:` value.
-6. Selected non-local sources have passed research probes before `PLAN_READY` and actual passed probes in PR evidence.
-7. Uncovered generic atoms cannot become local implementations until repository, installed, and bounded external no-fit evidence is present.
-8. Direct fitting primitives are used directly; product policy around them is demonstrably thin.
-9. Every local-policy row states its boundary, does not reimplement a generic primitive, and has independent approval.
-10. The planner performs architecture-free Pass A before discovery and evidence-led Pass B afterward.
-11. External research uses at most two lanes and two candidates per lane and stops on fit.
-12. Research remains ephemeral and is normalized into the sole plan without direct agent mesh or persistent side artifacts.
-13. Coder probe mismatches block and never trigger silent local fallback.
-14. Independent review re-derives capability coverage and maps every implementation behavior to a capability ID.
-15. A `direct-use` plan paired with a handmade equivalent in the diff is blocked.
-16. The machine validator never executes probes or claims semantic approval.
-17. The three pressure cases and handmade mismatch produce the required blocking outcomes.
-18. Only allowlisted files change, all full gates pass, CodeScene does not decline, and exact-head independent review passes.
+1. Every future plan and PR uses the exact shared capability schema and its exact stage-specific delivery-map schema.
+2. Existing-validator plan-input mode validates `## Existing Primitive Search` read-only before `PLAN_READY`; existing PR mode validates `## Reuse Proof`.
+3. Both modes reject malformed headers/rows, missing cells, duplicate IDs, map-ID inequality, bad enums/relations, ranged semver, and missing markers.
+4. Capability IDs are unique and stable; selected sources and `API:`/`Probe:` values are exact.
+5. Thin policy composes an existing generic C-ID; local policy declares composition, `generic-operation: none`, and stage-correct approval.
+6. Plan local-policy rows use only `approval: pending-plan-review`; review emits one immutable approval line per row plus `PLAN_REVIEW_PASS`.
+7. PR mode validates the tracked capability plan path/commit/blob/SHA-256, requires local-policy token identity equality, and rejects stale identity before reviewers match the approval output and check semantics.
+8. Uncovered generic atoms cannot become local until `repo:`, `installed:`, `oss:`, and `platform:` evidence is complete and semantically sufficient.
+9. Applicable official platform APIs and mature OSS share at most two lanes total, two candidates per lane, and stop-on-fit behavior.
+10. Exact `platform: inapplicable - <reason>` is structurally accepted and semantically reviewed.
+11. Selected non-local sources have passed plan probes and actual PR probes; mismatch never triggers silent local fallback.
+12. Planner Pass A is architecture-free; Pass B emits the delivery map and passes monitor-owned plan-input validation.
+13. Independent review re-derives coverage, fit, thinness, no-fit evidence, immutable approval, map truth, diff behavior, and test correctness.
+14. PS-01 through PS-03 return exact `PLAN_BLOCKED` blocker codes and PS-04 returns exact `CHANGES_REQUIRED` finding code from fresh agents.
+15. Pressure outputs are stored only in existing PR `Agent Gate Evidence`; no fixture/evidence file or new top-level verdict enum exists.
+16. The machine validator never executes probes, accesses the network, or claims semantic approval.
+17. Only allowlisted files change; all full gates, CodeScene, exact-head independent review, external review, and CI pass.
 
 ## Rollback
 
@@ -390,7 +405,7 @@ The validator must not pretend structural evidence proves semantic reuse. A stru
 - Restore the prior contents of the ten existing allowlisted contract and validator files.
 - Keep this plan as historical evidence unless the user explicitly authorizes its removal.
 - Do not add a compatibility parser for the legacy four-column table.
-- Do not weaken enums, relations, markers, probe requirements, or semantic review to preserve malformed PR text.
+- Do not weaken plan-input mode, map equality, tracked capability plan identity, enums, relations, platform markers, composition, approval identity, probes, stable codes, or semantic review.
 - If rollback is required after PR adoption, block new promotions until the existing template and validator are consistent again.
 
 ## Stop Conditions
@@ -401,10 +416,13 @@ Stop and return `STAGE_BLOCKED` if any of the following occurs:
 - A dependency, lockfile, source file, overlay skill, or second workflow/validator/status artifact appears necessary.
 - Open GSD v1.7.0 compatibility cannot remain read-only and ephemeral.
 - A selected non-local candidate lacks an exact version, export or API, official source, or passed probe.
-- A local generic candidate lacks complete repository, installed, and external no-fit evidence.
-- A local product-policy candidate lacks a provably thin boundary or independent approval.
+- Plan-input mode fails, writes state, executes a probe, or is bypassed before `PLAN_READY`.
+- A capability delivery/implementation map is malformed, incomplete, or has a different ID set.
+- Capability plan identity is missing, non-ancestor, stale, inconsistent with tracked Git object bytes, or differs from a local-policy approval token.
+- A local generic candidate lacks complete `repo:`, `installed:`, `oss:`, or `platform:` evidence.
+- A thin-policy composition target is missing/non-generic, or a local policy lacks composition, `generic-operation: none`, or stage-correct immutable approval.
 - A role or validator change confuses structural checking with semantic approval.
-- A pressure case that must block is admitted.
+- A pressure packet produces the wrong verdict/code or is run without fresh-agent immutable/current-head inputs.
 - The implementation diff contradicts a reviewed capability decision.
 - Full gates, CodeScene, independent review, external review, or current-head CI fail under the existing repair limits.
 
@@ -414,11 +432,12 @@ Stop and return `STAGE_BLOCKED` if any of the following occurs:
 - [ ] All implementation edits are within the exact allowlist.
 - [ ] The shared evidence schema is identical in plan, rule, template, roles, and validator expectations.
 - [ ] `validateReuseProof` reuses `parseTable` and `getDataRows`.
-- [ ] All specified RED selftests fail before implementation and pass afterward.
+- [ ] The existing validator has read-only plan-input and PR modes; both main/map schemas and exact ID-set equality are GREEN.
+- [ ] All malformed header/row, capability-plan identity, stale approval, platform, composition, semver, marker, and map RED cases pass after implementation.
 - [ ] Machine and semantic responsibilities remain explicitly separated.
-- [ ] Planner, monitor, researcher compatibility adapter, coder, reviewer, and ChatGPT reviewer responsibilities are fail-closed.
+- [ ] Planner/monitor invocation, immutable approval timing, coder evidence, and reviewer freshness/semantic checks are fail-closed.
 - [ ] No silent local fallback remains possible under the contract.
-- [ ] The three pressure cases and handmade direct-use mismatch are proven blocked.
+- [ ] PS-01 through PS-04 return their exact verdict/code pairs from fresh agents, with full outputs in existing PR evidence only.
 - [ ] No prohibited file, dependency, persistent artifact, second workflow, or full-GSD claim is introduced.
 - [ ] Focused and full repository gates pass with fresh evidence.
 - [ ] Independent exact-commit review and existing promotion gates pass.
