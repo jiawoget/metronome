@@ -31,7 +31,22 @@
    $env:OLLAMA_HOST = '127.0.0.1:11434'
    $env:OLLAMA_MODELS = $ollamaModels
    $ollamaProcess = Start-Process -FilePath $ollamaExe -ArgumentList 'serve' -WindowStyle Hidden -PassThru
-   $version = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/version'
+   $ollamaVersion = $null
+   for ($attempt = 0; $attempt -lt 60; $attempt++) {
+     try {
+       $versionResponse = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/version' -TimeoutSec 2
+       if ($versionResponse.version -eq '0.32.0') {
+         $ollamaVersion = $versionResponse.version
+         break
+       }
+     } catch {
+       # The pinned process can be healthy but not listening yet.
+     }
+     Start-Sleep -Milliseconds 500
+   }
+   if ($ollamaVersion -ne '0.32.0') {
+     throw 'Pinned Ollama 0.32.0 did not become ready within 30 seconds.'
+   }
    & $ollamaExe pull ordis/jina-embeddings-v2-base-code
    $tags = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags'
    ```
