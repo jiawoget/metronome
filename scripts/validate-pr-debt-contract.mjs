@@ -68,9 +68,12 @@ const reuseAdmissionConformanceStatuses = new Map([
 	["NOT_APPLICABLE|MSO-5", new Set(["NOT_APPLICABLE"])],
 	["NOT_APPLICABLE|MSO-6", new Set(["NOT_APPLICABLE"])],
 ]);
-const conformanceSuccessVerdicts = new Set(["PLAN_READY", "PASS", "PASS_WITH_NITS"]);
-const conformanceBlockingVerdicts = new Set(["PLAN_BLOCKED", "CHANGES_REQUIRED"]);
-const conformanceCodePattern = /^[0-9a-z]+(?:-[0-9a-z]+)*$/v;
+const compactSuccessRule = {kind: "success", codePattern: /^NONE$/v};
+const compactBlockingRule = {kind: "blocking", codePattern: /^(?:NONE|[0-9a-z]+(?:-[0-9a-z]+)*)$/v};
+const compactConformanceRules = new Map([
+	["PLAN_READY", compactSuccessRule], ["PASS", compactSuccessRule], ["PASS_WITH_NITS", compactSuccessRule],
+	["PLAN_BLOCKED", compactBlockingRule], ["CHANGES_REQUIRED", compactBlockingRule],
+]);
 const conformanceOpaqueIdPattern = /^\w[\w\u{2D}.]*$/v;
 
 const capabilityHeaders = [
@@ -180,17 +183,10 @@ function isProductionSourceFile(file) {
 	return sourceFilePattern.test(file) && !ignoredFilePattern.test(file);
 }
 
-function isGateControlFile(file) {
-	return gateControlFilePatterns.some(pattern => pattern.test(file));
-}
-
-function requiresDebtContractEvidence(file) {
-	return isProductionSourceFile(file) || isGateControlFile(file);
-}
-
 function parseFiles(output) {
 	return parseChangedFiles(output)
-		.filter(file => requiresDebtContractEvidence(file));
+		.filter(file => isProductionSourceFile(file)
+			|| gateControlFilePatterns.some(pattern => pattern.test(file)));
 }
 
 function parseChangedFiles(output) {
@@ -359,24 +355,18 @@ function getRiskKind(file, text) {
 }
 
 function scanRiskyAdditions(contexts) {
-	return contexts.flatMap(context => scanContextRiskyAdditions(context));
-}
-
-function scanContextRiskyAdditions(context) {
-	return context.files.flatMap(file => (
+	return contexts.flatMap(context => context.files.flatMap(file => (
 		isProductionSourceFile(file) ? scanFileRiskyAdditions(context, file) : []
-	));
+	)));
 }
 
 function scanFileRiskyAdditions(context, file) {
 	return getDiffLines(context, file)
-		.map(added => createRiskFinding(context, added))
+		.map(added => {
+			const kind = getRiskKind(added.file, added.text);
+			return kind ? {...added, context: context.name, kind} : null;
+		})
 		.filter(Boolean);
-}
-
-function createRiskFinding(context, added) {
-	const kind = getRiskKind(added.file, added.text);
-	return kind ? {...added, context: context.name, kind} : null;
 }
 
 function splitSections(body) {
@@ -478,11 +468,6 @@ function evidenceValues(value, label) {
 
 function hasEvidenceValue(value, label) {
 	return evidenceValues(value, label).some(candidate => !isPlaceholder(candidate));
-}
-
-function hasExactEvidenceValue(value, label, expected) {
-	const values = evidenceValues(value, label);
-	return values.length === 1 && values[0] === expected;
 }
 
 function splitMapSection(sectionBody, heading) {
@@ -685,6 +670,7 @@ function validateLocalPolicyApproval(id, evidence, stage, identity) {
 function validateLocalPolicyCapability(row, stage, identity) {
 	const {id, classification, sourceKind, evidence} = getCapabilityRowValues(row);
 	const target = compositionTarget(evidence, true);
+	const genericOperations = evidenceValues(evidence, "generic-operation");
 	const failures = [];
 	if (classification !== "product-policy" || sourceKind !== "local") {
 		failures.push(`Capability ${id} local-policy must be a local product-policy source.`);
@@ -692,7 +678,8 @@ function validateLocalPolicyCapability(row, stage, identity) {
 
 	const hasValidPolicyEvidence = hasEvidenceValue(evidence, "policy-boundary")
 		&& target !== null
-		&& hasExactEvidenceValue(evidence, "generic-operation", "none");
+		&& genericOperations.length === 1
+		&& genericOperations[0] === "none";
 	if (!hasValidPolicyEvidence) {
 		failures.push(`Capability ${id} local-policy requires policy-boundary, composition, and generic-operation: none evidence.`);
 	}
@@ -785,15 +772,6 @@ function sectionText(sectionBody) {
 		.join("\n");
 }
 
-function hasExplicitNoNewSurface(sectionBody) {
-	return /\bno new surface\b/iv.test(sectionText(sectionBody));
-}
-
-function hasExplicitNoRetiredSurface(sectionBody) {
-	return /\bnot a debt(?:-| )reduction pr\b/iv.test(sectionText(sectionBody))
-		&& /\bno retired surface\b/iv.test(sectionText(sectionBody));
-}
-
 function valuesAfterColon(sectionBody, label) {
 	const prefix = `- ${label}:`;
 	return sectionText(sectionBody)
@@ -853,11 +831,19 @@ function validateConformanceFieldShape(sectionBody) {
 	const failures = [];
 
 	for (const line of conformanceFieldLines(sectionBody)) {
-		const hasAllowedLabel = [...allowedLabels].some(label => line.startsWith(`- ${label}:`));
-		const isLocalPolicyApproval = /^LOCAL_POLICY_APPROVED C\d{2,} [0-9a-f]{40} [0-9a-f]{40} [0-9a-f]{64}$/v.test(line);
-		if (!hasAllowedLabel && !compactCandidates.has(line) && !isLocalPolicyApproval) {
-			failures.push(`Unexpected Agent Gate Evidence line: ${line}`);
+		if ([...allowedLabels].some(label => line.startsWith(`- ${label}:`))) {
+			continue;
 		}
+
+		if (compactCandidates.has(line)) {
+			continue;
+		}
+
+		if (/^LOCAL_POLICY_APPROVED C\d{2,} [0-9a-f]{40} [0-9a-f]{40} [0-9a-f]{64}$/v.test(line)) {
+			continue;
+		}
+
+		failures.push(`Unexpected Agent Gate Evidence line: ${line}`);
 	}
 
 	return failures;
@@ -894,20 +880,17 @@ function parseCompactConformanceLines(sectionBody) {
 		const id = normalizeCell(rawId);
 		const verdict = normalizeCell(rawVerdict);
 		const code = normalizeCell(rawCode);
+		const rule = compactConformanceRules.get(verdict);
 		if (!conformanceOpaqueIdPattern.test(id)) {
 			failures.push(`Compact ${phase} output has an invalid opaque case ID.`);
 		}
 
-		if (conformanceSuccessVerdicts.has(verdict)) {
-			if (code !== "NONE") {
-				failures.push(`Compact ${phase} output requires NONE for ${verdict}.`);
-			}
-		} else if (conformanceBlockingVerdicts.has(verdict)) {
-			if (code !== "NONE" && !conformanceCodePattern.test(code)) {
-				failures.push(`Compact ${phase} blocking output requires NONE or one lowercase kebab code.`);
-			}
-		} else {
+		if (!rule) {
 			failures.push(`Compact ${phase} output has an invalid answer-neutral verdict.`);
+		} else if (!rule.codePattern.test(code)) {
+			failures.push(rule.kind === "success"
+				? `Compact ${phase} output requires NONE for ${verdict}.`
+				: `Compact ${phase} blocking output requires NONE or one lowercase kebab code.`);
 		}
 
 		parsed.push({phase, id});
@@ -946,20 +929,16 @@ function validateCompactConformanceLines(sectionBody, isComplete) {
 
 function validateCompleteConformanceEvidence(sectionBody) {
 	const failures = [];
-	const baseline = readRequiredConformanceField(
-		sectionBody,
-		reuseAdmissionConformanceLabels.redBaseline,
-		failures,
-	);
+	const baseline = readRequiredConformanceField(sectionBody, reuseAdmissionConformanceLabels.redBaseline, failures);
 	const commitPattern = /^[0-9a-f]{40}$/v;
-	if (baseline !== null) {
-		if (!commitPattern.test(baseline) || !isPlanCommitAncestor(baseline, commitPattern)) {
-			failures.push("RED baseline commit must be one lowercase ancestor of candidate HEAD.");
-		}
+	const isBaselineInvalid = baseline !== null && (!commitPattern.test(baseline) || !isPlanCommitAncestor(baseline, commitPattern));
+	const isBaselineStale = baseline !== null && baseline !== getMergeBase();
+	if (isBaselineInvalid) {
+		failures.push("RED baseline commit must be one lowercase ancestor of candidate HEAD.");
+	}
 
-		if (baseline !== getMergeBase()) {
-			failures.push("RED baseline commit must equal the current git merge-base of the base ref and HEAD.");
-		}
+	if (isBaselineStale) {
+		failures.push("RED baseline commit must equal the current git merge-base of the base ref and HEAD.");
 	}
 
 	for (const [label, expected] of reuseAdmissionConformanceCounts) {
@@ -972,28 +951,22 @@ function validateCompleteConformanceEvidence(sectionBody) {
 	return [...failures, ...validateCompactConformanceLines(sectionBody, true)];
 }
 
-function validateAbsentConformanceResults(sectionBody) {
-	const failures = [];
-	const resultLabels = [
-		reuseAdmissionConformanceLabels.redBaseline,
-		...reuseAdmissionConformanceCounts.keys(),
-	];
-	for (const label of resultLabels) {
-		if (valuesAfterColon(sectionBody, label).length > 0) {
-			failures.push(`${label} is allowed only when conformance status is PASS.`);
-		}
-	}
-
-	return [...failures, ...validateCompactConformanceLines(sectionBody, false)];
-}
-
 function validateConformanceIdentityBinding(capabilityPlanReference, candidateHead) {
 	const failures = [];
 	if (capabilityPlanReference !== null && capabilityPlanReference !== "Reuse Proof") {
 		failures.push("Reuse-admission conformance must reference the existing Reuse Proof Capability plan identity.");
 	}
 
-	if (candidateHead !== null && (!/^[0-9a-f]{40}$/v.test(candidateHead) || candidateHead !== runGit(["rev-parse", "HEAD"]))) {
+	if (candidateHead === null) {
+		return failures;
+	}
+
+	if (!/^[0-9a-f]{40}$/v.test(candidateHead)) {
+		failures.push("Reuse-admission conformance candidate HEAD must be the exact lowercase current HEAD.");
+		return failures;
+	}
+
+	if (candidateHead !== runGit(["rev-parse", "HEAD"])) {
 		failures.push("Reuse-admission conformance candidate HEAD must be the exact lowercase current HEAD.");
 	}
 
@@ -1037,9 +1010,17 @@ function validateReuseAdmissionConformance(sectionBody, changedFiles) {
 		failures.push("Reuse-admission conformance status must match applicability and the MSO-5/MSO-6 promotion state.");
 	}
 
-	return status === "PASS"
-		? [...failures, ...validateCompleteConformanceEvidence(sectionBody)]
-		: [...failures, ...validateAbsentConformanceResults(sectionBody)];
+	if (status === "PASS") {
+		return [...failures, ...validateCompleteConformanceEvidence(sectionBody)];
+	}
+
+	for (const label of [reuseAdmissionConformanceLabels.redBaseline, ...reuseAdmissionConformanceCounts.keys()]) {
+		if (valuesAfterColon(sectionBody, label).length > 0) {
+			failures.push(`${label} is allowed only when conformance status is PASS.`);
+		}
+	}
+
+	return [...failures, ...validateCompactConformanceLines(sectionBody, false)];
 }
 
 function validateBoundaryDelta(sectionBody) {
@@ -1071,16 +1052,12 @@ function validateDebtGateEvidence(sectionBody) {
 		failures.push(`Debt Gate Evidence must include positive passed/success output for: ${missing.join(", ")}`);
 	}
 
-	return [...failures, ...validateCodeSceneEvidence(sectionBody)];
-}
-
-function validateCodeSceneEvidence(sectionBody) {
-	const evidence = valueAfterColon(sectionBody, codeSceneMcpEvidenceLabel);
-	if (isPassingCodeSceneEvidence(evidence)) {
-		return [];
+	const codeSceneEvidence = valueAfterColon(sectionBody, codeSceneMcpEvidenceLabel);
+	if (!isPassingCodeSceneEvidence(codeSceneEvidence)) {
+		failures.push("Debt Gate Evidence must include CodeScene MCP analyze_change_set output with no decline and quality_gates: passed.");
 	}
 
-	return ["Debt Gate Evidence must include CodeScene MCP analyze_change_set output with no decline and quality_gates: passed."];
+	return failures;
 }
 
 function isPassingCodeSceneEvidence(evidence) {
@@ -1145,15 +1122,6 @@ function validateAgentGateEvidence(sectionBody, chatGptVerdicts = allowedChatGpt
 	return failures;
 }
 
-function readImmutablePlanIdentity(sectionBody, config) {
-	return {
-		path: config.getValue(sectionBody, config.pathLabel),
-		commit: config.getValue(sectionBody, config.commitLabel),
-		blob: config.getValue(sectionBody, config.blobLabel),
-		sha256: config.getValue(sectionBody, config.sha256Label),
-	};
-}
-
 function isPlanCommitAncestor(commit, commitPattern) {
 	if (!commitPattern.test(commit ?? "")) {
 		return false;
@@ -1167,34 +1135,21 @@ function isPlanCommitAncestor(commit, commitPattern) {
 	}
 }
 
-function getCurrentPlanBlob(path, pathIsValid) {
-	return pathIsValid ? tryRunGit(["rev-parse", `HEAD:${path}`]) : "";
-}
-
-function getApprovedPlanBlob(identity, config, pathIsValid) {
-	if (!pathIsValid || !config.commitPattern.test(identity.commit ?? "")) {
-		return "";
-	}
-
-	return tryRunGit(["rev-parse", `${identity.commit}:${identity.path}`]);
-}
-
-function getCurrentPlanSha256(path, currentPlanBlob) {
-	if (!currentPlanBlob) {
-		return "";
-	}
-
-	return createHash("sha256").update(execFileSync("git", ["show", `HEAD:${path}`])).digest("hex");
-}
-
 function validateImmutablePlanIdentity(sectionBody, config) {
-	const identity = readImmutablePlanIdentity(sectionBody, config);
+	const identity = {
+		path: config.getValue(sectionBody, config.pathLabel),
+		commit: config.getValue(sectionBody, config.commitLabel),
+		blob: config.getValue(sectionBody, config.blobLabel),
+		sha256: config.getValue(sectionBody, config.sha256Label),
+	};
 	const failures = [];
 	const pathIsValid = config.isValidPath(identity.path);
 	const isAncestor = isPlanCommitAncestor(identity.commit, config.commitPattern);
-	const currentPlanBlob = getCurrentPlanBlob(identity.path, pathIsValid);
-	const approvedPlanBlob = getApprovedPlanBlob(identity, config, pathIsValid);
-	const currentPlanSha256 = getCurrentPlanSha256(identity.path, currentPlanBlob);
+	const currentPlanBlob = tryRunGit(["rev-parse", `HEAD:${identity.path}`]);
+	const approvedPlanBlob = tryRunGit(["rev-parse", `${identity.commit}:${identity.path}`]);
+	const currentPlanSha256 = currentPlanBlob
+		? createHash("sha256").update(execFileSync("git", ["show", `HEAD:${identity.path}`])).digest("hex")
+		: "";
 	if (!pathIsValid) {
 		failures.push(config.pathError);
 	}
@@ -1298,14 +1253,19 @@ function validateSections(body, changedFiles) {
 	const reuseProof = sections.get("Reuse Proof").join("\n");
 	const capabilityPlanIdentity = validateCapabilityPlanIdentity(reuseProof);
 	const retiredSurface = sections.get("Retired Surface").join("\n");
+	const retiredSurfaceText = sectionText(retiredSurface);
+	const hasExplicitNoRetiredSurface = [
+		/\bnot a debt(?:-| )reduction pr\b/iv.test(retiredSurfaceText), /\bno retired surface\b/iv.test(retiredSurfaceText),
+	].every(Boolean);
 	const newSurface = sections.get("New Surface").join("\n");
 	const surfaceEvidenceResults = [
 		validateReuseProof(reuseProof, "pr", capabilityPlanIdentity.identity),
 		capabilityPlanIdentity.failures,
-		hasValidRow(retiredSurface, "Removed / narrowed surface", 3) || hasExplicitNoRetiredSurface(retiredSurface)
+		hasValidRow(retiredSurface, "Removed / narrowed surface", 3) || hasExplicitNoRetiredSurface
 			? []
 			: ["Retired Surface must list removed/narrowed surface rows or explicitly say this is not a debt-reduction PR with no retired surface."],
-		hasValidRow(newSurface, "New helper/service/type/component", 3) || hasExplicitNoNewSurface(newSurface)
+		hasValidRow(newSurface, "New helper/service/type/component", 3)
+			|| /\bno new surface\b/iv.test(sectionText(newSurface))
 			? []
 			: ["New Surface must list new surface rows or explicitly say no new surface."],
 		validateBoundaryDelta(sections.get("Boundary Delta").join("\n")),
@@ -1325,37 +1285,6 @@ function validateSections(body, changedFiles) {
 	return failures;
 }
 
-function validateConformanceOnly(body, changedFiles) {
-	const sections = splitSections(body);
-	const failures = [];
-	if (countSectionHeading(body, "Reuse Proof") !== 1 || !sections.has("Reuse Proof")) {
-		failures.push("Reuse-admission conformance must reference exactly one existing Reuse Proof section.");
-	} else {
-		const reuseProof = sections.get("Reuse Proof").join("\n");
-		const capabilityPlanIdentity = validateCapabilityPlanIdentity(reuseProof);
-		failures.push(
-			...validateReuseProof(reuseProof, "pr", capabilityPlanIdentity.identity),
-			...capabilityPlanIdentity.failures,
-		);
-	}
-
-	if (countSectionHeading(body, "Agent Gate Evidence") !== 1 || !sections.has("Agent Gate Evidence")) {
-		failures.push("Reuse-admission conformance requires exactly one Agent Gate Evidence section.");
-		return failures;
-	}
-
-	const agentGateEvidence = sections.get("Agent Gate Evidence").join("\n");
-	return [...failures, ...validateReuseAdmissionConformance(agentGateEvidence, changedFiles)];
-}
-
-function isRepositoryRelativePath(value) {
-	const normalized = normalizePath(value);
-	return normalized !== ""
-		&& !normalized.startsWith("/")
-		&& !/^[A-Za-z]:/v.test(normalized)
-		&& !normalized.split("/").includes("..");
-}
-
 function getPlanInputRequest() {
 	const args = process.argv.slice(2);
 	if (args.length === 0) {
@@ -1370,7 +1299,20 @@ function getPlanInputRequest() {
 }
 
 function validatePlanInput(path) {
-	if (!isRepositoryRelativePath(path)) {
+	const normalized = normalizePath(path);
+	if (normalized === "") {
+		return ["Plan input path must be repository-relative."];
+	}
+
+	if (normalized.startsWith("/")) {
+		return ["Plan input path must be repository-relative."];
+	}
+
+	if (/^[A-Za-z]:/v.test(normalized)) {
+		return ["Plan input path must be repository-relative."];
+	}
+
+	if (normalized.split("/").includes("..")) {
 		return ["Plan input path must be repository-relative."];
 	}
 
@@ -1436,7 +1378,23 @@ if (changedDebtContractFiles.length === 0) {
 			process.exit(1);
 		}
 
-		const conformanceFailures = validateConformanceOnly(prContext.body, changedCandidateFiles);
+		const conformanceSections = splitSections(prContext.body);
+		const conformanceFailures = [];
+		if (countSectionHeading(prContext.body, "Reuse Proof") !== 1 || !conformanceSections.has("Reuse Proof")) {
+			conformanceFailures.push("Reuse-admission conformance must reference exactly one existing Reuse Proof section.");
+		} else {
+			const reuseProof = conformanceSections.get("Reuse Proof").join("\n");
+			const capabilityPlanIdentity = validateCapabilityPlanIdentity(reuseProof);
+			conformanceFailures.push(...validateReuseProof(reuseProof, "pr", capabilityPlanIdentity.identity), ...capabilityPlanIdentity.failures);
+		}
+
+		if (countSectionHeading(prContext.body, "Agent Gate Evidence") !== 1 || !conformanceSections.has("Agent Gate Evidence")) {
+			conformanceFailures.push("Reuse-admission conformance requires exactly one Agent Gate Evidence section.");
+		} else {
+			const agentGateEvidence = conformanceSections.get("Agent Gate Evidence").join("\n");
+			conformanceFailures.push(...validateReuseAdmissionConformance(agentGateEvidence, changedCandidateFiles));
+		}
+
 		if (conformanceFailures.length > 0) {
 			console.error("PR body reuse-admission conformance evidence failed:");
 			for (const failure of conformanceFailures) {
