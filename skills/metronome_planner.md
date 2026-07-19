@@ -1,87 +1,144 @@
 # Metronome Planner Skill
 
-Read `.agents/skills/metronome-workflow/SKILL.md` first. The full role contract below remains in force; the overlay takes precedence only for shared workflow, model-routing, pause, and promotion rules.
+Read `.agents/skills/metronome-workflow/SKILL.md` first. The full role contract below remains in force; the overlay takes precedence for shared workflow, model routing, pause, and promotion rules.
 
-This planner is a hard gate. A plan that lacks reuse proof, repo-map evidence, surface accounting, or retirement targets is not a plan; output `BLOCKED`.
+This planner is a hard gate for every task. A plan without complete capability-admission evidence, repo-map evidence, surface accounting, or required retirement targets is not a plan. Return `PLAN_BLOCKED`; do not substitute architecture guesses, local helpers, or a chat-only plan.
+
+`PLAN_READY` never authorizes coding by itself. Coding starts only after the written plan has immutable identity and an independent `PLAN_REVIEW_PASS`, as required by the overlay.
 
 ## Required Input Packet
 
-Before planning, gather and list the exact inputs read:
+Before Pass A, gather and list:
 
 - User request and active slice/stage name.
 - Relevant `docs/agent-index/*.md`.
 - Relevant `docs/v1/implementation-slices/*.md`.
 - Relevant prior plans under `docs/v1/implementation-slices/plans/`.
 - `docs/architecture/debt-gate-map.md`.
-- `package.json` when choosing libraries or tooling.
-- Existing code and tests named by the repo-map search.
+- `docs/v1/implementation-slices/rules/external-library-first.md`, the normative capability schema and relation contract.
 
-For metronome v1 implementation slices, the approved plan must be written under `docs/v1/implementation-slices/plans/`. A chat-only plan is `BLOCKED`.
+Before Pass B, the monitor follows up to the same planner with its normalized discovery/research evidence plus the exact code, tests, manifests, lockfiles, installed-package material, and official sources inspected for those atoms. Pass A cannot require evidence for atoms that it has not produced yet.
+
+For metronome v1 implementation slices, the approved plan must be written under `docs/v1/implementation-slices/plans/`. A chat-only plan is `PLAN_BLOCKED`.
 
 ## Planning Workflow
 
-1. Freeze scope.
-   - Name the slice/stage.
-   - Name files or modules likely in scope.
-   - Name no-go areas.
+This protocol applies to every task, including work that is not a refactor. It separates planner, monitor, researcher, reviewer, and promotion duties; it does not create a second workflow or an evidence artifact outside the plan.
 
-2. Build the repo map.
-   - Search beyond the target file.
-   - Include `src/**`, `tests/**`, relevant `scripts/**`, and relevant docs/plans.
-   - Use focused `rg` searches for `normalize*`, `format*`, `validate*`, `resolve*`, `select*`, `build*`, `create*`, service methods, repository methods, hooks, controllers, adapters, aliases, compatibility fields, and direct callers.
-   - If a generated primitive index exists, read it and cite it. If it does not exist, the repo map table below is mandatory.
+### Pass A: Architecture-Free Capability Atomization
 
-3. Prove reuse first.
-   - Prefer existing repo primitives.
-   - Then prefer already-installed libraries.
-   - Then extract a shared primitive only if old call sites will be migrated and old implementations will disappear.
-   - Add a local helper only with explicit no-go evidence.
+1. State each requested behavior as a capability atom before proposing files, modules, services, repositories, wrappers, helpers, or architecture.
+2. Give each atom a provisional stable `C\d{2,}` capability ID.
+3. Classify the need only as `generic` or `product-policy`; do not choose a source or a local implementation in Pass A.
+4. Hand the atom list to the monitor. End the initial invocation after the Pass A table without a final verdict; the monitor returns normalized evidence by following up to this same planner for Pass B. No second plan file or status artifact is created.
+5. The planner must not bypass the monitor by treating a guessed API, a package name, documentation alone, or a local design as proof of fit.
 
-4. Account for surface.
-   - Every new helper/service/controller/hook/formatter/validator/parser/adapter/repository method must have a matching old surface retired or narrowed in the same PR.
-   - If no old surface can be retired, the plan must say this is not a debt-reduction PR.
+#### Interim Monitor Handoff
 
-5. Check boundaries.
-   - UI -> browser adapter direct imports added: yes/no.
-   - UI -> infrastructure imports added: yes/no.
-   - Domain -> UI/service imports added: yes/no.
-   - Service passthrough methods added: yes/no.
-   - Repository direct callers reduced: yes/no.
+The initial invocation returns only this ephemeral monitor packet; it is not a plan, verdict, overlay stage, or authorization to code:
 
-6. Define tests.
-   - Behavior-equivalence coverage is mandatory when deleting compatibility surface.
-   - Focused unit tests are mandatory for non-trivial logic.
-   - Browser/E2E verification is mandatory for UI workflow or recording/media behavior.
+```md
+## Capability Atomization (Pass A)
+
+| Capability ID | Architecture-free need | Class |
+|---|---|---|
+```
+
+The monitor performs discovery/research and follows up to the same planner. Only that Pass B continuation may use the final verdict schema below.
+
+### Monitor-Owned Discovery and Research
+
+The monitor, not the planner, owns these ephemeral operations and returns normalized results only:
+
+1. Search repository paths and symbols for every atom.
+2. Check the lockfile and exact installed versions.
+3. Read relevant installed-package exports, types, and source.
+4. Run bounded direct runtime/repository probes for plausible repo or installed candidates.
+5. Stop discovery for an atom when an exact fitting repo or installed primitive passes its probe.
+6. Consider product-policy composition only after the referenced generic atom is resolved.
+
+For a still-uncovered `generic` atom, the monitor applies the shared rule's exact OSS/platform admission, probe, no-fit, and stop limits through the official Open GSD v1.7.0 read-only researcher adapter. Context7 unavailability records `provider_fallback` to official web documentation. Researchers return ephemeral evidence only to the monitor; they create no `.planning/**`, cache, graph, status, research artifact, second workflow, or direct planner/researcher mesh.
+
+### Pass B: Selection and Delivery Planning
+
+Begin Pass B only after the monitor supplies normalized source evidence. Choose the capability decision and architecture around admitted sources, never around a preselected local abstraction.
+
+Every plan must contain `## Existing Primitive Search` with this exact canonical table:
+
+| Capability ID | Need | Class | Source kind | Exact source / version | Exact API / probe | Files read | Decision | No-fit / policy evidence |
+|---|---|---|---|---|---|---|---|---|
+
+The shared rule defines every column, source encoding, decision relation, probe/no-fit requirement, and pending local-policy approval. The planner must apply it verbatim; this role owns only atomization, monitor handoff, selection timing, delivery mapping, and final planning decisions.
+
+Immediately following that table, the plan must contain `### Capability Delivery Map` with this exact header and the identical capability-ID set:
+
+| Capability ID | Planned files / symbols | Planned tests / probes |
+|---|---|---|
+
+Each map cell is non-empty. The map covers every planned behavior; every selected non-local row has a passed plan probe; and every local generic row proves all four no-fit classes. Plan table structure never substitutes for semantic evidence: the independent reviewer judges fit, coverage, thinness, no-fit sufficiency, and policy semantics.
+
+After Pass B, complete the existing plan obligations:
+
+1. Freeze scope, including in-scope files/modules and no-go areas.
+2. Convert the monitor evidence into a concise repo map that covers relevant `src/**`, `tests/**`, scripts, docs/plans, callers, aliases, compatibility fields, wrappers, services, repositories, hooks, controllers, and adapters.
+3. Account for new and retired surface. A new shared primitive needs same-PR migration/deletion evidence or repo-wide proof that fewer than two old call sites exist and no debt-reduction claim.
+4. Check boundaries and define focused, behavior-equivalence, and browser/E2E tests when the behavior requires them.
+5. Give the candidate plan to the monitor for the existing read-only validator: `node scripts/validate-pr-debt-contract.mjs --plan-input <candidate-plan-path>`. The monitor must report exit `0` before `PLAN_READY`; the validator must not run probes, network, or write state.
 
 ## Hard Fail
 
-Output `BLOCKED` if any of these are true:
+Return `PLAN_BLOCKED` and one exact `BLOCKER_CODE <code>` line if any required evidence is absent, stale, contradictory, malformed, or only placeholder text. Do not code or ask a downstream role to repair it.
 
-- Required input packet is missing.
-- Repo map evidence is missing.
-- Existing Primitive Search table is missing, empty, or evidence-free.
-- New Surface Budget table is missing, empty, or evidence-free.
-- Retired Surface target is missing for a refactor/debt PR.
-- The plan says "clean up later" for a known wrapper, alias, compatibility field, duplicate helper, or old entrypoint.
-- A shared primitive/controller/service/presenter/helper is proposed without either at least two old call sites to migrate and old implementations to delete, or repo-wide search evidence that fewer than two old call sites exist and no debt-reduction claim is being made.
-- Boundary Impact has `yes` for UI -> browser/infrastructure, domain -> UI/service, or service passthrough without a named composition-root exception.
-- Tests do not cover behavior equivalence for retired compatibility surface.
+Use these stable codes, choosing the first applicable cause:
 
-For refactor pipelines, output `PLAN_BLOCKED` if the refactor template sections are missing, if `Required Retired Surfaces` is empty, if implementation steps do not name exact deletion proof, or if a new surface is not tied to same-PR deletion.
+- `reuse-existing`: a fitting repository or installed primitive was bypassed by a local generic proposal.
+- `external-research-missing`: an uncovered generic atom lacks the bounded mature-OSS and applicable official-platform research/no-fit evidence.
+- `local-policy-unapproved`: a local-policy row lacks the exact pending plan-review marker, required policy boundary/composition, or `generic-operation: none`.
+- `capability-schema-invalid`: the canonical table, exact source/API/probe evidence, decision relation, or delivery-map ID equality is invalid.
+- `plan-input-failed`: monitor-owned `--plan-input` did not exit `0`.
+- `required-input-missing`: the task, monitor evidence, repo map, scope, surface, boundary, or test input is missing.
 
-## Required Output Schema
+Also block if a plan claims a later cleanup for a known wrapper, alias, compatibility field, duplicate helper, or old entrypoint; a shared primitive is proposed without its required call-site/deletion proof; a prohibited boundary import/passthrough lacks a named composition-root exception; or retired compatibility surface lacks behavior-equivalence coverage.
+
+## Read-Only Admission Projection
+
+When the monitor supplies an explicit reuse-admission conformance projection,
+apply the ordinary Pass B and Hard Fail rules to the target capability evidence.
+The projection packet supplies an opaque case ID, planner/Pass B stage, a
+complete valid non-target envelope, immutable identity binding, the canonical
+capability table, and its delivery map. Treat the supplied non-target envelope
+as held constant and classify only the target admission relation.
+
+This projection is a read-only decision sample. It does not write or approve a
+plan, approve local policy, authorize coding, create or advance a PR, or alter
+promotion evidence. The response contains exactly one line per opaque case in
+the received order and no other text:
+
+```text
+<opaque-case-id> | <actual-top-level-verdict> | <actual-stable-code-or-NONE>
+```
+
+Use `NONE` when the actual verdict has no stable blocker code. The packet and
+response shape carry no family label, expected verdict, expected code, score,
+matched count, or oracle; derive the actual result from this role contract.
+
+## Required Output Schema (Pass B only)
 
 Use this exact structure:
 
 ```md
 ## Verdict
 
-PLAN_READY / BLOCKED
+PLAN_READY / PLAN_BLOCKED
+
+When the verdict is PLAN_BLOCKED, add this exact next line:
+BLOCKER_CODE <stable-code>
 
 ## Skill Evidence
 
 - Skill file read: skills/metronome_planner.md
 - Debt gate map read: docs/architecture/debt-gate-map.md
+- Monitor plan-input: `node scripts/validate-pr-debt-contract.mjs --plan-input <candidate-plan-path>`; exit status: 0/fail
 
 ## Scope
 
@@ -91,20 +148,33 @@ PLAN_READY / BLOCKED
 
 ## Inputs Read
 
-| File | Why read |
+| File or monitor evidence | Why read |
 |---|---|
+
+## Capability Atomization (Pass A)
+
+| Capability ID | Architecture-free need | Class |
+|---|---|---|
+
+## Monitor Discovery Evidence
+
+| Capability ID | Repo/lock/installed/probe result | External-research result | Normalization decision |
+|---|---|---|---|
+
+## Existing Primitive Search
+
+| Capability ID | Need | Class | Source kind | Exact source / version | Exact API / probe | Files read | Decision | No-fit / policy evidence |
+|---|---|---|---|---|---|---|---|---|
+
+### Capability Delivery Map
+
+| Capability ID | Planned files / symbols | Planned tests / probes |
+|---|---|---|
 
 ## Repo Map Evidence
 
 | Search | Command or source | Files found | Decision |
 |---|---|---|---|
-
-## Existing Primitive Search
-
-| Need | Search terms used | Existing primitive/library found | Files read | Decision |
-|---|---|---|---|---|
-
-Decision must be `Reuse`, `Extract and retire old copies`, or `No-go, with evidence`.
 
 ## Shared Primitive Call-Site Audit
 
@@ -114,7 +184,7 @@ Decision must be `Reuse`, `Extract and retire old copies`, or `No-go, with evide
 ## New Surface Budget
 
 | New surface | Why needed | Existing alternative rejected | Old surface retired in same PR |
-|---|---|---|---|
+|---|---|---|
 
 ## Retired Surface Target
 
@@ -142,5 +212,5 @@ Decision must be `Reuse`, `Extract and retire old copies`, or `No-go, with evide
 
 ## Verdict Handling
 
-- `PLAN_READY`: coding may start only after the plan file is written.
-- `BLOCKED`: do not code. Fix the plan and rerun the plan review gate.
+- `PLAN_READY`: the candidate plan is written, the monitor recorded plan-input exit `0`, and the plan can enter immutable independent review. Do not authorize coding.
+- `PLAN_BLOCKED`: do not code. Repair the first blocker, regenerate monitor evidence when required, and rerun the plan-input gate.

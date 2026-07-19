@@ -40,6 +40,60 @@ Local pre-commit execution has no pull-request body to validate. It scans staged
 
 Normal PR evidence may use either `Codex final review prompt/verdict` or the legacy `ChatGPT final review prompt/verdict`, with exactly one non-placeholder verdict. Overlay promotion keeps its explicit ChatGPT stage contract until that workflow is separately revised.
 
+## Capability Admission Gate
+
+The existing `scripts/validate-pr-debt-contract.mjs` is the sole structural
+capability validator. Plan admission runs read-only before `PLAN_READY` with
+`node scripts/validate-pr-debt-contract.mjs --plan-input docs/v1/implementation-slices/plans/<plan>.md`;
+PR validation reads `Reuse Proof` on the candidate head. Neither mode writes,
+uses the network, runs probes, or executes commands copied from evidence.
+
+The canonical table plus exact `Capability Delivery Map` / `Capability Implementation Map`,
+decision relations, OSS/platform admission, Open GSD v1.7.0 read-only adapter,
+`provider_fallback`, and Pack F restrictions live in
+`docs/v1/implementation-slices/rules/external-library-first.md`. The validator
+enforces their structural shape, ID equality, source/probe markers, composition,
+and immutable capability-plan/approval identity. It cannot establish semantic
+fit, coverage, thinness, no-fit sufficiency, map truth, or diff conformance;
+independent review must fail closed on those concerns.
+
+Plan local-policy rows remain `approval: pending-plan-review` until immutable
+review emits matching `LOCAL_POLICY_APPROVED` lines with `PLAN_REVIEW_PASS`.
+Missing capability evidence reports `PLAN_BLOCKED` plus `BLOCKER_CODE <code>`;
+implementation-review evidence reports `CHANGES_REQUIRED` plus
+`FINDING_CODE <code>`. These secondary codes do not alter overlay or verdict
+contracts.
+
+### Conditional Control Conformance
+
+The shared rule's exact twelve-file `reuseAdmissionControlFiles` set is the
+only `REQUIRED` predicate for synthetic reuse-admission conformance. It is
+separate from `gateControlFilePatterns`: a plan, the validator selftest, an
+unrelated script/skill/workflow, dependency/lockfile, `.semgrep/**`,
+`.codescene/**`, or ordinary product/test change records `NOT_APPLICABLE` unless
+the same candidate also changes an exact reuse-admission control.
+
+After committed preflight and independent candidate review permit a Draft PR,
+`MSO-5` carries ChatGPT `PENDING` and triggered conformance `PENDING` or
+complete `PASS`; `MSO-6` requires triggered `PASS`. Non-triggered candidates use
+`NOT_APPLICABLE` at both stages. External ChatGPT begins only after conformance
+is `PASS` or `NOT_APPLICABLE` and the evidence edit has exact-head CI.
+
+The existing `Agent Gate Evidence` binds applicability/status to the existing
+Reuse Proof Capability plan identity, exact current candidate `HEAD`, and, for
+`PASS`, the lowercase current branch merge-base. It stores exact 4/4, 8/8, and
+4/4 compact count assertions plus twelve unique answer-neutral RED and twelve
+GREEN actual verdict/code lines; it stores no prompt, packet, hidden oracle,
+full response, transcript, or duplicate plan identity.
+
+The validator checks exact membership, state relations, identity reference,
+current `HEAD`, merge-base ancestry/equality, exact count values, compact line
+grammar/count/uniqueness, and absence of extra conformance fields. It does not
+run role agents, inspect ephemeral packets, compare the hidden oracle, or infer
+family, polarity, positive-control, metamorphic, or packet-secrecy semantics.
+Those remain monitor-owned and independent-review duties under
+`docs/v1/implementation-slices/rules/external-library-first.md`.
+
 ## Shared Primitive Rule
 
 A PR that extracts a shared primitive, controller, service, presenter, formatter, validator, parser, adapter, or helper is not debt reduction unless it:
