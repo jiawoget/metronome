@@ -100,6 +100,28 @@ Use these stable codes, choosing the first applicable cause:
 
 Also block if a plan claims a later cleanup for a known wrapper, alias, compatibility field, duplicate helper, or old entrypoint; a shared primitive is proposed without its required call-site/deletion proof; a prohibited boundary import/passthrough lacks a named composition-root exception; or retired compatibility surface lacks behavior-equivalence coverage.
 
+## Read-Only Admission Projection
+
+When the monitor supplies an explicit reuse-admission conformance projection,
+apply the ordinary Pass B and Hard Fail rules to the target capability evidence.
+The projection packet supplies an opaque case ID, planner/Pass B stage, a
+complete valid non-target envelope, immutable identity binding, the canonical
+capability table, and its delivery map. Treat the supplied non-target envelope
+as held constant and classify only the target admission relation.
+
+This projection is a read-only decision sample. It does not write or approve a
+plan, approve local policy, authorize coding, create or advance a PR, or alter
+promotion evidence. The response contains exactly one line per opaque case in
+the received order and no other text:
+
+```text
+<opaque-case-id> | <actual-top-level-verdict> | <actual-stable-code-or-NONE>
+```
+
+Use `NONE` when the actual verdict has no stable blocker code. The packet and
+response shape carry no family label, expected verdict, expected code, score,
+matched count, or oracle; derive the actual result from this role contract.
+
 ## Required Output Schema (Pass B only)
 
 Use this exact structure:

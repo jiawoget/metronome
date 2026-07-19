@@ -27,6 +27,46 @@ const capabilityHeaders = [
 const planMapHeaders = ["Capability ID", "Planned files / symbols", "Planned tests / probes"];
 const prMapHeaders = ["Capability ID", "Changed files / symbols", "Tests / probes"];
 const legacyReuseHeaders = ["Need", "Existing primitive/library checked", "Files read", "Decision"];
+const reuseAdmissionControlFiles = new Set([
+	"AGENTS.md",
+	".agents/skills/metronome-workflow/SKILL.md",
+	"skills/metronome_planner.md",
+	"skills/metronome_coder.md",
+	"skills/metronome_reviewer.md",
+	"skills/metronome_chatgpt_review.md",
+	"docs/v1/implementation-slices/rules/external-library-first.md",
+	"docs/architecture/debt-gate-map.md",
+	"scripts/validate-pr-debt-contract.mjs",
+	"scripts/validate-metronome-gates.mjs",
+	".github/pull_request_template.md",
+	".github/workflows/metronome-debt-gates.yml",
+]);
+const conformanceLabels = {
+	applicability: "Reuse-admission conformance applicability",
+	status: "Reuse-admission conformance status",
+	capabilityPlanReference: "Reuse-admission conformance Capability plan identity reference",
+	candidateHead: "Reuse-admission conformance candidate HEAD",
+	redBaseline: "RED baseline commit",
+	redFamilies: "RED families with at least one oracle mismatch",
+	greenFamilies: "GREEN families matched",
+	greenNegatives: "GREEN negative cases matched",
+	greenPositives: "GREEN positive controls matched",
+	greenMetamorphicPairs: "GREEN metamorphic pairs matched",
+};
+const opaqueConformanceIds = [
+	"q7m-01",
+	"q7m-02",
+	"q7m-03",
+	"v2k-04",
+	"v2k-05",
+	"v2k-06",
+	"r9x-07",
+	"r9x-08",
+	"r9x-09",
+	"b4n-10",
+	"b4n-11",
+	"b4n-12",
+];
 
 function git(cwd, args) {
 	return execFileSync("git", args, {cwd, encoding: "utf8", stdio: "pipe"}).trim();
@@ -286,15 +326,84 @@ function createNonAncestorCommit(cwd) {
 	return commit;
 }
 
+function commitPathChange(cwd, file) {
+	write(cwd, file, `fixture change for ${file}\n`);
+	git(cwd, ["add", "-A"]);
+	git(cwd, ["commit", "-m", `change ${file}`]);
+}
+
+function changedPaths(cwd) {
+	return git(cwd, ["diff", "--name-only", "main", "HEAD"])
+		.split(/\r?\n/v)
+		.filter(Boolean);
+}
+
+function requiresReuseAdmissionConformance(cwd) {
+	return changedPaths(cwd).some(file => reuseAdmissionControlFiles.has(file));
+}
+
+function compactConformanceLines(phase, ids = opaqueConformanceIds) {
+	const outputs = [
+		["PLAN_READY", "NONE"],
+		["PLAN_BLOCKED", "NONE"],
+		["PLAN_BLOCKED", "opaque-code"],
+		["PASS", "NONE"],
+		["PASS_WITH_NITS", "NONE"],
+		["CHANGES_REQUIRED", "NONE"],
+		["CHANGES_REQUIRED", "opaque-code"],
+	];
+
+	return ids.map((id, index) => {
+		const [verdict, code] = outputs[index % outputs.length];
+		return `${phase} | ${id} | ${verdict} | ${code}`;
+	});
+}
+
+function conformanceEvidence(cwd, {
+	applicability,
+	status,
+	redIds = opaqueConformanceIds,
+	greenIds = opaqueConformanceIds,
+} = {}) {
+	const candidateHead = git(cwd, ["rev-parse", "HEAD"]);
+	const lines = [
+		`- ${conformanceLabels.applicability}: ${applicability}`,
+		`- ${conformanceLabels.status}: ${status}`,
+		`- ${conformanceLabels.capabilityPlanReference}: Reuse Proof`,
+		`- ${conformanceLabels.candidateHead}: ${candidateHead}`,
+	];
+
+	if (status === "PASS") {
+		lines.push(
+			`- ${conformanceLabels.redBaseline}: ${git(cwd, ["merge-base", "main", "HEAD"])}`,
+			`- ${conformanceLabels.redFamilies}: 4/4`,
+			`- ${conformanceLabels.greenFamilies}: 4/4`,
+			`- ${conformanceLabels.greenNegatives}: 8/8`,
+			`- ${conformanceLabels.greenPositives}: 4/4`,
+			`- ${conformanceLabels.greenMetamorphicPairs}: 4/4`,
+			...compactConformanceLines("RED", redIds),
+			...compactConformanceLines("GREEN", greenIds),
+		);
+	}
+
+	return lines.join("\n");
+}
+
 function validBody(cwd, {
 	stage = "MSO-6",
 	chatGptVerdict = "PASS",
 	reuseProof = validReuseProof(cwd),
+	conformanceStatus,
 } = {}) {
 	const planPath = "docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md";
 	const planCommit = git(cwd, ["rev-parse", "HEAD"]);
 	const planBlob = git(cwd, ["rev-parse", `HEAD:${planPath}`]);
 	const planSha256 = createHash("sha256").update(execFileSync("git", ["show", `HEAD:${planPath}`], {cwd})).digest("hex");
+	const isConformanceRequired = requiresReuseAdmissionConformance(cwd);
+	const applicability = isConformanceRequired ? "REQUIRED" : "NOT_APPLICABLE";
+	const status = conformanceStatus
+		?? (isConformanceRequired ? (stage === "MSO-5" ? "PENDING" : "PASS") : "NOT_APPLICABLE");
+	const conformance = conformanceEvidence(cwd, {applicability, status});
 
 	return `## Summary
 
@@ -347,6 +456,8 @@ No new surface.
 - Independent plan review policy: GPT-5.6 Luna standard
 - Independent plan review verdict: PLAN_REVIEW_PASS
 - Current metronome Stage: ${stage}
+
+${conformance}
 `;
 }
 
@@ -1029,6 +1140,345 @@ assertReuseProofFails("a local-policy row with a mismatched PR approval ID", cwd
 	});
 	const result = runGate(cwd, validBody(cwd, {reuseProof}));
 	assert.equal(result.status, 1, "PR validation must reject an approval token that differs from the declared capability plan identity");
+}
+
+function assertConformanceFails(cwd, body, message) {
+	const result = runGate(cwd, body);
+	assert.equal(result.status, 1, message);
+}
+
+function replaceLines(body, replacements) {
+	let current = body;
+	for (const [from, to] of replacements) {
+		current = replaceLine(current, from, to);
+	}
+
+	return current;
+}
+
+function conformanceFieldLine(body, label) {
+	const line = body.split("\n").find(candidate => candidate.startsWith(`- ${label}:`));
+	assert.ok(line, `missing structural fixture line for ${label}`);
+	return line;
+}
+
+function validTriggeredConformanceBody({
+	stage = "MSO-6",
+	chatGptVerdict = stage === "MSO-5" ? "PENDING" : "PASS",
+	conformanceStatus,
+} = {}) {
+	const cwd = createRepo();
+	commitPathChange(cwd, "skills/metronome_planner.md");
+	return {
+		cwd,
+		body: validBody(cwd, {stage, chatGptVerdict, conformanceStatus}),
+	};
+}
+
+const nonTriggerPaths = [
+	"docs/v1/implementation-slices/plans/G-02-reuse-first-capability-admission-gate.md",
+	"scripts/validate-pr-debt-contract.selftest.mjs",
+	"scripts/foo.mjs",
+	"package.json",
+	"package-lock.json",
+	"docs/v1/implementation-slices/refactor/R-01-sheet-practice-controls.md",
+	"src/lib/ordinary-product.ts",
+	"tests/unit/ordinary-product.test.ts",
+	"skills/unrelated-role.md",
+	".github/workflows/unrelated.yml",
+	".semgrep/unrelated.yml",
+	".codescene/unrelated.json",
+];
+
+for (const [paths, expectedApplicability, expectedStatus, wrongApplicability, wrongStatus] of [
+	[reuseAdmissionControlFiles, "REQUIRED", "PASS", "NOT_APPLICABLE", "NOT_APPLICABLE"],
+	[nonTriggerPaths, "NOT_APPLICABLE", "NOT_APPLICABLE", "REQUIRED", "PENDING"],
+]) {
+	for (const changedPath of paths) {
+		const cwd = createRepo();
+		commitPathChange(cwd, changedPath);
+		const body = validBody(cwd);
+		assert.equal(runGate(cwd, body).status, 0, `${changedPath} must accept exact ${expectedApplicability} conformance evidence`);
+		const invalidBody = replaceLines(body, [
+			[`- ${conformanceLabels.applicability}: ${expectedApplicability}`, `- ${conformanceLabels.applicability}: ${wrongApplicability}`],
+			[`- ${conformanceLabels.status}: ${expectedStatus}`, `- ${conformanceLabels.status}: ${wrongStatus}`],
+		]);
+		assertConformanceFails(cwd, invalidBody, `${changedPath} must reject ${wrongApplicability} conformance evidence`);
+	}
+}
+
+const mso5PendingFixture = validTriggeredConformanceBody({stage: "MSO-5"});
+const mso5PassFixture = validTriggeredConformanceBody({stage: "MSO-5", conformanceStatus: "PASS"});
+const completeConformanceFixture = validTriggeredConformanceBody();
+for (const [{cwd, body}, message] of [
+	[mso5PendingFixture, "triggered MSO-5 must accept PENDING conformance before external review"],
+	[mso5PassFixture, "triggered MSO-5 must accept complete PASS conformance before external review"],
+	[completeConformanceFixture, "triggered MSO-6 must accept complete PASS conformance"],
+]) {
+	assert.equal(runGate(cwd, body).status, 0, message);
+}
+
+assertConformanceFails(
+	mso5PendingFixture.cwd,
+	replaceLines(mso5PendingFixture.body, [
+		[`- ${conformanceLabels.applicability}: REQUIRED`, `- ${conformanceLabels.applicability}: NOT_APPLICABLE`],
+		[`- ${conformanceLabels.status}: PENDING`, `- ${conformanceLabels.status}: NOT_APPLICABLE`],
+	]),
+	"triggered MSO-5 must reject NOT_APPLICABLE conformance",
+);
+assertConformanceFails(
+	completeConformanceFixture.cwd,
+	replaceLine(completeConformanceFixture.body, `- ${conformanceLabels.status}: PASS`, `- ${conformanceLabels.status}: PENDING`),
+	"triggered MSO-6 must reject PENDING conformance",
+);
+
+for (const [stage, chatGptVerdict] of [["MSO-5", "PENDING"], ["MSO-6", "PASS"]]) {
+	const cwd = createRepo();
+	commitSourceChange(cwd);
+	const result = runGate(cwd, validBody(cwd, {stage, chatGptVerdict}));
+	assert.equal(result.status, 0, `non-triggered ${stage} must accept NOT_APPLICABLE conformance`);
+}
+
+{
+	const cwd = createRepo();
+	commitSourceChange(cwd);
+	const invalidBody = replaceLines(validBody(cwd), [
+		[`- ${conformanceLabels.applicability}: NOT_APPLICABLE`, `- ${conformanceLabels.applicability}: REQUIRED`],
+		[`- ${conformanceLabels.status}: NOT_APPLICABLE`, `- ${conformanceLabels.status}: PASS`],
+	]);
+	assertConformanceFails(cwd, invalidBody, "non-triggered MSO-6 must require NOT_APPLICABLE conformance");
+}
+
+for (const label of [
+	conformanceLabels.applicability,
+	conformanceLabels.status,
+	conformanceLabels.capabilityPlanReference,
+	conformanceLabels.candidateHead,
+]) {
+	const {cwd, body} = completeConformanceFixture;
+	const line = conformanceFieldLine(body, label);
+	assertConformanceFails(cwd, replaceLine(body, line, `- ${label}:`), `required conformance must reject missing ${label}`);
+}
+
+const {cwd: completeCwd, body: completeBody} = completeConformanceFixture;
+const completeHead = git(completeCwd, ["rev-parse", "HEAD"]);
+const coreMutationCases = [
+	[
+		"required conformance must reference the existing Reuse Proof Capability plan identity",
+		[[`- ${conformanceLabels.capabilityPlanReference}: Reuse Proof`, `- ${conformanceLabels.capabilityPlanReference}: Overlay plan`]],
+	],
+	[
+		"required conformance must reject duplicate Capability plan identity references",
+		[[`- ${conformanceLabels.capabilityPlanReference}: Reuse Proof`, `- ${conformanceLabels.capabilityPlanReference}: Reuse Proof\n- ${conformanceLabels.capabilityPlanReference}: Reuse Proof`]],
+	],
+	[
+		"required conformance must reject malformed candidate HEAD",
+		[[`- ${conformanceLabels.candidateHead}: ${completeHead}`, `- ${conformanceLabels.candidateHead}: malformed`]],
+	],
+	[
+		"required conformance must reject uppercase candidate HEAD",
+		[[`- ${conformanceLabels.candidateHead}: ${completeHead}`, `- ${conformanceLabels.candidateHead}: ${completeHead.toUpperCase()}`]],
+	],
+];
+for (const [message, replacements] of coreMutationCases) {
+	assertConformanceFails(completeCwd, replaceLines(completeBody, replacements), message);
+}
+
+{
+	const {cwd, body} = validTriggeredConformanceBody();
+	commitPathChange(cwd, "src/lib/post-conformance-drift.ts");
+	assertConformanceFails(cwd, body, "required conformance must reject a stale candidate HEAD");
+}
+
+for (const label of [
+	conformanceLabels.redBaseline,
+	conformanceLabels.redFamilies,
+	conformanceLabels.greenFamilies,
+	conformanceLabels.greenNegatives,
+	conformanceLabels.greenPositives,
+	conformanceLabels.greenMetamorphicPairs,
+]) {
+	const {cwd, body} = completeConformanceFixture;
+	const line = conformanceFieldLine(body, label);
+	assertConformanceFails(cwd, replaceLine(body, line, `- ${label}:`), `PASS conformance must reject missing ${label}`);
+}
+
+{
+	const {cwd, body} = completeConformanceFixture;
+	const baseline = git(cwd, ["merge-base", "main", "HEAD"]);
+	assertConformanceFails(
+		cwd,
+		replaceLine(body, `- ${conformanceLabels.redBaseline}: ${baseline}`, `- ${conformanceLabels.redBaseline}: malformed`),
+		"PASS conformance must reject a malformed RED baseline commit",
+	);
+	assertConformanceFails(
+		cwd,
+		replaceLine(body, `- ${conformanceLabels.redBaseline}: ${baseline}`, `- ${conformanceLabels.redBaseline}: ${baseline.toUpperCase()}`),
+		"PASS conformance must reject an uppercase RED baseline commit",
+	);
+	assertConformanceFails(
+		cwd,
+		replaceLine(body, `- ${conformanceLabels.redBaseline}: ${baseline}`, `- ${conformanceLabels.redBaseline}: ${git(cwd, ["rev-parse", "HEAD"])}`),
+		"PASS conformance must bind RED baseline to the current merge base",
+	);
+}
+
+{
+	const {cwd, body} = completeConformanceFixture;
+	const baseline = git(cwd, ["merge-base", "main", "HEAD"]);
+	const nonAncestorCommit = createNonAncestorCommit(cwd);
+	assertConformanceFails(
+		cwd,
+		replaceLine(body, `- ${conformanceLabels.redBaseline}: ${baseline}`, `- ${conformanceLabels.redBaseline}: ${nonAncestorCommit}`),
+		"PASS conformance must reject a non-ancestor RED baseline commit",
+	);
+}
+
+for (const [label, wrongCount] of [
+	[conformanceLabels.redFamilies, "3/4"],
+	[conformanceLabels.greenFamilies, "3/4"],
+	[conformanceLabels.greenNegatives, "7/8"],
+	[conformanceLabels.greenPositives, "3/4"],
+	[conformanceLabels.greenMetamorphicPairs, "3/4"],
+]) {
+	const {cwd, body} = completeConformanceFixture;
+	const line = conformanceFieldLine(body, label);
+	assertConformanceFails(cwd, replaceLine(body, line, `- ${label}: ${wrongCount}`), `PASS conformance must reject wrong ${label}`);
+}
+
+const malformedCompactOutputCases = [
+	["RED | q7m-01 | PLAN_READY | NONE", "RED | q7m-01 | PLAN_READY | opaque-code", "successful verdicts require NONE"],
+	["RED | q7m-02 | PLAN_BLOCKED | NONE", "RED | q7m-02 | PLAN_BLOCKED | UPPER-CODE", "blocked verdict codes must be lowercase kebab case"],
+	["RED | q7m-03 | PLAN_BLOCKED | opaque-code", "RED | q7m-03 | UNKNOWN | NONE", "compact output verdicts must use the answer-neutral enum"],
+	["GREEN | v2k-04 | PASS | NONE", "GREEN | v2k-04 | PASS | unexpected-code", "PASS requires NONE"],
+];
+
+for (const [from, to, description] of malformedCompactOutputCases) {
+	const {cwd, body} = completeConformanceFixture;
+	assertConformanceFails(cwd, replaceLine(body, from, to), `PASS conformance must reject compact output where ${description}`);
+}
+
+const compactStructureCases = [
+	[replaceLine(completeBody, "RED | q7m-02 | PLAN_BLOCKED | NONE", ""), "PASS conformance must require exactly twelve RED compact lines"],
+	[replaceLine(completeBody, "RED | q7m-02 | PLAN_BLOCKED | NONE", "RED | q7m-01 | PLAN_BLOCKED | NONE"), "PASS conformance must reject duplicate opaque IDs within a phase"],
+	[replaceLine(completeBody, "GREEN | b4n-12 | PASS_WITH_NITS | NONE", "GREEN | new-13 | PASS_WITH_NITS | NONE"), "PASS conformance must require identical RED and GREEN opaque ID sets"],
+	[`${completeBody}RED | extra-13 | CHANGES_REQUIRED | NONE\n`, "PASS conformance must reject extra compact lines"],
+	[
+		replaceLine(completeBody, `- ${conformanceLabels.status}: PASS`, `- ${conformanceLabels.status}: PASS\n- Reuse-admission conformance hidden oracle: persisted`),
+		"conformance evidence must reject extra persisted conformance fields",
+	],
+];
+for (const [body, message] of compactStructureCases) {
+	assertConformanceFails(completeCwd, body, message);
+}
+
+{
+	const {cwd, body} = validTriggeredConformanceBody({stage: "MSO-5"});
+	assertConformanceFails(
+		cwd,
+		`${body}RED | extra-before-pass | PLAN_BLOCKED | NONE\n`,
+		"PENDING conformance must not persist compact result lines",
+	);
+}
+
+{
+	const cwd = createRepo();
+	commitSourceChange(cwd);
+	const body = validBody(cwd);
+	assertConformanceFails(
+		cwd,
+		`${body}GREEN | extra-not-applicable | PASS | NONE\n`,
+		"NOT_APPLICABLE conformance must not persist compact result lines",
+	);
+}
+
+function recordReviewRepairExpectation(cwd, body, expectedStatus, message) {
+	assert.equal(runGate(cwd, body).status, expectedStatus, message);
+}
+
+{
+	const cwd = createRepo();
+	commitPathChange(cwd, "tests/unit/reuse-proof-contract.test.ts");
+	const body = validBody(cwd);
+	for (const [candidateBody, expectedStatus, message] of [
+		[body, 0, "test-only PR must accept complete Reuse Proof and NOT_APPLICABLE conformance"],
+		[
+			replaceLine(body, `| ${capabilityHeaders.join(" | ")} |`, "| Capability ID | malformed capability table |"),
+			1,
+			"test-only PR must reject a malformed Reuse Proof capability table",
+		],
+		[
+			replaceLine(body, `| ${prMapHeaders.join(" | ")} |`, "| Capability ID | malformed implementation map |"),
+			1,
+			"test-only PR must reject a malformed Capability Implementation Map",
+		],
+	]) {
+		recordReviewRepairExpectation(cwd, candidateBody, expectedStatus, message);
+	}
+}
+
+for (const [from, to, expectedStatus, message] of [
+	[
+		`- ${conformanceLabels.applicability}: REQUIRED`,
+		`- ${conformanceLabels.applicability.toLowerCase()}: REQUIRED`,
+		1,
+		"conformance evidence must reject a lowercase canonical field",
+	],
+	[`- ${conformanceLabels.status}: PASS`, `- ${conformanceLabels.status}: PASS\n    hidden oracle: PLAN_BLOCKED/reuse-existing`, 1, "conformance evidence must reject an indented hidden-oracle continuation"],
+	[`- ${conformanceLabels.status}: PASS`, `- ${conformanceLabels.status}: PASS\n    full response: projected role output`, 1, "conformance evidence must reject an indented full-response continuation"],
+	[`- ${conformanceLabels.status}: PASS`, `- ${conformanceLabels.status}: PASS\n    Prompt: projected role input`, 1, "conformance evidence must reject an indented Prompt continuation"],
+	[`- ${conformanceLabels.status}: PASS`, `- ${conformanceLabels.status}: PASS\n    Rationalization: renamed expected reasoning`, 1, "conformance evidence must reject an indented Rationalization continuation"],
+	[`- ${conformanceLabels.status}: PASS`, `- ${conformanceLabels.status}: PASS\n    arbitrary continuation data`, 1, "conformance evidence must reject an arbitrary indented continuation"],
+	["- ChatGPT final review prompt/verdict: PASS", "- Codex final review prompt/verdict: PASS", 0, "exact Codex final review prompt/verdict evidence must remain allowed"],
+]) {
+	recordReviewRepairExpectation(completeCwd, replaceLine(completeBody, from, to), expectedStatus, message);
+}
+
+{
+	const {commit, blob, sha256} = capabilityPlanIdentity(completeCwd);
+	const approval = `LOCAL_POLICY_APPROVED C02 ${commit} ${blob} ${sha256}`;
+	for (const [line, expectedStatus, message] of [
+		[`LOCAL_POLICY_APPROVED C02 ${commit} ${blob}`, 1, "local-policy reviewer output must reject a missing identity token"],
+		[`${approval} extra`, 1, "local-policy reviewer output must reject an extra token"],
+		[`LOCAL_POLICY_APPROVED C02 ${commit} ${blob} ${sha256.toUpperCase()}`, 1, "local-policy reviewer output must reject uppercase hash evidence"],
+		[approval, 0, "local-policy reviewer output must allow exact lowercase identity evidence"],
+	]) {
+		const body = replaceLine(completeBody, `- ${conformanceLabels.status}: PASS`, `- ${conformanceLabels.status}: PASS\n${line}`);
+		recordReviewRepairExpectation(completeCwd, body, expectedStatus, message);
+	}
+}
+
+function withoutOverlayEvidence(body) {
+	return replaceLines(body, [
+		["- Overlay plan path: docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md", "- Overlay plan path:"],
+		[conformanceFieldLine(body, "Overlay plan commit"), "- Overlay plan commit:"],
+		[conformanceFieldLine(body, "Overlay plan blob"), "- Overlay plan blob:"],
+		[conformanceFieldLine(body, "Overlay plan SHA-256"), "- Overlay plan SHA-256:"],
+		["- Independent plan review policy: GPT-5.6 Luna standard", "- Independent plan review policy:"],
+		["- Independent plan review verdict: PLAN_REVIEW_PASS", "- Independent plan review verdict:"],
+	]);
+}
+
+{
+	const cwd = createRepo();
+	commitPathChange(cwd, "skills/metronome_reviewer.md");
+	recordReviewRepairExpectation(
+		cwd,
+		withoutOverlayEvidence(validBody(cwd)),
+		0,
+		"reuse-only reviewer control must not require historical overlay promotion evidence",
+	);
+}
+
+{
+	const cwd = createRepo();
+	commitAgentsRouterChange(cwd);
+	recordReviewRepairExpectation(
+		cwd,
+		withoutOverlayEvidence(validBody(cwd)),
+		1,
+		"AGENTS.md overlay control must still require historical overlay promotion evidence",
+	);
 }
 
 console.log("validate-pr-debt-contract selftest passed.");

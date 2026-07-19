@@ -72,6 +72,84 @@ mismatched identity or approval blocks promotion. Planners report
 `CHANGES_REQUIRED` followed by `FINDING_CODE <code>` without changing the
 existing top-level verdicts.
 
+### Conditional Reuse-Admission Control Conformance
+
+Synthetic role conformance is `REQUIRED` only when a candidate changes an exact
+member of this canonical control set:
+
+- `AGENTS.md`
+- `.agents/skills/metronome-workflow/SKILL.md`
+- `skills/metronome_planner.md`
+- `skills/metronome_coder.md`
+- `skills/metronome_reviewer.md`
+- `skills/metronome_chatgpt_review.md`
+- `docs/v1/implementation-slices/rules/external-library-first.md`
+- `docs/architecture/debt-gate-map.md`
+- `scripts/validate-pr-debt-contract.mjs`
+- `scripts/validate-metronome-gates.mjs`
+- `.github/pull_request_template.md`
+- `.github/workflows/metronome-debt-gates.yml`
+
+This exact membership predicate is separate from broad debt-contract patterns.
+Every other candidate records `NOT_APPLICABLE`, including a change only to
+`scripts/validate-pr-debt-contract.selftest.mjs`, a plan, an unrelated
+script/skill/workflow, a dependency or lockfile, `.semgrep/**`, `.codescene/**`,
+or product/test files.
+
+The existing PR `Agent Gate Evidence` always carries these four single-value
+fields, bound to the existing `Reuse Proof` identity rather than duplicating it:
+
+- `Reuse-admission conformance applicability: REQUIRED|NOT_APPLICABLE`
+- `Reuse-admission conformance status: PENDING|PASS|NOT_APPLICABLE`
+- `Reuse-admission conformance Capability plan identity reference: Reuse Proof`
+- `Reuse-admission conformance candidate HEAD: <lowercase current 40-hex>`
+
+At `MSO-5`, a triggered candidate uses `PENDING` or complete `PASS`; at `MSO-6`
+it uses complete `PASS`. A non-triggered candidate uses `NOT_APPLICABLE` at both
+stages. `PASS` adds exactly one current-merge-base `RED baseline commit`, the
+exact assertions `RED families with at least one oracle mismatch: 4/4`, `GREEN
+families matched: 4/4`, `GREEN negative cases matched: 8/8`, `GREEN positive
+controls matched: 4/4`, and `GREEN metamorphic pairs matched: 4/4`, plus exactly
+twelve unique RED and twelve unique GREEN actual lines over the same opaque-ID
+set:
+
+```text
+<RED|GREEN> | <opaque-case-id> | <actual-top-level-verdict> | <actual-stable-code-or-NONE>
+```
+
+`PLAN_READY`, `PASS`, and `PASS_WITH_NITS` pair with `NONE`.
+`PLAN_BLOCKED` and `CHANGES_REQUIRED` pair with `NONE` or one lowercase kebab
+code. This grammar is answer-neutral: the structural validator checks only
+exact applicability, state, tracked identity reference, current `HEAD`, RED
+baseline ancestry/current merge-base equality, exact count values, line count,
+ID uniqueness/equality, verdict/code grammar, and no extra conformance fields.
+It never runs roles or probes and never infers family coverage, polarity,
+positive-control validity, metamorphic equivalence, packet secrecy, or hidden
+oracle agreement.
+
+The monitor alone runs the conditional method after committed preflight and
+independent candidate review permit a Draft PR. It creates one shuffled
+nine-case planner matrix and one shuffled three-case candidate-review matrix,
+each with two vocabulary-distinct negative projections and one positive control
+per invariant family. Exactly four fresh xhigh Terra contexts run: separate RED
+planner/reviewer contexts with role guidance read from the recorded current
+branch merge-base, then separate GREEN planner/reviewer contexts with candidate
+guidance over the identical packets. Packets use opaque IDs and complete valid
+non-target envelopes; expected verdicts/codes, scores, counts, family names, and
+oracle data stay monitor-only. Projected verdicts are read-only samples and
+authorize no plan, policy approval, write, candidate, PR, or promotion.
+
+The invariant families are repository/installed bypass by local generic code,
+incomplete mature-OSS/applicable-platform research before local generic
+fallback, unapproved or generic-reimplementing local product policy, and a
+candidate diff that contradicts reviewed `direct-use`. The monitor requires at
+least one RED oracle mismatch per family and exact GREEN agreement for all
+families, eight negative variants, four positive controls, and four metamorphic
+pairs. Prompts, packets, hidden oracle, full outputs, and transcripts remain
+ephemeral. External ChatGPT begins only after `PASS` or `NOT_APPLICABLE` plus
+the edited-event exact-head CI; `MSO-6` and any merge-base or candidate edit
+invalidate stale evidence under the existing promotion rules.
+
 Pack F audio, music, recording, waveform, and timing work must check the mature primitive before adding local primitive logic.
 
 ## External Primitive Check

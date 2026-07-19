@@ -64,6 +64,36 @@ implementation-review evidence reports `CHANGES_REQUIRED` plus
 `FINDING_CODE <code>`. These secondary codes do not alter overlay or verdict
 contracts.
 
+### Conditional Control Conformance
+
+The shared rule's exact twelve-file `reuseAdmissionControlFiles` set is the
+only `REQUIRED` predicate for synthetic reuse-admission conformance. It is
+separate from `gateControlFilePatterns`: a plan, the validator selftest, an
+unrelated script/skill/workflow, dependency/lockfile, `.semgrep/**`,
+`.codescene/**`, or ordinary product/test change records `NOT_APPLICABLE` unless
+the same candidate also changes an exact reuse-admission control.
+
+After committed preflight and independent candidate review permit a Draft PR,
+`MSO-5` carries ChatGPT `PENDING` and triggered conformance `PENDING` or
+complete `PASS`; `MSO-6` requires triggered `PASS`. Non-triggered candidates use
+`NOT_APPLICABLE` at both stages. External ChatGPT begins only after conformance
+is `PASS` or `NOT_APPLICABLE` and the evidence edit has exact-head CI.
+
+The existing `Agent Gate Evidence` binds applicability/status to the existing
+Reuse Proof Capability plan identity, exact current candidate `HEAD`, and, for
+`PASS`, the lowercase current branch merge-base. It stores exact 4/4, 8/8, and
+4/4 compact count assertions plus twelve unique answer-neutral RED and twelve
+GREEN actual verdict/code lines; it stores no prompt, packet, hidden oracle,
+full response, transcript, or duplicate plan identity.
+
+The validator checks exact membership, state relations, identity reference,
+current `HEAD`, merge-base ancestry/equality, exact count values, compact line
+grammar/count/uniqueness, and absence of extra conformance fields. It does not
+run role agents, inspect ephemeral packets, compare the hidden oracle, or infer
+family, polarity, positive-control, metamorphic, or packet-secrecy semantics.
+Those remain monitor-owned and independent-review duties under
+`docs/v1/implementation-slices/rules/external-library-first.md`.
+
 ## Shared Primitive Rule
 
 A PR that extracts a shared primitive, controller, service, presenter, formatter, validator, parser, adapter, or helper is not debt reduction unless it:

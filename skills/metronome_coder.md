@@ -57,6 +57,13 @@ Without a reviewed immutable plan revision, do not add or substitute:
 
 Required PR body evidence remains monitor-owned. The coder supplies exact source data for the monitor to copy into `## Reuse Proof`; it does not claim a PR verdict, PR URL/body completion, CI, ChatGPT, CodeScene, or a downstream reviewer result.
 
+Conditional reuse-admission conformance is also monitor-owned and occurs only
+after a committed candidate passes preflight and independent candidate review.
+The coder does not run role projections, assign applicability/status, compare a
+hidden oracle, or persist prompts/results. Its implementation map and direct-use
+diff evidence remain the candidate-review inputs; a projected role verdict is
+never coding or promotion authorization.
+
 Return these five concrete groups:
 
 1. Implementation files and purpose.

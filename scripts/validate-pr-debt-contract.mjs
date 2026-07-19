@@ -28,8 +28,50 @@ const overlayControlFiles = new Set([
 	"AGENTS.md",
 	".agents/skills/metronome-workflow/SKILL.md",
 ]);
+const reuseAdmissionControlFiles = new Set([
+	...overlayControlFiles,
+	"skills/metronome_planner.md",
+	"skills/metronome_coder.md",
+	"skills/metronome_reviewer.md",
+	"skills/metronome_chatgpt_review.md",
+	"docs/v1/implementation-slices/rules/external-library-first.md",
+	"docs/architecture/debt-gate-map.md",
+	"scripts/validate-pr-debt-contract.mjs",
+	"scripts/validate-metronome-gates.mjs",
+	".github/pull_request_template.md",
+	".github/workflows/metronome-debt-gates.yml",
+]);
 const overlayPlanPath = "docs/superpowers/plans/2026-07-16-metronome-superpowers-overlay.md";
 const overlayPlanReviewPolicies = new Set(["GPT-5.6 Terra standard", "GPT-5.6 Luna standard"]);
+const reuseAdmissionConformanceLabels = {
+	applicability: "Reuse-admission conformance applicability",
+	status: "Reuse-admission conformance status",
+	capabilityPlanReference: "Reuse-admission conformance Capability plan identity reference",
+	candidateHead: "Reuse-admission conformance candidate HEAD",
+	redBaseline: "RED baseline commit",
+	redFamilies: "RED families with at least one oracle mismatch",
+	greenFamilies: "GREEN families matched",
+	greenNegatives: "GREEN negative cases matched",
+	greenPositives: "GREEN positive controls matched",
+	greenMetamorphicPairs: "GREEN metamorphic pairs matched",
+};
+const reuseAdmissionConformanceCounts = new Map([
+	[reuseAdmissionConformanceLabels.redFamilies, "4/4"],
+	[reuseAdmissionConformanceLabels.greenFamilies, "4/4"],
+	[reuseAdmissionConformanceLabels.greenNegatives, "8/8"],
+	[reuseAdmissionConformanceLabels.greenPositives, "4/4"],
+	[reuseAdmissionConformanceLabels.greenMetamorphicPairs, "4/4"],
+]);
+const reuseAdmissionConformanceStatuses = new Map([
+	["REQUIRED|MSO-5", new Set(["PENDING", "PASS"])],
+	["REQUIRED|MSO-6", new Set(["PASS"])],
+	["NOT_APPLICABLE|MSO-5", new Set(["NOT_APPLICABLE"])],
+	["NOT_APPLICABLE|MSO-6", new Set(["NOT_APPLICABLE"])],
+]);
+const conformanceSuccessVerdicts = new Set(["PLAN_READY", "PASS", "PASS_WITH_NITS"]);
+const conformanceBlockingVerdicts = new Set(["PLAN_BLOCKED", "CHANGES_REQUIRED"]);
+const conformanceCodePattern = /^[0-9a-z]+(?:-[0-9a-z]+)*$/v;
+const conformanceOpaqueIdPattern = /^\w[\w\u{2D}.]*$/v;
 
 const capabilityHeaders = [
 	"Capability ID",
@@ -147,11 +189,15 @@ function requiresDebtContractEvidence(file) {
 }
 
 function parseFiles(output) {
+	return parseChangedFiles(output)
+		.filter(file => requiresDebtContractEvidence(file));
+}
+
+function parseChangedFiles(output) {
 	return output
 		.split(/\r?\n/v)
 		.map(file => normalizePath(file))
-		.filter(Boolean)
-		.filter(file => requiresDebtContractEvidence(file));
+		.filter(Boolean);
 }
 
 function uniqueFiles(files) {
@@ -780,6 +826,222 @@ function valueAfterPlainColon(sectionBody, label) {
 	return values.length === 1 ? values[0] : null;
 }
 
+function conformanceFieldLines(sectionBody) {
+	return stripComments(sectionBody)
+		.split(/\r?\n/v)
+		.map(line => line.trim())
+		.filter(Boolean);
+}
+
+function validateConformanceFieldShape(sectionBody) {
+	const allowedLabels = new Set([
+		...requiredAgentSkillEvidence.map(([label]) => label),
+		"Planner skill verdict",
+		"Coder repo map / primitive search",
+		"Reviewer verdict",
+		...finalReviewEvidenceLabels,
+		"Overlay plan path",
+		"Overlay plan commit",
+		"Overlay plan blob",
+		"Overlay plan SHA-256",
+		"Independent plan review policy",
+		"Independent plan review verdict",
+		"Current metronome Stage",
+		...Object.values(reuseAdmissionConformanceLabels),
+	]);
+	const compactCandidates = new Set(compactConformanceCandidates(sectionBody));
+	const failures = [];
+
+	for (const line of conformanceFieldLines(sectionBody)) {
+		const hasAllowedLabel = [...allowedLabels].some(label => line.startsWith(`- ${label}:`));
+		const isLocalPolicyApproval = /^LOCAL_POLICY_APPROVED C\d{2,} [0-9a-f]{40} [0-9a-f]{40} [0-9a-f]{64}$/v.test(line);
+		if (!hasAllowedLabel && !compactCandidates.has(line) && !isLocalPolicyApproval) {
+			failures.push(`Unexpected Agent Gate Evidence line: ${line}`);
+		}
+	}
+
+	return failures;
+}
+
+function readRequiredConformanceField(sectionBody, label, failures) {
+	const values = valuesAfterColon(sectionBody, label);
+	if (values.length !== 1 || isPlaceholder(values[0])) {
+		failures.push(`${label} must appear exactly once with a non-placeholder value.`);
+		return null;
+	}
+
+	return values[0];
+}
+
+function compactConformanceCandidates(sectionBody) {
+	return conformanceFieldLines(sectionBody)
+		.filter(line => /^(?:red|green)(?:\s|\|)/iv.test(line));
+}
+
+function parseCompactConformanceLines(sectionBody) {
+	const failures = [];
+	const parsed = [];
+	const pattern = /^(?<phase>RED|GREEN) \| (?<id>[^\|]+) \| (?<verdict>[^\|]+) \| (?<code>[^\|]+)$/v;
+
+	for (const line of compactConformanceCandidates(sectionBody)) {
+		const match = pattern.exec(line);
+		if (!match) {
+			failures.push(`Malformed compact reuse-admission conformance line: ${line}`);
+			continue;
+		}
+
+		const {phase, id: rawId, verdict: rawVerdict, code: rawCode} = match.groups;
+		const id = normalizeCell(rawId);
+		const verdict = normalizeCell(rawVerdict);
+		const code = normalizeCell(rawCode);
+		if (!conformanceOpaqueIdPattern.test(id)) {
+			failures.push(`Compact ${phase} output has an invalid opaque case ID.`);
+		}
+
+		if (conformanceSuccessVerdicts.has(verdict)) {
+			if (code !== "NONE") {
+				failures.push(`Compact ${phase} output requires NONE for ${verdict}.`);
+			}
+		} else if (conformanceBlockingVerdicts.has(verdict)) {
+			if (code !== "NONE" && !conformanceCodePattern.test(code)) {
+				failures.push(`Compact ${phase} blocking output requires NONE or one lowercase kebab code.`);
+			}
+		} else {
+			failures.push(`Compact ${phase} output has an invalid answer-neutral verdict.`);
+		}
+
+		parsed.push({phase, id});
+	}
+
+	return {failures, parsed};
+}
+
+function validateCompactConformanceLines(sectionBody, isComplete) {
+	const candidates = compactConformanceCandidates(sectionBody);
+	if (!isComplete) {
+		return candidates.length === 0
+			? []
+			: ["PENDING or NOT_APPLICABLE conformance must not persist compact RED/GREEN output lines."];
+	}
+
+	const {failures, parsed} = parseCompactConformanceLines(sectionBody);
+	const red = parsed.filter(item => item.phase === "RED");
+	const green = parsed.filter(item => item.phase === "GREEN");
+	if (red.length !== 12 || green.length !== 12) {
+		failures.push("PASS conformance requires exactly twelve RED and twelve GREEN compact output lines.");
+	}
+
+	const redIds = new Set(red.map(item => item.id));
+	const greenIds = new Set(green.map(item => item.id));
+	if (redIds.size !== red.length || greenIds.size !== green.length) {
+		failures.push("Compact RED and GREEN opaque case IDs must be unique within each phase.");
+	}
+
+	if (!hasSameIdSet(redIds, greenIds)) {
+		failures.push("Compact RED and GREEN output must use the same opaque case ID set.");
+	}
+
+	return failures;
+}
+
+function validateCompleteConformanceEvidence(sectionBody) {
+	const failures = [];
+	const baseline = readRequiredConformanceField(
+		sectionBody,
+		reuseAdmissionConformanceLabels.redBaseline,
+		failures,
+	);
+	const commitPattern = /^[0-9a-f]{40}$/v;
+	if (baseline !== null) {
+		if (!commitPattern.test(baseline) || !isPlanCommitAncestor(baseline, commitPattern)) {
+			failures.push("RED baseline commit must be one lowercase ancestor of candidate HEAD.");
+		}
+
+		if (baseline !== getMergeBase()) {
+			failures.push("RED baseline commit must equal the current git merge-base of the base ref and HEAD.");
+		}
+	}
+
+	for (const [label, expected] of reuseAdmissionConformanceCounts) {
+		const values = valuesAfterColon(sectionBody, label);
+		if (values.length !== 1 || values[0] !== expected) {
+			failures.push(`${label} must be exactly ${expected}.`);
+		}
+	}
+
+	return [...failures, ...validateCompactConformanceLines(sectionBody, true)];
+}
+
+function validateAbsentConformanceResults(sectionBody) {
+	const failures = [];
+	const resultLabels = [
+		reuseAdmissionConformanceLabels.redBaseline,
+		...reuseAdmissionConformanceCounts.keys(),
+	];
+	for (const label of resultLabels) {
+		if (valuesAfterColon(sectionBody, label).length > 0) {
+			failures.push(`${label} is allowed only when conformance status is PASS.`);
+		}
+	}
+
+	return [...failures, ...validateCompactConformanceLines(sectionBody, false)];
+}
+
+function validateConformanceIdentityBinding(capabilityPlanReference, candidateHead) {
+	const failures = [];
+	if (capabilityPlanReference !== null && capabilityPlanReference !== "Reuse Proof") {
+		failures.push("Reuse-admission conformance must reference the existing Reuse Proof Capability plan identity.");
+	}
+
+	if (candidateHead !== null && (!/^[0-9a-f]{40}$/v.test(candidateHead) || candidateHead !== runGit(["rev-parse", "HEAD"]))) {
+		failures.push("Reuse-admission conformance candidate HEAD must be the exact lowercase current HEAD.");
+	}
+
+	return failures;
+}
+
+function validateReuseAdmissionConformance(sectionBody, changedFiles) {
+	const failures = validateConformanceFieldShape(sectionBody);
+	const isRequired = changedFiles.some(file => reuseAdmissionControlFiles.has(file));
+	const expectedApplicability = isRequired ? "REQUIRED" : "NOT_APPLICABLE";
+	const applicability = readRequiredConformanceField(
+		sectionBody,
+		reuseAdmissionConformanceLabels.applicability,
+		failures,
+	);
+	const status = readRequiredConformanceField(
+		sectionBody,
+		reuseAdmissionConformanceLabels.status,
+		failures,
+	);
+	const capabilityPlanReference = readRequiredConformanceField(
+		sectionBody,
+		reuseAdmissionConformanceLabels.capabilityPlanReference,
+		failures,
+	);
+	const candidateHead = readRequiredConformanceField(
+		sectionBody,
+		reuseAdmissionConformanceLabels.candidateHead,
+		failures,
+	);
+	const stage = valueAfterColon(sectionBody, "Current metronome Stage");
+
+	if (applicability !== null && applicability !== expectedApplicability) {
+		failures.push(`Reuse-admission conformance applicability must be exactly ${expectedApplicability}.`);
+	}
+
+	failures.push(...validateConformanceIdentityBinding(capabilityPlanReference, candidateHead));
+
+	const allowedStatuses = reuseAdmissionConformanceStatuses.get(`${expectedApplicability}|${stage}`) ?? new Set();
+	if (status !== null && !allowedStatuses.has(status)) {
+		failures.push("Reuse-admission conformance status must match applicability and the MSO-5/MSO-6 promotion state.");
+	}
+
+	return status === "PASS"
+		? [...failures, ...validateCompleteConformanceEvidence(sectionBody)]
+		: [...failures, ...validateAbsentConformanceResults(sectionBody)];
+}
+
 function validateBoundaryDelta(sectionBody) {
 	const requiredLabels = [
 		"UI -> browser adapter direct imports added",
@@ -1032,6 +1294,7 @@ function validateSections(body, changedFiles) {
 
 	const agentGateEvidence = sections.get("Agent Gate Evidence").join("\n");
 	const isOverlayControlChange = changedFiles.some(file => overlayControlFiles.has(file));
+	const stage = valueAfterColon(agentGateEvidence, "Current metronome Stage");
 	const reuseProof = sections.get("Reuse Proof").join("\n");
 	const capabilityPlanIdentity = validateCapabilityPlanIdentity(reuseProof);
 	const retiredSurface = sections.get("Retired Surface").join("\n");
@@ -1049,8 +1312,9 @@ function validateSections(body, changedFiles) {
 		validateDebtGateEvidence(sections.get("Debt Gate Evidence").join("\n")),
 		validateAgentGateEvidence(
 			agentGateEvidence,
-			isOverlayControlChange ? new Set(["PENDING", ...allowedChatGptVerdicts]) : allowedChatGptVerdicts,
+			stage === "MSO-5" ? new Set(["PENDING"]) : allowedChatGptVerdicts,
 		),
+		validateReuseAdmissionConformance(agentGateEvidence, changedFiles),
 	];
 	failures.push(...surfaceEvidenceResults.flat());
 
@@ -1059,6 +1323,29 @@ function validateSections(body, changedFiles) {
 	}
 
 	return failures;
+}
+
+function validateConformanceOnly(body, changedFiles) {
+	const sections = splitSections(body);
+	const failures = [];
+	if (countSectionHeading(body, "Reuse Proof") !== 1 || !sections.has("Reuse Proof")) {
+		failures.push("Reuse-admission conformance must reference exactly one existing Reuse Proof section.");
+	} else {
+		const reuseProof = sections.get("Reuse Proof").join("\n");
+		const capabilityPlanIdentity = validateCapabilityPlanIdentity(reuseProof);
+		failures.push(
+			...validateReuseProof(reuseProof, "pr", capabilityPlanIdentity.identity),
+			...capabilityPlanIdentity.failures,
+		);
+	}
+
+	if (countSectionHeading(body, "Agent Gate Evidence") !== 1 || !sections.has("Agent Gate Evidence")) {
+		failures.push("Reuse-admission conformance requires exactly one Agent Gate Evidence section.");
+		return failures;
+	}
+
+	const agentGateEvidence = sections.get("Agent Gate Evidence").join("\n");
+	return [...failures, ...validateReuseAdmissionConformance(agentGateEvidence, changedFiles)];
 }
 
 function isRepositoryRelativePath(value) {
@@ -1126,6 +1413,16 @@ if (planInputRequest !== null) {
 
 const prContext = getPrContext();
 const mergeBase = getMergeBase();
+const changedCandidateFiles = prContext.isPullRequest && mergeBase
+	? uniqueFiles(parseChangedFiles(tryRunGit([
+		"diff",
+		"--name-only",
+		"--no-renames",
+		`--diff-filter=${debtContractDiffFilter}`,
+		mergeBase,
+		"HEAD",
+	])))
+	: [];
 const scanContexts = getScanContexts(mergeBase, prContext)
 	.map(context => ({...context, files: uniqueFiles(context.files)}))
 	.filter(context => context.files.length > 0);
@@ -1133,6 +1430,26 @@ const changedDebtContractFiles = uniqueFiles(scanContexts.flatMap(context => con
 const riskyFindings = scanRiskyAdditions(scanContexts);
 
 if (changedDebtContractFiles.length === 0) {
+	if (prContext.isPullRequest && changedCandidateFiles.length > 0) {
+		if (prContext.body.trim() === "") {
+			console.error("Pull request body is empty. Reuse-admission conformance applicability evidence is required.");
+			process.exit(1);
+		}
+
+		const conformanceFailures = validateConformanceOnly(prContext.body, changedCandidateFiles);
+		if (conformanceFailures.length > 0) {
+			console.error("PR body reuse-admission conformance evidence failed:");
+			for (const failure of conformanceFailures) {
+				console.error(`- ${failure}`);
+			}
+
+			process.exit(1);
+		}
+
+		console.log("No broad debt-contract files changed; reuse-admission conformance is NOT_APPLICABLE and structurally valid.");
+		process.exit(0);
+	}
+
 	console.log("No changed production source or gate-control files require debt contract evidence.");
 	process.exit(0);
 }
@@ -1168,7 +1485,7 @@ if (prContext.body.trim() === "") {
 	process.exit(1);
 }
 
-const sectionFailures = validateSections(prContext.body, changedDebtContractFiles);
+const sectionFailures = validateSections(prContext.body, changedCandidateFiles);
 if (sectionFailures.length > 0) {
 	console.error("PR body debt contract evidence failed:");
 	for (const failure of sectionFailures) {

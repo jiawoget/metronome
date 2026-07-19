@@ -68,4 +68,31 @@ Net surface delta:
 - Independent plan review policy:
 - Independent plan review verdict:
 - Current metronome Stage:
-<!-- Overlay control changes require exactly MSO-5 with PENDING, or MSO-6 with PASS or PASS_WITH_NITS. -->
+- Reuse-admission conformance applicability:
+- Reuse-admission conformance status:
+- Reuse-admission conformance Capability plan identity reference: Reuse Proof
+- Reuse-admission conformance candidate HEAD:
+<!--
+Applicability is REQUIRED only for the exact canonical twelve-file control set;
+all other candidates use NOT_APPLICABLE. MSO-5 permits triggered PENDING or
+complete PASS. MSO-6 requires triggered PASS. Non-triggered work uses
+NOT_APPLICABLE at either stage.
+
+For PASS only, add each field exactly once:
+- RED baseline commit: <lowercase current git merge-base origin/main HEAD>
+- RED families with at least one oracle mismatch: 4/4
+- GREEN families matched: 4/4
+- GREEN negative cases matched: 8/8
+- GREEN positive controls matched: 4/4
+- GREEN metamorphic pairs matched: 4/4
+Then add exactly twelve unique RED and twelve unique GREEN actual lines over the
+same opaque IDs:
+RED | <opaque-case-id> | <actual-top-level-verdict> | <actual-code-or-NONE>
+GREEN | <opaque-case-id> | <actual-top-level-verdict> | <actual-code-or-NONE>
+Do not persist prompts, packets, expected answers, oracle data, full outputs, or
+transcripts.
+
+Overlay/control promotion uses MSO-5 with ChatGPT PENDING, or MSO-6 with
+ChatGPT PASS or PASS_WITH_NITS. External ChatGPT starts only after conformance
+PASS or NOT_APPLICABLE and the evidence edit's exact-head CI.
+-->

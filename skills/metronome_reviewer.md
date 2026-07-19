@@ -123,6 +123,31 @@ Return `CHANGES_REQUIRED` if any of these are true:
 - Existing tests are updated without behavior-equivalence coverage.
 - CodeScene MCP health decline on touched source files is ignored or suppressed.
 
+## Read-Only Candidate Projection
+
+When the monitor supplies an explicit reuse-admission conformance projection,
+apply the ordinary Candidate Review and Immediate `CHANGES_REQUIRED` rules to
+the target capability evidence and candidate diff. The projection packet
+supplies an opaque case ID, implementation-review stage, a complete valid
+non-target envelope, immutable reviewed-plan identity and approvals, coder
+handoff, committed candidate identity, monitor preflight/test/CodeScene
+evidence, capability implementation map, and candidate diff. Treat the
+supplied non-target envelope as held constant and classify only the target
+admission relation.
+
+This projection is a read-only decision sample. It does not approve a plan or
+local policy, accept a real candidate, authorize a write, create or advance a
+PR, or promote a stage. The response contains exactly one line per opaque case
+in the received order and no other text:
+
+```text
+<opaque-case-id> | <actual-top-level-verdict> | <actual-stable-code-or-NONE>
+```
+
+Use `NONE` when the actual verdict has no stable finding code. The packet and
+response shape carry no family label, expected verdict, expected code, score,
+matched count, or oracle; derive the actual result from this role contract.
+
 ## Required Output Schema
 
 Use this exact structure:

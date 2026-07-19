@@ -57,7 +57,10 @@ const requiredContent = {
     "provider_fallback",
     "Interim Monitor Handoff",
     "docs/v1/implementation-slices/rules/external-library-first.md",
-    "Capability Delivery Map"
+    "Capability Delivery Map",
+    "Read-Only Admission Projection",
+    "<actual-top-level-verdict>",
+    "read-only decision sample"
   ],
   "skills/metronome_coder.md": [
     ".agents/skills/metronome-workflow/SKILL.md",
@@ -68,7 +71,9 @@ const requiredContent = {
     "Required PR Body Evidence",
     "CODE_READY / BLOCKED",
     "Capability Implementation Map",
-    "Capability plan path"
+    "Capability plan path",
+    "Conditional reuse-admission conformance",
+    "monitor-owned"
   ],
   "skills/metronome_reviewer.md": [
     ".agents/skills/metronome-workflow/SKILL.md",
@@ -85,7 +90,10 @@ const requiredContent = {
     "Immutable Plan Review",
     "Candidate Review",
     "PLAN_REVIEW_PASS",
-    "LOCAL_POLICY_APPROVED"
+    "LOCAL_POLICY_APPROVED",
+    "Read-Only Candidate Projection",
+    "<actual-stable-code-or-NONE>",
+    "read-only decision sample"
   ],
   "skills/metronome_chatgpt_review.md": [
     ".agents/skills/metronome-workflow/SKILL.md",
@@ -98,7 +106,9 @@ const requiredContent = {
     "CHANGES_REQUIRED",
     "Agent Gate Evidence",
     "FINDING_CODE",
-    "LOCAL_POLICY_APPROVED"
+    "LOCAL_POLICY_APPROVED",
+    "reuse-admission conformance applicability",
+    "hidden-oracle agreement"
   ],
   "scripts/validate-pr-debt-contract.mjs": [
     String.raw`package\.json`,
@@ -118,7 +128,18 @@ const requiredContent = {
     "Capability Implementation Map",
     "Capability plan path",
     "generic-operation:",
-    "platform:"
+    "platform:",
+    "reuseAdmissionControlFiles",
+    "validateReuseAdmissionConformance",
+    "Reuse-admission conformance applicability",
+    "Reuse-admission conformance status",
+    "Reuse-admission conformance Capability plan identity reference",
+    "Reuse-admission conformance candidate HEAD",
+    "RED baseline commit",
+    "RED families with at least one oracle mismatch",
+    "GREEN negative cases matched",
+    "answer-neutral verdict",
+    ".github/workflows/metronome-debt-gates.yml"
   ],
   "scripts/validate-pr-debt-contract.selftest.mjs": [
     "commitPackageManifestChange",
@@ -128,7 +149,14 @@ const requiredContent = {
     "Overlay plan path",
     "MSO-5",
     "PENDING",
-    "Codex final review prompt/verdict"
+    "Codex final review prompt/verdict",
+    "reuseAdmissionControlFiles",
+    "nonTriggerPaths",
+    "wrongApplicability",
+    "RED baseline commit",
+    "GREEN metamorphic pairs matched",
+    "answer-neutral enum",
+    "hidden oracle"
   ],
   ".github/workflows/metronome-debt-gates.yml": ["edited", "ready_for_review"],
   ".github/pull_request_template.md": [
@@ -146,7 +174,14 @@ const requiredContent = {
     "Capability plan commit",
     "Capability plan blob",
     "Capability plan SHA-256",
-    "LOCAL_POLICY_APPROVED"
+    "LOCAL_POLICY_APPROVED",
+    "Reuse-admission conformance applicability",
+    "Reuse-admission conformance status",
+    "Reuse-admission conformance Capability plan identity reference",
+    "Reuse-admission conformance candidate HEAD",
+    "RED families with at least one oracle mismatch: 4/4",
+    "GREEN negative cases matched: 8/8",
+    "actual-code-or-NONE"
   ],
   "AGENTS.md": [".agents/skills/metronome-workflow/SKILL.md"],
   ".agents/skills/metronome-workflow/SKILL.md": [
@@ -179,7 +214,12 @@ const requiredContent = {
     "provider_fallback",
     "LOCAL_POLICY_APPROVED",
     "BLOCKER_CODE",
-    "FINDING_CODE"
+    "FINDING_CODE",
+    "Conditional Control Conformance",
+    "reuseAdmissionControlFiles",
+    "NOT_APPLICABLE",
+    "current branch merge-base",
+    "hidden oracle"
   ],
   "docs/v1/implementation-slices/rules/external-library-first.md": [
     "Universal Capability Admission",
@@ -191,6 +231,14 @@ const requiredContent = {
     "LOCAL_POLICY_APPROVED",
     "BLOCKER_CODE",
     "FINDING_CODE",
+    "Conditional Reuse-Admission Control Conformance",
+    "scripts/validate-pr-debt-contract.selftest.mjs",
+    ".github/workflows/metronome-debt-gates.yml",
+    "Reuse-admission conformance applicability",
+    "RED families with at least one oracle mismatch: 4/4",
+    "twelve unique RED and twelve unique GREEN",
+    "answer-neutral",
+    "hidden oracle",
     "Pack F audio, music, recording, waveform, and timing work"
   ]
 };

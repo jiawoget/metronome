@@ -95,6 +95,11 @@ Send all of this before asking for review:
 - PR URL, branch, head SHA, and base branch.
 - Diffstat and changed-file list split into production/tests/docs/scripts/workflows.
 - Draft PR body with exact `MSO-5` and ChatGPT `PENDING` overlay evidence.
+- Conditional reuse-admission conformance evidence: exact applicability from the
+  canonical twelve-file set; `PASS` when triggered or `NOT_APPLICABLE`
+  otherwise; exact candidate `HEAD`; and edited-event exact-head CI after the
+  evidence update. For `PASS`, include only the compact baseline/count/actual-line
+  evidence permitted by the shared rule.
 - Approved plan text or plan path plus relevant excerpt.
 - Exact capability-plan path/commit/blob/SHA-256 and matching immutable local-policy approval output.
 - Exact-head CI and full local-gate output copied from the commands actually run.
@@ -119,7 +124,7 @@ Do not require a final ChatGPT verdict in this packet. If any other item is miss
 3. New Surface / Net Surface Delta：每个新 helper/service/type/component 是否有 why-not-reuse 和 same-PR old surface；Net surface delta 是否与 diff 一致。
 4. Shared Primitive Two-Call-Site Rule：shared primitive/controller/service/presenter/helper 是否至少迁移两个旧调用点并让旧实现消失；少于两个时是否有全仓搜索证据且没有声称 debt reduction。
 5. Boundary Delta：是否没有新增 UI -> browser/infrastructure、domain -> UI/service、service passthrough；composition-root 例外是否明确。
-6. Agent Gate Evidence：draft PR 是否精确为 MSO-5 和 PENDING，并看到 planner/coder/reviewer skill read evidence、PLAN_READY、CODE_READY、reviewer PASS/PASS_WITH_NITS。
+6. Agent Gate Evidence：draft PR 是否精确为 MSO-5 和 ChatGPT PENDING，并看到 planner/coder/reviewer skill read evidence、PLAN_READY、CODE_READY、reviewer PASS/PASS_WITH_NITS。根据 changed-file 精确集合独立确认 reuse-admission conformance applicability：只有 12 个 canonical control file 触发 REQUIRED，其他候选必须 NOT_APPLICABLE；外部 review 开始前 REQUIRED 必须 PASS。PASS 是否绑定当前 HEAD、当前 origin/main merge-base、现有 Reuse Proof capability-plan identity，并只保留 4/4 RED family assertion、4/4/8/4/4 exact counts、12 RED 与 12 GREEN answer-neutral actual lines；不得持久化 prompt、packet、oracle、full response 或 transcript。结构 validator 只能证明 trigger/state/identity/count/grammar/uniqueness/no-extra-field shape，不能证明 family、polarity、positive control、metamorphic pair、packet secrecy 或 hidden-oracle agreement；这些必须由 monitor-owned conformance 过程确认，外部 review 不得伪造或重算 unseen oracle。
 7. CodeScene Pre-Review：是否有 exact-head CodeScene MCP analyze_change_set，且没有 Code Health decline 并包含 quality_gates: passed；如果失败是否拒绝并要求 rework。
 8. Semgrep Pre-Review：monitor 的 lint:debt:changed 是否在 review 前运行且通过；如果失败是否拒绝并要求 rework。
 9. Behavior-Equivalence Tests：是否覆盖 retired compatibility surface；不能只是更新旧测试或 snapshot。
