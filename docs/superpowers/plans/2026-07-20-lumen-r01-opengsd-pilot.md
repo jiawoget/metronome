@@ -15,12 +15,25 @@
 **Repository files:** none. All provider state lives outside the repository.
 
 1. Confirm neither Ollama nor LM Studio is currently available. Use Ollama as Lumen's pinned local backend for this pilot.
-2. Download the official Ollama `v0.32.0` Windows AMD64 portable archive from `https://github.com/ollama/ollama/releases/download/v0.32.0/ollama-windows-amd64.zip`, require SHA-256 `56561a8f0a904483303c610e61af61c5a7b6f5496ce3707e207d25d4ff67b89e`, and extract it under a fresh pilot-specific directory outside the repository. Do not use an unverified mirror or overwrite another installation.
-3. Start the pinned binary with `OLLAMA_HOST=127.0.0.1:11434` and a pilot-specific `OLLAMA_MODELS` directory in a hidden background process. Require `/api/version` to report `0.32.0`.
-4. Pull the exact embedding model and resolve its local digest:
+2. Download the official Ollama `v0.32.0` Windows AMD64 portable archive from `https://github.com/ollama/ollama/releases/download/v0.32.0/ollama-windows-amd64.zip`, require SHA-256 `56561a8f0a904483303c610e61af61c5a7b6f5496ce3707e207d25d4ff67b89e`, and extract it under a fresh pilot-specific directory outside the repository. Do not use an unverified mirror or overwrite another installation. Define the executable and model paths explicitly; do not depend on `PATH`:
 
    ```powershell
-   ollama pull ordis/jina-embeddings-v2-base-code
+   $providerRoot = "C:\tmp\metronome-opengsd-r01-l2-$runId-provider"
+   $ollamaRoot = Join-Path $providerRoot 'ollama'
+   $ollamaExe = Join-Path $ollamaRoot 'ollama.exe'
+   $ollamaModels = Join-Path $providerRoot 'ollama-models'
+   ```
+
+3. Set `OLLAMA_HOST=127.0.0.1:11434` and `OLLAMA_MODELS=$ollamaModels`, then start `& $ollamaExe serve` in a hidden background process. Query `http://127.0.0.1:11434/api/version` directly and require version `0.32.0`.
+4. Pull the exact embedding model through the same pinned executable and resolve its local digest through the same explicit host:
+
+   ```powershell
+   $env:OLLAMA_HOST = '127.0.0.1:11434'
+   $env:OLLAMA_MODELS = $ollamaModels
+   $ollamaProcess = Start-Process -FilePath $ollamaExe -ArgumentList 'serve' -WindowStyle Hidden -PassThru
+   $version = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/version'
+   & $ollamaExe pull ordis/jina-embeddings-v2-base-code
+   $tags = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags'
    ```
 
    Require `/api/tags` to report digest `080d707f4f4ab48ceafa7452ce70e7f44751c7c599fe4eaf4b3256d51008d667`; a changed mutable tag is a provider-version failure.
