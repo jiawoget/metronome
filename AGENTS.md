@@ -1,7 +1,9 @@
 # AGENTS
 
 ## Repository workflow
-- Before any planning, implementation, diagnosis, review, or promotion task, read and follow `.agents/skills/metronome-workflow/SKILL.md`.
+- Native OpenGSD is the sole project lifecycle entrypoint.
+- Start project work with `$gsd-next`, or continue the already-active GSD phase.
+- OpenGSD loads the project policy through `.planning/config.json`; do not load the policy manually.
 
 ## Git hooks
 - This repo uses a local `pre-commit` hook for gate checks.

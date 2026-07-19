@@ -1,0 +1,40 @@
+{
+  "mode": "interactive",
+  "runtime": "codex",
+  "model_profile": "quality",
+  "planning": {
+    "commit_docs": true,
+    "search_gitignored": false
+  },
+  "workflow": {
+    "research": true,
+    "plan_check": true,
+    "verifier": true,
+    "auto_advance": false,
+    "pattern_mapper": false,
+    "use_worktrees": false
+  },
+  "parallelization": false,
+  "agent_skills": {
+    "gsd-assumptions-analyzer": ["skills/metronome-policy"],
+    "gsd-phase-researcher": ["skills/metronome-policy"],
+    "gsd-planner": ["skills/metronome-policy"],
+    "gsd-plan-checker": ["skills/metronome-policy"],
+    "gsd-executor": ["skills/metronome-policy"],
+    "gsd-verifier": ["skills/metronome-policy"]
+  },
+  "intel": {
+    "enabled": false
+  },
+  "graphify": {
+    "auto_update": false
+  },
+  "effort": {
+    "default": "xhigh",
+    "routing_tier_defaults": {
+      "light": "xhigh",
+      "standard": "xhigh",
+      "heavy": "xhigh"
+    }
+  }
+}
