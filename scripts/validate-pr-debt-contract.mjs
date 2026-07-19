@@ -967,11 +967,7 @@ function validateConformanceIdentityBinding(capabilityPlanReference, candidateHe
 		return failures;
 	}
 
-	if (
-		typeof pullRequestHeadSha !== "string"
-		|| !/^[0-9a-f]{40}$/v.test(pullRequestHeadSha)
-		|| candidateHead !== pullRequestHeadSha
-	) {
+	if (candidateHead !== pullRequestHeadSha) {
 		failures.push("Reuse-admission conformance candidate HEAD must be the exact lowercase current HEAD.");
 	}
 

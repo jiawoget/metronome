@@ -1222,11 +1222,11 @@ for (const [{cwd, body}, message] of [
 	git(cwd, ["merge", "--no-ff", "feature", "-m", "synthetic pull request merge"]);
 	const mergeHead = git(cwd, ["rev-parse", "HEAD"]);
 	assert.notEqual(mergeHead, featureHead, "synthetic merge HEAD must differ from the feature head");
-	const result = runGate(cwd, body, {headSha: featureHead});
-	assert.equal(result.status, 0, "required conformance must bind candidate HEAD to pull_request.head.sha under a synthetic merge checkout");
+	assert.equal(runGate(cwd, body, {headSha: featureHead}).status, 0, "required conformance must bind candidate HEAD to pull_request.head.sha under a synthetic merge checkout");
+	assert.equal(runGate(cwd, body, {headSha: featureHead.toUpperCase()}).status, 1, "required conformance must reject an uppercase pull_request.head.sha");
+	assert.equal(runGate(cwd, body, {headSha: mergeHead}).status, 1, "required conformance must reject a valid but different pull_request.head.sha");
 	const mergeBoundBody = replaceLine(
-		body,
-		`- ${conformanceLabels.candidateHead}: ${featureHead}`,
+		body, `- ${conformanceLabels.candidateHead}: ${featureHead}`,
 		`- ${conformanceLabels.candidateHead}: ${mergeHead}`,
 	);
 	assert.equal(runGate(cwd, mergeBoundBody, {includeHead: false}).status, 1, "required conformance must reject a missing pull_request.head.sha without falling back to the synthetic merge HEAD");
