@@ -219,6 +219,7 @@ function getPrContext() {
 		return {
 			isPullRequest: true,
 			body: typeof event.pull_request.body === "string" ? event.pull_request.body : "",
+			headSha: event.pull_request.head?.sha,
 		};
 	} catch (error) {
 		console.error(`Could not read GitHub pull request body: ${error instanceof Error ? error.message : String(error)}`);
@@ -951,7 +952,7 @@ function validateCompleteConformanceEvidence(sectionBody) {
 	return [...failures, ...validateCompactConformanceLines(sectionBody, true)];
 }
 
-function validateConformanceIdentityBinding(capabilityPlanReference, candidateHead) {
+function validateConformanceIdentityBinding(capabilityPlanReference, candidateHead, pullRequestHeadSha) {
 	const failures = [];
 	if (capabilityPlanReference !== null && capabilityPlanReference !== "Reuse Proof") {
 		failures.push("Reuse-admission conformance must reference the existing Reuse Proof Capability plan identity.");
@@ -966,14 +967,18 @@ function validateConformanceIdentityBinding(capabilityPlanReference, candidateHe
 		return failures;
 	}
 
-	if (candidateHead !== runGit(["rev-parse", "HEAD"])) {
+	if (
+		typeof pullRequestHeadSha !== "string"
+		|| !/^[0-9a-f]{40}$/v.test(pullRequestHeadSha)
+		|| candidateHead !== pullRequestHeadSha
+	) {
 		failures.push("Reuse-admission conformance candidate HEAD must be the exact lowercase current HEAD.");
 	}
 
 	return failures;
 }
 
-function validateReuseAdmissionConformance(sectionBody, changedFiles) {
+function validateReuseAdmissionConformance(sectionBody, changedFiles, pullRequestHeadSha) {
 	const failures = validateConformanceFieldShape(sectionBody);
 	const isRequired = changedFiles.some(file => reuseAdmissionControlFiles.has(file));
 	const expectedApplicability = isRequired ? "REQUIRED" : "NOT_APPLICABLE";
@@ -1003,7 +1008,7 @@ function validateReuseAdmissionConformance(sectionBody, changedFiles) {
 		failures.push(`Reuse-admission conformance applicability must be exactly ${expectedApplicability}.`);
 	}
 
-	failures.push(...validateConformanceIdentityBinding(capabilityPlanReference, candidateHead));
+	failures.push(...validateConformanceIdentityBinding(capabilityPlanReference, candidateHead, pullRequestHeadSha));
 
 	const allowedStatuses = reuseAdmissionConformanceStatuses.get(`${expectedApplicability}|${stage}`) ?? new Set();
 	if (status !== null && !allowedStatuses.has(status)) {
@@ -1233,7 +1238,7 @@ function hasSkillReadEvidence(sectionBody, label, expectedPath) {
 	return value !== null && !isPlaceholder(value) && normalizePath(value).includes(expectedPath);
 }
 
-function validateSections(body, changedFiles) {
+function validateSections(body, changedFiles, pullRequestHeadSha) {
 	const sections = splitSections(body);
 	const missingSections = requiredSections
 		.filter(section => !sections.has(section))
@@ -1274,7 +1279,7 @@ function validateSections(body, changedFiles) {
 			agentGateEvidence,
 			stage === "MSO-5" ? new Set(["PENDING"]) : allowedChatGptVerdicts,
 		),
-		validateReuseAdmissionConformance(agentGateEvidence, changedFiles),
+		validateReuseAdmissionConformance(agentGateEvidence, changedFiles, pullRequestHeadSha),
 	];
 	failures.push(...surfaceEvidenceResults.flat());
 
@@ -1392,7 +1397,7 @@ if (changedDebtContractFiles.length === 0) {
 			conformanceFailures.push("Reuse-admission conformance requires exactly one Agent Gate Evidence section.");
 		} else {
 			const agentGateEvidence = conformanceSections.get("Agent Gate Evidence").join("\n");
-			conformanceFailures.push(...validateReuseAdmissionConformance(agentGateEvidence, changedCandidateFiles));
+			conformanceFailures.push(...validateReuseAdmissionConformance(agentGateEvidence, changedCandidateFiles, prContext.headSha));
 		}
 
 		if (conformanceFailures.length > 0) {
@@ -1443,7 +1448,7 @@ if (prContext.body.trim() === "") {
 	process.exit(1);
 }
 
-const sectionFailures = validateSections(prContext.body, changedCandidateFiles);
+const sectionFailures = validateSections(prContext.body, changedCandidateFiles, prContext.headSha);
 if (sectionFailures.length > 0) {
 	console.error("PR body debt contract evidence failed:");
 	for (const failure of sectionFailures) {

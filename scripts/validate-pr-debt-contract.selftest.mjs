@@ -235,20 +235,17 @@ function createRepo({withGateControlFile = false} = {}) {
 	return cwd;
 }
 
-function createEvent(cwd, body) {
+function createEvent(cwd, body, {headSha = git(cwd, ["rev-parse", "HEAD"]), includeHead = true} = {}) {
 	const eventPath = path.join(cwd, "event.json");
-	writeFileSync(
-		eventPath,
-		JSON.stringify({
-			"pull_request": {body},
-		}),
-	);
+	writeFileSync(eventPath, JSON.stringify({
+		"pull_request": {body, ...(includeHead && {head: {sha: headSha}})},
+	}));
 
 	return eventPath;
 }
 
-function runGate(cwd, eventBody) {
-	const eventPath = eventBody === undefined ? undefined : createEvent(cwd, eventBody);
+function runGate(cwd, eventBody, eventOptions) {
+	const eventPath = eventBody === undefined ? undefined : createEvent(cwd, eventBody, eventOptions);
 
 	return spawnSync(process.execPath, [scriptPath], {
 		cwd,
@@ -1216,6 +1213,25 @@ for (const [{cwd, body}, message] of [
 	[completeConformanceFixture, "triggered MSO-6 must accept complete PASS conformance"],
 ]) {
 	assert.equal(runGate(cwd, body).status, 0, message);
+}
+
+{
+	const {cwd, body} = validTriggeredConformanceBody();
+	const featureHead = git(cwd, ["rev-parse", "HEAD"]);
+	git(cwd, ["switch", "-c", "synthetic-merge", "main"]);
+	git(cwd, ["merge", "--no-ff", "feature", "-m", "synthetic pull request merge"]);
+	const mergeHead = git(cwd, ["rev-parse", "HEAD"]);
+	assert.notEqual(mergeHead, featureHead, "synthetic merge HEAD must differ from the feature head");
+	const result = runGate(cwd, body, {headSha: featureHead});
+	assert.equal(result.status, 0, "required conformance must bind candidate HEAD to pull_request.head.sha under a synthetic merge checkout");
+	const mergeBoundBody = replaceLine(
+		body,
+		`- ${conformanceLabels.candidateHead}: ${featureHead}`,
+		`- ${conformanceLabels.candidateHead}: ${mergeHead}`,
+	);
+	assert.equal(runGate(cwd, mergeBoundBody, {includeHead: false}).status, 1, "required conformance must reject a missing pull_request.head.sha without falling back to the synthetic merge HEAD");
+	assert.equal(runGate(cwd, mergeBoundBody, {headSha: null}).status, 1, "required conformance must reject a malformed pull_request.head.sha without falling back to the synthetic merge HEAD");
+	assert.equal(runGate(cwd, mergeBoundBody, {headSha: "malformed"}).status, 1, "required conformance must reject a non-hex pull_request.head.sha without falling back to the synthetic merge HEAD");
 }
 
 assertConformanceFails(
