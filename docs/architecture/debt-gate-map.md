@@ -1,103 +1,23 @@
 # Debt Gate Map
 
-This file is the required repo map entrypoint for debt-prevention PRs. It is not a full architecture document; it lists the boundaries and primitive checks that agents must consult before planning, coding, or reviewing.
+OpenGSD owns the project lifecycle and loads the project policy through `.planning/config.json`. This document is only a static map of existing quality entrypoints.
 
-Workflow, model routing, pause conditions, and final-promotion policy live in
-`.agents/skills/metronome-workflow/SKILL.md`.
+## Static and architectural checks
 
-## Repo Map Inputs
+| Check | Local entrypoint | Configuration or implementation |
+|---|---|---|
+| Semgrep runner self-test | `npm run validate:debt-gates` | `scripts/run-metronome-semgrep-changed.selftest.mjs` |
+| Semgrep changed files | `npm run lint:debt:changed` | `scripts/run-metronome-semgrep-changed.mjs`, `.semgrep/**` |
+| XO changed files | `npm run lint:xo:changed` | `scripts/run-xo-changed.mjs`, `xo.config.js`, `.xo-suppressions.json` |
+| CodeScene changed files | `npm run lint:codescene:changed` | `scripts/run-codescene-debt-changed.mjs`, `.codescene/quality-gate-policy.md` |
 
-Agents must search beyond the local file they intend to edit:
+## Repository checks
 
-- `src/**`
-- `tests/**`
-- `scripts/**` when tooling or test helpers are touched
-- `package.json` and lockfiles when package scripts, dependencies, or tool versions are touched
-- `docs/v1/implementation-slices/plans/**` for active slice plans
+| Check | Local entrypoint |
+|---|---|
+| ESLint | `npm run lint` |
+| TypeScript | `npm run typecheck` |
+| Unit tests | `npm run test:unit` |
+| Production build | `npm run build` |
 
-Required search families:
-
-- `normalize*`, `format*`, `validate*`, `resolve*`, `select*`, `build*`, `create*`
-- service, repository, controller, hook, adapter, read-model names related to the change
-- old aliases, compatibility fields, wrappers, and direct callers named in the plan
-
-Gate-control changes always require PR debt-contract evidence, even when no `src/**` production file changed:
-
-- `scripts/**`
-- `package.json`
-- `package-lock.json`
-- `npm-shrinkwrap.json`
-- `pnpm-lock.yaml`
-- `yarn.lock`
-- `skills/**`
-- `.github/workflows/**`
-- `.github/pull_request_template.md`
-- `.semgrep/**`
-- `.codescene/**`
-- `docs/architecture/debt-gate-map.md`
-
-Local pre-commit execution has no pull-request body to validate. It scans staged and working-tree production changes, reports risky primitive/boundary additions, and defers the required debt-contract evidence to pull-request context so the first commit can create that context. This is not a debt-gate bypass: the pull-request workflow must fail closed on missing or invalid evidence before merge, while local Semgrep, XO, lint, typecheck, unit, and build hooks still run normally.
-
-Normal PR evidence may use either `Codex final review prompt/verdict` or the legacy `ChatGPT final review prompt/verdict`, with exactly one non-placeholder verdict. Overlay promotion keeps its explicit ChatGPT stage contract until that workflow is separately revised.
-
-## Shared Primitive Rule
-
-A PR that extracts a shared primitive, controller, service, presenter, formatter, validator, parser, adapter, or helper is not debt reduction unless it:
-
-1. Migrates at least two old call sites to the shared surface.
-2. Deletes or narrows the old implementation paths in the same PR.
-3. Lists the retired surface in the PR body.
-4. Includes behavior-equivalence coverage when deleting compatibility surface.
-
-If fewer than two old call sites exist, the plan must say so with repo-wide search evidence and must not claim shared-primitive debt reduction.
-
-## Boundary Rules
-
-Block new imports or defaults that move runtime dependencies inward:
-
-- `src/components/**` and `src/hooks/**` must not import `@/infrastructure/**`.
-- Business components must not default props to browser services.
-- `src/domain/**` must not import `src/components/**`, `@/components/**`, `src/services/**`, or `@/services/**`.
-- Service methods that only return `repository.*(...)` must retire at least one direct repository caller in the same PR.
-- Composition-root exceptions must be named explicitly in the plan and PR body.
-
-## Review Preflight Gates
-
-The code review agent must run gates in this order before normal review:
-
-1. CodeScene score/delta for the PR branch.
-   - Primary path is CodeScene MCP `analyze_change_set` against the PR base ref.
-   - Shell `npm run lint:codescene:changed` is fallback only when MCP is unavailable, and fallback evidence must explain why MCP could not run.
-   - Missing shell token/env is not a valid reason to skip MCP.
-   - Any Code Health decline is `CHANGES_REQUIRED`.
-   - If CodeScene cannot run for a production-source or gate-control PR, review is blocked unless the user explicitly grants a one-off override.
-2. Semgrep changed-file gate.
-   - Candidates are the de-duplicated union of JavaScript/TypeScript files changed between the merge base and `HEAD` plus files currently staged in the index.
-   - Only exact paths present in the Git index are scanned, so deleted paths and the old spelling of case-only renames are excluded.
-   - If a candidate also has unstaged changes, or Git classifies a working-tree file as an untracked or ignored shadow of a staged deletion or rename, the gate fails before scanning because the committed/staged snapshot is ambiguous.
-   - The runner uses Semgrep's merge-base comparison to keep existing findings visible but non-blocking while rejecting net-new findings; all configured rules and severities remain active.
-   - `npm run lint:debt:changed` must pass.
-   - Any Semgrep failure is `CHANGES_REQUIRED`.
-
-Only after both preflight gates pass may the reviewer inspect normal correctness.
-
-## Agent Skill Load Gates
-
-Each agent output must prove it read the matching hard-gate skill:
-
-- Planner output must include `Skill file read: skills/metronome_planner.md`.
-- Coder output must include `Skill file read: skills/metronome_coder.md`.
-- Reviewer output must include `Skill file read: skills/metronome_reviewer.md`.
-
-The PR body's `Agent Gate Evidence` must include planner, coder, and reviewer skill-read evidence. Missing or placeholder skill-read evidence is `CHANGES_REQUIRED`.
-
-## Retired Surface Examples
-
-Examples of surfaces that must be listed when touched:
-
-- local `resolveTarget*` or target-resolution copies
-- local duration/timestamp formatters
-- `onSaveX` / `saveX` alias pairs
-- singular/plural compatibility fields such as `continueTarget` plus `continueTargets`
-- UI-owned browser adapter defaults
-- direct repository callers replaced by service/controller boundaries
+The local pre-commit hook runs the Semgrep runner self-test, changed-file Semgrep and XO checks, ESLint, typecheck, unit tests, and build. `.github/workflows/metronome-debt-gates.yml` runs the Semgrep changed-file path, typecheck, and lint in pull requests. CodeScene remains a separate review entrypoint.

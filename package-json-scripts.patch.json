@@ -1,8 +1,0 @@
-{
-  "scripts": {
-    "lint:debt": "semgrep --config .semgrep --error",
-    "lint:debt:changed": "node scripts/run-metronome-semgrep-changed.mjs",
-    "lint:debt:inventory": "semgrep --config .semgrep --json --output semgrep-inventory.json || true",
-    "validate:debt-gates": "node scripts/validate-metronome-gates.mjs"
-  }
-}

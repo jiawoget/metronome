@@ -39,7 +39,7 @@ jobs:
       - name: Install Semgrep
         run: python -m pip install semgrep
 
-      - name: Validate debt gate package
+      - name: Validate Semgrep changed-file runner
         env:
           BASE_REF: origin/${{ github.base_ref }}
         run: npm run validate:debt-gates

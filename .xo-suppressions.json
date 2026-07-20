@@ -89,27 +89,6 @@
       "count": 1
     }
   },
-  "scripts/validate-metronome-gates.mjs": {
-    "@stylistic/quotes": {
-      "count": 129
-    },
-    "unicorn/consistent-boolean-name": {
-      "count": 1
-    },
-    "unicorn/prefer-continue": {
-      "count": 2
-    }
-  },
-  "scripts/validate-pr-debt-contract.mjs": {
-    "@stylistic/quotes": {
-      "count": 190
-    }
-  },
-  "scripts/validate-pr-debt-contract.selftest.mjs": {
-    "@stylistic/quotes": {
-      "count": 213
-    }
-  },
   "src/app/layout.tsx": {
     "import-x/order": {
       "count": 3
