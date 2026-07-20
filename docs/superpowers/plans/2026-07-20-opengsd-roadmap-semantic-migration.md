@@ -18,8 +18,9 @@
 - No Phase 3.1 is created. The five corrected false completions remain Pending Backlog capabilities.
 - R01 is the only newly planned current phase. Do not prewrite its `PLAN.md` before native research and planning.
 - Do not add a migration script, validator, status mirror, graph, registry, or second workflow.
-- Run each independent review and each gate once. On failure, stop with the exact evidence; do not rerun or weaken the design without user approval.
-- Every Git write requires elevated permission. If a commit outlives the initial tool yield, wait on that same process instead of starting another commit.
+- Run each independent review once. On failure, stop with the exact evidence; do not rerun or weaken the design without user approval.
+- The user explicitly authorized `--no-verify` for intermediate planning-only checkpoint commits in Tasks 1-3. The final Task 4 cutover commit runs the normal full hook exactly once.
+- Every Git write requires elevated permission. If the final verified commit outlives the initial tool yield, wait on that same process instead of starting another commit.
 - Do not change product source or product behavior in this migration.
 
 ## File Structure
@@ -201,10 +202,10 @@ Stage only the four top-level planning artifacts and eight Phase 1-8 directories
 
 ```powershell
 git add -- .planning/PROJECT.md .planning/REQUIREMENTS.md .planning/ROADMAP.md .planning/STATE.md .planning/phases
-git commit -m "Stage completed legacy history for OpenGSD"
+git commit --no-verify -m "Stage completed legacy history for OpenGSD"
 ```
 
-Expected: the normal pre-commit hook passes; no `docs/v1` or product file is part of this commit.
+Expected: this user-authorized planning-only checkpoint skips the hook; no `docs/v1` or product file is part of this commit.
 
 ---
 
@@ -276,10 +277,10 @@ Expected: eight results with `status=passed` and none with `missing`, `stale`, `
 
 ```powershell
 git add -- .planning/phases
-git commit -m "Verify completed legacy OpenGSD history"
+git commit --no-verify -m "Verify completed legacy OpenGSD history"
 ```
 
-Expected: full pre-commit passes and the diff contains only the eight verification reports plus any reviewer-required evidence-link correction approved by the user.
+Expected: this user-authorized planning-only checkpoint skips the hook, and the diff contains only the eight verification reports plus any reviewer-required evidence-link correction approved by the user.
 
 ---
 
@@ -350,7 +351,7 @@ Do not include an active phase yet. This transition commit exists only to satisf
 
 ```powershell
 git add -A -- .planning
-git commit -m "Archive the completed legacy milestone"
+git commit --no-verify -m "Archive the completed legacy milestone"
 ```
 
 Expected: the archive exists in Git before staging requirements are removed.
@@ -359,7 +360,7 @@ Expected: the archive exists in Git before staging requirements are removed.
 
 ```powershell
 git rm .planning/REQUIREMENTS.md
-git commit -m "Close legacy milestone requirements"
+git commit --no-verify -m "Close legacy milestone requirements"
 ```
 
 Expected: `v1.0-REQUIREMENTS.md` remains committed and contains all 32 Complete IDs; only the top-level staging copy is removed.
@@ -451,7 +452,7 @@ git add -- .planning/PROJECT.md .planning/REQUIREMENTS.md .planning/ROADMAP.md .
 git commit -m "Open R01 with the legacy capability backlog"
 ```
 
-Expected: full pre-commit passes; `docs/v1/status.json` is not staged.
+Expected: the normal full pre-commit hook runs exactly once for the final cutover and passes; `docs/v1/status.json` is not staged.
 
 ---
 
@@ -511,7 +512,7 @@ git status --short
 git log -5 --oneline
 ```
 
-Expected: only unrelated user-owned changes, if any, remain. All migration commits already passed the normal hook, so do not rerun the full hook or E2E suite solely to repeat evidence.
+Expected: only unrelated user-owned changes, if any, remain. The final cutover commit already passed the normal full hook; intermediate planning-only checkpoints were explicitly exempted, so do not rerun the hook or E2E suite solely to repeat evidence.
 
 Return:
 
@@ -531,4 +532,4 @@ Do not begin Lumen/Ollama or R01 execution on `MIGRATION_BLOCKED`.
 - The archived Complete set and active Backlog form an exact, non-overlapping 64-capability union.
 - No Phase 3.1, status mirror, migration validator, graph, registry, or custom lifecycle is added.
 - No product source or behavior changes.
-- Every Git commit uses normal hooks and elevated Git permission without blind retry.
+- Intermediate planning-only checkpoints use the explicitly authorized `--no-verify`; the final cutover commit uses elevated Git permission and passes the normal full hook exactly once without blind retry.
