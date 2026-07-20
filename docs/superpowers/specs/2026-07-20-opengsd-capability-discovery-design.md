@@ -1,7 +1,7 @@
 # OpenGSD Capability Discovery and Reuse-First Governance Design
 
 **Date:** 2026-07-20  
-**Status:** Design approved in discussion; implementation not yet authorized by this document  
+**Status:** Approved architecture; migration implemented and review repair incorporated
 **Scope:** Project workflow, capability discovery, planning admission, and the R-01 pilot
 
 ## 1. Problem
@@ -86,14 +86,15 @@ Legacy migration separates historical evidence, completed delivery, product trut
 
 - The tracked `docs/v1/` tree becomes the frozen raw legacy archive. It retains the original 13 packs, 132 slice identities, old status data, plans, and evidence. The eight tracked lifecycle entrypoints receive a clear archive marker stating that they are historical sources, not current lifecycle authority. The local `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted and is absent from migration diff, index, staging, and commit scope. `.git/info/exclude` is not modified. The file's local bytes and local edit history are outside migration acceptance.
 - OpenGSD milestone history imports only the eight completed packs, 83 verified slices, and 32 evidence-backed Complete capabilities. Completed pack IDs, names, capability IDs, and evidence remain immutable historical facts. The five unfinished packs and 49 not-started slices are not imported as active or future OpenGSD phases.
-- The semantic capability baseline retains all 64 original capability IDs across the archived completed requirements and the current Backlog. Reachable behavior and evidence establish 32 as Complete; the other 32 remain explicitly Pending. Pack completion never upgrades a broader product capability without evidence.
-- The current OpenGSD roadmap contains only newly designed work. Immediately after migration, its sole planned phase is the isolated R-01 Level 2 refactoring-and-slimming pilot. Local Lumen/Ollama setup is R-01 discovery preflight, not a separate product phase.
+- The semantic capability baseline retains all 64 original capability IDs as an exact disjoint union: 32 evidence-backed Complete capabilities in the archived v1.0 requirements plus 32 Pending/unimplemented capabilities in dormant native OpenGSD seeds. Pack completion never upgrades a broader product capability without evidence.
+- After the v1.0 migration, the primary repository is semantically between milestones: `STATE.md` preserves milestone `v1.0` / `Legacy Delivered Baseline` with native `Awaiting next milestone` status, `Phase: Milestone v1.0 complete`, and `Plan: —`; its current roadmap has zero phases and zero plans, and it has no current `REQUIREMENTS.md`. The next real product milestone begins only through native `$gsd-new-milestone` after governance acceptance.
+- The R-01 Level 2 proof is governance evaluation, not primary-repository product lifecycle state. Its only execution contract is the pending isolated pilot plan, which uses an independent repository at historical base `eb1730205784a88c0a5b6177d9c31b515071b069`, defines native Phase 1 there, never advances primary-repository state, and never merges pilot code.
 
-The 32 Pending capabilities live in a compact `## Backlog` projection in the current `ROADMAP.md`. Each row preserves the stable capability ID, short user-visible contract, `Pending` status, and a link to its legacy source. Backlog rows are not phases and carry no inherited legacy pack/slice decomposition. OpenGSD's milestone-completion workflow preserves the Backlog section across roadmap rewrites, while the frozen archive retains the original planning context.
+The 32 Pending capabilities live only as `.planning/seeds/SEED-*.md` files using OpenGSD's native dormant-seed contract. Each seed preserves one legacy capability ID, feature key, required behavior, Pending/unimplemented truth, reachable legacy-source link, frozen-roadmap link, and behavior/category-specific trigger without selecting a milestone, phase, owner, implementation, API, helper, or dependency.
 
-The semantic audit's five corrected false completions remain in that Backlog: `sessions.event-timeline`, `sessions.segment-sessions`, `sessions.session-history-grouping`, `practice-session.event-timeline`, and `practice-session.segment-history`. They do not create Phase 3.1 and do not reopen completed Pack 3 history.
+The semantic audit's five corrected false completions remain dormant seeds: `sessions.event-timeline`, `sessions.segment-sessions`, `sessions.session-history-grouping`, `practice-session.event-timeline`, and `practice-session.segment-history`. They do not create Phase 3.1 and do not reopen completed Pack 3 history.
 
-Future planning selects coherent capabilities from the Backlog and derives new milestones and phases from their current behavior contracts. A capability leaves the Backlog only after verified completion or an explicit user decision to cancel it with a recorded reason. Unselected capabilities remain Pending. The legacy archive is evidence; the Backlog is the durable future-work queue; neither is a second lifecycle control plane.
+Future planning uses native `$gsd-new-milestone` questioning. The pinned workflow discovers `SEED-*.md`, surfaces seeds whose triggers match the user's milestone goals, feeds selected seed context into requirement definition, and leaves unselected seeds untouched. The legacy archive is evidence and native seeds are the sole deferred-capability carrier; neither creates a second lifecycle control plane.
 
 ### 4.2 Project policy and final review
 
@@ -294,9 +295,11 @@ The design is validated with one real R-01 end-to-end pilot, not a synthetic con
 
 - `docs/v1/` remains available, and its eight tracked lifecycle entrypoints are visibly marked as frozen, non-authoritative legacy sources; the local review tutorial remains ignored, untracked, and uncommitted and is absent from migration diff, index, staging, and commit scope; `.git/info/exclude` is not modified; its local bytes and local edit history are outside migration acceptance;
 - OpenGSD milestone history contains the eight completed packs and 83 verified slices, but no active phase derived from the five unfinished packs or 49 not-started slices;
-- the semantic baseline contains every original capability ID exactly once and reports 32 Complete / 32 Pending;
-- the current `ROADMAP.md` Backlog contains exactly those 32 Pending IDs, including the five corrected false completions, with no duplicate or missing ID and with reachable legacy-source links;
-- R-01 is the only newly planned current phase after migration; no Phase 3.1 or other inherited unfinished legacy phase exists.
+- the semantic baseline contains every original capability ID and feature key exactly once across 32 archived Complete requirements plus 32 dormant native seeds, with no intersection and with all five corrected false completions still Pending/unimplemented;
+- every seed has native dormant frontmatter, a reachable legacy-source link, a link to the frozen v1.0 roadmap, and a trigger usable by `$gsd-new-milestone`; selected seeds feed native requirement definition and unselected seeds remain untouched;
+- the primary repository is between milestones with zero current phases, zero current plans, no current `REQUIREMENTS.md`, and no current artifact mapping R-01 or a Pending capability to a phase;
+- the isolated historical-base pilot plan is the only R-01 execution contract and its code never merges;
+- the earlier pre-repair candidate passed one normal hook on a predecessor tree, but review required this repair; promotion requires one new normal full-hook pass on the exact repaired candidate, as an explicit review-driven validation rather than a blind retry.
 
 ### 11.2 Connection smoke
 

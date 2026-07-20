@@ -12,8 +12,8 @@ tech-stack:
   patterns: [native-opengsd-semantic-import]
 key-files:
   created:
-    - ".planning/phases/04-pack-4-practice-controls-upgrade/04-01-PLAN.md"
-    - ".planning/phases/04-pack-4-practice-controls-upgrade/04-01-SUMMARY.md"
+    - ".planning/milestones/v1.0-phases/04-pack-4-practice-controls-upgrade/04-01-PLAN.md"
+    - ".planning/milestones/v1.0-phases/04-pack-4-practice-controls-upgrade/04-01-SUMMARY.md"
   modified: []
 key-decisions:
   - "Represent the completed legacy pack as one native import plan."

@@ -1,6 +1,6 @@
 # Lumen and Historical R-01 OpenGSD Pilot Implementation Plan
 
-> **Execution contract:** Execute after the foundation commit exists and before opening the governance PR. The pilot is isolated and never merged into `main`. Each OpenGSD stage runs once; one affected-stage/CAP repair is allowed only after explicit user approval.
+> **Status — pending and authoritative:** This is the only R-01 execution contract. Execute it only after the repaired migration candidate passes its new exact-candidate full hook and receives governance approval. The pilot runs in an independent repository from historical base `eb1730205784a88c0a5b6177d9c31b515071b069`, defines R-01 as native Phase 1 only inside that repository, never advances or rewrites primary-repository lifecycle state, and never pushes or merges pilot code. Each OpenGSD stage runs once; one affected-stage/CAP repair is allowed only after explicit user approval.
 
 **Goal:** Prove the approved OpenGSD + single-policy architecture on the real pre-R-01 repository: local semantic recall works through pinned Ory Lumen, installed music/audio APIs and public OSS are researched, CAP decisions constrain the plan and diff, and the resulting refactor retires responsibility instead of moving it.
 
@@ -101,7 +101,7 @@ Any failed hash, missing model, unhealthy backend, or unavailable MCP is a provi
    - the old `C:\tmp\metronome-opengsd-r01-019f7372` pilot remains untouched;
    - the pilot branch has no remote push target and will not enter the governance PR.
 
-## Task 3: Seed one native R-01 phase and index the historical source
+## Task 3: Seed native Phase 1 for R-01 only in the independent pilot repository
 
 **Pilot files:** native `.planning/PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, and one R-01 phase `CONTEXT.md` generated inside the pilot branch.
 
@@ -197,6 +197,7 @@ The pilot fails if it merely moves complexity, adds more production code than it
 4. Only after explicit user approval may one affected CAP or stage be repaired and rerun once.
 5. A repeated cause returns to architecture discussion; there is no “minimal fallback.”
 6. Commit pilot artifacts and implementation only to the local pilot branch for audit. Never push or merge that branch into `main`.
+7. Do not copy pilot `ROADMAP.md`, `STATE.md`, `REQUIREMENTS.md`, phase artifacts, implementation commits, or progress back to the primary repository; primary lifecycle authority remains between milestones throughout the proof.
 7. Preserve the local branch as a verified Git bundle outside the project, record its SHA-256, and put only the compact pass/fail evidence plus immutable pilot commit/bundle hash in the governance PR body. Do not add a new repository status ledger.
 
 ## Acceptance criteria
@@ -204,9 +205,10 @@ The pilot fails if it merely moves complexity, adds more production code than it
 - Lumen 0.0.41 and the embedding model are healthy, local-only, and pinned.
 - The index is disposable and outside the repository.
 - The pilot starts from the exact historical R-01 base plus only the foundation commit.
+- R-01 is Phase 1 only in the independent pilot repository and never becomes a current phase in the primary repository.
 - All six OpenGSD roles receive one policy source.
 - Research covers local semantic duplicates, installed/transitive APIs, and official OSS/platform candidates.
 - CAP decisions constrain every plan task and production surface.
 - Execution and verification run once with no silent rerun.
 - The result demonstrates real responsibility/code retirement, preserved behavior, and non-declining Code Health.
-- Pilot code is not merged; only the governance implementation proceeds to PR after the pilot passes.
+- Pilot code is not pushed or merged; only governance conclusions may inform a later explicitly authorized repository change after the pilot passes.

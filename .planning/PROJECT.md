@@ -16,7 +16,11 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ### Active
 
-- R01 discovery-and-slimming pilot only. Native Level 2 research and planning must define its current work; no R01 `PLAN.md` is prewritten before that research.
+- None. The repository is between milestones, so a fresh `REQUIREMENTS.md` will be created only when the next real milestone is defined.
+
+### Deferred
+
+- 32 unimplemented capability contracts are preserved only as [native OpenGSD seeds](seeds/). Future milestones select relevant seeds through native `$gsd-new-milestone` questioning; unselected seeds remain dormant and unchanged.
 
 ### Out of Scope
 
@@ -25,19 +29,20 @@ Musicians can move from a score and practice target to a repeatable local practi
 - Automatic score following, correctness scoring, or claims of musical-performance accuracy — these require separately approved product and analysis contracts.
 - A custom lifecycle wrapper, shadow status ledger, capability database, committed migration validator, or project knowledge graph — native OpenGSD artifacts own lifecycle state.
 - Treating maintenance/refactor slices as user-facing product requirements — the 24 support/maintenance slices remain completed roadmap history only.
+- Treating the historical R01 governance proof as current primary-repository product work — its pending isolated contract lives in the [Lumen and historical R01 pilot plan](../docs/superpowers/plans/2026-07-20-lumen-r01-opengsd-pilot.md).
 
 ## Context
 
 - Frozen legacy product contracts: [`docs/v1`](../docs/v1/)
 - Imported capability-to-slice evidence: [`docs/v1/implementation-slices/product-feature-map.md`](../docs/v1/implementation-slices/product-feature-map.md)
 - Completed history: 8 completed packs / 83 verified slices.
-- Semantic capability truth: 32 Complete capabilities / 32 Pending capabilities.
-- Pending capabilities persist as the non-phase Backlog in [ROADMAP.md](ROADMAP.md); future milestones are redesigned from selected capabilities rather than inherited legacy packs.
+- Semantic capability truth: 32 archived Complete capabilities / 32 dormant unimplemented seeds.
+- The archived Complete set and dormant seed set form the exact disjoint 64-capability baseline preserved from frozen [`docs/v1/status.json`](../docs/v1/status.json).
 - The application is TypeScript/React/Next.js with browser-local persistence and explicit domain, service, and infrastructure boundaries.
 
 ## Constraints
 
-- **Lifecycle**: Start and continue project work through native OpenGSD (`$gsd-next` or the active phase) — prevents a second scheduler or state machine.
+- **Lifecycle**: Begin the next real product milestone through native `$gsd-new-milestone`; once active, continue through `$gsd-next` or that active phase. This prevents a second scheduler or state machine.
 - **Completion truth**: A product requirement is complete only when every mapped legacy slice is verified and reachable runtime plus automated or repeatable acceptance evidence is linked — prevents false promotion during import.
 - **Local first**: Existing browser-local storage and audio boundaries remain authoritative unless a future requirement explicitly changes them.
 - **Reuse first**: Agents must inspect existing project code, installed dependencies, and relevant external APIs before adding parallel implementations.
@@ -48,14 +53,14 @@ Musicians can move from a score and practice target to a repeatable local practi
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Archive completed legacy history only | Completion history must not convert unfinished proposals into current phases or plans | ✓ Good |
-| Persist 32 Pending capabilities as a non-phase Backlog projection | Stable capability identities remain visible without inheriting obsolete pack or slice decomposition | ✓ Good |
-| Keep R01 as the only current planning target | Current work must begin through native research and planning from the isolated discovery-and-slimming pilot | ✓ Good |
+| Preserve 32 deferred capabilities as native dormant seeds | Native `$gsd-new-milestone` discovers relevant seeds and leaves unselected seeds untouched without a parallel queue | ✓ Good |
+| Keep the primary repository between milestones | The historical R01 proof is governance evaluation, not a current product phase | ✓ Good |
 | Import each completed legacy pack as one native PLAN/SUMMARY pair | Preserves eight completed phases without pretending 83 historical slices were executed natively | ✓ Good |
 | Use native OpenGSD as the sole project lifecycle and roadmap control plane | Cross-session planning, execution, verification, and progress already exist in OpenGSD | ✓ Good |
 
 ## Evolution
 
-The shipped v1.0 archive retains the 32 validated capabilities. Current work begins with R01 discovery and planning; future product milestones are redesigned from capabilities selected from the [ROADMAP.md Backlog](ROADMAP.md#backlog), never by importing unfinished legacy packs.
+The shipped v1.0 archive retains the 32 validated capabilities. The remaining 32 capability identities live only in native dormant seeds. After governance acceptance, a future user decision starts `$gsd-new-milestone`; its questioning may select relevant seeds and define fresh requirements and phase boundaries without importing unfinished legacy packs.
 
 ---
-*Last updated: 2026-07-20 for the v1.1 R01 cutover*
+*Last updated: 2026-07-20 for the repaired between-milestones state*

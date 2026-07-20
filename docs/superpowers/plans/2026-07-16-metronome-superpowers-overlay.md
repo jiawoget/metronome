@@ -396,6 +396,8 @@ new isolated missing-file harness merely for the overlay skill.
 
 ## Post-Merge R-01 Trial
 
+> **Historical and superseded — do not execute this section.** The sole authoritative R-01 execution contract is the [Lumen and Historical R-01 OpenGSD Pilot Implementation Plan](2026-07-20-lumen-r01-opengsd-pilot.md).
+
 The trial begins only after the workflow PR is merged and local clean `main`
 matches freshly fetched `origin/main`. The workflow PR does not modify the
 historical R-01 path already on `main`; the newly generated complete trial plan

@@ -1,6 +1,6 @@
-# OpenGSD Governance Foundation Implementation Plan
+# OpenGSD Governance Foundation Implementation Plan (Executed Historical Record)
 
-> **Execution contract:** Implement this plan before the roadmap migration or R-01 pilot. Use `superpowers:executing-plans`, `superpowers:test-driven-development` for behavioral changes, and `superpowers:verification-before-completion`. Editing `skills/metronome-policy/SKILL.md` also requires `superpowers:writing-skills`.
+> **Status:** Executed and retained only as historical implementation evidence. Do not execute these tasks again. The primary repository is now between milestones; the pending historical R-01 pilot has its own isolated execution contract.
 
 **Goal:** Make OpenGSD 1.7.0 the only project lifecycle control plane, inject one stateless Metronome capability-discovery policy through native `agent_skills`, and retire the legacy Metronome orchestrator and semantic PR validator without weakening the existing Semgrep, XO, lint, typecheck, unit, or build gates.
 
@@ -41,7 +41,6 @@ Delete:
 Do not modify:
 
 - `.semgrep/**`
-- `.xo-suppressions.json`
 - `scripts/run-metronome-semgrep-changed.mjs`
 - `scripts/run-metronome-semgrep-changed.selftest.mjs`
 - `scripts/run-xo-changed.mjs`
@@ -49,7 +48,11 @@ Do not modify:
 - product code or tests under `src/**` and `tests/**`
 - `docs/v1/status.json` in this plan
 
-Historical plans/specs may retain old terminology because they are not live entrypoints.
+Narrow executed scope adjustment:
+
+- `.xo-suppressions.json` was modified only to remove stale suppression entries belonging to the retired validators. No new suppression or unrelated XO policy change was introduced.
+
+The task descriptions below record the executed foundation work and are not live lifecycle entrypoints.
 
 ## Task 1: Establish the clean runtime baseline
 

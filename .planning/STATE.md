@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: R01 Sheet Re-record Source Validation Slimming Pilot
-status: planning
+milestone: v1.0
+milestone_name: Legacy Delivered Baseline
+status: Awaiting next milestone
 last_updated: "2026-07-20"
 last_activity: 2026-07-20
-last_activity_desc: Opened the R01-only v1.1 milestone
+last_activity_desc: v1.0 milestone completed and archived
 progress:
-  total_phases: 1
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 8
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -21,48 +21,48 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-20)
 
 **Core value:** Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
-**Current focus:** Phase 9 — R01 Sheet Re-record Source Validation Slimming Pilot
+**Current focus:** Awaiting next milestone
 
 ## Current Position
 
-Phase: 9 of 9 (R01 Sheet Re-record Source Validation Slimming Pilot)
-Plan: 0 of 0
-Status: Planning
-Last activity: 2026-07-20 — Opened the R01-only v1.1 milestone
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-20 — Milestone v1.0 completed and archived
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100% of archived v1.0 history (8 phases, 8 plans)
 
-## Next Action
+## Operator Next Steps
 
-Confirm Lumen/Ollama readiness, then begin native R01 Level 2 research through `$gsd-next`. Do not create a Phase 9 plan or implementation surface before research resolves the capability-admission evidence.
+- Start the next milestone with `$gsd-new-milestone` after governance acceptance. Native milestone questioning surfaces matching dormant seeds; it leaves unselected seeds untouched.
 
 ## Accumulated Context
 
 ### Decisions
 
-- OpenGSD is the sole lifecycle control plane; current routing starts with `$gsd-next` or the already-active phase.
-- R01 is the only current phase and begins with native Level 2 research.
-- The shipped v1.0 baseline remains archived under `.planning/milestones/`.
-- All 32 Pending product capabilities remain unchanged in the non-phase ROADMAP Backlog.
+- OpenGSD is the sole lifecycle control plane.
+- The shipped v1.0 baseline remains archived under `.planning/milestones/` with 8 completed phases and 8 completed plans.
+- The 32 unimplemented product capabilities are dormant native seeds under `.planning/seeds/`, not current requirements, phases, plans, or a ROADMAP Backlog.
+- The historical R01 proof remains an isolated governance evaluation on its historical base; it never advances this repository's lifecycle state and its pilot code never merges.
 - Unfinished legacy packs and their slice decomposition remain frozen historical proposals, not current work.
 
 ### Pending Todos
 
-- Complete the Lumen/Ollama readiness preflight.
-- Run native R01 Level 2 research before planning.
+- Obtain governance acceptance for this repaired migration candidate.
+- When the user chooses the next product milestone, run `$gsd-new-milestone` and consider relevant dormant seeds through native questioning.
 
 ### Blockers/Concerns
 
-- R01 research remains fail-closed if required local semantic or authoritative external evidence is unavailable.
+- No product-lifecycle blocker is active. The repository intentionally remains between milestones pending governance acceptance and a future user-selected milestone.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Product | 32 Pending capabilities in the non-phase ROADMAP Backlog | Pending | v1.1 R01 cutover |
+| Product | 32 native capability seeds in `.planning/seeds/` | Dormant | v1.0 completion transition |
 
 ## Session Continuity
 
 Last session: 2026-07-20
-Stopped at: R01-only v1.1 milestone opened for preflight and native research
+Stopped at: v1.0 complete; awaiting governance acceptance and the next milestone decision
 Resume file: None

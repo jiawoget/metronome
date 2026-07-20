@@ -12,8 +12,8 @@ tech-stack:
   patterns: [native-opengsd-semantic-import]
 key-files:
   created:
-    - ".planning/phases/08-pack-f-audio-music-library-alignment/08-01-PLAN.md"
-    - ".planning/phases/08-pack-f-audio-music-library-alignment/08-01-SUMMARY.md"
+    - ".planning/milestones/v1.0-phases/08-pack-f-audio-music-library-alignment/08-01-PLAN.md"
+    - ".planning/milestones/v1.0-phases/08-pack-f-audio-music-library-alignment/08-01-SUMMARY.md"
   modified: []
 key-decisions:
   - "Represent the completed legacy pack as one native import plan."

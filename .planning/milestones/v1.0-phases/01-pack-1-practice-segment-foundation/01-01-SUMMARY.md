@@ -12,8 +12,8 @@ tech-stack:
   patterns: [native-opengsd-semantic-import]
 key-files:
   created:
-    - ".planning/phases/01-pack-1-practice-segment-foundation/01-01-PLAN.md"
-    - ".planning/phases/01-pack-1-practice-segment-foundation/01-01-SUMMARY.md"
+    - ".planning/milestones/v1.0-phases/01-pack-1-practice-segment-foundation/01-01-PLAN.md"
+    - ".planning/milestones/v1.0-phases/01-pack-1-practice-segment-foundation/01-01-SUMMARY.md"
   modified: []
 key-decisions:
   - "Represent the completed legacy pack as one native import plan."

@@ -67,7 +67,9 @@ None — identity, count, and empty-requirement invariants are explicit and repe
 **Human checks required:** 0
 
 **Import effect:** No product code was executed or changed by semantic import.
-**Independent evidence:** `C:\tmp\metronome-opengsd-legacy-completion-review.md` ends `LEGACY_IMPORT_APPROVED`.
+**Independent evidence:** The [durable semantic import audit](../../v1.0-SEMANTIC-IMPORT-AUDIT.md) ends `LEGACY_IMPORT_APPROVED`.
+
+**Archive maintenance:** Only archived path provenance and evidence portability changed; semantic truth was rechecked and all original counts remained intact.
 
 ---
 *Verified: 2026-07-20T04:33:59Z*
