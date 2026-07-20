@@ -1,8 +1,35 @@
 # Roadmap: Metronome
 
-## Shipped Milestones
+## Milestones
 
 - [x] **v1.0 Legacy Delivered Baseline** — Shipped 2026-07-20. See the [archived v1.0 roadmap](milestones/v1.0-ROADMAP.md).
+- [ ] **v1.1 R01 Sheet Re-record Source Validation Slimming Pilot** — Planning.
+
+## Overview
+
+Milestone v1.1 validates the approved reuse-first governance design through one isolated R01 Level 2 pilot. It does not import unfinished legacy product packs or create plans before native research.
+
+## Phases
+
+- [ ] **Phase 9: R01 Sheet Re-record Source Validation Slimming Pilot** - Preserve sheet re-recording behavior while validating approved source reuse and measurable responsibility retirement.
+
+## Phase Details
+
+### Phase 9: R01 Sheet Re-record Source Validation Slimming Pilot
+
+**Goal**: Preserve observable sheet re-recording behavior while native Level 2 research determines whether approved reuse can retire redundant production responsibility.
+**Depends on**: Shipped [v1.0 Legacy Delivered Baseline](milestones/v1.0-ROADMAP.md)
+**Requirements**: [R01-01, R01-02, R01-03, R01-04]
+**Success Criteria** (what must be TRUE):
+
+  1. The sheet re-recording workflow retains its existing observable behavior and automated acceptance evidence throughout the refactor.
+  2. Level 2 research resolves each required behavior against local code, installed dependencies, and authoritative platform/OSS evidence before implementation planning.
+  3. Any implementation introduces only an explicitly approved surface and retires redundant production responsibility rather than relocating it.
+  4. Verification reports preserved behavior, retired production LOC, added and net production LOC, Code Health, and remaining complexity separately.
+
+**Plans**: 0 plans
+
+The next action is Lumen/Ollama readiness preflight followed by native R01 Level 2 research. No Phase 9 directory or `PLAN.md` exists before that work.
 
 ## Backlog
 
@@ -43,6 +70,8 @@ These 32 Pending capability contracts are a durable, non-phase projection. They 
 | REQ-063 | `analysis.onset-detection-infrastructure` | The analysis layer provides fixture-backed onset-detection infrastructure with explicit limits. | Pending | [`docs/v1/09-audio-analysis.md`](../docs/v1/09-audio-analysis.md) |
 | REQ-064 | `analysis.reference-recording-support` | The analysis boundary accepts supported local reference-recording inputs. | Pending | [`docs/v1/09-audio-analysis.md`](../docs/v1/09-audio-analysis.md) |
 
-## Transition State
+## Progress
 
-No active phase is defined in this archive safety-commit transition view.
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 9. R01 Sheet Re-record Source Validation Slimming Pilot | v1.1 | 0/0 | Not started | - |

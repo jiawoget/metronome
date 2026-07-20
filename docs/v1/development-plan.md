@@ -1,4 +1,6 @@
-﻿# v1 Development Plan
+﻿> Frozen legacy v1 record. Preserve for historical product, pack, slice, and evidence context. Do not use this document or `status.json` as current lifecycle authority. Current project state is under `.planning/` and routing starts with `$gsd-next`.
+
+# v1 Development Plan
 
 For day-to-day scheduling, start with docs/v1/START-HERE.md. This file is the detailed planning reference.
 

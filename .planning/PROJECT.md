@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Metronome is a local-first web application for musicians to run metronome practice, import and view sheet music, define measure grids and practice segments, record and review takes, and inspect local practice history. The existing browser application keeps user artifacts and metadata on the device; product contracts live under [`docs/v1`](../docs/v1/), while OpenGSD is the sole lifecycle and roadmap control plane.
+Metronome is a local-first web application for musicians to run metronome practice, import and view sheet music, define measure grids and practice segments, record and review takes, and inspect local practice history. The existing browser application keeps user artifacts and metadata on the device; frozen legacy product contracts remain under [`docs/v1`](../docs/v1/) as historical evidence, while OpenGSD is the sole lifecycle and roadmap control plane.
 
 ## Core Value
 
@@ -12,11 +12,11 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ### Validated
 
-- ✓ 32 evidence-backed product capabilities are retained in the v1.0 completed requirements archive that milestone completion will create at [`milestones/v1.0-REQUIREMENTS.md`](milestones/v1.0-REQUIREMENTS.md).
+- ✓ 32 evidence-backed product capabilities are retained in the shipped [`v1.0 requirements archive`](milestones/v1.0-REQUIREMENTS.md).
 
 ### Active
 
-- R01 discovery-and-slimming pilot only. Native research and planning must define its current work; no R01 `PLAN.md` is prewritten by this staging milestone.
+- R01 discovery-and-slimming pilot only. Native Level 2 research and planning must define its current work; no R01 `PLAN.md` is prewritten before that research.
 
 ### Out of Scope
 
@@ -28,11 +28,11 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ## Context
 
-- Product contracts: [`docs/v1`](../docs/v1/)
+- Frozen legacy product contracts: [`docs/v1`](../docs/v1/)
 - Imported capability-to-slice evidence: [`docs/v1/implementation-slices/product-feature-map.md`](../docs/v1/implementation-slices/product-feature-map.md)
 - Completed history: 8 completed packs / 83 verified slices.
 - Semantic capability truth: 32 Complete capabilities / 32 Pending capabilities.
-- Pending capabilities persist as the non-phase Backlog in [ROADMAP.md](ROADMAP.md).
+- Pending capabilities persist as the non-phase Backlog in [ROADMAP.md](ROADMAP.md); future milestones are redesigned from selected capabilities rather than inherited legacy packs.
 - The application is TypeScript/React/Next.js with browser-local persistence and explicit domain, service, and infrastructure boundaries.
 
 ## Constraints
@@ -55,7 +55,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ## Evolution
 
-After staging v1.0 completed history, native milestone completion archives the 32 validated requirements. Subsequent work begins with R01 discovery and planning; Pending Backlog capabilities become phases only through future current-design decisions.
+The shipped v1.0 archive retains the 32 validated capabilities. Current work begins with R01 discovery and planning; future product milestones are redesigned from capabilities selected from the [ROADMAP.md Backlog](ROADMAP.md#backlog), never by importing unfinished legacy packs.
 
 ---
-*Last updated: 2026-07-20 for completed-only v1.0 staging*
+*Last updated: 2026-07-20 for the v1.1 R01 cutover*

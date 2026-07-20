@@ -1,3 +1,5 @@
+> Frozen legacy v1 record. Preserve for historical product, pack, slice, and evidence context. Do not use this document or `status.json` as current lifecycle authority. Current project state is under `.planning/` and routing starts with `$gsd-next`.
+
 # v1 Start Here
 
 ## Purpose

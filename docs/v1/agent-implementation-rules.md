@@ -1,4 +1,6 @@
-﻿# v1 Agent Implementation Rules
+﻿> Frozen legacy v1 record. Preserve for historical product, pack, slice, and evidence context. Do not use this document or `status.json` as current lifecycle authority. Current project state is under `.planning/` and routing starts with `$gsd-next`.
+
+# v1 Agent Implementation Rules
 
 Start with `docs/v1/START-HERE.md` for day-to-day scheduling. This file is the detailed rules reference.
 

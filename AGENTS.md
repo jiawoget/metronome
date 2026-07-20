@@ -3,7 +3,12 @@
 ## Repository workflow
 - Native OpenGSD is the sole project lifecycle entrypoint.
 - Start project work with `$gsd-next`, or continue the already-active GSD phase.
-- OpenGSD loads the project policy through `.planning/config.json`; do not load the policy manually.
+- OpenGSD loads the project policy through `.planning/config.json`; lifecycle agents do not load it manually.
+
+## Final PR review
+- Final pull-request review is performed by `@codex`.
+- Before reviewing, read and use `skills/reviewing-metronome-prs/SKILL.md`.
+- This is a read-only terminal gate and does not replace the native OpenGSD lifecycle.
 
 ## Git hooks
 - This repo uses a local `pre-commit` hook for gate checks.

@@ -24,7 +24,7 @@ The replacement must improve discovery and decision quality without building ano
 2. Search local code by behavior, not only names and directory structure.
 3. Inspect installed, transitive, platform, and public OSS capabilities before permitting new generic logic.
 4. Keep research decisions traceable into plans and implementation diffs.
-5. Keep all project-specific policy in one small, stateless skill.
+5. Keep lifecycle policy in one small, stateless skill and final PR review in one thin, read-only skill indexed by `AGENTS.md`.
 6. Keep indexes and search caches disposable and outside project state.
 7. Validate the design with one real R-01 end-to-end pilot rather than a synthetic validator suite.
 8. Preserve completed legacy delivery and every still-unimplemented capability without inheriting the unfinished legacy plan decomposition.
@@ -62,11 +62,12 @@ flowchart LR
     H --> P["GSD planner"]
     P --> K["GSD plan checker"]
     K --> X["GSD executor"]
-    X --> V["GSD verifier and independent review"]
+    X --> V["GSD verifier"]
+    V --> Q["@codex final PR review"]
 
     K -->|"unapproved surface"| B
     X -->|"new capability required"| B
-    V -->|"traceability or behavior failure"| B
+    Q -->|"traceability or behavior failure"| B
 ```
 
 ### 4.1 Control plane
@@ -83,7 +84,7 @@ The Metronome policy does not duplicate those responsibilities.
 
 Legacy migration separates historical evidence, completed delivery, product truth, and future planning instead of forcing them into one roadmap:
 
-- `docs/v1/` becomes the frozen raw legacy archive. It retains the original 13 packs, 132 slice identities, old status data, plans, and evidence. A clear archive marker states that these files are historical sources, not current lifecycle authority.
+- The tracked `docs/v1/` tree becomes the frozen raw legacy archive. It retains the original 13 packs, 132 slice identities, old status data, plans, and evidence. The eight tracked lifecycle entrypoints receive a clear archive marker stating that they are historical sources, not current lifecycle authority. The local `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted and is absent from migration diff, index, staging, and commit scope. `.git/info/exclude` is not modified. The file's local bytes and local edit history are outside migration acceptance.
 - OpenGSD milestone history imports only the eight completed packs, 83 verified slices, and 32 evidence-backed Complete capabilities. Completed pack IDs, names, capability IDs, and evidence remain immutable historical facts. The five unfinished packs and 49 not-started slices are not imported as active or future OpenGSD phases.
 - The semantic capability baseline retains all 64 original capability IDs across the archived completed requirements and the current Backlog. Reachable behavior and evidence establish 32 as Complete; the other 32 remain explicitly Pending. Pack completion never upgrades a broader product capability without evidence.
 - The current OpenGSD roadmap contains only newly designed work. Immediately after migration, its sole planned phase is the isolated R-01 Level 2 refactoring-and-slimming pilot. Local Lumen/Ollama setup is R-01 discovery preflight, not a separate product phase.
@@ -94,7 +95,7 @@ The semantic audit's five corrected false completions remain in that Backlog: `s
 
 Future planning selects coherent capabilities from the Backlog and derives new milestones and phases from their current behavior contracts. A capability leaves the Backlog only after verified completion or an explicit user decision to cancel it with a recorded reason. Unselected capabilities remain Pending. The legacy archive is evidence; the Backlog is the durable future-work queue; neither is a second lifecycle control plane.
 
-### 4.2 Project policy
+### 4.2 Project policy and final review
 
 One project skill, `skills/metronome-policy/SKILL.md`, is explicitly injected through OpenGSD `agent_skills`. It is kept outside `.agents/skills` and `.codex/skills` so automatic skill discovery does not load it multiple times.
 
@@ -108,6 +109,10 @@ The same policy is mapped to:
 - `gsd-verifier`
 
 The target is approximately 80 lines. It contains role-specific obligations, not lifecycle orchestration, model routing, stage names, promotion vocabulary, or duplicated test commands.
+
+Final pull-request review uses a separate thin skill at `skills/reviewing-metronome-prs/SKILL.md`, with generated UI metadata in `agents/openai.yaml`. Root `AGENTS.md` is only a minimal index directing `@codex` to that skill. The reviewer discovers the current `.planning` authority, conditionally loads `skills/metronome-policy/SKILL.md` for production behavior or surface changes, reconciles the real diff to Capability Admission, Approved Surface, plans, tests, and verification, and reports findings without editing or merging.
+
+The review skill is not injected into OpenGSD agents and does not orchestrate lifecycle state. The lifecycle policy governs native roles; the final-review skill governs one read-only terminal audit.
 
 The current `.agents/skills/metronome-workflow/SKILL.md` and role packets cannot coexist as a second orchestrator. Their required semantics must either move into native OpenGSD configuration/artifacts or retire. They must not be wrapped by the new policy.
 
@@ -250,7 +255,7 @@ Allowed decisions:
 
 OpenGSD executor deviation rules may correct implementation mistakes only inside the approved CAP boundary. A new dependency, shared surface, business algorithm, owner move, or API replacement stops execution and returns only the affected CAP to research.
 
-The independent reviewer reads source, `RESEARCH.md`, `PLAN.md`, the real diff, and verification evidence. It is not another policy-injected lifecycle agent and does not edit artifacts.
+The independent final reviewer is `@codex` using `skills/reviewing-metronome-prs/SKILL.md`. It discovers current planning inputs, reads source, `RESEARCH.md`, `PLAN.md`, the real diff, tests, and verification evidence, and conditionally reads the lifecycle policy for production behavior or surface changes. It is not another policy-injected lifecycle agent and does not edit artifacts or merge the pull request.
 
 ## 9. Data flow and recovery
 
@@ -287,7 +292,7 @@ The design is validated with one real R-01 end-to-end pilot, not a synthetic con
 
 ### 11.1 Migration acceptance
 
-- `docs/v1/` remains available and is visibly marked as a frozen, non-authoritative legacy source;
+- `docs/v1/` remains available, and its eight tracked lifecycle entrypoints are visibly marked as frozen, non-authoritative legacy sources; the local review tutorial remains ignored, untracked, and uncommitted and is absent from migration diff, index, staging, and commit scope; `.git/info/exclude` is not modified; its local bytes and local edit history are outside migration acceptance;
 - OpenGSD milestone history contains the eight completed packs and 83 verified slices, but no active phase derived from the five unfinished packs or 49 not-started slices;
 - the semantic baseline contains every original capability ID exactly once and reports 32 Complete / 32 Pending;
 - the current `ROADMAP.md` Backlog contains exactly those 32 Pending IDs, including the five corrected false completions, with no duplicate or missing ID and with reachable legacy-source links;
@@ -298,6 +303,8 @@ The design is validated with one real R-01 end-to-end pilot, not a synthetic con
 - the project loads one policy source;
 - all six OpenGSD agent mappings resolve to it;
 - the legacy orchestrator is not auto-loaded;
+- root `AGENTS.md` indexes the thin final-review skill without adding lifecycle routing;
+- the final-review skill and generated `agents/openai.yaml` validate, and the skill is not injected into OpenGSD roles;
 - Lumen health and local index status are valid.
 
 ### 11.3 Research acceptance
@@ -320,7 +327,7 @@ The design is validated with one real R-01 end-to-end pilot, not a synthetic con
 
 ### 11.5 Independent acceptance
 
-The reviewer evaluates actual source, exact APIs, research, plan, diff, tests, and quality evidence. Formatting or the presence of expected words is not proof.
+The `@codex` final reviewer discovers and evaluates current `.planning` authority, actual source, exact APIs, research Capability Admission and Approved Surface, plan, diff, tests, and quality evidence. It independently checks reuse decisions, reports retired/added/net production LOC and Code Health separately, and emits findings first with file/line and violated-contract evidence. Formatting or the presence of expected words is not proof.
 
 ### 11.6 Retry limit
 
@@ -334,7 +341,7 @@ R-01 is a real engineering acceptance. If it again fails to retire code, misses 
 
 ## 12. Generality and limitations
 
-The policy remains general by using capability semantics, source kinds, approved surfaces, and traceability rather than R-01 paths, function names, expected helper counts, or expected diffs. R-01 validates the full Level 2 path. The first naturally occurring Level 0 and Level 1 tasks validate their cheaper paths; no artificial task corpus is maintained.
+The policy and final-review skill remain general by using capability semantics, source kinds, approved surfaces, and traceability rather than R-01 paths, function names, expected helper counts, or expected diffs. R-01 validates the full Level 2 path. The first naturally occurring Level 0 and Level 1 tasks validate their cheaper paths; no artificial task corpus is maintained.
 
 This design is a governance boundary, not a tamper-proof gate:
 

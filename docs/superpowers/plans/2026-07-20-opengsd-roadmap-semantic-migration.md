@@ -4,7 +4,7 @@
 
 **Goal:** Migrate only completed legacy delivery into native OpenGSD history, preserve every unfinished capability in a durable Backlog, freeze `docs/v1/` as the legacy record, and make R01 the only current phase.
 
-**Architecture:** Build a truthful eight-phase legacy staging milestone, verify it, and archive it through OpenGSD's native milestone command. The current milestone then contains only R01; the 32 unfinished capability IDs remain non-phase Backlog rows linked to the frozen legacy source.
+**Architecture:** Build a truthful eight-phase legacy staging milestone, verify it, and archive it through OpenGSD's native milestone command. The current milestone then contains only R01; the 32 unfinished capability IDs remain non-phase Backlog rows linked to the frozen legacy source. Final pull-request review is a separate read-only `@codex` gate implemented by one thin repository skill indexed from `AGENTS.md`, not another lifecycle.
 
 **Tech Stack:** OpenGSD 1.7.0, Markdown/JSON planning artifacts, Windows PowerShell, repository-local Node.js 24.17.0, Git hooks.
 
@@ -14,6 +14,7 @@
 - Legacy truth is fixed at 15 modules, 64 capabilities, 13 packs, and 132 slices: 8 completed packs / 83 verified slices and 5 unfinished packs / 49 not-started slices.
 - Semantic product truth is exactly 32 Complete / 32 Pending. The old mechanical 37/27 inference is historical only.
 - `docs/v1/status.json` remains byte-identical as frozen legacy evidence. It is not deleted or used as current lifecycle authority.
+- The local `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted and must be absent from migration diff, index, staging, and commit scope. Do not modify `.git/info/exclude`. The file's local bytes and local edit history are outside migration acceptance.
 - The five unfinished packs and 49 not-started slices never become current OpenGSD phases or plans.
 - No Phase 3.1 is created. The five corrected false completions remain Pending Backlog capabilities.
 - R01 is the only newly planned current phase. Do not prewrite its `PLAN.md` before native research and planning.
@@ -22,6 +23,7 @@
 - The user explicitly authorized `--no-verify` for intermediate planning-only checkpoint commits in Tasks 1-3. The final Task 4 cutover commit runs the normal full hook exactly once.
 - Every Git write requires elevated permission. If the final verified commit outlives the initial tool yield, wait on that same process instead of starting another commit.
 - Do not change product source or product behavior in this migration.
+- Final pull-request review is performed read-only by `@codex` through `skills/reviewing-metronome-prs/SKILL.md`; it does not replace or orchestrate native OpenGSD.
 
 ## File Structure
 
@@ -40,11 +42,10 @@ Create through native milestone archival:
 - `.planning/milestones/v1.0-REQUIREMENTS.md`
 - `.planning/milestones/v1.0-phases/` — the eight archived completed phase directories.
 
-Modify only to mark the legacy lifecycle as frozen while retaining its content:
+Modify only to mark the eight tracked legacy lifecycle entrypoints as frozen while retaining their content:
 
 - `docs/v1/START-HERE.md`
 - `docs/v1/agent-implementation-rules.md`
-- `docs/v1/code-review-workflow.md`
 - `docs/v1/scheduler-handoff.md`
 - `docs/v1/development-plan.md`
 - `docs/v1/feature-inventory.md`
@@ -52,10 +53,25 @@ Modify only to mark the legacy lifecycle as frozen while retaining its content:
 - `docs/v1/implementation-slices/README.md`
 - `docs/v1/implementation-slices/product-feature-map.md`
 
-Keep unchanged:
+Create the thin final-review interface:
+
+- `skills/reviewing-metronome-prs/SKILL.md` — concise read-only final PR-review contract.
+- `skills/reviewing-metronome-prs/agents/openai.yaml` — generated skill interface metadata.
+
+Modify the thin index and decision records:
+
+- `AGENTS.md` — index `@codex` final PR review to the repository skill without changing native lifecycle routing.
+- `docs/superpowers/specs/2026-07-20-opengsd-capability-discovery-design.md` — record the final-review architecture and ignored-file correction.
+- `docs/superpowers/plans/2026-07-20-opengsd-roadmap-semantic-migration.md` — keep Task 4 and Task 5 consistent with the user decision.
+
+Keep repository-controlled inputs unchanged:
 
 - `docs/v1/status.json` and all legacy product contracts, pack specifications, slice plans, and historical evidence.
-- `.planning/config.json`, `AGENTS.md`, and `skills/metronome-policy/SKILL.md` from the completed governance foundation.
+- `.planning/config.json` and `skills/metronome-policy/SKILL.md` from the completed governance foundation.
+
+Local-only exclusion:
+
+- `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted and is absent from migration diff, index, staging, and commit scope. `.git/info/exclude` is not modified. The file's local bytes and local edit history are outside migration acceptance.
 
 ---
 
@@ -379,13 +395,18 @@ Expected: `v1.0-REQUIREMENTS.md` remains committed and contains all 32 Complete 
 - Create: `.planning/REQUIREMENTS.md`
 - Modify: `.planning/ROADMAP.md`
 - Modify: `.planning/STATE.md`
-- Modify with archive markers: the nine `docs/v1` lifecycle files listed in File Structure
+- Modify with archive markers: the eight tracked `docs/v1` lifecycle files listed in File Structure
+- Modify: `AGENTS.md`
+- Create: `skills/reviewing-metronome-prs/SKILL.md`
+- Create: `skills/reviewing-metronome-prs/agents/openai.yaml`
+- Modify: the approved design and this migration plan
+- Exclude from repository scope: `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted and is absent from diff, index, staging, and commit; `.git/info/exclude` is not modified; the ignored file's local bytes and local edit history are outside migration acceptance
 - Keep byte-identical: `docs/v1/status.json`
 
 **Interfaces:**
 
 - Consumes: archived v1.0 history, the exact 32-row Backlog, and the approved R01 governance design.
-- Produces: current milestone v1.1 with one unplanned Phase 9 for R01 and an explicit frozen legacy archive.
+- Produces: current milestone v1.1 with one unplanned Phase 9 for R01, an explicit frozen legacy archive, and a thin read-only `@codex` final-review interface.
 
 - [ ] **Step 1: Create current R01 requirements**
 
@@ -427,15 +448,43 @@ Set `STATE.md` to:
 
 Link 32 validated capabilities to `.planning/milestones/v1.0-REQUIREMENTS.md`. Keep only R01 under `Requirements / Active`. Point future product work to the `ROADMAP.md` Backlog and state that future milestones are redesigned from selected capabilities rather than legacy packs.
 
-- [ ] **Step 5: Mark `docs/v1/` as a frozen archive without deleting its contents**
+- [ ] **Step 5: Mark the tracked `docs/v1/` lifecycle entrypoints as a frozen archive without deleting their contents**
 
-Prepend a consistent warning to the nine lifecycle files:
+Prepend a consistent warning to the eight tracked lifecycle files listed in File Structure:
 
 > Frozen legacy v1 record. Preserve for historical product, pack, slice, and evidence context. Do not use this document or `status.json` as current lifecycle authority. Current project state is under `.planning/` and routing starts with `$gsd-next`.
 
 Retain the original body below the warning. In `05f-practice-segments.md`, label the four `contract_ready` predicates as historical legacy readiness records and point current readiness to OpenGSD; do not change the product behavior contracts.
 
-- [ ] **Step 6: Verify current native routing and archive immutability**
+The local `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted and must be absent from migration diff, index, staging, and commit scope. `.git/info/exclude` is not modified. The file's local bytes and local edit history are outside migration acceptance.
+
+- [ ] **Step 6: Add the thin final `@codex` PR-review interface**
+
+Initialize `skills/reviewing-metronome-prs/` with the repository-approved skill-creator script and retain its generated `agents/openai.yaml`. Use these exact interface values:
+
+- `display_name=Reviewing Metronome PRs`
+- `short_description=Traceable final PR review for Metronome`
+- `default_prompt=Use $reviewing-metronome-prs to perform the final read-only review of this Metronome pull request.`
+
+Replace the template with a concise, general, read-only skill that:
+
+- discovers current `.planning` inputs and treats `docs/v1/status.json` only as frozen evidence;
+- conditionally reads `skills/metronome-policy/SKILL.md` for production behavior or surface changes;
+- reconciles every production surface to Capability Admission, Approved Surface, PLAN, the real diff, tests, and verification;
+- independently checks local, installed, dependency, platform, and OSS reuse decisions;
+- reports retired, added, and net production LOC plus Code Health and remaining complexity separately;
+- emits findings first with severity, file/line, violated contract, and impact, followed by open questions, scope, reuse, and verification summaries;
+- never edits files, repairs artifacts, merges the pull request, or orchestrates lifecycle state.
+
+Add only a minimal `AGENTS.md` index: final PR review is performed by `@codex`, the reviewer reads the new skill first, and the gate remains read-only and separate from native OpenGSD.
+
+- [ ] **Step 7: Record and validate the scope correction**
+
+Update the approved design and this plan to record the thin-index architecture, eight tracked archive markers, and exclusion of the ignored local tutorial. Mechanically regenerate `.superpowers/sdd/task-4-brief.md` from this updated Task 4 contract.
+
+Run the skill creator's `quick_validate.py` against `skills/reviewing-metronome-prs/` and focused structural checks for the exact interface values, trigger-only description, word limit, read-only boundary, authority discovery, CAP/Approved Surface traceability, reuse evidence, LOC/Code Health separation, and findings-first output. Forward testing is a separate fresh-agent gate.
+
+- [ ] **Step 8: Verify current native routing and archive immutability**
 
 Run:
 
@@ -449,14 +498,14 @@ Get-FileHash -Algorithm SHA256 -LiteralPath 'docs/v1/status.json'
 
 Expected roadmap fields: `phase_count=1`, `completed_phases=0`, `total_plans=0`, and `next_phase=9`. The status hash must equal Task 1.
 
-- [ ] **Step 7: Commit current R01 cutover**
+- [ ] **Step 9: Commit current R01 cutover**
 
 ```powershell
-git add -- .planning/PROJECT.md .planning/REQUIREMENTS.md .planning/ROADMAP.md .planning/STATE.md docs/v1/START-HERE.md docs/v1/agent-implementation-rules.md docs/v1/code-review-workflow.md docs/v1/scheduler-handoff.md docs/v1/development-plan.md docs/v1/feature-inventory.md docs/v1/05f-practice-segments.md docs/v1/implementation-slices/README.md docs/v1/implementation-slices/product-feature-map.md
+git add -- .planning/PROJECT.md .planning/REQUIREMENTS.md .planning/ROADMAP.md .planning/STATE.md AGENTS.md skills/reviewing-metronome-prs/SKILL.md skills/reviewing-metronome-prs/agents/openai.yaml docs/superpowers/specs/2026-07-20-opengsd-capability-discovery-design.md docs/superpowers/plans/2026-07-20-opengsd-roadmap-semantic-migration.md docs/v1/START-HERE.md docs/v1/agent-implementation-rules.md docs/v1/scheduler-handoff.md docs/v1/development-plan.md docs/v1/feature-inventory.md docs/v1/05f-practice-segments.md docs/v1/implementation-slices/README.md docs/v1/implementation-slices/product-feature-map.md
 git commit -m "Open R01 with the legacy capability backlog"
 ```
 
-Expected: the normal full pre-commit hook runs exactly once for the final cutover and passes; `docs/v1/status.json` is not staged.
+Expected: the normal full pre-commit hook runs exactly once for the final cutover and passes. `docs/v1/status.json` and `.superpowers/` are not staged. The local `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted and is absent from diff, index, staging, and commit scope; `.git/info/exclude` is not modified; the ignored file's local bytes and local edit history are outside migration acceptance.
 
 ---
 
@@ -498,16 +547,22 @@ Require:
 - current roadmap has only Phase 9;
 - current requirements contain only `R01-01` through `R01-04`;
 - `roadmap analyze` reports Phase 9 as next;
-- `docs/v1/START-HERE.md` begins with the frozen archive warning;
+- all eight tracked lifecycle entrypoints begin with the frozen archive warning and preserve their historical bodies;
+- the local `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted, is absent from diff, index, staging, and commit scope, and is excluded from the archive-marker count; `.git/info/exclude` is not modified; the ignored file's local bytes and local edit history are outside migration acceptance;
 - `docs/v1/status.json` still exists and matches its Task 1 SHA-256;
-- root `AGENTS.md` still routes to native OpenGSD;
+- root `AGENTS.md` still routes lifecycle work to native OpenGSD and minimally indexes `@codex` final review to `skills/reviewing-metronome-prs/SKILL.md`;
+- the final-review skill remains read-only, discovers current `.planning` authority, and does not become an OpenGSD agent mapping;
 - no current OpenGSD artifact links an unfinished product capability to a legacy phase.
 
 - [ ] **Step 4: Check all changed local Markdown links**
 
-Run one disposable PowerShell link scan over `.planning` and the nine modified `docs/v1` files. Ignore HTTP(S), mail, and fragment-only links. Resolve every remaining link relative to its containing file and require zero missing paths. Do not commit the scanner.
+Run one disposable PowerShell link scan over `.planning`, the eight modified `docs/v1` files, `AGENTS.md`, the final-review skill, the approved design, and this plan. Ignore HTTP(S), mail, and fragment-only links. Resolve every remaining link relative to its containing file and require zero missing paths. Do not commit the scanner.
 
-- [ ] **Step 5: Confirm repository and hook state**
+- [ ] **Step 5: Verify final-review skill consistency**
+
+Run `quick_validate.py` against `skills/reviewing-metronome-prs/` and require the generated `agents/openai.yaml` to retain the approved interface values. Require root `AGENTS.md` to remain a thin index, the skill to remain under 500 words and read-only, and no legacy review tutorial, hooks, machine-specific paths, R01-specific instructions, or lifecycle orchestration to be copied into it.
+
+- [ ] **Step 6: Confirm repository and hook state**
 
 Run:
 
@@ -527,7 +582,8 @@ Do not begin Lumen/Ollama or R01 execution on `MIGRATION_BLOCKED`.
 
 ## Acceptance Criteria
 
-- `docs/v1/` remains the complete frozen legacy record, including byte-identical `status.json`, all 13 pack records, and all 132 slice identities.
+- The tracked `docs/v1/` tree remains the complete frozen legacy record, including byte-identical `status.json`, all 13 pack records, all 132 slice identities, and archive warnings on exactly eight tracked lifecycle entrypoints.
+- The local review tutorial remains ignored, untracked, and uncommitted and is absent from diff, index, staging, and commit scope; `.git/info/exclude` is not modified; its local bytes and local edit history are outside migration acceptance.
 - Native OpenGSD completed history contains only 8 completed packs, 83 verified slices, and 32 evidence-backed Complete capabilities.
 - Native archived verification is passed and current for all eight completed phases.
 - The five unfinished packs and 49 not-started slices are never imported as current phases or plans.
@@ -535,5 +591,6 @@ Do not begin Lumen/Ollama or R01 execution on `MIGRATION_BLOCKED`.
 - Current `REQUIREMENTS.md` contains only `R01-01` through `R01-04`.
 - The archived Complete set and active Backlog form an exact, non-overlapping 64-capability union.
 - No Phase 3.1, status mirror, migration validator, graph, registry, or custom lifecycle is added.
+- Root `AGENTS.md` remains a thin index to a validated, read-only `@codex` final PR-review skill that is separate from native OpenGSD lifecycle roles.
 - No product source or behavior changes.
 - Intermediate planning-only checkpoints use the explicitly authorized `--no-verify`; the final cutover commit uses elevated Git permission and passes the normal full hook exactly once without blind retry.

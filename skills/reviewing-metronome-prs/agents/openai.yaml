@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reviewing Metronome PRs"
+  short_description: "Traceable final PR review for Metronome"
+  default_prompt: "Use $reviewing-metronome-prs to perform the final read-only review of this Metronome pull request."
