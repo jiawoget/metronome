@@ -10,7 +10,7 @@ This completed-only staging archive retains the 32 product capabilities supporte
 
 ### 01 App Shell Home
 
-- [x] **REQ-004**: Users can view truthful local practice totals and trends on Home.
+- [x] **REQ-004**: Users can view truthful aggregate local practice totals on Home.
   - Feature key: `home.dashboard-analytics`
   - Contract: [`docs/v1/01-app-shell-home.md`](../docs/v1/01-app-shell-home.md)
   - Imported phase: [Phase 3: pack-3-sessions-continue-practice](ROADMAP.md#phase-3-pack-3-sessions-continue-practice)
@@ -54,7 +54,7 @@ This completed-only staging archive retains the 32 product capabilities supporte
 
 ### 03 Recordings Review
 
-- [x] **REQ-016**: Users can review recordings grouped into meaningful quick and sheet take histories.
+- [x] **REQ-016**: Users can review sheet recordings grouped into sheet and segment take histories, with quick recordings separately reviewable in the same review system.
   - Feature key: `recordings.review-grouping`
   - Contract: [`docs/v1/03-recordings-review.md`](../docs/v1/03-recordings-review.md)
   - Imported phase: [Phase 2: pack-2-segment-take-review](ROADMAP.md#phase-2-pack-2-segment-take-review)
@@ -68,7 +68,7 @@ This completed-only staging archive retains the 32 product capabilities supporte
   - Runtime: [`src/lib/recordings-review/recording-organization-metadata.ts`](../src/lib/recordings-review/recording-organization-metadata.ts)
   - Evidence: [`tests/e2e/recordings-review.spec.ts`](../tests/e2e/recordings-review.spec.ts)
 
-- [x] **REQ-018**: Users can select local recordings and compare their metadata and waveform evidence.
+- [x] **REQ-018**: Users can compare selected local recording metadata and, when a validated sheet source is available, waveform evidence.
   - Feature key: `recordings.recording-comparison`
   - Contract: [`docs/v1/03-recordings-review.md`](../docs/v1/03-recordings-review.md)
   - Imported phase: [Phase 2: pack-2-segment-take-review](ROADMAP.md#phase-2-pack-2-segment-take-review)
