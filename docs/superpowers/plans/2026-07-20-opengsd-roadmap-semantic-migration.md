@@ -71,8 +71,10 @@ Keep unchanged:
 
 **Interfaces:**
 
-- Consumes: `docs/v1/status.json`, `docs/v1/implementation-slices/product-feature-map.md`, legacy pack files, the approved design, and the already-audited candidate artifacts.
+- Consumes: `docs/v1/status.json`, `docs/v1/implementation-slices/product-feature-map.md`, the linked frozen legacy product, pack, and slice contracts, reachable runtime and evidence, and the approved design.
 - Produces: an OpenGSD-loadable v1.0 staging milestone with 8 completed phases, 32 completed requirements, 83 verified slice records, and a 32-item non-phase Backlog.
+- Source authority: preserve the stable `REQ-` IDs, feature keys, and authoritative 32 Complete / 32 Pending truth, then semantically reconcile every migrated record to the frozen sources above.
+- Non-authority: any overwritten pre-migration candidate is implementation scratch, not an input authority. Byte-for-byte or verbatim equality to that candidate is not a Task 1 acceptance criterion.
 
 - [ ] **Step 1: Capture the immutable legacy baseline**
 
@@ -113,13 +115,13 @@ Write `PROJECT.md` so that:
 
 - [ ] **Step 3: Split the 64 capability records into 32 completed requirements and 32 Backlog rows**
 
-Retain the exact requirement text, feature key, contract link, runtime link, and evidence link for these completed entries in staging `REQUIREMENTS.md`:
+Preserve the stable requirement IDs, feature keys, and Complete classification for these entries in staging `REQUIREMENTS.md`. Semantically reconcile each required-behavior sentence, contract link, runtime link, and evidence link to `docs/v1/status.json`, the product-feature map, its linked frozen legacy contract, and reachable runtime/evidence:
 
 `REQ-004` through `REQ-009`, `REQ-016` through `REQ-038`, `REQ-045`, `REQ-059`, and `REQ-060`.
 
 The resulting file must contain exactly 32 checked requirements, each mapped to one of completed Phases 1-5. Phases 6-8 remain maintenance history and map no product requirement.
 
-Move these exact Pending IDs and stable feature keys into a `ROADMAP.md` `## Backlog` table; preserve each existing contract sentence and legacy contract link verbatim:
+Move these exact Pending IDs and stable feature keys into a `ROADMAP.md` `## Backlog` table. Source-ground each `Required behavior` sentence and `Legacy source` link in the product-feature map and its linked frozen legacy contract:
 
 | ID | Feature key |
 |---|---|
@@ -195,6 +197,8 @@ $gsdPath = Join-Path $env:USERPROFILE '.codex\gsd-core\bin\gsd-tools.cjs'
 Expected roadmap fields: `phase_count=8`, `completed_phases=8`, `total_plans=8`, `total_summaries=8`, and `next_phase=null`.
 
 Run a one-time PowerShell reconciliation over `REQUIREMENTS.md` and `ROADMAP.md`. Require 32 checked requirements, 32 unique Backlog IDs, a 64-ID union, no intersection, and inclusion of `REQ-042`, `REQ-043`, `REQ-044`, `REQ-057`, and `REQ-058` in Backlog.
+
+Also require authoritative-source reconciliation: every completed behavior and contract/runtime/evidence link is semantically supported by `docs/v1/status.json`, the product-feature map, the linked frozen legacy contracts, and reachable runtime/evidence; every Pending Backlog behavior and legacy link is grounded in the product-feature map and linked frozen contract. Do not compare against, hash, or require literal equality with an overwritten candidate artifact.
 
 - [ ] **Step 7: Commit the mechanically reconciled staging milestone**
 
