@@ -8,6 +8,8 @@
 
 Whole-branch task review later extended the policy with only the narrow `Dormant seed promotion` carrier-transfer rule. `.planning/config.json` remains unchanged: its `agent_skills` mapping injects policy into the six named subagents, not the native `$gsd-new-milestone` controller or every lifecycle actor. One thin root `AGENTS.md` controller rule therefore tells that controller when to read the section and how to include approved matching seed deletions with `REQUIREMENTS.md` in the same requirements commit. Native OpenGSD remains the sole lifecycle; no alias, wrapper, script, registry, status, fork, or second control plane was added.
 
+Late task review after commit `3baa742` found that the same-commit statement did not yet guarantee an atomic native transaction. OpenGSD 1.7.0 skips explicitly named deleted files, while an existing `.planning/seeds` directory pathspec stages changed seed entries. The repaired controller rule therefore requires an empty index, no `MERGE_HEAD`, an existing seeds directory, and an exact `.planning` worktree set of current `REQUIREMENTS.md` add/modify plus expected matching selected-seed deletions; stops without cleaning on any mismatch; replaces the native requirements commit with `gsd_run query commit "docs: define milestone v[X.Y] requirements" --files .planning/REQUIREMENTS.md .planning/seeds`; and then requires an empty index and an exact commit name/status set containing only the requirements add/modify plus expected deletions. Explicit deleted-file paths, unscoped helper calls, and merge fallback are prohibited, and rejected, unmatched, and unselected seeds remain unchanged. An isolated real helper run proved this directory-scoped behavior by committing exactly modified requirements plus one matching deletion while leaving unrelated `.planning/UNRELATED.md` outside. This is a later boundary repair, not a rewrite of the checked foundation actions or an architecture change.
+
 **Pinned runtime:** `@opengsd/gsd-core@1.7.0`, installed through the official Codex installer. The old runtime under `C:\tmp\metronome-opengsd-r01-019f7372` is evidence only and must not be copied or used as the installed runtime.
 
 **Design source:** `docs/superpowers/specs/2026-07-20-opengsd-capability-discovery-design.md`.
@@ -138,13 +140,13 @@ The global installation is machine setup, not a repository diff. Do not vendor `
 
 5. The policy must not contain lifecycle stages, model names, PR promotion, a status vocabulary, test-command duplication, R-01 paths, expected helper counts, or a second artifact schema.
 
-Historical extension note: checked Task 2 records the original foundation scope and must not be read as a claim that the later repaired policy still has no lifecycle-boundary seam. Whole-branch task review subsequently added only `Dormant seed promotion`, plus the corresponding thin root `AGENTS.md` controller rule, because native `agent_skills` reaches the six mapped subagents but not `$gsd-new-milestone`. The config and all original prohibitions against stages, statuses, wrappers, alternate schemas, and duplicated commands remain unchanged.
+Historical extension note: checked Task 2 records the original foundation scope and must not be read as a claim that the later repaired policy still has no lifecycle-boundary seam. Whole-branch task review subsequently added only `Dormant seed promotion`, plus the corresponding thin root `AGENTS.md` controller rule, because native `agent_skills` reaches the six mapped subagents but not `$gsd-new-milestone`. Late task review subsequently made only that controller rule's atomic native commit mechanics explicit. The config and all original prohibitions against stages, statuses, wrappers, alternate schemas, and duplicated commands remain unchanged.
 
 ## Task 3: Retire the second control plane and semantic validator
 
 **Files:** modify `AGENTS.md`, `package.json`, `.github/workflows/metronome-debt-gates.yml`, `.github/pull_request_template.md`, `docs/architecture/debt-gate-map.md`; delete all legacy files listed in Scope.
 
-1. At foundation execution, update `AGENTS.md` so native OpenGSD is the sole lifecycle entrypoint, direct project work to `$gsd-next` or the already-active GSD phase, and state that mapped subagents receive project policy through `.planning/config.json`. The later task-review repair retained that routing, clarified that `agent_skills` does not reach every lifecycle actor, and added one explicit `$gsd-new-milestone` controller read-and-transfer rule without rewriting this checked historical action.
+1. At foundation execution, update `AGENTS.md` so native OpenGSD is the sole lifecycle entrypoint, direct project work to `$gsd-next` or the already-active GSD phase, and state that mapped subagents receive project policy through `.planning/config.json`. The later task-review repair retained that routing, clarified that `agent_skills` does not reach every lifecycle actor, and added one explicit `$gsd-new-milestone` controller read-and-transfer rule without rewriting this checked historical action. A still later review after commit `3baa742` repaired only the rule's empty-index/no-merge/exact-path, existing-directory-scoped helper, and exact post-commit checks.
 2. Keep the existing pre-commit command list, npm fallback, and no-`--no-verify` rule. The hook file itself is not modified.
 3. Replace `package.json`'s `validate:debt-gates` implementation with the existing Semgrep runner self-test:
 
@@ -231,9 +233,11 @@ Also inspect `git diff --stat` and record deleted versus added workflow LOC. A p
 - OpenGSD 1.7.0 is installed outside the repository from the official package.
 - `.planning/config.json` is accepted by the native loader.
 - All six agent mappings resolve to exactly one policy source.
-- The mapping is not overstated: only those six subagents receive the policy through `agent_skills`; the later thin root `AGENTS.md` rule supplies the actual `$gsd-new-milestone` controller seam for approved seed promotion.
+- The mapping is not overstated: only those six subagents receive the policy through `agent_skills`; the later thin root `AGENTS.md` rule supplies the actual `$gsd-new-milestone` controller seam and fail-closed native atomic transaction for approved seed promotion.
+- That transaction rejects a non-empty index, a merge, an absent `.planning/seeds` directory, any unrelated `.planning` worktree path, explicit deleted seed file pathspecs, and unscoped commits; it verifies the resulting commit contains only added/modified `.planning/REQUIREMENTS.md` plus expected deleted matching seeds while rejected, unmatched, and unselected seeds remain unchanged.
 - The project has no live legacy Metronome orchestrator, role packets, or semantic PR validator.
 - Existing Semgrep, XO, lint, typecheck, unit, build, and CodeScene entrypoints remain available.
 - No product code changes.
 - Net workflow/config LOC decreases materially.
 - Full pre-commit succeeds on the committed candidate.
+- Historical foundation hook evidence remains valid for its committed candidate. Commit `3baa742` later passed another normal full pre-commit hook, but late task review invalidated promotion until the atomic transaction repair; the next exact repaired candidate requires a new normal full-hook pass.

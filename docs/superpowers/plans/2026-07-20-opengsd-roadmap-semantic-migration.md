@@ -1,6 +1,6 @@
 # OpenGSD Completed Legacy Archive Migration Plan (Executed Historical Record)
 
-> **Status:** Executed historical migration plan, subsequently repaired through whole-branch review. Do not execute these tasks again. Checked steps record completed historical work. The repaired final state uses native dormant seeds as the sole deferred-capability carrier, leaves the primary repository between milestones, and keeps the R-01 proof under its separate pending isolated pilot contract.
+> **Status:** Executed historical migration plan, subsequently repaired through whole-branch review. Do not execute these tasks again. Checked steps record completed historical work. The repaired final state uses native dormant seeds as the sole deferred-capability carrier, leaves the primary repository between milestones, and keeps the R-01 proof under its separate pending isolated pilot contract. A late task review after commit `3baa742` invalidated promotion until the future seed-promotion transaction was made atomic; that later contract is recorded below and does not rewrite the checked migration actions.
 
 **Goal:** Migrate only completed legacy delivery into native OpenGSD history, preserve every unfinished capability durably, and freeze `docs/v1/` as the legacy record. Review repaired the initial Backlog/R01 cutover so the durable result is 32 archived Complete capabilities plus 32 dormant native seeds while the primary repository awaits its next real milestone.
 
@@ -9,6 +9,12 @@
 Native active-only progress therefore reports `0/0 plans (0%)`. The 100% progress retained in `STATE.md` is explicitly archived v1.0 history: 8 completed archived phases and 8 completed archived plans, not current work.
 
 Seed promotion preserves one authoritative carrier per deferred legacy capability. Surfacing or selecting a seed does not consume it. Keep it until an approved current `REQUIREMENTS.md` contains the same legacy capability ID, feature key, and required behavior, then delete it in that same planning commit. If approval does not occur, keep the seed; unselected seeds remain untouched. OpenGSD does not delete seeds automatically, and no consumed or implemented seed state is introduced. After promotion, native requirements, PLAN/SUMMARY/VERIFICATION artifacts, and milestone archives carry implementation and completion truth.
+
+Late atomic transaction repair, added after the checked migration work:
+
+1. Immediately before the requirements commit, require an empty index, no `MERGE_HEAD`, an existing `.planning/seeds` directory, and an exact `git status --porcelain=v1 --untracked-files=all -- .planning` path set containing only the current `.planning/REQUIREMENTS.md` add/modify and the expected matching selected-seed deletions. Stop without cleaning, staging, or rewriting history on any mismatch; rejected, unmatched, and unselected seeds remain unchanged.
+2. Override the native requirements command with `gsd_run query commit "docs: define milestone v[X.Y] requirements" --files .planning/REQUIREMENTS.md .planning/seeds`. OpenGSD 1.7.0 skips explicitly named paths that no longer exist, so individual deleted seed paths cannot stage their deletions. The existing directory pathspec is the proven native mechanism: an isolated real helper run committed exactly modified `REQUIREMENTS.md` plus the matching deleted seed while an unrelated `.planning/UNRELATED.md` remained outside the commit. Never use an explicit deleted-file path, an unscoped helper call, or the helper's merge fallback.
+3. After the helper commits, require an empty index and use `git diff-tree --no-commit-id --name-status -r HEAD` to require the exact commit set: only added/modified `.planning/REQUIREMENTS.md` and the expected deleted matching seeds. Confirm rejected, unmatched, and unselected seeds remain unchanged; otherwise stop without cleaning or rewriting history.
 
 **Tech Stack:** OpenGSD 1.7.0, Markdown/JSON planning artifacts, Windows PowerShell, repository-local Node.js 24.17.0, Git hooks.
 
@@ -24,7 +30,7 @@ Seed promotion preserves one authoritative carrier per deferred legacy capabilit
 - R01 is not a current primary-repository phase. Its only execution contract is the pending isolated historical-base pilot plan, where it is native Phase 1 and pilot code never merges.
 - Do not add a migration script, validator, status mirror, graph, registry, or second workflow.
 - Run each independent review once. On failure, stop with the exact evidence; do not rerun or weaken the design without user approval.
-- The user explicitly authorized `--no-verify` for intermediate planning-only checkpoint commits in Tasks 1-3. One normal hook passed on the earlier pre-repair cutover candidate's predecessor tree; whole-branch review then required this coordinated repair. The exact repaired candidate must pass one new normal full hook before promotion. That controller-owned run is an approved review-driven validation, not a blind retry.
+- The user explicitly authorized `--no-verify` for intermediate planning-only checkpoint commits in Tasks 1-3. Commit `3baa742` subsequently passed one normal full pre-commit hook, but late task review found the future seed-promotion transaction non-atomic and invalidated promotion until this repair. The next exact repaired candidate must pass one new normal full hook before promotion. That controller-owned run is an approved review-driven validation, not a blind retry.
 - Every Git write requires elevated permission. If the final verified commit outlives the initial tool yield, wait on that same process instead of starting another commit.
 - Do not change product source or product behavior in this migration.
 - Final pull-request review is performed read-only by `@codex` through `skills/reviewing-metronome-prs/SKILL.md`; it does not replace or orchestrate native OpenGSD.
@@ -66,7 +72,7 @@ Create the thin final-review interface:
 
 Modify the thin index and decision records:
 
-- `AGENTS.md` — retain native lifecycle routing and the `@codex` final-review index; whole-branch task review later added one `$gsd-new-milestone` controller rule for the selected-seed carrier transfer.
+- `AGENTS.md` — retain native lifecycle routing and the `@codex` final-review index; whole-branch task review later added one `$gsd-new-milestone` controller rule for the selected-seed carrier transfer, and late task review made its native atomic mechanics explicit.
 - `docs/superpowers/specs/2026-07-20-opengsd-capability-discovery-design.md` — record the final-review architecture and ignored-file correction.
 - `docs/superpowers/plans/2026-07-20-opengsd-roadmap-semantic-migration.md` — keep Task 4 and Task 5 consistent with the user decision.
 
@@ -75,7 +81,7 @@ Keep immutable repository-controlled inputs unchanged:
 - `docs/v1/status.json` and all legacy product contracts, pack specifications, slice plans, and historical evidence.
 - `.planning/config.json` from the completed governance foundation.
 
-Historical scope note: the original migration reused `skills/metronome-policy/SKILL.md` unchanged. Whole-branch repair later extended that policy only with `Dormant seed promotion` and added the matching thin root `AGENTS.md` controller rule because `agent_skills` injects the policy into six mapped subagents, not the native `$gsd-new-milestone` controller or every lifecycle actor.
+Historical scope note: the original migration reused `skills/metronome-policy/SKILL.md` unchanged. Whole-branch repair later extended that policy only with `Dormant seed promotion` and added the matching thin root `AGENTS.md` controller rule because `agent_skills` injects the policy into six mapped subagents, not the native `$gsd-new-milestone` controller or every lifecycle actor. Late task review subsequently repaired only that controller rule's commit mechanics; it did not change the policy, config, seeds, source, tests, or architecture.
 
 Local-only exclusion:
 
@@ -489,7 +495,7 @@ Replace the template with a concise, general, read-only skill that:
 
 Original checked action, before the later controller-seam extension: add only a minimal `AGENTS.md` index for `@codex` final review, require the reviewer to read the new skill first, and keep the gate read-only and separate from native OpenGSD.
 
-That checked sentence records the original Step 6 interface work. Whole-branch task review later retained the final-review index and added one thin `$gsd-new-milestone` controller rule: before approving or committing selected-seed requirements, read `Dormant seed promotion`; after approval, verify the exact legacy capability ID, feature key, and required behavior, then commit `REQUIREMENTS.md` and matching selected-seed deletions together. Rejected, unmatched, and unselected seeds remain. `.planning/config.json` remains unchanged because its `agent_skills` mapping reaches only the six mapped subagents, not this controller.
+That checked sentence records the original Step 6 interface work. Whole-branch task review later retained the final-review index and added one thin `$gsd-new-milestone` controller rule: before approving or committing selected-seed requirements, read `Dormant seed promotion`; after approval, verify the exact legacy capability ID, feature key, and required behavior, then commit `REQUIREMENTS.md` and matching selected-seed deletions together. Rejected, unmatched, and unselected seeds remain. `.planning/config.json` remains unchanged because its `agent_skills` mapping reaches only the six mapped subagents, not this controller. Late task review after commit `3baa742` showed that the same-commit intent was insufficient because OpenGSD 1.7.0 skips explicitly named deleted files; the fail-closed preflight, existing-directory-scoped helper call, and exact post-commit verification recorded above now govern future promotions without rewriting this checked action.
 
 - [x] **Step 7: Record the final review-driven architecture and repair archive provenance**
 
@@ -516,7 +522,7 @@ Expected roadmap fields after repair: `phase_count=0`, `completed_phases=0`, `to
 
 **Controller promotion handoff (not an executable migration step): exact-candidate full-hook gate**
 
-The repair worker does not stage, commit, or run the full hook. After focused review approves the exact repaired tree, the controller stages the approved scope and runs one new normal full pre-commit hook on that exact candidate before promotion. The earlier hook passed on a predecessor tree and is insufficient for the repaired candidate. This is the single approved review-driven validation; do not blind-retry it. `docs/v1/status.json`, ignored `docs/v1/code-review-workflow.md`, `.git/info/exclude`, and user-owned `.superpowers/` scratch remain outside staged repository scope.
+The original repair worker did not stage, commit, or run the full hook. The controller later committed `3baa742`, whose normal full pre-commit hook passed, but late task review invalidated promotion because the future seed-promotion transaction was still non-atomic. The atomic repair worker likewise does not stage, commit, or run the full hook. After focused review approves the next exact repaired tree, the controller stages the approved scope and runs one new normal full pre-commit hook on that candidate before promotion. This is the single approved review-driven validation; do not blind-retry it. `docs/v1/status.json`, ignored `docs/v1/code-review-workflow.md`, `.git/info/exclude`, and user-owned `.superpowers/` scratch remain outside staged repository scope.
 
 ---
 
@@ -557,7 +563,7 @@ Parse archived `v1.0-REQUIREMENTS.md`, the exact pre-repair Pending table at hea
 - all 64 original feature keys present exactly once across those two sets;
 - all five corrected false completions present as dormant seeds;
 - the pinned `new-milestone.md` discovers `SEED-*.md`, sends selected seed context to requirement definition, and leaves unselected seeds untouched.
-- future review verifies the one-carrier invariant immediately after requirement approval and again after completion or archival: selection alone retains the seed, the matching approval commit deletes it, and native lifecycle artifacts then carry the truth.
+- future review verifies the one-carrier invariant and exact approval-commit name/status set immediately after requirement approval and again after completion or archival: selection alone retains the seed, the matching approval commit contains only added/modified `.planning/REQUIREMENTS.md` plus the expected deleted matching seeds, and native lifecycle artifacts then carry the truth.
 
 - [x] **Step 3: Verify native between-milestones state and R-01 isolation**
 
@@ -573,7 +579,7 @@ Require:
 - all eight tracked lifecycle entrypoints begin with the frozen archive warning and preserve their historical bodies;
 - the local `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted, is absent from diff, index, staging, and commit scope, and is excluded from the archive-marker count; `.git/info/exclude` is not modified; the ignored file's local bytes and local edit history are outside migration acceptance;
 - `docs/v1/status.json` still exists and matches its Task 1 SHA-256;
-- root `AGENTS.md` still routes lifecycle work to native OpenGSD, contains exactly one actual-controller rule for reading `Dormant seed promotion` and committing approved matching seed deletions with `REQUIREMENTS.md`, and minimally indexes `@codex` final review to `skills/reviewing-metronome-prs/SKILL.md`;
+- root `AGENTS.md` still routes lifecycle work to native OpenGSD, contains exactly one actual-controller rule for reading `Dormant seed promotion`, requiring an empty index/no merge/exact `.planning` path set, committing through the scoped existing `.planning/seeds` directory, and verifying the exact approval-commit set, and minimally indexes `@codex` final review to `skills/reviewing-metronome-prs/SKILL.md`;
 - the final-review skill remains read-only, discovers current `.planning` authority, and does not become an OpenGSD agent mapping;
 - no current OpenGSD artifact links an unfinished product capability or R-01 to a phase;
 - the pending isolated historical-base pilot plan is the only R-01 execution contract and explicitly never advances primary-repository state or merges pilot code.
@@ -597,7 +603,7 @@ git diff --cached --name-only
 git status --short --untracked-files=all
 ```
 
-Expected: no forbidden path changed, the index remains empty, and pre-existing user-owned `.superpowers/` scratch remains untouched except for the requested repair report. Do not run the full hook or E2E in the repair wave. The earlier pre-repair hook evidence belongs to a predecessor tree; after focused approval the controller must run one new normal full hook on the exact repaired candidate before promotion.
+Expected for the original checked verification: no forbidden path changed, the index remained empty, and pre-existing user-owned `.superpowers/` scratch remained untouched except for the requested repair report. The worker did not run the full hook or E2E. Commit `3baa742` later passed one normal full pre-commit hook, but late task review invalidated promotion until the atomic seed-transaction repair. This repair worker also does not run the hook; after focused approval the controller must run one new normal full hook on the next exact repaired candidate before promotion.
 
 Return:
 
@@ -616,9 +622,9 @@ Do not begin Lumen/Ollama or R01 execution before the exact repaired candidate p
 - Current `ROADMAP.md` and `STATE.md` place the primary repository between milestones with zero current phases/plans and no next phase; current top-level `REQUIREMENTS.md` is absent.
 - Exactly 32 native dormant seeds are the current deferred-capability truth, preserve exact semantic equality to the former Pending rows, and include the five corrected false completions.
 - The archived Complete set and dormant seed set form an exact, non-overlapping 64-capability/feature-key union.
-- Native `$gsd-new-milestone` discovers matching seeds, feeds selected seed context into requirement definition, and leaves unselected seeds untouched. Its controller follows the single root `AGENTS.md` rule to read `Dormant seed promotion` before approving or committing selected-seed requirements. Selection retains the seed until the same requirements commit approves the matching legacy ID, feature key, and behavior and includes both `REQUIREMENTS.md` and the matching seed deletion; rejected, unmatched, and unselected seeds remain. Review rechecks the one-carrier invariant after approval and after completion.
+- Native `$gsd-new-milestone` discovers matching seeds, feeds selected seed context into requirement definition, and leaves unselected seeds untouched. Its controller follows the single root `AGENTS.md` rule to read `Dormant seed promotion` before approving or committing selected-seed requirements. Selection retains the seed until approval of the matching legacy ID, feature key, and behavior. The controller then requires an empty index, no merge, an existing `.planning/seeds` directory, and the exact expected `.planning` worktree set; invokes the native helper scoped to `.planning/REQUIREMENTS.md` and `.planning/seeds`; and verifies that the resulting commit contains only the requirements add/modify plus matching selected-seed deletions. Explicit deleted seed paths, unscoped commits, and merge fallback are prohibited; rejected, unmatched, and unselected seeds remain unchanged. Review rechecks the one-carrier invariant and exact commit after approval and after completion.
 - The pending isolated historical-base pilot plan is the only R-01 execution contract; it uses native Phase 1 only in its independent repository, never advances primary-repository lifecycle state, and never merges pilot code.
 - No Phase 3.1, status mirror, migration validator, graph, registry, or custom lifecycle is added.
-- Root `AGENTS.md` remains thin: native OpenGSD is the sole lifecycle entrypoint, one actual-controller rule bridges the `agent_skills` limitation at selected-seed approval, and a validated read-only `@codex` final-review skill remains separate from native OpenGSD lifecycle roles.
+- Root `AGENTS.md` remains thin: native OpenGSD is the sole lifecycle entrypoint, one actual-controller rule bridges the `agent_skills` limitation and supplies the fail-closed native atomic seed-promotion transaction, and a validated read-only `@codex` final-review skill remains separate from native OpenGSD lifecycle roles.
 - No product source or behavior changes.
-- Intermediate planning-only checkpoints used the explicitly authorized `--no-verify`. The earlier pre-repair candidate passed one normal hook on a predecessor tree, review required this repair, and promotion now requires one new normal full-hook pass on the exact repaired candidate. This is the approved review-driven validation, not a blind retry.
+- Intermediate planning-only checkpoints used the explicitly authorized `--no-verify`. Commit `3baa742` passed one normal full pre-commit hook, but late task review invalidated promotion until the atomic seed-promotion repair. Promotion now requires one new normal full-hook pass on the next exact repaired candidate. This is the approved review-driven validation, not a blind retry.

@@ -98,6 +98,10 @@ Future planning uses native `$gsd-new-milestone` questioning. The pinned workflo
 
 One deferred legacy capability always has exactly one authoritative carrier. Before approval, that carrier is the dormant seed. Keep a selected seed until an approved current `REQUIREMENTS.md` contains the same legacy capability ID, feature key, and required behavior; delete the seed in that same planning commit. If the requirement is not approved, keep the seed. OpenGSD does not delete seeds automatically. After promotion, native requirements, PLAN/SUMMARY/VERIFICATION artifacts, and milestone archives carry implementation and completion truth, while Git history preserves the deleted seed's provenance. Never add consumed or implemented seed frontmatter or another ledger.
 
+The pinned OpenGSD 1.7.0 commit helper skips an explicitly listed path once that file has been deleted. Its proven native atomic mechanism is therefore the existing `.planning/seeds` directory pathspec, not individual deleted seed paths. An isolated actual helper run scoped to `.planning/REQUIREMENTS.md` and `.planning/seeds` committed exactly modified requirements plus the matching deleted seed while unrelated `.planning/UNRELATED.md` stayed outside the commit. Immediately before the requirements commit, the controller requires an empty index, no merge in progress, an existing `.planning/seeds` directory, and an exact `.planning` worktree path set containing only the current `.planning/REQUIREMENTS.md` add/modify plus the expected matching selected-seed deletions. Any unrelated `.planning` change stops the transaction without cleaning, staging, or rewriting history.
+
+The controller overrides the native requirements commit with `gsd_run query commit "docs: define milestone v[X.Y] requirements" --files .planning/REQUIREMENTS.md .planning/seeds`. An unscoped helper call, an explicit deleted-file path, or the helper's merge fallback is prohibited. After the commit, the controller requires an empty index and verifies the commit's exact name/status set: only added/modified `.planning/REQUIREMENTS.md` plus deleted matching selected seeds, with rejected, unmatched, and unselected seeds unchanged. A mismatch stops without cleaning or rewriting history.
+
 ### 4.2 Project policy and final review
 
 One project skill, `skills/metronome-policy/SKILL.md`, is explicitly injected through OpenGSD `agent_skills`. It is kept outside `.agents/skills` and `.codex/skills` so automatic skill discovery does not load it multiple times.
@@ -115,7 +119,7 @@ This `agent_skills` mapping injects the policy only into those six subagents. It
 
 The foundation target was approximately 80 lines of role-specific obligations without lifecycle orchestration, model routing, stage names, promotion vocabulary, or duplicated test commands. Whole-branch review later added only the narrow `Dormant seed promotion` carrier-transfer rule. That rule does not create a lifecycle stage, status, wrapper, or second control plane.
 
-Final pull-request review uses a separate thin skill at `skills/reviewing-metronome-prs/SKILL.md`, with generated UI metadata in `agents/openai.yaml`. Root `AGENTS.md` remains thin: it routes native OpenGSD lifecycle work, supplies one `$gsd-new-milestone` controller rule to read `Dormant seed promotion` and perform the approved same-commit carrier transfer, and directs `@codex` to the final-review skill. The reviewer discovers the current `.planning` authority, conditionally loads `skills/metronome-policy/SKILL.md` for production behavior or surface changes, reconciles the real diff to Capability Admission, Approved Surface, plans, tests, and verification, and reports findings without editing or merging.
+Final pull-request review uses a separate thin skill at `skills/reviewing-metronome-prs/SKILL.md`, with generated UI metadata in `agents/openai.yaml`. Root `AGENTS.md` remains thin: it routes native OpenGSD lifecycle work, supplies one `$gsd-new-milestone` controller rule to read `Dormant seed promotion` and perform the approved fail-closed, directory-scoped native carrier transfer, and directs `@codex` to the final-review skill. The reviewer discovers the current `.planning` authority, conditionally loads `skills/metronome-policy/SKILL.md` for production behavior or surface changes, reconciles the real diff to Capability Admission, Approved Surface, plans, tests, and verification, and reports findings without editing or merging.
 
 The review skill is not injected into OpenGSD agents and does not orchestrate lifecycle state. The policy governs the six mapped subagents; the milestone controller receives only the explicit root `AGENTS.md` handoff at the requirement-approval boundary; the final-review skill governs one read-only terminal audit.
 
@@ -300,18 +304,19 @@ The design is validated with one real R-01 end-to-end pilot, not a synthetic con
 - `docs/v1/` remains available, and its eight tracked lifecycle entrypoints are visibly marked as frozen, non-authoritative legacy sources; the local review tutorial remains ignored, untracked, and uncommitted and is absent from migration diff, index, staging, and commit scope; `.git/info/exclude` is not modified; its local bytes and local edit history are outside migration acceptance;
 - OpenGSD milestone history contains the eight completed packs and 83 verified slices, but no active phase derived from the five unfinished packs or 49 not-started slices;
 - the semantic baseline contains every original capability ID and feature key exactly once across 32 archived Complete requirements plus 32 dormant native seeds, with no intersection and with all five corrected false completions still Pending/unimplemented;
-- every seed has native dormant frontmatter, a reachable legacy-source link, a link to the frozen v1.0 roadmap, and a trigger usable by `$gsd-new-milestone`; surfacing or selection keeps the seed, and the same planning commit that approves a requirement with the matching legacy ID, feature key, and behavior deletes it;
-- review verifies the one-carrier invariant immediately after requirement approval and again after completion or archival: dormant seed before approval, native requirement and lifecycle artifacts afterward, never both;
+- every seed has native dormant frontmatter, a reachable legacy-source link, a link to the frozen v1.0 roadmap, and a trigger usable by `$gsd-new-milestone`; surfacing or selection keeps the seed, and the same planning commit that approves a requirement with the matching legacy ID, feature key, and behavior deletes it through the scoped `.planning/REQUIREMENTS.md` plus existing `.planning/seeds` directory transaction;
+- before that commit, the index is empty, no merge is in progress, and the exact `.planning` worktree path set is only the current requirements add/modify plus expected matching seed deletions; afterward, the commit name/status set is exactly those paths and rejected, unmatched, and unselected seeds remain unchanged;
+- review verifies the one-carrier invariant and exact atomic commit immediately after requirement approval and again after completion or archival: dormant seed before approval, native requirement and lifecycle artifacts afterward, never both;
 - the primary repository is between milestones with zero current phases, zero current plans, no current `REQUIREMENTS.md`, and no current artifact mapping R-01 or a Pending capability to a phase;
 - the isolated historical-base pilot plan is the only R-01 execution contract and its code never merges;
-- the earlier pre-repair candidate passed one normal hook on a predecessor tree, but review required this repair; promotion requires one new normal full-hook pass on the exact repaired candidate, as an explicit review-driven validation rather than a blind retry.
+- commit `3baa742` passed one normal full pre-commit hook, but late task review found the seed-promotion transaction non-atomic and invalidated promotion until this repair; the next exact repaired candidate requires a new normal full-hook pass as an explicit review-driven validation rather than a blind retry.
 
 ### 11.2 Connection smoke
 
 - the project loads one policy source;
 - all six OpenGSD agent mappings resolve to it;
 - the legacy orchestrator is not auto-loaded;
-- root `AGENTS.md` retains native OpenGSD lifecycle routing, supplies exactly one selected-seed promotion controller seam, and separately indexes the thin final-review skill; it adds no wrapper or second control plane;
+- root `AGENTS.md` retains native OpenGSD lifecycle routing, supplies exactly one selected-seed promotion controller seam with empty-index, no-merge, exact-path, directory-scoped commit, and post-commit checks, and separately indexes the thin final-review skill; it adds no wrapper or second control plane;
 - the final-review skill and generated `agents/openai.yaml` validate, and the skill is not injected into OpenGSD roles;
 - Lumen health and local index status are valid.
 
@@ -355,6 +360,7 @@ This design is a governance boundary, not a tamper-proof gate:
 
 - `agent_skills` is prompt injection;
 - OpenGSD still exposes skip flags and direct execution commands;
+- the atomic seed-promotion transaction is controller-enforced rather than an unbypassable repository gate;
 - a user can deliberately bypass review.
 
 An unbypassable gate would require a wrapper, hook, CI policy, or OpenGSD modification. Those are explicitly outside the approved architecture.
