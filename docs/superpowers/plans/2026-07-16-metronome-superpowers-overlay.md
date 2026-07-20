@@ -1,3 +1,6 @@
+> [!CAUTION]
+> **Historical and superseded — do not execute.** This overlay contract is retained only as workflow history. Current authority is the [native OpenGSD governance design](../specs/2026-07-20-opengsd-capability-discovery-design.md) and its [executed migration plan](2026-07-20-opengsd-roadmap-semantic-migration.md).
+
 # Metronome Superpowers Overlay Implementation Contract
 
 ## Objective and Non-Goals

@@ -2,8 +2,11 @@
 
 ## Repository workflow
 - Native OpenGSD is the sole project lifecycle entrypoint.
-- Start project work with `$gsd-next`, or continue the already-active GSD phase.
-- OpenGSD loads the project policy through `.planning/config.json`; lifecycle agents do not load it manually.
+- Read `.planning/STATE.md` and `.planning/ROADMAP.md` before routing repository work.
+- When state is `Awaiting next milestone` and the current roadmap has zero phases, start with `$gsd-new-milestone`.
+- When a current milestone or phase exists, use `$gsd-next` or continue the already-active GSD phase.
+- `.planning/config.json` injects `skills/metronome-policy/SKILL.md` only into its explicitly mapped OpenGSD subagents; it does not inject the policy into the `$gsd-new-milestone` controller or every lifecycle actor.
+- `$gsd-new-milestone` controller rule: before approving or committing requirements derived from selected seeds, read the `Dormant seed promotion` section of `skills/metronome-policy/SKILL.md`; after approval, verify the exact legacy capability ID, feature key, and required behavior, delete each matching selected seed, and include `REQUIREMENTS.md` plus those deletions in the same requirements commit. Keep rejected, unmatched, and unselected seeds unchanged.
 
 ## Final PR review
 - Final pull-request review is performed by `@codex`.

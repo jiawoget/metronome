@@ -10,7 +10,10 @@ Act as the terminal evidence gate. Never edit files, repair artifacts, merge the
 ## Discover authority
 
 - Establish the requested PR base and head, then inspect the real diff and changed files.
-- Discover current inputs instead of assuming a phase path: read `.planning/PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, and `STATE.md`; derive the current phase; enumerate its applicable `CONTEXT`, `RESEARCH`, `PLAN`, `SUMMARY`, and `VERIFICATION` artifacts. Treat missing or contradictory authority as a finding.
+- Read `.planning/PROJECT.md`, `.planning/ROADMAP.md`, and `.planning/STATE.md` first, then compare their declared lifecycle state with the actual current artifacts.
+- If state is `Awaiting next milestone` and the current roadmap has zero phases and zero plans, absent current `REQUIREMENTS.md` and phase `CONTEXT`, `RESEARCH`, `PLAN`, `SUMMARY`, and `VERIFICATION` artifacts are expected, not findings. Presence of conflicting current artifacts is a finding.
+- If state declares an active milestone, phase, or plan, derive that phase and require current `REQUIREMENTS.md` plus every `CONTEXT`, `RESEARCH`, `PLAN`, `SUMMARY`, and `VERIFICATION` artifact applicable to the declared stage. Missing applicable authority is a fail-closed finding.
+- Treat every contradiction between declared state and actual artifacts as a finding.
 - Treat `docs/v1/status.json` and other `docs/v1` material only as frozen historical evidence, never current lifecycle authority.
 
 ## Reconcile the implementation
@@ -19,6 +22,7 @@ Act as the terminal evidence gate. Never edit files, repair artifacts, merge the
 - Inventory every added, changed, moved, and removed production surface, including dependencies, modules, helpers, services, hooks, repositories, schemas, public APIs, owners, and generic algorithms.
 - Trace each surface through: real diff -> PLAN task -> `CAP-xx` Capability Admission decision -> Approved Surface -> tests -> verification evidence. Flag missing traceability, widened scope, conflicting decisions, and any implementation outside the approved surface.
 - Compare observable behavior and boundaries with current requirements and plan acceptance criteria; do not trust summaries as proof.
+- For a deferred legacy-capability promotion, verify the same legacy ID, feature key, and required behavior across seed and requirement: selection keeps the seed until approval, the approval commit deletes it, and only native lifecycle artifacts carry truth afterward. A duplicate or missing carrier is a finding; unselected seeds remain untouched.
 
 ## Verify reuse independently
 

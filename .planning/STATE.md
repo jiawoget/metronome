@@ -34,7 +34,8 @@ Progress: [██████████] 100% of archived v1.0 history (8 phas
 
 ## Operator Next Steps
 
-- Start the next milestone with `$gsd-new-milestone` after governance acceptance. Native milestone questioning surfaces matching dormant seeds; it leaves unselected seeds untouched.
+- Start the next milestone with `$gsd-new-milestone` after governance acceptance. Native milestone questioning may surface or select matching dormant seeds, but selection does not consume them.
+- Keep a selected seed until the current `REQUIREMENTS.md` approves the same legacy capability ID, feature key, and required behavior. Delete it in that same planning commit; if approval does not occur, keep it. OpenGSD does not delete seeds automatically.
 
 ## Accumulated Context
 
@@ -43,13 +44,14 @@ Progress: [██████████] 100% of archived v1.0 history (8 phas
 - OpenGSD is the sole lifecycle control plane.
 - The shipped v1.0 baseline remains archived under `.planning/milestones/` with 8 completed phases and 8 completed plans.
 - The 32 unimplemented product capabilities are dormant native seeds under `.planning/seeds/`, not current requirements, phases, plans, or a ROADMAP Backlog.
+- Each deferred capability has exactly one authoritative carrier: its dormant seed before requirement approval, then matching native requirement/plan/verification/archive artifacts after the approval commit deletes the seed.
 - The historical R01 proof remains an isolated governance evaluation on its historical base; it never advances this repository's lifecycle state and its pilot code never merges.
 - Unfinished legacy packs and their slice decomposition remain frozen historical proposals, not current work.
 
 ### Pending Todos
 
 - Obtain governance acceptance for this repaired migration candidate.
-- When the user chooses the next product milestone, run `$gsd-new-milestone` and consider relevant dormant seeds through native questioning.
+- When the user chooses the next product milestone, run `$gsd-new-milestone`, consider relevant dormant seeds through native questioning, and enforce the promote-and-delete rule in the requirement-approval commit.
 
 ### Blockers/Concerns
 

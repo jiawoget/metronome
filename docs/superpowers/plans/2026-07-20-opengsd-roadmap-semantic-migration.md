@@ -6,6 +6,10 @@
 
 **Architecture:** The executed migration built a truthful eight-phase legacy staging milestone, verified it, and archived it through OpenGSD's native milestone command. The repaired primary repository now has zero current phases or plans and no top-level `REQUIREMENTS.md`; 32 dormant `.planning/seeds/SEED-*.md` files carry all Pending/unimplemented capability truth into native `$gsd-new-milestone` questioning. The separate historical-base R-01 pilot is the only R-01 execution contract and never mutates or merges into primary-repository lifecycle state. Final pull-request review remains a separate read-only `@codex` gate, not another lifecycle.
 
+Native active-only progress therefore reports `0/0 plans (0%)`. The 100% progress retained in `STATE.md` is explicitly archived v1.0 history: 8 completed archived phases and 8 completed archived plans, not current work.
+
+Seed promotion preserves one authoritative carrier per deferred legacy capability. Surfacing or selecting a seed does not consume it. Keep it until an approved current `REQUIREMENTS.md` contains the same legacy capability ID, feature key, and required behavior, then delete it in that same planning commit. If approval does not occur, keep the seed; unselected seeds remain untouched. OpenGSD does not delete seeds automatically, and no consumed or implemented seed state is introduced. After promotion, native requirements, PLAN/SUMMARY/VERIFICATION artifacts, and milestone archives carry implementation and completion truth.
+
 **Tech Stack:** OpenGSD 1.7.0, Markdown/JSON planning artifacts, Windows PowerShell, repository-local Node.js 24.17.0, Git hooks.
 
 ## Global Constraints
@@ -62,14 +66,16 @@ Create the thin final-review interface:
 
 Modify the thin index and decision records:
 
-- `AGENTS.md` — index `@codex` final PR review to the repository skill without changing native lifecycle routing.
+- `AGENTS.md` — retain native lifecycle routing and the `@codex` final-review index; whole-branch task review later added one `$gsd-new-milestone` controller rule for the selected-seed carrier transfer.
 - `docs/superpowers/specs/2026-07-20-opengsd-capability-discovery-design.md` — record the final-review architecture and ignored-file correction.
 - `docs/superpowers/plans/2026-07-20-opengsd-roadmap-semantic-migration.md` — keep Task 4 and Task 5 consistent with the user decision.
 
-Keep repository-controlled inputs unchanged:
+Keep immutable repository-controlled inputs unchanged:
 
 - `docs/v1/status.json` and all legacy product contracts, pack specifications, slice plans, and historical evidence.
-- `.planning/config.json` and `skills/metronome-policy/SKILL.md` from the completed governance foundation.
+- `.planning/config.json` from the completed governance foundation.
+
+Historical scope note: the original migration reused `skills/metronome-policy/SKILL.md` unchanged. Whole-branch repair later extended that policy only with `Dormant seed promotion` and added the matching thin root `AGENTS.md` controller rule because `agent_skills` injects the policy into six mapped subagents, not the native `$gsd-new-milestone` controller or every lifecycle actor.
 
 Local-only exclusion:
 
@@ -420,6 +426,8 @@ Consume the exact 32 Pending rows from the pre-repair `ROADMAP.md` in their exis
 
 Each seed uses native frontmatter (`id`, `status: dormant`, `planted: 2026-07-20`, `planted_during`, behavior/category-specific `trigger_when`, `scope: unknown`) and the standard sections `Why This Matters`, `When to Surface`, `Scope Estimate`, `Breadcrumbs`, and `Notes`. Preserve exactly once the legacy capability ID, feature key, required behavior, Pending/unimplemented truth, reachable legacy-source link, and frozen v1.0 roadmap link. Do not preselect a milestone, phase, owner, implementation, API, helper, or dependency.
 
+At future milestone definition, a surfaced or selected seed remains authoritative until the matching requirement is approved. The same planning commit that approves the matching legacy capability ID, feature key, and required behavior deletes that seed. This is a project-policy action, not automatic OpenGSD behavior; if approval does not occur, keep the seed.
+
 Delete the current top-level `REQUIREMENTS.md`. Native milestone completion requires the next real milestone to define a fresh file.
 
 - [x] **Step 2: Restore the top-level roadmap to a native transition state**
@@ -430,7 +438,7 @@ Write current `ROADMAP.md` with:
 - a clear between-milestones transition state;
 - zero current phases and zero current plans;
 - no current Backlog;
-- a link to native dormant seeds as the sole deferred-capability carrier;
+- a link to native dormant seeds as the current deferred-capability carrier, subject to the approved promote-and-delete rule;
 - `$gsd-new-milestone` as the next future product-lifecycle action after governance acceptance.
 
 The historical R-01 proof is not a current phase and links only to its pending isolated pilot contract.
@@ -449,17 +457,17 @@ Set `STATE.md` to:
 
 - [x] **Step 4: Evolve `PROJECT.md` for native seeds and no open next milestone**
 
-Link 32 validated capabilities to `.planning/milestones/v1.0-REQUIREMENTS.md`; state that Active requirements are none between milestones; link the 32 deferred capabilities only to `.planning/seeds/`; and state that native `$gsd-new-milestone` questioning selects relevant seeds while leaving unselected seeds untouched. Record 32 archived Complete plus 32 dormant seeds as the exact disjoint 64-capability union.
+Link 32 validated capabilities to `.planning/milestones/v1.0-REQUIREMENTS.md`; state that Active requirements are none between milestones; link the 32 deferred capabilities to `.planning/seeds/`; and state that native `$gsd-new-milestone` questioning may surface or select relevant seeds while leaving unselected seeds untouched. Record the promote-and-delete rule and the exact one-carrier invariant before requirement approval and afterward. Record 32 archived Complete plus 32 dormant seeds as the exact disjoint 64-capability union.
 
 - [x] **Step 5: Retain the tracked `docs/v1/` frozen archive markers without further repair edits**
 
 Prepend a consistent warning to the eight tracked lifecycle files listed in File Structure:
 
-> Frozen legacy v1 record. Preserve for historical product, pack, slice, and evidence context. Do not use this document or `status.json` as current lifecycle authority. Current project state is under `.planning/` and routing starts with `$gsd-next`.
+> Frozen legacy v1 record. Preserve for historical product, pack, slice, and evidence context. Do not use this document or `status.json` as current lifecycle authority. Read root `AGENTS.md` and current `.planning/` authority for routing.
 
 Retain the original body below the warning. In `05f-practice-segments.md`, label the four `contract_ready` predicates as historical legacy readiness records and point current readiness to OpenGSD; do not change the product behavior contracts.
 
-The repair wave leaves these already-frozen files unchanged. The local `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted and must be absent from migration diff, index, staging, and commit scope. `.git/info/exclude` is not modified. The file's local bytes and local edit history are outside migration acceptance.
+The original migration left these eight frozen legacy files unchanged. The later whole-branch repair changed only their routing warning banners while preserving their historical bodies. The local `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted and must be absent from migration diff, index, staging, and commit scope. `.git/info/exclude` is not modified. The file's local bytes and local edit history are outside migration acceptance.
 
 - [x] **Step 6: Retain the thin final `@codex` PR-review interface**
 
@@ -479,7 +487,9 @@ Replace the template with a concise, general, read-only skill that:
 - emits findings first with severity, file/line, violated contract, and impact, followed by open questions, scope, reuse, and verification summaries;
 - never edits files, repairs artifacts, merges the pull request, or orchestrates lifecycle state.
 
-Add only a minimal `AGENTS.md` index: final PR review is performed by `@codex`, the reviewer reads the new skill first, and the gate remains read-only and separate from native OpenGSD.
+Original checked action, before the later controller-seam extension: add only a minimal `AGENTS.md` index for `@codex` final review, require the reviewer to read the new skill first, and keep the gate read-only and separate from native OpenGSD.
+
+That checked sentence records the original Step 6 interface work. Whole-branch task review later retained the final-review index and added one thin `$gsd-new-milestone` controller rule: before approving or committing selected-seed requirements, read `Dormant seed promotion`; after approval, verify the exact legacy capability ID, feature key, and required behavior, then commit `REQUIREMENTS.md` and matching selected-seed deletions together. Rejected, unmatched, and unselected seeds remain. `.planning/config.json` remains unchanged because its `agent_skills` mapping reaches only the six mapped subagents, not this controller.
 
 - [x] **Step 7: Record the final review-driven architecture and repair archive provenance**
 
@@ -502,7 +512,7 @@ $gsdPath = Join-Path $env:USERPROFILE '.codex\gsd-core\bin\gsd-tools.cjs'
 Get-FileHash -Algorithm SHA256 -LiteralPath 'docs/v1/status.json'
 ```
 
-Expected roadmap fields after repair: `phase_count=0`, `completed_phases=0`, `total_plans=0`, and `next_phase=null`. `state json --raw` must report milestone `v1.0`, native status `Awaiting next milestone`, and the archived 8/8 completion counters; with this zero-phase roadmap the pinned native command currently derives the generic milestone name `milestone`, so the exact preserved `Legacy Delivered Baseline` name is verified through `state get --raw` together with `Phase: Milestone v1.0 complete` and `Plan: —`. `list-seeds dormant --raw` must return exactly 32 seeds. The pinned native `smart-entry --json` currently reports `situation=unknown` and recommends `progress` while surfacing status `awaiting next milestone`; record that classifier behavior truthfully, but do not treat it as a state-shape failure or patch OpenGSD. Also require exact seed semantic equality to the pre-repair Pending rows, the five corrected IDs, the disjoint 32+32=64 union, 8/8/8 archive inventory, 83 preserved slice identities, 32 archived Complete requirements, zero archived `.planning/phases/` references, eight durable-audit links, and all relevant local paths/Markdown links resolving.
+Expected roadmap fields after repair: `phase_count=0`, `completed_phases=0`, `total_plans=0`, and `next_phase=null`. Native active-only progress is `0/0 plans (0%)`; `STATE.md`'s 100% is archived v1.0 history. `state json --raw` must report milestone `v1.0`, native status `Awaiting next milestone`, and the archived 8/8 completion counters; with this zero-phase roadmap the pinned native command currently derives the generic milestone name `milestone`, so the exact preserved `Legacy Delivered Baseline` name is verified through `state get --raw` together with `Phase: Milestone v1.0 complete` and `Plan: —`. `list-seeds dormant --raw` must return exactly 32 seeds. The pinned native `smart-entry --json` currently reports `situation=unknown` and recommends `progress` while surfacing status `awaiting next milestone`; record that classifier behavior truthfully, but do not treat it as a state-shape failure or patch OpenGSD. Also require exact seed semantic equality to the pre-repair Pending rows, the five corrected IDs, the disjoint 32+32=64 union, 8/8/8 archive inventory, 83 preserved slice identities, 32 archived Complete requirements, zero archived `.planning/phases/` references, eight durable-audit links, and all relevant local paths/Markdown links resolving.
 
 **Controller promotion handoff (not an executable migration step): exact-candidate full-hook gate**
 
@@ -547,6 +557,7 @@ Parse archived `v1.0-REQUIREMENTS.md`, the exact pre-repair Pending table at hea
 - all 64 original feature keys present exactly once across those two sets;
 - all five corrected false completions present as dormant seeds;
 - the pinned `new-milestone.md` discovers `SEED-*.md`, sends selected seed context to requirement definition, and leaves unselected seeds untouched.
+- future review verifies the one-carrier invariant immediately after requirement approval and again after completion or archival: selection alone retains the seed, the matching approval commit deletes it, and native lifecycle artifacts then carry the truth.
 
 - [x] **Step 3: Verify native between-milestones state and R-01 isolation**
 
@@ -557,10 +568,12 @@ Require:
 - `state json --raw` reports milestone `v1.0`, native status `Awaiting next milestone`, and 8 completed archived phases/plans; `state get --raw` preserves milestone name `Legacy Delivered Baseline` and exposes `Phase: Milestone v1.0 complete` and `Plan: —`; the native JSON projection's generic milestone name is recorded rather than hidden;
 - `list-seeds dormant --raw` returns exactly 32 seeds, and the native `smart-entry --json` result (`situation=unknown`, recommended `progress`, status signal `awaiting next milestone`) is recorded without coercing its classifier;
 - `PROJECT.md`, `ROADMAP.md`, and `STATE.md` identify 32 dormant seeds and `$gsd-new-milestone` as the next future product-lifecycle command after governance acceptance;
+- `PROJECT.md`, `ROADMAP.md`, `STATE.md`, the approved design, project policy, and root `AGENTS.md` all require the same promote-and-delete rule without claiming automatic OpenGSD deletion;
+- the approved design and both durable plans state that `.planning/config.json` injects policy only into the six mapped `agent_skills` subagents, not the `$gsd-new-milestone` controller or every lifecycle actor;
 - all eight tracked lifecycle entrypoints begin with the frozen archive warning and preserve their historical bodies;
 - the local `docs/v1/code-review-workflow.md` remains ignored, untracked, and uncommitted, is absent from diff, index, staging, and commit scope, and is excluded from the archive-marker count; `.git/info/exclude` is not modified; the ignored file's local bytes and local edit history are outside migration acceptance;
 - `docs/v1/status.json` still exists and matches its Task 1 SHA-256;
-- root `AGENTS.md` still routes lifecycle work to native OpenGSD and minimally indexes `@codex` final review to `skills/reviewing-metronome-prs/SKILL.md`;
+- root `AGENTS.md` still routes lifecycle work to native OpenGSD, contains exactly one actual-controller rule for reading `Dormant seed promotion` and committing approved matching seed deletions with `REQUIREMENTS.md`, and minimally indexes `@codex` final review to `skills/reviewing-metronome-prs/SKILL.md`;
 - the final-review skill remains read-only, discovers current `.planning` authority, and does not become an OpenGSD agent mapping;
 - no current OpenGSD artifact links an unfinished product capability or R-01 to a phase;
 - the pending isolated historical-base pilot plan is the only R-01 execution contract and explicitly never advances primary-repository state or merges pilot code.
@@ -601,11 +614,11 @@ Do not begin Lumen/Ollama or R01 execution before the exact repaired candidate p
 - Native archived verification is passed and current for all eight completed phases; 24 stale path records are repaired, all eight verifications reach the durable audit, and that audit ends `LEGACY_IMPORT_APPROVED`.
 - The five unfinished packs and 49 not-started slices are never imported as current phases or plans.
 - Current `ROADMAP.md` and `STATE.md` place the primary repository between milestones with zero current phases/plans and no next phase; current top-level `REQUIREMENTS.md` is absent.
-- Exactly 32 native dormant seeds are the sole current deferred-capability truth, preserve exact semantic equality to the former Pending rows, and include the five corrected false completions.
+- Exactly 32 native dormant seeds are the current deferred-capability truth, preserve exact semantic equality to the former Pending rows, and include the five corrected false completions.
 - The archived Complete set and dormant seed set form an exact, non-overlapping 64-capability/feature-key union.
-- Native `$gsd-new-milestone` discovers matching seeds, feeds selected seed context into requirement definition, and leaves unselected seeds untouched.
+- Native `$gsd-new-milestone` discovers matching seeds, feeds selected seed context into requirement definition, and leaves unselected seeds untouched. Its controller follows the single root `AGENTS.md` rule to read `Dormant seed promotion` before approving or committing selected-seed requirements. Selection retains the seed until the same requirements commit approves the matching legacy ID, feature key, and behavior and includes both `REQUIREMENTS.md` and the matching seed deletion; rejected, unmatched, and unselected seeds remain. Review rechecks the one-carrier invariant after approval and after completion.
 - The pending isolated historical-base pilot plan is the only R-01 execution contract; it uses native Phase 1 only in its independent repository, never advances primary-repository lifecycle state, and never merges pilot code.
 - No Phase 3.1, status mirror, migration validator, graph, registry, or custom lifecycle is added.
-- Root `AGENTS.md` remains a thin index to a validated, read-only `@codex` final PR-review skill that is separate from native OpenGSD lifecycle roles.
+- Root `AGENTS.md` remains thin: native OpenGSD is the sole lifecycle entrypoint, one actual-controller rule bridges the `agent_skills` limitation at selected-seed approval, and a validated read-only `@codex` final-review skill remains separate from native OpenGSD lifecycle roles.
 - No product source or behavior changes.
 - Intermediate planning-only checkpoints used the explicitly authorized `--no-verify`. The earlier pre-repair candidate passed one normal hook on a predecessor tree, review required this repair, and promotion now requires one new normal full-hook pass on the exact repaired candidate. This is the approved review-driven validation, not a blind retry.

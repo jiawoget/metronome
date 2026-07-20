@@ -1,3 +1,6 @@
+> [!CAUTION]
+> **Historical and superseded — do not execute.** This file is not the executable R-01 contract. The only pending proof contract is the isolated [Lumen and Historical R-01 OpenGSD Pilot Implementation Plan](../../../superpowers/plans/2026-07-20-lumen-r01-opengsd-pilot.md).
+
 # R-01 Sheet Rerecord Source Validation Refactor Plan
 
 > Execution skill: use `superpowers:executing-plans` only after this revision is independently approved and merged. Execute in the primary checkout at `C:\Users\wsuto\metronome`; do not create a worktree.

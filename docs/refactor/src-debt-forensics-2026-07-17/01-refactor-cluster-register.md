@@ -57,4 +57,4 @@ The targeted boundary review for candidate 1 is complete. It concludes that the 
 - proposed R01 candidate: `sheet-practice-controls.tsx`, limited first to duplicated Record Again source validation, with one pure sibling helper allowed;
 - later independent candidate: `practice-segment-selector-panel.tsx`, limited to segment loading, editor, mutation, and selection state.
 
-The boundary review is approved and the new implementation plan is `docs/v1/implementation-slices/plans/R-01-sheet-rerecord-source-validation.md`. The eventual implementation PR will use repository gates and `@codex review`; this register does not test that integration.
+The boundary review's former implementation plan, [`R-01-sheet-rerecord-source-validation.md`](../../v1/implementation-slices/plans/R-01-sheet-rerecord-source-validation.md), is historical and superseded. The isolated [Lumen and Historical R-01 OpenGSD Pilot Implementation Plan](../../superpowers/plans/2026-07-20-lumen-r01-opengsd-pilot.md) is the only pending proof contract; this register does not authorize execution.

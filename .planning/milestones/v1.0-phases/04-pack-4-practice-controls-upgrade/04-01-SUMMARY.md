@@ -64,6 +64,6 @@ None — this summary records prior completed history and does not fabricate a h
 - REQ-033 — `controls.bar-aware-count-in`; runtime and automated evidence are linked in [REQUIREMENTS.md](../../v1.0-REQUIREMENTS.md).
 - REQ-034 — `controls.per-sheet-metronome-presets`; runtime and automated evidence are linked in [REQUIREMENTS.md](../../v1.0-REQUIREMENTS.md).
 
-## Next Phase Readiness
+## Historical Verification Handoff
 
-The imported count baseline is ready for independent semantic audit. A passing VERIFICATION file is intentionally absent until that audit validates all completed requirement-to-runtime-to-evidence links.
+At import time, the count baseline was ready for independent semantic audit, and a passing VERIFICATION file was intentionally absent pending that audit. The later adjacent [passed VERIFICATION artifact](04-VERIFICATION.md) records the completed review.

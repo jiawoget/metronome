@@ -6,6 +6,8 @@
 
 **Historical base:** `eb1730205784a88c0a5b6177d9c31b515071b069` (`Remove legacy refactor planning artifacts (#118)`).
 
+**Immutable foundation commit:** `06e80276caa21c5d4058f1ffa2fb7086af3bc1d7`. Export only its allowlisted foundation diff into the history-isolated pilot as described below.
+
 **Pins:** OpenGSD `1.7.0`; Ory Lumen `v0.0.41`, tag commit `d0dee0efcc8235bf514217ecb12cdac2ed5213fa`; Windows AMD64 asset SHA-256 `0012c4837b2cc22fbb6124a9ff133518d963c93510178e9060b6004e299ec44d`.
 
 **Design source:** `docs/superpowers/specs/2026-07-20-opengsd-capability-discovery-design.md`.

@@ -43,6 +43,12 @@ Allowed decisions are `USE_LOCAL`, `USE_INSTALLED_API`, `PROMOTE_TRANSITIVE`, `U
 
 `LOCAL_NO_FIT` requires completed local, dependency, and authoritative OSS/platform evidence plus mismatch reasons. Provider failure, no result, or assertion is insufficient. Approved Surface names the only dependency, module, symbol, algorithm, or owner change permitted; an empty value permits no new production surface.
 
+## Dormant seed promotion
+
+- Before approval, one deferred legacy capability has one carrier: its dormant seed. Surfacing or selecting the seed does not consume it.
+- If the current `REQUIREMENTS.md` approves the same legacy capability ID, feature key, and required behavior, delete that seed in the same planning commit. If approval does not occur, keep it. OpenGSD does not delete seeds automatically.
+- After that commit, native requirements and their PLAN/SUMMARY/VERIFICATION or milestone archive are the sole carrier; leave unselected seeds untouched and never invent consumed or implemented seed frontmatter.
+
 ## Role contract
 
 | Role | Responsibility | Prohibited |

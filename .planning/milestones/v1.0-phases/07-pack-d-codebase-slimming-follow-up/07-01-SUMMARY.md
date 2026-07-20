@@ -60,6 +60,6 @@ None — this summary records prior completed history and does not fabricate a h
 
 - None. This phase contains support/maintenance history only.
 
-## Next Phase Readiness
+## Historical Verification Handoff
 
-The imported count baseline is ready for independent semantic audit. A passing VERIFICATION file is intentionally absent until that audit validates all completed requirement-to-runtime-to-evidence links.
+At import time, the count baseline was ready for independent semantic audit, and a passing VERIFICATION file was intentionally absent pending that audit. The later adjacent [passed VERIFICATION artifact](07-VERIFICATION.md) records the completed review.

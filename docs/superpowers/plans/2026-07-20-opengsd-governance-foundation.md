@@ -4,7 +4,9 @@
 
 **Goal:** Make OpenGSD 1.7.0 the only project lifecycle control plane, inject one stateless Metronome capability-discovery policy through native `agent_skills`, and retire the legacy Metronome orchestrator and semantic PR validator without weakening the existing Semgrep, XO, lint, typecheck, unit, or build gates.
 
-**Architecture:** OpenGSD owns lifecycle and tracked `.planning` state. `skills/metronome-policy/SKILL.md` contains only capability-discovery and CAP-to-plan obligations. Repository quality gates remain normal package scripts and CI jobs; no JavaScript parses prose to decide reuse, planning, review, or promotion state.
+**Architecture:** OpenGSD owns lifecycle and tracked `.planning` state. At foundation execution, `skills/metronome-policy/SKILL.md` contained only capability-discovery and CAP-to-plan obligations. Repository quality gates remain normal package scripts and CI jobs; no JavaScript parses prose to decide reuse, planning, review, or promotion state.
+
+Whole-branch task review later extended the policy with only the narrow `Dormant seed promotion` carrier-transfer rule. `.planning/config.json` remains unchanged: its `agent_skills` mapping injects policy into the six named subagents, not the native `$gsd-new-milestone` controller or every lifecycle actor. One thin root `AGENTS.md` controller rule therefore tells that controller when to read the section and how to include approved matching seed deletions with `REQUIREMENTS.md` in the same requirements commit. Native OpenGSD remains the sole lifecycle; no alias, wrapper, script, registry, status, fork, or second control plane was added.
 
 **Pinned runtime:** `@opengsd/gsd-core@1.7.0`, installed through the official Codex installer. The old runtime under `C:\tmp\metronome-opengsd-r01-019f7372` is evidence only and must not be copied or used as the installed runtime.
 
@@ -136,11 +138,13 @@ The global installation is machine setup, not a repository diff. Do not vendor `
 
 5. The policy must not contain lifecycle stages, model names, PR promotion, a status vocabulary, test-command duplication, R-01 paths, expected helper counts, or a second artifact schema.
 
+Historical extension note: checked Task 2 records the original foundation scope and must not be read as a claim that the later repaired policy still has no lifecycle-boundary seam. Whole-branch task review subsequently added only `Dormant seed promotion`, plus the corresponding thin root `AGENTS.md` controller rule, because native `agent_skills` reaches the six mapped subagents but not `$gsd-new-milestone`. The config and all original prohibitions against stages, statuses, wrappers, alternate schemas, and duplicated commands remain unchanged.
+
 ## Task 3: Retire the second control plane and semantic validator
 
 **Files:** modify `AGENTS.md`, `package.json`, `.github/workflows/metronome-debt-gates.yml`, `.github/pull_request_template.md`, `docs/architecture/debt-gate-map.md`; delete all legacy files listed in Scope.
 
-1. Update `AGENTS.md` so native OpenGSD is the sole lifecycle entrypoint. It should direct project work to `$gsd-next` or the already-active GSD phase and explicitly say the project policy is loaded through `.planning/config.json`, not manually.
+1. At foundation execution, update `AGENTS.md` so native OpenGSD is the sole lifecycle entrypoint, direct project work to `$gsd-next` or the already-active GSD phase, and state that mapped subagents receive project policy through `.planning/config.json`. The later task-review repair retained that routing, clarified that `agent_skills` does not reach every lifecycle actor, and added one explicit `$gsd-new-milestone` controller read-and-transfer rule without rewriting this checked historical action.
 2. Keep the existing pre-commit command list, npm fallback, and no-`--no-verify` rule. The hook file itself is not modified.
 3. Replace `package.json`'s `validate:debt-gates` implementation with the existing Semgrep runner self-test:
 
@@ -220,13 +224,14 @@ Also inspect `git diff --stat` and record deleted versus added workflow LOC. A p
    ```
 
 3. Use a commit timeout of at least 10 minutes because the hook runs the full repository suite. If it times out, first inspect the elevated process and hook output; do not immediately rerun.
-4. Record the immutable foundation commit. The historical R-01 pilot may cherry-pick this commit only; it must not cherry-pick roadmap migration state.
+4. Record the immutable foundation commit as `06e80276caa21c5d4058f1ffa2fb7086af3bc1d7`. The historical R-01 pilot may use this foundation diff only; it must not import roadmap migration state.
 
 ## Acceptance criteria
 
 - OpenGSD 1.7.0 is installed outside the repository from the official package.
 - `.planning/config.json` is accepted by the native loader.
 - All six agent mappings resolve to exactly one policy source.
+- The mapping is not overstated: only those six subagents receive the policy through `agent_skills`; the later thin root `AGENTS.md` rule supplies the actual `$gsd-new-milestone` controller seam for approved seed promotion.
 - The project has no live legacy Metronome orchestrator, role packets, or semantic PR validator.
 - Existing Semgrep, XO, lint, typecheck, unit, build, and CodeScene entrypoints remain available.
 - No product code changes.
