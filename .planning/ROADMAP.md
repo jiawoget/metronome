@@ -10,7 +10,7 @@ Metronome is semantically between milestones. Native state preserves the complet
 
 Deferred capability ideas currently live as 32 dormant [native OpenGSD seeds](seeds/). A future product milestone may surface or select relevant seeds through `$gsd-new-milestone`; selection alone leaves the seed in place. When a current `REQUIREMENTS.md` approves the same legacy capability ID, feature key, and required behavior, that planning commit deletes the selected seed. Unselected seeds remain dormant and unchanged, and OpenGSD does not perform the deletion automatically.
 
-The historical R01 governance proof is not a current product phase. Its pending, isolated execution contract is documented in the [Lumen and historical R01 pilot plan](../docs/superpowers/plans/2026-07-20-lumen-r01-opengsd-pilot.md).
+The historical R01 pilot is superseded and is not a current phase or execution path. Its [plan](../docs/superpowers/plans/2026-07-20-lumen-r01-opengsd-pilot.md) is retained as evidence only. After governance acceptance, the next approved lifecycle action is `$gsd-new-milestone` for a real R01 from updated `main`, using current code and frozen legacy R01 evidence; no disposable pilot code advances or merges.
 
 ## Phases
 
@@ -18,4 +18,4 @@ No current phases.
 
 ## Progress
 
-No current plans. The next product-lifecycle action, after governance acceptance, is `$gsd-new-milestone`.
+No current plans. After governance acceptance, the next lifecycle action is `$gsd-new-milestone` for the real R01 from updated `main`.

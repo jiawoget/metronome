@@ -45,13 +45,13 @@ Progress: [██████████] 100% of archived v1.0 history (8 phas
 - The shipped v1.0 baseline remains archived under `.planning/milestones/` with 8 completed phases and 8 completed plans.
 - The 32 unimplemented product capabilities are dormant native seeds under `.planning/seeds/`, not current requirements, phases, plans, or a ROADMAP Backlog.
 - Each deferred capability has exactly one authoritative carrier: its dormant seed before requirement approval, then matching native requirement/plan/verification/archive artifacts after the approval commit deletes the seed.
-- The historical R01 proof remains an isolated governance evaluation on its historical base; it never advances this repository's lifecycle state and its pilot code never merges.
+- The historical R01 pilot was superseded after governance migration and local Lumen provider verification. Its external artifacts are diagnostic evidence only; no foundation overlay or product edit from that pilot advances this repository or merges.
 - Unfinished legacy packs and their slice decomposition remain frozen historical proposals, not current work.
 
 ### Pending Todos
 
-- Obtain governance acceptance for this repaired migration candidate.
-- When the user chooses the next product milestone, run `$gsd-new-milestone`, consider relevant dormant seeds through native questioning, and enforce the promote-and-delete rule in the requirement-approval commit.
+- Obtain governance acceptance and merge this repaired migration candidate.
+- From the updated `main`, run `$gsd-new-milestone` for the real R01 using current code and frozen legacy R01 evidence. Do not resume the historical disposable pilot. R01 does not consume a dormant product seed unless an approved product requirement exactly matches it.
 
 ### Blockers/Concerns
 
@@ -66,5 +66,5 @@ Progress: [██████████] 100% of archived v1.0 history (8 phas
 ## Session Continuity
 
 Last session: 2026-07-20
-Stopped at: v1.0 complete; awaiting governance acceptance and the next milestone decision
+Stopped at: v1.0 complete; awaiting governance acceptance, then real R01 from updated main
 Resume file: None

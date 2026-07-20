@@ -1,6 +1,6 @@
 # OpenGSD Governance Foundation Implementation Plan (Executed Historical Record)
 
-> **Status:** Executed and retained only as historical implementation evidence. Do not execute these tasks again. The primary repository is now between milestones; the pending historical R-01 pilot has its own isolated execution contract.
+> **Status:** Executed and retained only as historical implementation evidence. Do not execute these tasks again. A later user decision superseded the pending historical R-01 pilot after provider verification; the active route is governance merge followed by a real R01 from updated `main` through native OpenGSD.
 
 **Goal:** Make OpenGSD 1.7.0 the only project lifecycle control plane, inject one stateless Metronome capability-discovery policy through native `agent_skills`, and retire the legacy Metronome orchestrator and semantic PR validator without weakening the existing Semgrep, XO, lint, typecheck, unit, or build gates.
 

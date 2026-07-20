@@ -1,8 +1,10 @@
 # OpenGSD Capability Discovery and Reuse-First Governance Design
 
 **Date:** 2026-07-20
-**Status:** Approved architecture; migration implemented and review repair incorporated
-**Scope:** Project workflow, capability discovery, planning admission, and the R-01 pilot
+**Status:** Approved architecture; migration implemented and review repair incorporated; historical pilot superseded
+**Scope:** Project workflow, capability discovery, planning admission, and first real R01 adoption
+
+> **Post-approval execution correction:** The user superseded the disposable historical R01 pilot after the governance migration and pinned local Lumen provider were verified. References below to a pending or sole pilot contract describe the earlier validation design and are historical only. The active route is to merge governance, then start the real R01 from updated `main` through native OpenGSD; no historical pilot code advances or merges.
 
 ## 1. Problem
 

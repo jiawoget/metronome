@@ -1,8 +1,8 @@
-# Lumen and Historical R-01 OpenGSD Pilot Implementation Plan
+# Lumen and Historical R-01 OpenGSD Pilot Plan (Superseded Historical Record)
 
-> **Status — pending and authoritative:** This is the only R-01 execution contract. Execute it only after the repaired migration candidate passes its new exact-candidate full hook and receives governance approval. The pilot runs in an independent repository from historical base `eb1730205784a88c0a5b6177d9c31b515071b069`, defines R-01 as native Phase 1 only inside that repository, never advances or rewrites primary-repository lifecycle state, and never pushes or merges pilot code. Each OpenGSD stage runs once; one affected-stage/CAP repair is allowed only after explicit user approval.
+> **Status — superseded; do not execute Tasks 2-7:** After the governance migration and pinned local Lumen provider were verified, the user replaced this disposable historical experiment with a real R01 executed from updated `main` through native OpenGSD. Task 1 provider evidence remains reusable. An independent repository was initialized at the historical base, but no foundation overlay or product edit was applied; its external files are diagnostic evidence only and never advance lifecycle state, push, or merge. The active path is governance PR/merge followed by `$gsd-new-milestone` for the real R01.
 
-**Goal:** Prove the approved OpenGSD + single-policy architecture on the real pre-R-01 repository: local semantic recall works through pinned Ory Lumen, installed music/audio APIs and public OSS are researched, CAP decisions constrain the plan and diff, and the resulting refactor retires responsibility instead of moving it.
+**Historical goal:** Prove the approved OpenGSD + single-policy architecture on the real pre-R-01 repository: local semantic recall works through pinned Ory Lumen, installed music/audio APIs and public OSS are researched, CAP decisions constrain the plan and diff, and the resulting refactor retires responsibility instead of moving it.
 
 **Historical base:** `eb1730205784a88c0a5b6177d9c31b515071b069` (`Remove legacy refactor planning artifacts (#118)`).
 

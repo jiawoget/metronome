@@ -29,7 +29,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 - Automatic score following, correctness scoring, or claims of musical-performance accuracy — these require separately approved product and analysis contracts.
 - A custom lifecycle wrapper, shadow status ledger, capability database, committed migration validator, or project knowledge graph — native OpenGSD artifacts own lifecycle state.
 - Treating maintenance/refactor slices as user-facing product requirements — the 24 support/maintenance slices remain completed roadmap history only.
-- Treating the historical R01 governance proof as current primary-repository product work — its pending isolated contract lives in the [Lumen and historical R01 pilot plan](../docs/superpowers/plans/2026-07-20-lumen-r01-opengsd-pilot.md).
+- Treating the superseded historical R01 pilot as current product work — after governance acceptance, the real R01 starts from the then-current `main` through native OpenGSD; the old [pilot plan](../docs/superpowers/plans/2026-07-20-lumen-r01-opengsd-pilot.md) is evidence only.
 
 ## Context
 
@@ -42,7 +42,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ## Constraints
 
-- **Lifecycle**: Begin the next real product milestone through native `$gsd-new-milestone`; once active, continue through `$gsd-next` or that active phase. This prevents a second scheduler or state machine.
+- **Lifecycle**: Begin the next real milestone through native `$gsd-new-milestone`; once active, continue through `$gsd-next` or that active phase. This supports product or maintenance work without creating a second scheduler or state machine.
 - **Deferred-capability carrier**: Before requirement approval, the dormant seed is the sole carrier. The same planning commit that approves the matching requirement deletes the seed; afterward native requirement, plan, verification, and archive artifacts carry the truth. OpenGSD does not perform this deletion automatically.
 - **Completion truth**: A product requirement is complete only when every mapped legacy slice is verified and reachable runtime plus automated or repeatable acceptance evidence is linked — prevents false promotion during import.
 - **Local first**: Existing browser-local storage and audio boundaries remain authoritative unless a future requirement explicitly changes them.
@@ -55,13 +55,13 @@ Musicians can move from a score and practice target to a repeatable local practi
 |----------|-----------|---------|
 | Archive completed legacy history only | Completion history must not convert unfinished proposals into current phases or plans | ✓ Good |
 | Preserve deferred capabilities through one authoritative carrier | Native `$gsd-new-milestone` discovers seeds; selection keeps the seed until the matching requirement is approved and deletes it in that same commit, leaving unselected seeds untouched | ✓ Good |
-| Keep the primary repository between milestones | The historical R01 proof is governance evaluation, not a current product phase | ✓ Good |
+| Keep the primary repository between milestones until governance acceptance | The superseded historical pilot does not advance lifecycle state; the next approved work is a real R01 milestone from updated `main` | ✓ Good |
 | Import each completed legacy pack as one native PLAN/SUMMARY pair | Preserves eight completed phases without pretending 83 historical slices were executed natively | ✓ Good |
 | Use native OpenGSD as the sole project lifecycle and roadmap control plane | Cross-session planning, execution, verification, and progress already exist in OpenGSD | ✓ Good |
 
 ## Evolution
 
-The shipped v1.0 archive retains the 32 validated capabilities. The remaining 32 capability identities currently live in native dormant seeds. After governance acceptance, a future user decision starts `$gsd-new-milestone`; its questioning may select relevant seeds and define fresh requirements and phase boundaries without importing unfinished legacy packs. Selection keeps a seed until matching requirement approval; the approval commit deletes it so the capability is represented by exactly one authoritative carrier before and after promotion.
+The shipped v1.0 archive retains the 32 validated capabilities. The remaining 32 capability identities currently live in native dormant seeds. After governance acceptance, the approved next work starts a real R01 milestone from updated `main` through `$gsd-new-milestone`, using current code plus frozen legacy R01 evidence rather than the superseded historical pilot. R01 is maintenance/refactor work and does not consume a dormant product seed unless a separately approved product requirement exactly matches that seed. Normal seed selection still keeps a seed until matching requirement approval; the approval commit deletes it so the capability is represented by exactly one authoritative carrier before and after promotion.
 
 ---
 *Last updated: 2026-07-20 for the repaired between-milestones state*
