@@ -23,7 +23,7 @@ Practice sessions persist an ordered timeline of meaningful session events.
 
 ## Breadcrumbs
 
-- Legacy source: [`docs/v1/05e-session-integration.md`](../../docs/v1/05e-session-integration.md)
+- Legacy source: [`docs/legacy/v1/05e-session-integration.md`](../../docs/legacy/v1/05e-session-integration.md)
 - Frozen baseline: [v1.0 roadmap snapshot](../milestones/v1.0-ROADMAP.md)
 
 ## Notes

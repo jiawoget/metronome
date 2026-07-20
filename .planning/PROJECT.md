@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Metronome is a local-first web application for musicians to run metronome practice, import and view sheet music, define measure grids and practice segments, record and review takes, and inspect local practice history. The existing browser application keeps user artifacts and metadata on the device; frozen legacy product contracts remain under [`docs/v1`](../docs/v1/) as historical evidence, while OpenGSD is the sole lifecycle and roadmap control plane.
+Metronome is a local-first web application for musicians to run metronome practice, import and view sheet music, define measure grids and practice segments, record and review takes, and inspect local practice history. The existing browser application keeps user artifacts and metadata on the device; frozen legacy product contracts remain under [`docs/v1`](../docs/legacy/v1/) as historical evidence, while OpenGSD is the sole lifecycle and roadmap control plane.
 
 ## Core Value
 
@@ -24,20 +24,20 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ### Out of Scope
 
-- The five unfinished legacy pack boundaries and their 49 not-started slice decomposition are historical proposals under `docs/v1/`, not the future roadmap.
+- The five unfinished legacy pack boundaries and their 49 not-started slice decomposition are historical proposals under `docs/legacy/v1/`, not the future roadmap.
 - Cloud accounts, sync, sharing, and remote storage — current v1 contracts are local-first and defer cross-device behavior.
 - Automatic score following, correctness scoring, or claims of musical-performance accuracy — these require separately approved product and analysis contracts.
 - A custom lifecycle wrapper, shadow status ledger, capability database, committed migration validator, or project knowledge graph — native OpenGSD artifacts own lifecycle state.
 - Treating maintenance/refactor slices as user-facing product requirements — the 24 support/maintenance slices remain completed roadmap history only.
-- Treating the superseded historical R01 pilot as current product work — after governance acceptance, the real R01 starts from the then-current `main` through native OpenGSD; the old [pilot plan](../docs/superpowers/plans/2026-07-20-lumen-r01-opengsd-pilot.md) is evidence only.
+- Treating the superseded historical R01 pilot as current product work — after governance acceptance, the real R01 starts from the then-current `main` through native OpenGSD; the old [pilot plan](../docs/legacy/governance/plans/2026-07-20-lumen-r01-opengsd-pilot.md) is evidence only.
 
 ## Context
 
-- Frozen legacy product contracts: [`docs/v1`](../docs/v1/)
-- Imported capability-to-slice evidence: [`docs/v1/implementation-slices/product-feature-map.md`](../docs/v1/implementation-slices/product-feature-map.md)
+- Frozen legacy product contracts: [`docs/v1`](../docs/legacy/v1/)
+- Imported capability-to-slice evidence: [`docs/legacy/v1/implementation-slices/product-feature-map.md`](../docs/legacy/v1/implementation-slices/product-feature-map.md)
 - Completed history: 8 completed packs / 83 verified slices.
 - Semantic capability truth: 32 archived Complete capabilities / 32 dormant unimplemented seeds.
-- The archived Complete set and dormant seed set form the exact disjoint 64-capability baseline preserved from frozen [`docs/v1/status.json`](../docs/v1/status.json).
+- The archived Complete set and dormant seed set form the exact disjoint 64-capability baseline preserved from frozen [`docs/legacy/v1/status.json`](../docs/legacy/v1/status.json).
 - The application is TypeScript/React/Next.js with browser-local persistence and explicit domain, service, and infrastructure boundaries.
 
 ## Constraints

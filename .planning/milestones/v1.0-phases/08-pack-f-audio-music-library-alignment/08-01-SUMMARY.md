@@ -46,16 +46,16 @@ None — this summary records prior completed history and does not fabricate a h
 
 ## Source And Historical Evidence
 
-- [Legacy status source](../../../../docs/v1/status.json)
-- [Product-feature map](../../../../docs/v1/implementation-slices/product-feature-map.md)
-- [Pack specification / closeout](../../../../docs/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md)
-- `F1-library-first-rescan-plan` — [F0-audio-music-library-alignment-and-tech-debt-closeout.md](../../../../docs/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md)
-- `F2-external-library-first-guardrails` — [F0-audio-music-library-alignment-and-tech-debt-closeout.md](../../../../docs/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md)
-- `F3-tone-runtime-metronome-alignment` — [F3-tone-runtime-metronome-alignment.md](../../../../docs/v1/implementation-slices/plans/F3-tone-runtime-metronome-alignment.md)
-- `F4-countdown-executor-unification` — [F4-countdown-executor-unification.md](../../../../docs/v1/implementation-slices/plans/F4-countdown-executor-unification.md)
-- `F5-tonaljs-music-domain-policy` — [F5-tonaljs-music-domain-policy.md](../../../../docs/v1/implementation-slices/plans/F5-tonaljs-music-domain-policy.md)
-- `F6-recording-waveform-analysis-alignment` — [F6-recording-waveform-analysis-alignment.md](../../../../docs/v1/implementation-slices/plans/F6-recording-waveform-analysis-alignment.md)
-- `F7-boundary-hardening-viewer-closeout` — [F7-boundary-hardening-viewer-closeout.md](../../../../docs/v1/implementation-slices/plans/F7-boundary-hardening-viewer-closeout.md)
+- [Legacy status source](../../../../docs/legacy/v1/status.json)
+- [Product-feature map](../../../../docs/legacy/v1/implementation-slices/product-feature-map.md)
+- [Pack specification / closeout](../../../../docs/legacy/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md)
+- `F1-library-first-rescan-plan` — [F0-audio-music-library-alignment-and-tech-debt-closeout.md](../../../../docs/legacy/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md)
+- `F2-external-library-first-guardrails` — [F0-audio-music-library-alignment-and-tech-debt-closeout.md](../../../../docs/legacy/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md)
+- `F3-tone-runtime-metronome-alignment` — [F3-tone-runtime-metronome-alignment.md](../../../../docs/legacy/v1/implementation-slices/plans/F3-tone-runtime-metronome-alignment.md)
+- `F4-countdown-executor-unification` — [F4-countdown-executor-unification.md](../../../../docs/legacy/v1/implementation-slices/plans/F4-countdown-executor-unification.md)
+- `F5-tonaljs-music-domain-policy` — [F5-tonaljs-music-domain-policy.md](../../../../docs/legacy/v1/implementation-slices/plans/F5-tonaljs-music-domain-policy.md)
+- `F6-recording-waveform-analysis-alignment` — [F6-recording-waveform-analysis-alignment.md](../../../../docs/legacy/v1/implementation-slices/plans/F6-recording-waveform-analysis-alignment.md)
+- `F7-boundary-hardening-viewer-closeout` — [F7-boundary-hardening-viewer-closeout.md](../../../../docs/legacy/v1/implementation-slices/plans/F7-boundary-hardening-viewer-closeout.md)
 
 ## Requirement Coverage
 

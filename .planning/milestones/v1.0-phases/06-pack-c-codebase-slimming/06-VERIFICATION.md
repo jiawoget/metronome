@@ -18,7 +18,7 @@ behavior_unverified: 0
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | All 10 imported Pack C slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 6](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/v1/status.json), [Pack C source](../../../../docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md), and the completed import pair preserve C2-01 through C2-10 exactly. |
+| 1 | All 10 imported Pack C slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 6](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/legacy/v1/status.json), [Pack C source](../../../../docs/legacy/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md), and the completed import pair preserve C2-01 through C2-10 exactly. |
 | 2 | No product requirement is invented for the 10 maintenance slices. | ✓ VERIFIED | [06-01-PLAN.md](06-01-PLAN.md) retains `requirements: []`; [REQUIREMENTS.md](../../v1.0-REQUIREMENTS.md) maps no requirement to Phase 6. |
 
 **Score:** 2/2 truths verified

@@ -23,7 +23,7 @@ Users can bind a reference recording to a practice segment.
 
 ## Breadcrumbs
 
-- Legacy source: [`docs/v1/06-reference-system.md`](../../docs/v1/06-reference-system.md)
+- Legacy source: [`docs/legacy/v1/06-reference-system.md`](../../docs/legacy/v1/06-reference-system.md)
 - Frozen baseline: [v1.0 roadmap snapshot](../milestones/v1.0-ROADMAP.md)
 
 ## Notes

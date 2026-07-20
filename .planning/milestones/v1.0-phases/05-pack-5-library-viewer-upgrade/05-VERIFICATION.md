@@ -18,7 +18,7 @@ behavior_unverified: 0
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | All 12 imported Pack 5 slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 5](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/v1/status.json), and [Pack 5 source](../../../../docs/v1/implementation-slices/05-library-viewer-upgrade.md) preserve P5-01 through P5-12. |
+| 1 | All 12 imported Pack 5 slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 5](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/legacy/v1/status.json), and [Pack 5 source](../../../../docs/legacy/v1/implementation-slices/05-library-viewer-upgrade.md) preserve P5-01 through P5-12. |
 | 2 | All eight mapped completed requirements retain reachable runtime and behavioral evidence. | ✓ VERIFIED | The independent repair review approved every Phase 5 mapping. |
 
 **Score:** 2/2 truths verified

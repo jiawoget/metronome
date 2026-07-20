@@ -18,7 +18,7 @@ behavior_unverified: 0
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | All seven imported Pack F slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 8](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/v1/status.json), [Pack F source](../../../../docs/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md), and the completed import pair preserve F1 through F7 exactly. |
+| 1 | All seven imported Pack F slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 8](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/legacy/v1/status.json), [Pack F source](../../../../docs/legacy/v1/implementation-slices/plans/F0-audio-music-library-alignment-and-tech-debt-closeout.md), and the completed import pair preserve F1 through F7 exactly. |
 | 2 | No product requirement is invented for the seven maintenance slices. | ✓ VERIFIED | [08-01-PLAN.md](08-01-PLAN.md) retains `requirements: []`; [REQUIREMENTS.md](../../v1.0-REQUIREMENTS.md) maps no requirement to Phase 8. |
 
 **Score:** 2/2 truths verified

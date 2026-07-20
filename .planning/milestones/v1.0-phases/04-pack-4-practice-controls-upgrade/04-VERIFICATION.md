@@ -18,7 +18,7 @@ behavior_unverified: 0
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | All eight imported Pack 4 slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 4](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/v1/status.json), and [Pack 4 source](../../../../docs/v1/implementation-slices/04-practice-controls-upgrade.md) preserve P4-01 through P4-08. |
+| 1 | All eight imported Pack 4 slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 4](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/legacy/v1/status.json), and [Pack 4 source](../../../../docs/legacy/v1/implementation-slices/04-practice-controls-upgrade.md) preserve P4-01 through P4-08. |
 | 2 | All three mapped completed requirements retain reachable runtime and behavioral evidence. | ✓ VERIFIED | The independent repair review approved every Phase 4 mapping. |
 
 **Score:** 2/2 truths verified

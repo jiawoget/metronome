@@ -23,7 +23,7 @@ Recording and session comparison views use a consistent, evidence-focused visual
 
 ## Breadcrumbs
 
-- Legacy source: [`docs/v1/design-style-roadmap.md`](../../docs/v1/design-style-roadmap.md)
+- Legacy source: [`docs/legacy/v1/design-style-roadmap.md`](../../docs/legacy/v1/design-style-roadmap.md)
 - Frozen baseline: [v1.0 roadmap snapshot](../milestones/v1.0-ROADMAP.md)
 
 ## Notes

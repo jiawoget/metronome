@@ -46,20 +46,20 @@ None — this summary records prior completed history and does not fabricate a h
 
 ## Source And Historical Evidence
 
-- [Legacy status source](../../../../docs/v1/status.json)
-- [Product-feature map](../../../../docs/v1/implementation-slices/product-feature-map.md)
-- [Pack specification / closeout](../../../../docs/v1/implementation-slices/02-segment-take-review.md)
-- `P2-01 take-grouping-domain` — [P2-01-take-grouping-domain.md](../../../../docs/v1/implementation-slices/plans/P2-01-take-grouping-domain.md)
-- `P2-02 take-grouping-review-ui` — [P2-02-take-grouping-review-ui.md](../../../../docs/v1/implementation-slices/plans/P2-02-take-grouping-review-ui.md)
-- `P2-03 best-active-take-metadata` — [P2-03-best-active-take-metadata.md](../../../../docs/v1/implementation-slices/plans/P2-03-best-active-take-metadata.md)
-- `P2-04 best-active-take-ui` — [P2-04-best-active-take-ui.md](../../../../docs/v1/implementation-slices/plans/P2-04-best-active-take-ui.md)
-- `P2-05 take-history-summary` — [P2-05-take-history-summary.md](../../../../docs/v1/implementation-slices/plans/P2-05-take-history-summary.md)
-- `P2-06 take-history-return-to-practice` — [P2-06-take-history-return-to-practice.md](../../../../docs/v1/implementation-slices/plans/P2-06-take-history-return-to-practice.md)
-- `P2-07 waveform-comparison-source-boundary` — [P2-07-waveform-comparison-source-boundary.md](../../../../docs/v1/implementation-slices/plans/P2-07-waveform-comparison-source-boundary.md)
-- `P2-08 waveform-comparison-ui` — [P2-08-waveform-comparison-ui.md](../../../../docs/v1/implementation-slices/plans/P2-08-waveform-comparison-ui.md)
-- `P2-09 recordings-tags-favorites-archive` — [P2-09-recordings-tags-favorites-archive.md](../../../../docs/v1/implementation-slices/plans/P2-09-recordings-tags-favorites-archive.md)
-- `P2-10 recordings-recording-comparison` — [P2-10-recordings-recording-comparison.md](../../../../docs/v1/implementation-slices/plans/P2-10-recordings-recording-comparison.md)
-- `P2-11 recordings-audio-export` — [P2-11-recordings-audio-export.md](../../../../docs/v1/implementation-slices/plans/P2-11-recordings-audio-export.md)
+- [Legacy status source](../../../../docs/legacy/v1/status.json)
+- [Product-feature map](../../../../docs/legacy/v1/implementation-slices/product-feature-map.md)
+- [Pack specification / closeout](../../../../docs/legacy/v1/implementation-slices/02-segment-take-review.md)
+- `P2-01 take-grouping-domain` — [P2-01-take-grouping-domain.md](../../../../docs/legacy/v1/implementation-slices/plans/P2-01-take-grouping-domain.md)
+- `P2-02 take-grouping-review-ui` — [P2-02-take-grouping-review-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P2-02-take-grouping-review-ui.md)
+- `P2-03 best-active-take-metadata` — [P2-03-best-active-take-metadata.md](../../../../docs/legacy/v1/implementation-slices/plans/P2-03-best-active-take-metadata.md)
+- `P2-04 best-active-take-ui` — [P2-04-best-active-take-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P2-04-best-active-take-ui.md)
+- `P2-05 take-history-summary` — [P2-05-take-history-summary.md](../../../../docs/legacy/v1/implementation-slices/plans/P2-05-take-history-summary.md)
+- `P2-06 take-history-return-to-practice` — [P2-06-take-history-return-to-practice.md](../../../../docs/legacy/v1/implementation-slices/plans/P2-06-take-history-return-to-practice.md)
+- `P2-07 waveform-comparison-source-boundary` — [P2-07-waveform-comparison-source-boundary.md](../../../../docs/legacy/v1/implementation-slices/plans/P2-07-waveform-comparison-source-boundary.md)
+- `P2-08 waveform-comparison-ui` — [P2-08-waveform-comparison-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P2-08-waveform-comparison-ui.md)
+- `P2-09 recordings-tags-favorites-archive` — [P2-09-recordings-tags-favorites-archive.md](../../../../docs/legacy/v1/implementation-slices/plans/P2-09-recordings-tags-favorites-archive.md)
+- `P2-10 recordings-recording-comparison` — [P2-10-recordings-recording-comparison.md](../../../../docs/legacy/v1/implementation-slices/plans/P2-10-recordings-recording-comparison.md)
+- `P2-11 recordings-audio-export` — [P2-11-recordings-audio-export.md](../../../../docs/legacy/v1/implementation-slices/plans/P2-11-recordings-audio-export.md)
 
 ## Requirement Coverage
 

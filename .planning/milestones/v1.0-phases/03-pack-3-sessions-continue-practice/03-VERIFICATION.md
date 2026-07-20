@@ -18,7 +18,7 @@ behavior_unverified: 0
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | All 17 imported Pack 3 slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 3](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/v1/status.json), and [Pack 3 source](../../../../docs/v1/implementation-slices/03-sessions-continue-practice.md) preserve P3-01 through P3-17. |
+| 1 | All 17 imported Pack 3 slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 3](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/legacy/v1/status.json), and [Pack 3 source](../../../../docs/legacy/v1/implementation-slices/03-sessions-continue-practice.md) preserve P3-01 through P3-17. |
 | 2 | All nine independently complete requirements retain reachable runtime and behavioral evidence. | ✓ VERIFIED | The authorized repair review approved the corrected aggregate-total boundary and all unchanged Phase 3 mappings. |
 
 **Score:** 2/2 truths verified

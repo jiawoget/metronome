@@ -23,7 +23,7 @@ Users can inspect session history in its sheet and segment context.
 
 ## Breadcrumbs
 
-- Legacy source: [`docs/v1/08-practice-session.md`](../../docs/v1/08-practice-session.md)
+- Legacy source: [`docs/legacy/v1/08-practice-session.md`](../../docs/legacy/v1/08-practice-session.md)
 - Frozen baseline: [v1.0 roadmap snapshot](../milestones/v1.0-ROADMAP.md)
 
 ## Notes

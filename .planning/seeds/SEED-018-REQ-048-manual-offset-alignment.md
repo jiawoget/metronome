@@ -23,7 +23,7 @@ Users can manually align a reference recording to practice timing.
 
 ## Breadcrumbs
 
-- Legacy source: [`docs/v1/06-reference-system.md`](../../docs/v1/06-reference-system.md)
+- Legacy source: [`docs/legacy/v1/06-reference-system.md`](../../docs/legacy/v1/06-reference-system.md)
 - Frozen baseline: [v1.0 roadmap snapshot](../milestones/v1.0-ROADMAP.md)
 
 ## Notes

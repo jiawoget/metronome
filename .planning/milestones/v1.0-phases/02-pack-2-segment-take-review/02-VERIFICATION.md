@@ -18,7 +18,7 @@ behavior_unverified: 0
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | All 11 imported Pack 2 slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 2](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/v1/status.json), and [Pack 2 source](../../../../docs/v1/implementation-slices/02-segment-take-review.md) preserve P2-01 through P2-11. |
+| 1 | All 11 imported Pack 2 slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 2](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/legacy/v1/status.json), and [Pack 2 source](../../../../docs/legacy/v1/implementation-slices/02-segment-take-review.md) preserve P2-01 through P2-11. |
 | 2 | All eight mapped completed requirements retain reachable runtime and behavioral evidence. | ✓ VERIFIED | The authorized repair review approved the corrected REQ-016 and REQ-018 boundaries and all unchanged Phase 2 mappings. |
 
 **Score:** 2/2 truths verified

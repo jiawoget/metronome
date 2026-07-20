@@ -46,21 +46,21 @@ None — this summary records prior completed history and does not fabricate a h
 
 ## Source And Historical Evidence
 
-- [Legacy status source](../../../../docs/v1/status.json)
-- [Product-feature map](../../../../docs/v1/implementation-slices/product-feature-map.md)
-- [Pack specification / closeout](../../../../docs/v1/implementation-slices/05-library-viewer-upgrade.md)
-- `P5-01 library-tags-favorites-domain` — [P5-01-library-tags-favorites-domain.md](../../../../docs/v1/implementation-slices/plans/P5-01-library-tags-favorites-domain.md)
-- `P5-02 library-tags-favorites-ui` — [P5-02-library-tags-favorites-ui.md](../../../../docs/v1/implementation-slices/plans/P5-02-library-tags-favorites-ui.md)
-- `P5-03 library-batch-import-orchestrator` — [P5-03-library-batch-import-orchestrator.md](../../../../docs/v1/implementation-slices/plans/P5-03-library-batch-import-orchestrator.md)
-- `P5-04 library-recent-practice-summary-source` — [P5-04-library-recent-practice-summary-source.md](../../../../docs/v1/implementation-slices/plans/P5-04-library-recent-practice-summary-source.md)
-- `P5-05 library-recent-practice-summary-ui` — [P5-05-library-recent-practice-summary-ui.md](../../../../docs/v1/implementation-slices/plans/P5-05-library-recent-practice-summary-ui.md)
-- `P5-06 library-review-by-sheet-link` — [P5-06-library-review-by-sheet-link.md](../../../../docs/v1/implementation-slices/plans/P5-06-library-review-by-sheet-link.md)
-- `P5-07 viewer-page-thumbnails-service` — [P5-07-viewer-page-thumbnails-service.md](../../../../docs/v1/implementation-slices/plans/P5-07-viewer-page-thumbnails-service.md)
-- `P5-08 viewer-page-thumbnails-ui` — [P5-08-viewer-page-thumbnails-ui.md](../../../../docs/v1/implementation-slices/plans/P5-08-viewer-page-thumbnails-ui.md)
-- `P5-09 viewer-page-jump` — [P5-09-viewer-page-jump.md](../../../../docs/v1/implementation-slices/plans/P5-09-viewer-page-jump.md)
-- `P5-10 viewer-zoom-pan-domain` — [P5-10-viewer-zoom-pan-domain.md](../../../../docs/v1/implementation-slices/plans/P5-10-viewer-zoom-pan-domain.md)
-- `P5-11 viewer-zoom-pan-ui` — [P5-11-viewer-zoom-pan-ui.md](../../../../docs/v1/implementation-slices/plans/P5-11-viewer-zoom-pan-ui.md)
-- `P5-12 viewer-assisted-page-turning` — [P5-12-viewer-assisted-page-turning.md](../../../../docs/v1/implementation-slices/plans/P5-12-viewer-assisted-page-turning.md)
+- [Legacy status source](../../../../docs/legacy/v1/status.json)
+- [Product-feature map](../../../../docs/legacy/v1/implementation-slices/product-feature-map.md)
+- [Pack specification / closeout](../../../../docs/legacy/v1/implementation-slices/05-library-viewer-upgrade.md)
+- `P5-01 library-tags-favorites-domain` — [P5-01-library-tags-favorites-domain.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-01-library-tags-favorites-domain.md)
+- `P5-02 library-tags-favorites-ui` — [P5-02-library-tags-favorites-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-02-library-tags-favorites-ui.md)
+- `P5-03 library-batch-import-orchestrator` — [P5-03-library-batch-import-orchestrator.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-03-library-batch-import-orchestrator.md)
+- `P5-04 library-recent-practice-summary-source` — [P5-04-library-recent-practice-summary-source.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-04-library-recent-practice-summary-source.md)
+- `P5-05 library-recent-practice-summary-ui` — [P5-05-library-recent-practice-summary-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-05-library-recent-practice-summary-ui.md)
+- `P5-06 library-review-by-sheet-link` — [P5-06-library-review-by-sheet-link.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-06-library-review-by-sheet-link.md)
+- `P5-07 viewer-page-thumbnails-service` — [P5-07-viewer-page-thumbnails-service.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-07-viewer-page-thumbnails-service.md)
+- `P5-08 viewer-page-thumbnails-ui` — [P5-08-viewer-page-thumbnails-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-08-viewer-page-thumbnails-ui.md)
+- `P5-09 viewer-page-jump` — [P5-09-viewer-page-jump.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-09-viewer-page-jump.md)
+- `P5-10 viewer-zoom-pan-domain` — [P5-10-viewer-zoom-pan-domain.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-10-viewer-zoom-pan-domain.md)
+- `P5-11 viewer-zoom-pan-ui` — [P5-11-viewer-zoom-pan-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-11-viewer-zoom-pan-ui.md)
+- `P5-12 viewer-assisted-page-turning` — [P5-12-viewer-assisted-page-turning.md](../../../../docs/legacy/v1/implementation-slices/plans/P5-12-viewer-assisted-page-turning.md)
 
 ## Requirement Coverage
 

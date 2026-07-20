@@ -1,4 +1,4 @@
-﻿> Frozen legacy v1 record. Preserve for historical product, pack, slice, and evidence context. Do not use this document or `status.json` as current lifecycle authority. Read [root `AGENTS.md`](../../AGENTS.md) and current [`.planning/`](../../.planning/) authority for routing.
+﻿> Frozen legacy v1 record. Preserve for historical product, pack, slice, and evidence context. Do not use this document or `status.json` as current lifecycle authority. Read [root `AGENTS.md`](../../../AGENTS.md) and current [`.planning/`](../../../.planning/) authority for routing.
 
 # v1 Feature Inventory
 

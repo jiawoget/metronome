@@ -46,17 +46,17 @@ None — this summary records prior completed history and does not fabricate a h
 
 ## Source And Historical Evidence
 
-- [Legacy status source](../../../../docs/v1/status.json)
-- [Product-feature map](../../../../docs/v1/implementation-slices/product-feature-map.md)
-- [Pack specification / closeout](../../../../docs/v1/implementation-slices/04-practice-controls-upgrade.md)
-- `P4-01 segment-tempo-apply-policy` — [P4-01-segment-tempo-apply-policy.md](../../../../docs/v1/implementation-slices/plans/P4-01-segment-tempo-apply-policy.md)
-- `P4-02 segment-tempo-ui` — [P4-02-segment-tempo-ui.md](../../../../docs/v1/implementation-slices/plans/P4-02-segment-tempo-ui.md)
-- `P4-03 bar-count-in-domain` — [P4-03-bar-count-in-domain.md](../../../../docs/v1/implementation-slices/plans/P4-03-bar-count-in-domain.md)
-- `P4-04 bar-count-in-scheduler` — [P4-04-bar-count-in-scheduler.md](../../../../docs/v1/implementation-slices/plans/P4-04-bar-count-in-scheduler.md)
-- `P4-05 bar-count-in-ui` — [P4-05-bar-count-in-ui.md](../../../../docs/v1/implementation-slices/plans/P4-05-bar-count-in-ui.md)
-- `P4-06 per-sheet-presets-domain-repository` — [P4-06-per-sheet-presets-domain-repository.md](../../../../docs/v1/implementation-slices/plans/P4-06-per-sheet-presets-domain-repository.md)
-- `P4-07 per-sheet-presets-ui` — [P4-07-per-sheet-presets-ui.md](../../../../docs/v1/implementation-slices/plans/P4-07-per-sheet-presets-ui.md)
-- `P4-08 advanced-countdown-shared-infrastructure` — [P4-08-advanced-countdown-shared-infrastructure.md](../../../../docs/v1/implementation-slices/plans/P4-08-advanced-countdown-shared-infrastructure.md)
+- [Legacy status source](../../../../docs/legacy/v1/status.json)
+- [Product-feature map](../../../../docs/legacy/v1/implementation-slices/product-feature-map.md)
+- [Pack specification / closeout](../../../../docs/legacy/v1/implementation-slices/04-practice-controls-upgrade.md)
+- `P4-01 segment-tempo-apply-policy` — [P4-01-segment-tempo-apply-policy.md](../../../../docs/legacy/v1/implementation-slices/plans/P4-01-segment-tempo-apply-policy.md)
+- `P4-02 segment-tempo-ui` — [P4-02-segment-tempo-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P4-02-segment-tempo-ui.md)
+- `P4-03 bar-count-in-domain` — [P4-03-bar-count-in-domain.md](../../../../docs/legacy/v1/implementation-slices/plans/P4-03-bar-count-in-domain.md)
+- `P4-04 bar-count-in-scheduler` — [P4-04-bar-count-in-scheduler.md](../../../../docs/legacy/v1/implementation-slices/plans/P4-04-bar-count-in-scheduler.md)
+- `P4-05 bar-count-in-ui` — [P4-05-bar-count-in-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P4-05-bar-count-in-ui.md)
+- `P4-06 per-sheet-presets-domain-repository` — [P4-06-per-sheet-presets-domain-repository.md](../../../../docs/legacy/v1/implementation-slices/plans/P4-06-per-sheet-presets-domain-repository.md)
+- `P4-07 per-sheet-presets-ui` — [P4-07-per-sheet-presets-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P4-07-per-sheet-presets-ui.md)
+- `P4-08 advanced-countdown-shared-infrastructure` — [P4-08-advanced-countdown-shared-infrastructure.md](../../../../docs/legacy/v1/implementation-slices/plans/P4-08-advanced-countdown-shared-infrastructure.md)
 
 ## Requirement Coverage
 

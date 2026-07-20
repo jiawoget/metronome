@@ -23,7 +23,7 @@ Waveform peaks can be precomputed, validated, and reused through the analysis bo
 
 ## Breadcrumbs
 
-- Legacy source: [`docs/v1/09-audio-analysis.md`](../../docs/v1/09-audio-analysis.md)
+- Legacy source: [`docs/legacy/v1/09-audio-analysis.md`](../../docs/legacy/v1/09-audio-analysis.md)
 - Frozen baseline: [v1.0 roadmap snapshot](../milestones/v1.0-ROADMAP.md)
 
 ## Notes

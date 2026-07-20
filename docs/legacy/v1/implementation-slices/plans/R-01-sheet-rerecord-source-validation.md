@@ -1,5 +1,5 @@
 > [!CAUTION]
-> **Historical and superseded — do not execute.** This file is not the executable R-01 contract, and the later isolated [Lumen historical pilot](../../../superpowers/plans/2026-07-20-lumen-r01-opengsd-pilot.md) was also superseded. Current authority is the top-level [OpenGSD roadmap](../../../../.planning/ROADMAP.md) and [state](../../../../.planning/STATE.md): after governance merge, the real R01 starts from updated `main` through native OpenGSD.
+> **Historical and superseded — do not execute.** This file is not the executable R-01 contract, and the later isolated [Lumen historical pilot](../../../governance/plans/2026-07-20-lumen-r01-opengsd-pilot.md) was also superseded. Current authority is the top-level [OpenGSD roadmap](../../../../../.planning/ROADMAP.md) and [state](../../../../../.planning/STATE.md): after governance merge, the real R01 starts from updated `main` through native OpenGSD.
 
 # R-01 Sheet Rerecord Source Validation Refactor Plan
 

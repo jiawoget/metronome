@@ -46,19 +46,19 @@ None — this summary records prior completed history and does not fabricate a h
 
 ## Source And Historical Evidence
 
-- [Legacy status source](../../../../docs/v1/status.json)
-- [Product-feature map](../../../../docs/v1/implementation-slices/product-feature-map.md)
-- [Pack specification / closeout](../../../../docs/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md)
-- `C2-01 safe-wrapper-api-cleanup` — [C2-01-safe-wrapper-api-cleanup.md](../../../../docs/v1/implementation-slices/plans/C2-01-safe-wrapper-api-cleanup.md)
-- `C2-02 metadata-session-type-split` — [C2-02-metadata-session-type-split.md](../../../../docs/v1/implementation-slices/plans/C2-02-metadata-session-type-split.md)
-- `C2-03 sheet-recording-direct-body-decode` — [C2-03-sheet-recording-direct-body-decode.md](../../../../docs/v1/implementation-slices/plans/C2-03-sheet-recording-direct-body-decode.md)
-- `C2-04 legacy-audio-data-url-deletion` — [C2-04-legacy-audio-data-url-deletion.md](../../../../docs/v1/implementation-slices/plans/C2-04-legacy-audio-data-url-deletion.md)
-- `C2-05 artifact-review-single-resolve` — [C2-05-artifact-review-single-resolve.md](../../../../docs/v1/implementation-slices/plans/C2-05-artifact-review-single-resolve.md)
-- `C2-06 save-rollback-leaf-helpers` — [C2-06-save-rollback-leaf-helpers.md](../../../../docs/v1/implementation-slices/plans/C2-06-save-rollback-leaf-helpers.md)
-- `C2-07 test-fixture-slimming` — [C2-07-unit-recording-fixtures.md](../../../../docs/v1/implementation-slices/plans/C2-07-unit-recording-fixtures.md)
-- `C2-08 large-unit-fixture-follow-up` — [C2-08-large-unit-fixture-follow-up.md](../../../../docs/v1/implementation-slices/plans/C2-08-large-unit-fixture-follow-up.md)
-- `C2-09 e2e-fixture-and-spec-slimming` — [C2-09-e2e-fixture-and-spec-slimming.md](../../../../docs/v1/implementation-slices/plans/C2-09-e2e-fixture-and-spec-slimming.md)
-- `C2-10 shared-unit-audio-artifact-fixtures` — [C2-10-shared-unit-audio-artifact-fixtures.md](../../../../docs/v1/implementation-slices/plans/C2-10-shared-unit-audio-artifact-fixtures.md)
+- [Legacy status source](../../../../docs/legacy/v1/status.json)
+- [Product-feature map](../../../../docs/legacy/v1/implementation-slices/product-feature-map.md)
+- [Pack specification / closeout](../../../../docs/legacy/v1/implementation-slices/plans/C2-main-codebase-slimming-plan.md)
+- `C2-01 safe-wrapper-api-cleanup` — [C2-01-safe-wrapper-api-cleanup.md](../../../../docs/legacy/v1/implementation-slices/plans/C2-01-safe-wrapper-api-cleanup.md)
+- `C2-02 metadata-session-type-split` — [C2-02-metadata-session-type-split.md](../../../../docs/legacy/v1/implementation-slices/plans/C2-02-metadata-session-type-split.md)
+- `C2-03 sheet-recording-direct-body-decode` — [C2-03-sheet-recording-direct-body-decode.md](../../../../docs/legacy/v1/implementation-slices/plans/C2-03-sheet-recording-direct-body-decode.md)
+- `C2-04 legacy-audio-data-url-deletion` — [C2-04-legacy-audio-data-url-deletion.md](../../../../docs/legacy/v1/implementation-slices/plans/C2-04-legacy-audio-data-url-deletion.md)
+- `C2-05 artifact-review-single-resolve` — [C2-05-artifact-review-single-resolve.md](../../../../docs/legacy/v1/implementation-slices/plans/C2-05-artifact-review-single-resolve.md)
+- `C2-06 save-rollback-leaf-helpers` — [C2-06-save-rollback-leaf-helpers.md](../../../../docs/legacy/v1/implementation-slices/plans/C2-06-save-rollback-leaf-helpers.md)
+- `C2-07 test-fixture-slimming` — [C2-07-unit-recording-fixtures.md](../../../../docs/legacy/v1/implementation-slices/plans/C2-07-unit-recording-fixtures.md)
+- `C2-08 large-unit-fixture-follow-up` — [C2-08-large-unit-fixture-follow-up.md](../../../../docs/legacy/v1/implementation-slices/plans/C2-08-large-unit-fixture-follow-up.md)
+- `C2-09 e2e-fixture-and-spec-slimming` — [C2-09-e2e-fixture-and-spec-slimming.md](../../../../docs/legacy/v1/implementation-slices/plans/C2-09-e2e-fixture-and-spec-slimming.md)
+- `C2-10 shared-unit-audio-artifact-fixtures` — [C2-10-shared-unit-audio-artifact-fixtures.md](../../../../docs/legacy/v1/implementation-slices/plans/C2-10-shared-unit-audio-artifact-fixtures.md)
 
 ## Requirement Coverage
 

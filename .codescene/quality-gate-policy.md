@@ -32,7 +32,7 @@ Required project-side gate behavior:
 
 4. **No unreviewed CodeScene directives.**
    Any new `@codescene(disable...)` or `@codescene(disable-all)` directive in `src/**` requires:
-   - a linked no-go note in `docs/refactor/`,
+   - a linked no-go note in `docs/legacy/refactor/`,
    - reviewer approval,
    - reason why fixing is unsafe or out of scope.
 

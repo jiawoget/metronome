@@ -46,15 +46,15 @@ None — this summary records prior completed history and does not fabricate a h
 
 ## Source And Historical Evidence
 
-- [Legacy status source](../../../../docs/v1/status.json)
-- [Product-feature map](../../../../docs/v1/implementation-slices/product-feature-map.md)
-- [Pack specification / closeout](../../../../docs/v1/implementation-slices/plans/D1-main-codebase-slimming-follow-up-plan.md)
-- `D1-01 e2e-sheet-import-helper-adoption` — [D1-01-e2e-sheet-import-helper-adoption.md](../../../../docs/v1/implementation-slices/plans/D1-01-e2e-sheet-import-helper-adoption.md)
-- `D1-02 e2e-clear-state-storage-helper-consolidation` — [D1-02-e2e-clear-state-storage-helper-consolidation.md](../../../../docs/v1/implementation-slices/plans/D1-02-e2e-clear-state-storage-helper-consolidation.md)
-- `D1-03 e2e-practice-snapshot-reader-helper` — [D1-03-e2e-practice-snapshot-reader-helper.md](../../../../docs/v1/implementation-slices/plans/D1-03-e2e-practice-snapshot-reader-helper.md)
-- `D1-04 recordings-review-string-normalization-helper` — [D1-04-recordings-review-string-normalization-helper.md](../../../../docs/v1/implementation-slices/plans/D1-04-recordings-review-string-normalization-helper.md)
-- `D1-05 unit-recording-fixture-residual-audit` — [D1-05-unit-recording-fixture-residual-audit.md](../../../../docs/v1/implementation-slices/plans/D1-05-unit-recording-fixture-residual-audit.md)
-- `D1-06 deferred-no-go-validation-and-closeout` — [D1-06-deferred-no-go-validation-and-closeout.md](../../../../docs/v1/implementation-slices/plans/D1-06-deferred-no-go-validation-and-closeout.md)
+- [Legacy status source](../../../../docs/legacy/v1/status.json)
+- [Product-feature map](../../../../docs/legacy/v1/implementation-slices/product-feature-map.md)
+- [Pack specification / closeout](../../../../docs/legacy/v1/implementation-slices/plans/D1-main-codebase-slimming-follow-up-plan.md)
+- `D1-01 e2e-sheet-import-helper-adoption` — [D1-01-e2e-sheet-import-helper-adoption.md](../../../../docs/legacy/v1/implementation-slices/plans/D1-01-e2e-sheet-import-helper-adoption.md)
+- `D1-02 e2e-clear-state-storage-helper-consolidation` — [D1-02-e2e-clear-state-storage-helper-consolidation.md](../../../../docs/legacy/v1/implementation-slices/plans/D1-02-e2e-clear-state-storage-helper-consolidation.md)
+- `D1-03 e2e-practice-snapshot-reader-helper` — [D1-03-e2e-practice-snapshot-reader-helper.md](../../../../docs/legacy/v1/implementation-slices/plans/D1-03-e2e-practice-snapshot-reader-helper.md)
+- `D1-04 recordings-review-string-normalization-helper` — [D1-04-recordings-review-string-normalization-helper.md](../../../../docs/legacy/v1/implementation-slices/plans/D1-04-recordings-review-string-normalization-helper.md)
+- `D1-05 unit-recording-fixture-residual-audit` — [D1-05-unit-recording-fixture-residual-audit.md](../../../../docs/legacy/v1/implementation-slices/plans/D1-05-unit-recording-fixture-residual-audit.md)
+- `D1-06 deferred-no-go-validation-and-closeout` — [D1-06-deferred-no-go-validation-and-closeout.md](../../../../docs/legacy/v1/implementation-slices/plans/D1-06-deferred-no-go-validation-and-closeout.md)
 
 ## Requirement Coverage
 

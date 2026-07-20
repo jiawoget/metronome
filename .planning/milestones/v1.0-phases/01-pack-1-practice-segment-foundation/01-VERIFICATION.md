@@ -18,7 +18,7 @@ behavior_unverified: 0
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | All 12 imported Pack 1 slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 1](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/v1/status.json), and [Pack 1 source](../../../../docs/v1/implementation-slices/01-practice-segment-mvp.md) preserve P1-01 through P1-12. |
+| 1 | All 12 imported Pack 1 slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 1](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/legacy/v1/status.json), and [Pack 1 source](../../../../docs/legacy/v1/implementation-slices/01-practice-segment-mvp.md) preserve P1-01 through P1-12. |
 | 2 | All four mapped completed requirements retain reachable runtime and behavioral evidence. | ✓ VERIFIED | The independent repair review approved every mapping below and preserved the exact Phase 1 assignment. |
 
 **Score:** 2/2 truths verified

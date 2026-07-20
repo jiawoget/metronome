@@ -18,7 +18,7 @@ behavior_unverified: 0
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | All six imported Pack D slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 7](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/v1/status.json), [Pack D source](../../../../docs/v1/implementation-slices/plans/D1-main-codebase-slimming-follow-up-plan.md), and the completed import pair preserve D1-01 through D1-06 exactly. |
+| 1 | All six imported Pack D slice identities remain verified and traceable. | ✓ VERIFIED | [ROADMAP Phase 7](../../v1.0-ROADMAP.md), [legacy status](../../../../docs/legacy/v1/status.json), [Pack D source](../../../../docs/legacy/v1/implementation-slices/plans/D1-main-codebase-slimming-follow-up-plan.md), and the completed import pair preserve D1-01 through D1-06 exactly. |
 | 2 | No product requirement is invented for the six maintenance slices. | ✓ VERIFIED | [07-01-PLAN.md](07-01-PLAN.md) retains `requirements: []`; [REQUIREMENTS.md](../../v1.0-REQUIREMENTS.md) maps no requirement to Phase 7. |
 
 **Score:** 2/2 truths verified

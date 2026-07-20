@@ -46,21 +46,21 @@ None — this summary records prior completed history and does not fabricate a h
 
 ## Source And Historical Evidence
 
-- [Legacy status source](../../../../docs/v1/status.json)
-- [Product-feature map](../../../../docs/v1/implementation-slices/product-feature-map.md)
-- [Pack specification / closeout](../../../../docs/v1/implementation-slices/01-practice-segment-mvp.md)
-- `P1-01 measure-grid-types-and-math` — [01-practice-segment-mvp.md](../../../../docs/v1/implementation-slices/01-practice-segment-mvp.md)
-- `P1-02 measure-grid-repository` — [P1-02-measure-grid-repository.md](../../../../docs/v1/implementation-slices/plans/P1-02-measure-grid-repository.md)
-- `P1-03 measure-grid-calibration-ui` — [P1-03-measure-grid-calibration-ui.md](../../../../docs/v1/implementation-slices/plans/P1-03-measure-grid-calibration-ui.md)
-- `P1-04 segment-types-and-validation` — [P1-04-segment-types-and-validation.md](../../../../docs/v1/implementation-slices/plans/P1-04-segment-types-and-validation.md)
-- `P1-05 segment-repository` — [P1-05-segment-repository.md](../../../../docs/v1/implementation-slices/plans/P1-05-segment-repository.md)
-- `P1-06 segment-selector-read-ui` — [P1-06-segment-selector-read-ui.md](../../../../docs/v1/implementation-slices/plans/P1-06-segment-selector-read-ui.md)
-- `P1-07 segment-create-edit-delete-ui` — [P1-07-segment-create-edit-delete-ui.md](../../../../docs/v1/implementation-slices/plans/P1-07-segment-create-edit-delete-ui.md)
-- `P1-08 recording-metadata-segment-fields` — [P1-08-recording-metadata-segment-fields.md](../../../../docs/v1/implementation-slices/plans/P1-08-recording-metadata-segment-fields.md)
-- `P1-09 recording-save-segment-context` — [P1-09-recording-save-segment-context.md](../../../../docs/v1/implementation-slices/plans/P1-09-recording-save-segment-context.md)
-- `P1-10 rerecord-workflow-state` — [P1-10-rerecord-workflow-state.md](../../../../docs/v1/implementation-slices/plans/P1-10-rerecord-workflow-state.md)
-- `P1-11 rerecord-record-again-action` — [P1-11-rerecord-record-again-action.md](../../../../docs/v1/implementation-slices/plans/P1-11-rerecord-record-again-action.md)
-- `P1-12 rerecord-two-artifact-verification` — [P1-12-rerecord-two-artifact-verification.md](../../../../docs/v1/implementation-slices/plans/P1-12-rerecord-two-artifact-verification.md)
+- [Legacy status source](../../../../docs/legacy/v1/status.json)
+- [Product-feature map](../../../../docs/legacy/v1/implementation-slices/product-feature-map.md)
+- [Pack specification / closeout](../../../../docs/legacy/v1/implementation-slices/01-practice-segment-mvp.md)
+- `P1-01 measure-grid-types-and-math` — [01-practice-segment-mvp.md](../../../../docs/legacy/v1/implementation-slices/01-practice-segment-mvp.md)
+- `P1-02 measure-grid-repository` — [P1-02-measure-grid-repository.md](../../../../docs/legacy/v1/implementation-slices/plans/P1-02-measure-grid-repository.md)
+- `P1-03 measure-grid-calibration-ui` — [P1-03-measure-grid-calibration-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P1-03-measure-grid-calibration-ui.md)
+- `P1-04 segment-types-and-validation` — [P1-04-segment-types-and-validation.md](../../../../docs/legacy/v1/implementation-slices/plans/P1-04-segment-types-and-validation.md)
+- `P1-05 segment-repository` — [P1-05-segment-repository.md](../../../../docs/legacy/v1/implementation-slices/plans/P1-05-segment-repository.md)
+- `P1-06 segment-selector-read-ui` — [P1-06-segment-selector-read-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P1-06-segment-selector-read-ui.md)
+- `P1-07 segment-create-edit-delete-ui` — [P1-07-segment-create-edit-delete-ui.md](../../../../docs/legacy/v1/implementation-slices/plans/P1-07-segment-create-edit-delete-ui.md)
+- `P1-08 recording-metadata-segment-fields` — [P1-08-recording-metadata-segment-fields.md](../../../../docs/legacy/v1/implementation-slices/plans/P1-08-recording-metadata-segment-fields.md)
+- `P1-09 recording-save-segment-context` — [P1-09-recording-save-segment-context.md](../../../../docs/legacy/v1/implementation-slices/plans/P1-09-recording-save-segment-context.md)
+- `P1-10 rerecord-workflow-state` — [P1-10-rerecord-workflow-state.md](../../../../docs/legacy/v1/implementation-slices/plans/P1-10-rerecord-workflow-state.md)
+- `P1-11 rerecord-record-again-action` — [P1-11-rerecord-record-again-action.md](../../../../docs/legacy/v1/implementation-slices/plans/P1-11-rerecord-record-again-action.md)
+- `P1-12 rerecord-two-artifact-verification` — [P1-12-rerecord-two-artifact-verification.md](../../../../docs/legacy/v1/implementation-slices/plans/P1-12-rerecord-two-artifact-verification.md)
 
 ## Requirement Coverage
 
