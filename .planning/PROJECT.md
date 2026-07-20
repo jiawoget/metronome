@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Metronome is a local-first web application for musicians to run metronome practice, import and view sheet music, define measure grids and practice segments, record and review takes, and inspect local practice history. The existing browser application keeps user artifacts and metadata on the device; frozen legacy product contracts remain under [`docs/v1`](../docs/legacy/v1/) as historical evidence, while OpenGSD is the sole lifecycle and roadmap control plane.
+Metronome is a local-first web application for musicians to run metronome practice, import and view sheet music, define measure grids and practice segments, record and review takes, and inspect local practice history. The existing browser application keeps user artifacts and metadata on the device; frozen legacy product contracts remain under [`docs/legacy/v1`](../docs/legacy/v1/) as historical evidence, while OpenGSD is the sole lifecycle and roadmap control plane.
 
 ## Core Value
 
@@ -33,7 +33,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ## Context
 
-- Frozen legacy product contracts: [`docs/v1`](../docs/legacy/v1/)
+- Frozen legacy product contracts: [`docs/legacy/v1`](../docs/legacy/v1/)
 - Imported capability-to-slice evidence: [`docs/legacy/v1/implementation-slices/product-feature-map.md`](../docs/legacy/v1/implementation-slices/product-feature-map.md)
 - Completed history: 8 completed packs / 83 verified slices.
 - Semantic capability truth: 32 archived Complete capabilities / 32 dormant unimplemented seeds.
