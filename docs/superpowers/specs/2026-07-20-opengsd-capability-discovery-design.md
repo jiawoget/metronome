@@ -27,6 +27,7 @@ The replacement must improve discovery and decision quality without building ano
 5. Keep all project-specific policy in one small, stateless skill.
 6. Keep indexes and search caches disposable and outside project state.
 7. Validate the design with one real R-01 end-to-end pilot rather than a synthetic validator suite.
+8. Preserve completed legacy delivery and every still-unimplemented capability without inheriting the unfinished legacy plan decomposition.
 
 ## 3. Non-goals
 
@@ -80,13 +81,18 @@ OpenGSD owns:
 
 The Metronome policy does not duplicate those responsibilities.
 
-The legacy `docs/v1/status.json` may only leave after semantic migration into OpenGSD. Every capability and truthful completion state must survive; an unimplemented capability remains unimplemented. Completion requires reachable runtime behavior plus automated behavioral evidence, or repeatable manual acceptance when automation is unsuitable.
+Legacy migration separates historical evidence, completed delivery, product truth, and future planning instead of forcing them into one roadmap:
 
-Legacy pack completion and product-requirement completion are separate facts. A verified pack and its native import PLAN/SUMMARY remain immutable historical evidence of the functions that were delivered. If semantic audit proves that a broader mapped product contract is still incomplete, migration must not reopen, delete, or rewrite that completed pack to manufacture consistency. Instead, keep the requirement Pending and use OpenGSD's native phase insertion to route the missing behavior through a new phase.
+- `docs/v1/` becomes the frozen raw legacy archive. It retains the original 13 packs, 132 slice identities, old status data, plans, and evidence. A clear archive marker states that these files are historical sources, not current lifecycle authority.
+- OpenGSD milestone history imports only the eight completed packs, 83 verified slices, and 32 evidence-backed Complete capabilities. Completed pack IDs, names, capability IDs, and evidence remain immutable historical facts. The five unfinished packs and 49 not-started slices are not imported as active or future OpenGSD phases.
+- The semantic capability baseline retains all 64 original capability IDs across the archived completed requirements and the current Backlog. Reachable behavior and evidence establish 32 as Complete; the other 32 remain explicitly Pending. Pack completion never upgrades a broader product capability without evidence.
+- The current OpenGSD roadmap contains only newly designed work. Immediately after migration, its sole planned phase is the isolated R-01 Level 2 refactoring-and-slimming pilot. Local Lumen/Ollama setup is R-01 discovery preflight, not a separate product phase.
 
-The migration audit established the first concrete case. Pack 3 remains a completed historical phase with all 17 verified legacy slices, its import PLAN/SUMMARY, and nine product requirements supported by reachable behavior and evidence. Five broader contracts remain Pending: `sessions.event-timeline`, `sessions.segment-sessions`, `sessions.session-history-grouping`, `practice-session.event-timeline`, and `practice-session.segment-history`. They move to a native inserted Phase 3.1 with no prewritten implementation plan. The migrated project therefore has 13 preserved legacy packs plus one native gap phase: 14 phases total, eight complete, Phase 3.1 next, eight completed import PLAN/SUMMARY pairs, 32 complete requirements, and 32 pending requirements. Legacy traceability remains 83 verified and 49 not-started slices.
+The 32 Pending capabilities live in a compact `## Backlog` projection in the current `ROADMAP.md`. Each row preserves the stable capability ID, short user-visible contract, `Pending` status, and a link to its legacy source. Backlog rows are not phases and carry no inherited legacy pack/slice decomposition. OpenGSD's milestone-completion workflow preserves the Backlog section across roadmap rewrites, while the frozen archive retains the original planning context.
 
-Phase 3.1 records truthful future scope; it is not the next engineering activity in this governance rollout. Once semantic migration is complete, the first engineering execution is the isolated R-01 Level 2 refactoring-and-slimming pilot. Local Lumen/Ollama setup is R-01 discovery preflight, not an intervening product phase. Phase 3.1 product work remains pending until separately started through normal OpenGSD routing.
+The semantic audit's five corrected false completions remain in that Backlog: `sessions.event-timeline`, `sessions.segment-sessions`, `sessions.session-history-grouping`, `practice-session.event-timeline`, and `practice-session.segment-history`. They do not create Phase 3.1 and do not reopen completed Pack 3 history.
+
+Future planning selects coherent capabilities from the Backlog and derives new milestones and phases from their current behavior contracts. A capability leaves the Backlog only after verified completion or an explicit user decision to cancel it with a recorded reason. Unselected capabilities remain Pending. The legacy archive is evidence; the Backlog is the durable future-work queue; neither is a second lifecycle control plane.
 
 ### 4.2 Project policy
 
@@ -279,14 +285,22 @@ No approval database or invalidation ledger is added. OpenGSD pause/resume prese
 
 The design is validated with one real R-01 end-to-end pilot, not a synthetic conformance suite.
 
-### 11.1 Connection smoke
+### 11.1 Migration acceptance
+
+- `docs/v1/` remains available and is visibly marked as a frozen, non-authoritative legacy source;
+- OpenGSD milestone history contains the eight completed packs and 83 verified slices, but no active phase derived from the five unfinished packs or 49 not-started slices;
+- the semantic baseline contains every original capability ID exactly once and reports 32 Complete / 32 Pending;
+- the current `ROADMAP.md` Backlog contains exactly those 32 Pending IDs, including the five corrected false completions, with no duplicate or missing ID and with reachable legacy-source links;
+- R-01 is the only newly planned current phase after migration; no Phase 3.1 or other inherited unfinished legacy phase exists.
+
+### 11.2 Connection smoke
 
 - the project loads one policy source;
 - all six OpenGSD agent mappings resolve to it;
 - the legacy orchestrator is not auto-loaded;
 - Lumen health and local index status are valid.
 
-### 11.2 Research acceptance
+### 11.3 Research acceptance
 
 - R-01 is classified as Level 2;
 - capability atoms describe behavior rather than a predetermined hook/module shape;
@@ -295,7 +309,7 @@ The design is validated with one real R-01 end-to-end pilot, not a synthetic con
 - unresolved generic atoms receive official platform/OSS research;
 - no unresolved CAP is marked ready for planning.
 
-### 11.3 Plan and execution acceptance
+### 11.4 Plan and execution acceptance
 
 - every production task and new surface is traceable to a CAP;
 - the plan introduces no unapproved helper, hook, protocol, dependency, service, or algorithm;
@@ -304,11 +318,11 @@ The design is validated with one real R-01 end-to-end pilot, not a synthetic con
 - production LOC, retired LOC, Code Health, and behavior evidence are reported separately;
 - any new production surface in the diff is both necessary and approved.
 
-### 11.4 Independent acceptance
+### 11.5 Independent acceptance
 
 The reviewer evaluates actual source, exact APIs, research, plan, diff, tests, and quality evidence. Formatting or the presence of expected words is not proof.
 
-### 11.5 Retry limit
+### 11.6 Retry limit
 
 - each pilot stage runs once;
 - on failure, stop and classify the cause as policy gap, provider/tool failure, requirement ambiguity, or agent contract violation;
