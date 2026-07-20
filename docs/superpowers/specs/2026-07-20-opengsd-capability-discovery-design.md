@@ -82,6 +82,12 @@ The Metronome policy does not duplicate those responsibilities.
 
 The legacy `docs/v1/status.json` may only leave after semantic migration into OpenGSD. Every capability and truthful completion state must survive; an unimplemented capability remains unimplemented. Completion requires reachable runtime behavior plus automated behavioral evidence, or repeatable manual acceptance when automation is unsuitable.
 
+Legacy pack completion and product-requirement completion are separate facts. A verified pack and its native import PLAN/SUMMARY remain immutable historical evidence of the functions that were delivered. If semantic audit proves that a broader mapped product contract is still incomplete, migration must not reopen, delete, or rewrite that completed pack to manufacture consistency. Instead, keep the requirement Pending and use OpenGSD's native phase insertion to route the missing behavior through a new phase.
+
+The migration audit established the first concrete case. Pack 3 remains a completed historical phase with all 17 verified legacy slices, its import PLAN/SUMMARY, and nine product requirements supported by reachable behavior and evidence. Five broader contracts remain Pending: `sessions.event-timeline`, `sessions.segment-sessions`, `sessions.session-history-grouping`, `practice-session.event-timeline`, and `practice-session.segment-history`. They move to a native inserted Phase 3.1 with no prewritten implementation plan. The migrated project therefore has 13 preserved legacy packs plus one native gap phase: 14 phases total, eight complete, Phase 3.1 next, eight completed import PLAN/SUMMARY pairs, 32 complete requirements, and 32 pending requirements. Legacy traceability remains 83 verified and 49 not-started slices.
+
+Phase 3.1 records truthful future scope; it is not the next engineering activity in this governance rollout. Once semantic migration is complete, the first engineering execution is the isolated R-01 Level 2 refactoring-and-slimming pilot. Local Lumen/Ollama setup is R-01 discovery preflight, not an intervening product phase. Phase 3.1 product work remains pending until separately started through normal OpenGSD routing.
+
 ### 4.2 Project policy
 
 One project skill, `skills/metronome-policy/SKILL.md`, is explicitly injected through OpenGSD `agent_skills`. It is kept outside `.agents/skills` and `.codex/skills` so automatic skill discovery does not load it multiple times.
@@ -333,4 +339,3 @@ An unbypassable gate would require a wrapper, hook, CI policy, or OpenGSD modifi
 - **Reject as default:** mgrep because its normal architecture synchronizes files to a cloud-backed store.
 - **Do not enable:** OpenGSD Graphify/Intel for semantic duplicate discovery.
 - **Do not build:** a custom graph, capability registry, semantic-search engine, validator framework, or second workflow.
-
