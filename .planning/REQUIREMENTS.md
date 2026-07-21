@@ -47,23 +47,23 @@ Explicitly excluded to prevent scope drift.
 
 ## Traceability
 
-Roadmap creation will map every v1.1 requirement to exactly one phase.
+Every v1.1 requirement maps to the single bounded roadmap phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FMT-01 | Unmapped | Pending |
-| FMT-02 | Unmapped | Pending |
-| EVID-01 | Unmapped | Pending |
-| SLIM-01 | Unmapped | Pending |
-| QUAL-01 | Unmapped | Pending |
-| HEALTH-01 | Unmapped | Pending |
-| SHIP-01 | Unmapped | Pending |
+| FMT-01 | Phase 1 | Pending |
+| FMT-02 | Phase 1 | Pending |
+| EVID-01 | Phase 1 | Pending |
+| SLIM-01 | Phase 1 | Pending |
+| QUAL-01 | Phase 1 | Pending |
+| HEALTH-01 | Phase 1 | Pending |
+| SHIP-01 | Phase 1 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 7 total
-- Mapped to phases: 0
-- Unmapped: 7
+- Mapped to phases: 7
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-07-21*
-*Last updated: 2026-07-21 after user confirmation*
+*Last updated: 2026-07-21 after roadmap creation*
