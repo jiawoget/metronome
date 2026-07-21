@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: Legacy Delivered Baseline
-status: Awaiting next milestone
-last_updated: "2026-07-20"
+milestone: v1.1
+milestone_name: R01 Evidence-First Code Slimming
+status: planning
+last_updated: "2026-07-20T15:48:00.975Z"
 last_activity: 2026-07-20
-last_activity_desc: v1.0 milestone completed and archived
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,21 +20,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-20)
 
 **Core value:** Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
-**Current focus:** Awaiting next milestone
+**Current focus:** v1.1 R01 Evidence-First Code Slimming
 
 ## Current Position
 
-Phase: Milestone v1.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-20 — Milestone v1.0 completed and archived
-
-Progress: [██████████] 100% of archived v1.0 history (8 phases, 8 plans)
+Status: Defining requirements
+Last activity: 2026-07-20 — Milestone v1.1 started
 
 ## Operator Next Steps
 
-- Start the next milestone with `$gsd-new-milestone` after governance acceptance. Native milestone questioning may surface or select matching dormant seeds, but selection does not consume them.
-- Keep a selected seed until the current `REQUIREMENTS.md` approves the same legacy capability ID, feature key, and required behavior. Delete it in that same planning commit; if approval does not occur, keep it. OpenGSD does not delete seeds automatically.
+- Research current `main` before selecting a target: search project behavior semantically, inspect installed dependencies, and verify relevant OSS APIs against authoritative online sources.
+- Define and approve the bounded v1.1 maintenance requirements and reset-numbered roadmap beginning at Phase 1. This maintenance milestone does not select or consume a dormant product seed.
 
 ## Accumulated Context
 
@@ -50,12 +47,13 @@ Progress: [██████████] 100% of archived v1.0 history (8 phas
 
 ### Pending Todos
 
-- Obtain governance acceptance and merge this repaired migration candidate.
-- From the updated `main`, run `$gsd-new-milestone` for the real R01 using current code and frozen legacy R01 evidence. Do not resume the historical disposable pilot. R01 does not consume a dormant product seed unless an approved product requirement exactly matches it.
+- Complete discovery-first research from current `main` without inheriting the historical pilot target or conclusions.
+- Define and approve v1.1 maintenance requirements while leaving all dormant product seeds unchanged.
+- Create and approve a milestone-local roadmap beginning at Phase 1, then execute the selected bounded refactor.
 
 ### Blockers/Concerns
 
-- No product-lifecycle blocker is active. The repository intentionally remains between milestones pending governance acceptance and a future user-selected milestone.
+- No active blocker. Restored historical experimental worktrees remain preserved for later cleanup, but are excluded from v1.1 discovery and implementation context.
 
 ## Deferred Items
 
@@ -66,5 +64,5 @@ Progress: [██████████] 100% of archived v1.0 history (8 phas
 ## Session Continuity
 
 Last session: 2026-07-20
-Stopped at: v1.0 complete; awaiting governance acceptance, then real R01 from updated main
+Stopped at: v1.1 started; defining evidence-first maintenance requirements from current main
 Resume file: None
