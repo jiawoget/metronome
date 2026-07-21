@@ -12,7 +12,9 @@ Four timestamp bodies, two identical minute-duration bodies, and one no-op minut
 
 **Primary recommendation:** characterize every selected output through existing public seams before production edits, then add the two admitted exports to `src/domain/practice/format.ts`, redirect only the verified callers, delete all seven superseded functions atomically, and accept only a strictly net-negative virtually normalized `src/**` result from immutable `$productionBaseSha`/`$reviewedProductionSha` blobs that passes the exact reviewed-revision gates. [VERIFIED: REQUIREMENTS.md and current HEAD source]
 
-**Execution amendment:** `01-EXECUTION-RECOVERY.md`, the compact execution receipt, and the current PLAN govern sequencing after the interrupted first run. Research remains the sole producer of selection evidence. An executor checks its fingerprints and consumes the receipt; it does not reload this document, rebuild the semantic index, repeat dependency/OSS discovery, or run CodeScene before edits. Baseline and final CodeScene evidence are both captured later from immutable refs in the controller-owned final gate. This changes execution timing only, not any CAP decision, Approved Surface, behavior, LOC rule, health threshold, or 89-line verifier.
+**Execution amendment:** The formatter consolidation is complete and preserved at immutable commit `ef98c28759a017d6c1a09ef4f1bd68a9488440bf`; its T1/T2 work is historical evidence and is never repeated, amended, or reverted. The first T3 attempt was blocked only because final Home Code Health was `6.86`, below the unchanged `7.0` threshold. The approved repair adds one local Goals-first structural extraction followed by one explicit final-evidence retry. It performs no semantic, dependency, or OSS rediscovery and uses a new observability run/step identity. [VERIFIED: immutable commit and `.logs/gsd-observability/r01-formal-20260721-01/evidence/codescene-final.json`]
+
+**Amendment precedence:** CAP-03 and the amended execution receipt/PLAN govern all work after `ef98c28`. Later references in this document to an exact four-source/six-file formatter transaction, zero new production paths, the original 89-line verifier, or T1-T3 describe the completed historical formatter attempt only. They do not authorize repeating it and do not constrain the approved CAP-03 files. Final acceptance instead evaluates the combined immutable range `3370d2f93fd6740d96150d9ee69e31238b258c6a..reviewedProductionSha`: four existing production paths may be modified, exactly two Goals components may be added, and the combined normalized production LOC must remain strictly negative.
 
 <phase_requirements>
 ## Phase Requirements
@@ -68,7 +70,19 @@ Discovery level is **Level 2** because the phase consolidates generic time/forma
 | **Approved Surface** | Add only `formatPracticeMinuteDuration(value: number): string` to `src/domain/practice/format.ts`; import/use it only in `src/hooks/use-practice-session-dashboard.ts` and `src/components/home/home-dashboard.tsx`; replace hook calls at current lines 532 and 605 plus Home call at current line 1023; delete `formatSessionComparisonDuration`, `formatSessionComparisonMinutes`, and `formatAnalyticsDuration`. [VERIFIED: current HEAD source] |
 | Evidence | Three exact selected call expressions, two identical bodies, one no-op wrapper, existing Home boundary tests, and the approved semantic/call-site review. [VERIFIED: current HEAD source and approved FEATURES/SUMMARY research] |
 
-**Admission closure:** The planner and executor may use only the two Approved Surface entries above. Any required new dependency, module, type export, wrapper, facade, adapter, compatibility path, feature flag, owner move, public API, or additional formatter stops the affected CAP and returns it to research. [VERIFIED: `skills/metronome-policy/SKILL.md`]
+### CAP-03 — Goals-first Home structural extraction (execution amendment)
+
+| Field | Admission record |
+|---|---|
+| Intent | Restore Home to a composition role by extracting its approximately 613 physical lines of Practice Goals UI responsibility into cohesive sibling components, without changing behavior or persistence. [VERIFIED: approved architecture analysis and existing `session-comparison-panel.tsx` precedent] |
+| Inputs / outputs | Existing Home/hook props, goal view models, callbacks, and rendered behavior remain the contract; no domain or service API changes. |
+| Local candidates | Use the existing sibling-component pattern represented by `src/components/home/session-comparison-panel.tsx`; keep goal composition in `home-dashboard.tsx`, panel behavior in `practice-goals-panel.tsx`, and editor/form state in `practice-goal-editor.tsx`. |
+| Dependency / OSS decision | **USE_LOCAL**. This is a bounded responsibility extraction using existing React/project patterns. No new dependency, framework, generic abstraction, service, schema, domain API, ID algorithm, or persistence path is admitted. No rediscovery is required because the approved change introduces no generic capability. |
+| Required deletion | Remove duplicate save/delete callback aliases and the empty-data reference sentinel when preserved behavior and tests permit; do not merely move one approximately 600-line block into one new file. |
+| **Approved Surface** | Modify only `src/components/home/home-dashboard.tsx` and `src/hooks/use-practice-session-dashboard.ts`; create only `src/components/home/practice-goals-panel.tsx` and `src/components/home/practice-goal-editor.tsx`; modify only `tests/unit/home-dashboard.test.tsx` and `tests/unit/architecture-boundaries.test.ts` as needed. Domain, services, dependencies, schemas, algorithms, persistence, and every other path are excluded. |
+| Acceptance | Existing user-visible behavior stays locked; Home remains composition; each new file receives attributable CodeScene evidence with no new severe finding; Home is at least `7.0`; normalized total production LOC across the original formatter range plus this repair remains strictly net-negative. |
+
+**Admission closure:** The formatter CAP-01/CAP-02 implementation at `ef98c28759a017d6c1a09ef4f1bd68a9488440bf` is immutable historical work. The executor may implement only CAP-03 within its Approved Surface, then run one explicit final-evidence retry. Any required dependency, domain/service change, API replacement, persistence change, ID algorithm change, or additional production path blocks the repair and returns for a separate scope decision rather than rediscovery or automatic retry.
 
 ## Architectural Responsibility Map
 
@@ -495,7 +509,7 @@ The current interactive PowerShell environment has no `cs` command and no shell 
 - Full command outputs tied to `reviewedProductionSha` and `IMPLEMENTATION_BRANCH`. [VERIFIED: QUAL-01]
 - Fresh CodeScene pre/post per-file scores/reviews and branch change-set raw outputs externally bound to exact revisions/blobs/paths/invocation times/tool names; pre-commit safeguard raw output with recorded parent SHA, staged tree/name-status/diff/blob IDs, and verified resulting commit/tree; optional returned metadata and any repository delta view URL actually returned. [VERIFIED: HEALTH-01]
 - DELIV-01 evidence: complete product evidence, clean disposable revert demonstration, immutable product SHA/tree/config/named-branch bindings, and clean scoped state ready to enter native verification/validation/security. Later pass artifacts are ship preconditions only. [VERIFIED: REQUIREMENTS.md and native workflows]
-- Milestone Release Exit evidence, carried externally rather than credited to Phase 1: actual final PR-head SHA, independent `@codex` verdict, exact-head CI result, GitHub merge record, updated `main` SHA, and empty final `git status --porcelain=v1 --untracked-files=all`. [VERIFIED: AGENTS.md]
+- Milestone Release Exit evidence, carried externally rather than credited to Phase 1: actual deliverable SHA, applicable exact-head CI/delivery record, updated `main` SHA, and empty final `git status --porcelain=v1 --untracked-files=all`. The normally required independent `@codex` verdict is explicitly waived only for this migration/repair run.
 
 ### Wave 0 gaps
 
@@ -555,9 +569,9 @@ The production change must remain one bounded source refactor with no schema/key
 
 ## Milestone Release Exit
 
-Final review is read-only and performed by `@codex` using `skills/reviewing-metronome-prs/SKILL.md`. The reviewer must trace every changed production surface through plan task -> CAP decision -> Approved Surface -> tests -> verification, independently recheck reuse/dependency/OSS rejection evidence, and report production LOC and Code Health separately. [VERIFIED: AGENTS.md and review skill]
+The project owner explicitly waived the separate `@codex` PR-review gate for this unusually large migration/repair run. Strict task review, native verification/validation/security, exact-head CI where applicable, merge, and clean synchronized `main` remain required; this one-run waiver does not change the repository default for later work.
 
-This release exit is deliberately external to Phase 1 requirement completion because native execute-plan and phase completion run before `$gsd-ship`. After native ship has made its final post-ship update, resolve the actual PR-head SHA without writing that SHA into a commit that would change it. Require CI for that exact head, a finding-free `@codex` review of the same head, and merge through the GitHub PR lifecycle. After merge, update local `main`, require it to match the intended remote merge revision, and require `git status --porcelain=v1 --untracked-files=all` to be empty. Missing exact-head CI, a stale review, an unresolved finding, failed merge, data/user repair, or dirty updated `main` leaves the Milestone Release Exit open; `verification.status=passed` never substitutes for it. [VERIFIED: AGENTS.md and native ship behavior]
+This release exit is deliberately external to Phase 1 requirement completion because native execute-plan and phase completion run before `$gsd-ship`. After native ship has made its final post-ship update, resolve the actual deliverable SHA without writing that SHA into a commit that would change it. Require applicable exact-head CI and complete the approved GitHub/direct-main delivery path. Finally require synchronized `main` and an empty `git status --porcelain=v1 --untracked-files=all`. Failed delivery, data/user repair, or dirty updated `main` leaves the Milestone Release Exit open; `verification.status=passed` never substitutes for it.
 
 ## Assumptions Log
 
@@ -567,13 +581,13 @@ This release exit is deliberately external to Phase 1 requirement completion bec
 
 ## Open Questions
 
-None. `format.ts` CodeScene baseline capture, characterization additions, mutation evidence, final LOC, and exact-revision health/review results are mandatory execution evidence rather than design questions. Any need to exceed Approved Surface is a stop-and-return-to-research condition, not planner discretion. [VERIFIED: metronome policy]
+None. Formatter T1/T2 evidence is immutable at `ef98c28`; CAP-03 TDD evidence, final combined-range LOC, and one exact-revision health retry remain execution evidence rather than design questions. Any need to exceed the amended Approved Surface stops for an explicit scope decision rather than triggering rediscovery or an automatic plan loop.
 
 ## Project Constraints (from AGENTS.md)
 
 - Native OpenGSD is the sole lifecycle entrypoint; continue the active Phase 1 rather than creating another scheduler or milestone. [VERIFIED: `AGENTS.md`, `STATE.md`, `ROADMAP.md`]
 - Read and reconcile `.planning/STATE.md` and `.planning/ROADMAP.md` before routing work. [VERIFIED: `AGENTS.md`]
-- Final PR review is read-only, performed by `@codex`, and uses `skills/reviewing-metronome-prs/SKILL.md`; it does not replace native lifecycle work. [VERIFIED: `AGENTS.md`]
+- Final PR review normally follows the repository `@codex` rule; the project owner explicitly waived it for this one migration/repair run without waiving native verification, security, delivery, or clean-main requirements.
 - Before commit, run debt-gate self-test, changed Semgrep, changed XO, lint, typecheck, unit tests, and build through the hook. [VERIFIED: `AGENTS.md`]
 - Use repository-local `scripts/npm-local.ps1` when npm is absent from PATH, in the documented npm -> npm.cmd -> PowerShell/pwsh fallback order. [VERIFIED: `AGENTS.md`]
 - Do not bypass hooks with `--no-verify` unless the user explicitly requests it. [VERIFIED: `AGENTS.md`]

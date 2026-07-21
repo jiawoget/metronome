@@ -17,6 +17,25 @@ This is the compact, execution-only projection of approved research. It does not
 | Home blob | `95d0946c0796d5e3f5b577c551b7963337c7a647` |
 | Lumen cache | 348 files / 2,905 chunks, `ordis/jina-embeddings-v2-base-code`, refreshed 2026-07-21T10:34:49Z, not stale |
 
+## Execution amendment: Goals-first Home repair
+
+The original receipt below is retained as historical proof. T1 and T2 completed at immutable formatter commit `ef98c28759a017d6c1a09ef4f1bd68a9488440bf`; the original T3 stopped after Home improved from `6.46` to `6.86`, below the unchanged `7.0` threshold. No original task, discovery query, dependency/OSS search, Lumen reindex, baseline capture, or CodeScene attempt is repeated.
+
+| Amendment identity | Required value |
+|---|---|
+| Combined production baseline | `3370d2f93fd6740d96150d9ee69e31238b258c6a` |
+| Preserved formatter commit | `ef98c28759a017d6c1a09ef4f1bd68a9488440bf` |
+| Original blocked evidence | `.logs/gsd-observability/r01-formal-20260721-01/evidence/codescene-final.json` |
+| Repair observability run | `r01-home-repair-20260721-01` |
+| Repair task | `01-01-T4`, resume `r01-home-goals-repair`, cache `approved-home-goals-repair:v1` |
+| Explicit evidence retry | `01-01-T5`, resume `r01-home-final-evidence-retry`, cache `immutable-home-repair-final:v1`, retry-of original `t3-final-evidence` |
+
+T4 may modify only `src/components/home/home-dashboard.tsx`, `src/hooks/use-practice-session-dashboard.ts`, `tests/unit/home-dashboard.test.tsx`, and `tests/unit/architecture-boundaries.test.ts`, and may add only `src/components/home/practice-goals-panel.tsx` plus `src/components/home/practice-goal-editor.tsx`. It first records a failing architecture-boundary test, then restores behavior while making Home composition-only for Goals. It removes duplicate save/delete callback aliases and the empty-data reference sentinel only where the focused tests prove compatibility. No dependency, domain/service/schema/API replacement, persistence path, generic abstraction, or goal-ID algorithm change is admitted.
+
+T5 accepts exactly those six repair paths relative to `ef98c28`. Across `3370d2f..reviewedProductionSha`, the source inventory is exactly four `M` rows (`format.ts`, `session-comparison.ts`, dashboard hook, Home) and two `A` rows (the Goals panel/editor). The normalized production total across those six paths must be strictly negative; relocation alone does not count. Existing changed files require no Code Health decline/new severe finding, both new files require attributable no-severe results, and Home must be at least `7.0`. T5 is the only permitted evidence retry. Interruption or failure stops without rediscovery, alternate targets, threshold reduction, or automatic replan.
+
+The original 89-line verifier below is historical and must not be rerun unchanged because it assumes four modified-only source rows. T5 instead records a concise combined-range normalized verifier in the run evidence that handles both modified and added files, validates the exact `4M + 2A` source inventory, pins formatter inputs/tool versions, prints per-path and total added/deleted/net counts, and cleans its temporary files. The verifier itself remains runtime evidence under `.logs/`; it is not added to the product repository.
+
 At T1, run `node scripts/gsd-observability-write.mjs fingerprint --repo .` and require exact equality. Planning/STATE commits may change HEAD but must leave the product fingerprint and `src` tree unchanged. Any product/search drift is `EVIDENCE_STALE`; record blocked and stop. Do not reindex or research from the executor.
 
 ## Approved capability decisions
@@ -57,7 +76,7 @@ The existing `src/domain/practice/index.ts` wildcard export remains unchanged. R
 
 Run the focused command before any source edit. Apply the four approved mutations one at a time, require the intended test to fail, restore immediately, and require all four working source hashes to equal the blobs above before T2.
 
-## Final stop conditions
+## Historical formatter stop conditions
 
 - Exact four-source staged allowlist before changed-file gates and safeguard; exact six-file commit allowlist after adding tests.
 - The full pre-commit hook runs once and is never bypassed.
@@ -67,7 +86,7 @@ Run the focused command before any source edit. Apply the four approved mutation
 - Exact normalized production net is `< 0`; rollback passes only in a disposable verification context.
 - Interruption records `interrupted` and stops. No automatic retry, alternative target, or return from final verification to broad research.
 
-## Canonical 89-line LOC verifier
+## Historical canonical 89-line LOC verifier
 
 Replace only the three placeholders. The physical body below is exactly 89 lines.
 
