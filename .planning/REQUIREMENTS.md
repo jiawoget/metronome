@@ -35,7 +35,7 @@ This is explicitly outside Phase 1 requirement completion. All gates below are c
 1. Run native `$gsd-ship` to create or prepare the PR.
 2. After any ship-note or update, resolve the actual final post-ship PR head.
 3. Ensure CI applies to that exact head; re-run or refresh CI if `[ci skip]` prevents it.
-4. Obtain a mandatory, finding-free, read-only `@codex` review of that same head using `skills/reviewing-metronome-prs/SKILL.md`.
+4. For this migration/repair run only, apply the project owner's explicit waiver of the separate `@codex` review; future runs continue to use the repository's normal final-review policy.
 5. Merge the GitHub PR.
 6. Update local `main` to the intended `origin` merge revision.
 7. Verify `main == origin/main`, no `MERGE_HEAD`, an empty index, and empty `git status --porcelain=v1 --untracked-files=all` output.

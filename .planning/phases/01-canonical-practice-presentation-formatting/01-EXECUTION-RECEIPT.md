@@ -62,7 +62,7 @@ The existing `src/domain/practice/index.ts` wildcard export remains unchanged. R
 - General null, empty, or invalid timestamp -> `Unknown time`.
 - Whitespace-only analytics timestamp -> suppress the entire updated suffix.
 - Non-empty invalid analytics timestamp -> `Unknown update time`.
-- Valid values -> zero-padded `YYYY-MM-DD HH:mm UTC`, converted with UTC getters and without seconds/milliseconds.
+- Valid values -> the exact legacy UTC rendering: numeric UTC year plus zero-padded month/day/hour/minute, converted with UTC getters and without seconds/milliseconds.
 - `NaN`, infinities, negative, or zero milliseconds -> `0 min`.
 - `1..59_999` -> `<1 min`; `60_000` -> `1 min`; `119_999` -> `1 min`; `3_599_999` -> `59 min`; `3_600_000` -> `1 hr`; `3_660_000` -> `1 hr 1 min`.
 - Larger finite values remain uncapped `N hr` or `N hr M min`.

@@ -38,7 +38,7 @@ Discovery level is **Level 2** because the phase consolidates generic time/forma
 
 | Field | Admission record |
 |---|---|
-| Intent | Render selected absolute practice instants as fixed ASCII `YYYY-MM-DD HH:mm UTC` while preserving the caller's invalid-value label. [VERIFIED: current HEAD source and FMT-01] |
+| Intent | Preserve the selected absolute practice instants' existing ASCII UTC-minute rendering while retaining the caller's invalid-value label; the legacy numeric UTC year token is not normalized, while month/day/hour/minute remain two digits. [VERIFIED: current HEAD source and FMT-01] |
 | Inputs / outputs | Input is `string \| null`; output is a string. Valid values are parsed by the existing `Date` algorithm, rendered from UTC fields, zero-padded to minutes, and omit seconds/milliseconds. [VERIFIED: four current bodies] |
 | Invariants and boundary behavior | Null/empty/invalid values produce `Unknown time` through the legitimate general Home/domain seams; analytics suppresses its updated suffix when `analytics.generatedAt.trim().length === 0` and produces `Unknown update time` for a non-empty invalid value; valid values preserve UTC conversion, ASCII digits/punctuation, and minute truncation. [VERIFIED: current HEAD source and tests] |
 | Side effects | None: no mutation, I/O, storage, timers, locale lookup, or browser resource ownership. [VERIFIED: current HEAD source] |
@@ -178,7 +178,7 @@ Invalid timestamp? --yes--> caller-selected fixed fallback
          |
          no
          v
-UTC fields + zero padding --> YYYY-MM-DD HH:mm UTC
+UTC fields + legacy year token + two-digit month/day/hour/minute --> existing ASCII UTC-minute text
 
 Invalid/non-positive duration? --> 0 min
 positive < 60,000 ms? ---------> <1 min
