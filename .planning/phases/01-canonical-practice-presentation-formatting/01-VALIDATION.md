@@ -11,6 +11,8 @@ created: 2026-07-21
 
 This contract binds product evidence to `reviewedProductionSha` on recorded `IMPLEMENTATION_BRANCH`. Draft status remains until native validation confirms its evidence.
 
+Execution sequencing is amended by `01-EXECUTION-RECOVERY.md` and the current PLAN: the executor consumes the compact receipt, T1 has no external work or commit, T2 leaves exactly four approved source rows staged after one candidate-gate run, and T3 expands them to one exact six-file hook-bearing commit before immutable LOC and CodeScene evidence. The behavior matrix, Approved Surface, 89-line verifier, health thresholds, and native lifecycle gates are unchanged.
+
 ## Test Infrastructure and Latency
 
 | Property | Value |
@@ -42,8 +44,9 @@ Record `IMPLEMENTATION_BRANCH` from `git symbolic-ref -q --short HEAD`; empty ou
 
 ## Complete-Index Commit Protocol
 
-- **T1:** immediately before staging, require the complete index empty. Stage only the two named tests; complete cached name-status must be exactly two non-empty `M` rows. Only then capture tree/diff and commit. Afterward require empty complete index and the same two-row commit inventory.
-- **T2:** immediately before staging, require the complete index empty. Stage only the four approved source paths; complete cached name-status must be exactly four non-empty `M` rows, with no planning/config/test/fifth-source row and no unstaged/untracked source. Establish this allowlist before changed Semgrep/XO or any T2 gate; only after gates pass capture tree/diff/blobs, safeguard, and commit. Afterward require empty complete index and matching parent/tree/four-row inventory.
+- **T1:** keep the complete index empty; add exactly the two named test worktree modifications and prove characterization before any source edit. Do not commit or invoke a full hook.
+- **T2:** stage exactly the four approved source modifications before changed Semgrep/XO; leave exactly the two named tests unstaged. Run the candidate gates once and preserve that four-row staged identity.
+- **T3:** bind the CodeScene safeguard to those four source rows, then stage exactly the two tests and require exactly six non-empty `M` rows with no other path. Commit once through the elevated full hook. Afterward require an empty complete index and the same six-row commit inventory.
 
 ## Executable Task Gates
 
@@ -73,28 +76,14 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 ```
 
-### T3 reviewed-product gate — run elevated on named branch
+### T3 reviewed-product gate — one authoritative hook run
 
-Before and after this block, and again immediately before native closeout, require symbolic HEAD = `IMPLEMENTATION_BRANCH` and that branch tip = `reviewedProductionSha`.
+Before the single six-file commit, run the local pre-commit hook without bypass; its debt self-test, changed Semgrep/XO, lint, typecheck, full unit, and build results are the authoritative full-gate evidence. Do not immediately repeat that suite. After commit, require an empty index, symbolic HEAD = `IMPLEMENTATION_BRANCH`, branch tip = `reviewedProductionSha`, and a six-row commit inventory. Recheck branch/tip before native closeout.
 
 ```powershell
-& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/home-dashboard.test.tsx tests/unit/session-comparison.test.ts
+git diff --cached --quiet
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/architecture-boundaries.test.ts
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& .\scripts\npm-local.ps1 --% run validate:debt-gates
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& .\scripts\npm-local.ps1 --% run lint:debt:changed
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& .\scripts\npm-local.ps1 --% run lint:xo:changed
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& .\scripts\npm-local.ps1 --% run lint
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& .\scripts\npm-local.ps1 --% run typecheck
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& .\scripts\npm-local.ps1 --% run test:unit
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& .\scripts\npm-local.ps1 --% run build
+git diff --check "$productionBaseSha..$reviewedProductionSha"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 ```
 
@@ -102,9 +91,9 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 | Task | Requirements | Automated/product evidence | Manual/provider evidence |
 |------|--------------|----------------------------|--------------------------|
-| `01-01-T1` | FMT-01, EVID-01, SLIM-01, QUAL-01, HEALTH-01 | T1 gate, <=30-second measurement, four mutation-red/restorations, exact two-row commit | immutable base/index/normalizer identities and four-file CodeScene baseline |
-| `01-01-T2` | FMT-01, FMT-02, SLIM-01, QUAL-01, HEALTH-01 | exact four-row staging before T2 seven-gate block; elevated hook; matching commit | staged-identity CodeScene safeguard |
-| `01-01-T3` | EVID-01, SLIM-01, QUAL-01, HEALTH-01, DELIV-01 | T3 nine-gate block, canonical LOC, deletion searches, disposable rollback | every-hunk audit, final CodeScene, named-branch/scoped-clean evidence |
+| `01-01-T1` | FMT-01, EVID-01, QUAL-01 | Receipt fingerprint match, <=30-second measurement, four mutation-red/restorations, two test-only worktree rows | None; external work is forbidden |
+| `01-01-T2` | FMT-01, FMT-02, SLIM-01, QUAL-01 | Exact four-source staging before the seven candidate gates | None; external work is forbidden |
+| `01-01-T3` | EVID-01, SLIM-01, QUAL-01, HEALTH-01, DELIV-01 | Exact six-row hook transaction, canonical LOC, deletion searches, disposable rollback | Staged safeguard plus immutable baseline/final CodeScene and named-branch/scoped-clean evidence |
 
 - T1 must finish before any production edit. T2 staging must precede its changed-file gates. T3 must not check out a detached revision.
 - Rollback occurs only in a disposable context; after disposal the intended branch/tip invariants must still hold.
@@ -112,10 +101,10 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 ## Wave 0 and Canonical LOC Gates
 
 - [ ] Add exactly the three research-named cases; retain focused green, four separate mutation-red results, exact restorations, and measured quick latency <=30 seconds.
-- [ ] Record base SHA/src tree/four blobs, `.lumenignore` and semantic-index identities, write-free normalizer probe, and attributable four-file CodeScene baselines.
+- [ ] Match the receipt's four fingerprints; record base SHA/src tree/four blobs and write-free normalizer probe. Defer baseline-ref CodeScene to T3.
 - [ ] Pin Git `2.55.0.windows.3`, Node `24.17.0`, Prettier `3.9.5`, plugin `0.8.0`, explicit config, absent/untracked `.prettierignore`, and unchanged package files.
 - [ ] Run RESEARCH `Reproducible virtual normalization and calculation` exactly as 89 physical lines, substituting the three recorded placeholders.
-- [ ] Require named branch/tip/reviewed SHA, ancestry, clean scoped status, unchanged formatter inputs, exact four committed `M` rows, raw rows, Unicode-safe blobs, per-file A/D/net, every hunk, aggregate net `< 0`, restored encodings, and both temp files removed.
+- [ ] Require named branch/tip/reviewed SHA, ancestry, clean scoped status, unchanged formatter inputs, exactly four committed source `M` rows plus two committed test `M` rows, raw rows, Unicode-safe blobs, per-file A/D/net, every hunk, aggregate net `< 0`, restored encodings, and both temp files removed.
 - [ ] Map every hunk to the Approved Surface and separately prove retired-body/distinctive-algorithm searches empty; reject relocation, wrappers, comments-only credit, formatting churn, and unrelated cleanup.
 
 ## Provider, Rollback, and Lifecycle Gates
@@ -131,7 +120,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 - [x] All seven requirements appear; DELIV-01 ends at readiness to enter native verification/validation/security.
 - [x] T1/T2/T3 contain 1/7/9 runnable guarded commands; T2 gates are explicitly post-stage.
-- [ ] The controller clears the stale-agent preflight before execute-phase dispatch; exact complete-index transactions pass for T1/T2.
+- [ ] The controller passes native init/structure and repository liveness before dispatch; the single T1/T2/T3 index transaction progresses empty -> four source rows -> six total rows -> empty after commit.
 - [ ] T3 exact 89-line verifier parses in PowerShell 5.1 and all product/branch/LOC/semantic/CodeScene/rollback evidence passes.
 - [ ] Native artifact and key-link discovery totals are nonzero; all final-state checks pass after implementation, while pre-implementation missing exports/links are reported accurately.
 - [ ] Later native ship preconditions pass without Phase 1 requirement credit; Release Exit remains separate.

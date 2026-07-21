@@ -14,7 +14,7 @@ Requirements for this maintenance milestone. Each requirement must map to exactl
 
 ### Evidence and Slimming
 
-- [ ] **EVID-01**: The selected refactor remains supported by reproducible current-HEAD semantic evidence, installed-dependency inspection, and authoritative OSS/platform API evidence, adds no dependency, and refreshes selection evidence if the source HEAD or semantic-index configuration changes before implementation.
+- [ ] **EVID-01**: The selected refactor remains supported by reproducible current-product semantic evidence, installed-dependency inspection, and authoritative OSS/platform API evidence, adds no dependency, and refreshes selection evidence if the selected product fingerprint or semantic-index configuration changes before implementation.
 - [ ] **SLIM-01**: The final formatted diff is strictly net-negative in tracked production code under `src/**`, with no deletion credit from tests, planning, generated files, renames, formatting-only churn, or logic moved into a new production path.
 
 ### Quality and Code Health
