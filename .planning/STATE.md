@@ -69,7 +69,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 1 execution]: Pre-edit is local-only; one final immutable step owns CodeScene, LOC, rollback, and full-hook evidence. Interrupted work is logged and never automatically retried.
 - [Phase 1 execution]: Project-local `.logs/gsd-observability/` records exact step timing, rollout token dimensions, I/O paths, cache/resume identity, and soft-budget status without becoming lifecycle truth or agent context.
 - [Phase 1 amendment]: Preserve formatter commit `ef98c28`; do not repeat T1/T2 or discovery. Extract the Goals responsibility into exactly two cohesive sibling components, remove duplicate plumbing where tests permit, and perform exactly one final evidence retry without lowering Home Code Health 7.0.
-- [Phase 1 amendment]: Evaluate slimming over `3370d2f..reviewedProductionSha`; the combined normalized production LOC must stay strictly negative, so moving the existing block without deletion is insufficient.
+- [Phase 1 amendment]: After the six-file attempt stopped on ownership debt, the project owner approved a narrow ten-file boundary: goal-draft parsing/building moves to the existing domain validation owner and WebCrypto-only ID creation moves to the existing goal service; no dependency, persistence, stored-schema, fallback, or generic abstraction is admitted.
+- [Phase 1 amendment]: The first full-hook attempt exposed XO 4 forcing the ES2024-only regexp `v` flag into TypeScript while `tsconfig.json` targets ES2022. The project owner approved one tooling-contract correction in `xo.config.js`: TypeScript extensions require `u`, JS/MJS retain the native XO rule, and unrelated `/v` suggestion churn is excluded.
+- [Phase 1 amendment]: Evaluate slimming over `3370d2f..reviewedProductionSha`; the exact `6M + 2A` combined normalized production LOC must stay strictly negative, so moving the existing block without deletion is insufficient.
 - [Milestone Release Exit]: The project owner waived the separate `@codex` PR review for this one migration/repair run; native verification/validation/security, applicable CI/delivery, and clean synchronized `main` remain mandatory.
 
 ### Pending Todos
@@ -78,7 +80,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-The original final-evidence attempt is historically blocked at Home `6.86 < 7.0`; the approved CAP-03 repair is now active. Any need to leave its six-file repair surface stops for an explicit user decision. No automatic retry or rediscovery is allowed.
+The original final-evidence attempt is historically blocked at Home `6.86 < 7.0`; the approved CAP-03 repair is now active. Its implementation surface is exactly ten product/test paths plus the approved `xo.config.js` TypeScript-target correction. Any further expansion stops for an explicit user decision. No automatic retry or rediscovery is allowed.
 
 ## Deferred Items
 

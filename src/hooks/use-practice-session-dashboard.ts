@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-
 import {
   DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
   DEFAULT_HOME_RECENT_ACTIVITY_LIMIT,
@@ -20,6 +19,7 @@ import {
   type SessionComparisonResult
 } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/services/practice-session/browser";
+import { createPracticeGoalId } from "@/services/practice-goals";
 import { practiceGoalService } from "@/services/practice-goals/browser-service";
 
 export type PracticeSessionDashboardReadStatus = "idle" | "loading" | "loaded" | "error";
@@ -96,28 +96,27 @@ export type PracticeSessionDashboardActions = {
   refreshPracticeGoals: () => Promise<void>;
   savePracticeGoal: (goal: LocalPracticeGoal) => Promise<void>;
   deletePracticeGoal: (goalId: string) => Promise<void>;
-  onSavePracticeGoal: (goal: LocalPracticeGoal) => Promise<void>;
-  onDeletePracticeGoal: (goalId: string) => Promise<void>;
+  createPracticeGoalId: () => string;
 };
 
 export type PracticeSessionDashboardResult =
   PracticeSessionDashboardState &
   PracticeSessionDashboardActions;
 
-const emptyContinueTargets: ContinuePracticeTargetsResult = {
+export const emptyContinueTargets: ContinuePracticeTargetsResult = {
   targets: [],
   generatedAt: "",
   limit: DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
   rejected: []
 };
 
-const emptyRecentActivity: HomeRecentActivityResult = {
+export const emptyRecentActivity: HomeRecentActivityResult = {
   items: [],
   generatedAt: "",
   limit: DEFAULT_HOME_RECENT_ACTIVITY_LIMIT
 };
 
-const emptyAnalytics: HomeDashboardAnalyticsSource = {
+export const emptyAnalytics: HomeDashboardAnalyticsSource = {
   generatedAt: "",
   summary: {
     durationMs: 0,
@@ -141,7 +140,7 @@ const emptyAnalytics: HomeDashboardAnalyticsSource = {
   }
 };
 
-const emptyStreaks: HomePracticeStreaks = {
+export const emptyStreaks: HomePracticeStreaks = {
   generatedAt: "",
   currentStreakDays: 0,
   longestStreakDays: 0,
@@ -152,7 +151,7 @@ const emptyStreaks: HomePracticeStreaks = {
   }
 };
 
-const emptySessionComparison: HomeSessionComparisonData = {
+export const emptySessionComparison: HomeSessionComparisonData = {
   generatedAt: "",
   candidates: [],
   limit: DEFAULT_SESSION_COMPARISON_LIMIT,
@@ -363,7 +362,7 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
             ? "loaded"
             : "idle"
           : currentState.practiceGoalProgressStatus,
-        practiceGoalsErrorMessage: practiceGoalsErrorMessage,
+        practiceGoalsErrorMessage,
         practiceGoalProgressErrorMessage: evaluationRefreshId === latestPracticeGoalEvaluationRefreshIdRef.current
           ? null
           : currentState.practiceGoalProgressErrorMessage
@@ -423,6 +422,7 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
           practiceGoalMutationErrorMessage: practiceGoalSaveErrorMessage
         }));
       }
+
       throw new Error(practiceGoalSaveErrorMessage);
     }
 
@@ -457,6 +457,7 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
           practiceGoalMutationErrorMessage: practiceGoalDeleteErrorMessage
         }));
       }
+
       throw new Error(practiceGoalDeleteErrorMessage);
     }
 
@@ -498,8 +499,7 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
     refreshPracticeGoals,
     savePracticeGoal,
     deletePracticeGoal,
-    onSavePracticeGoal: savePracticeGoal,
-    onDeletePracticeGoal: deletePracticeGoal
+    createPracticeGoalId
   };
 }
 

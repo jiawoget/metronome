@@ -4,6 +4,14 @@ import type {
   PracticeGoalService
 } from "@/services/practice-goals/types";
 
+export function createPracticeGoalId() {
+  if (typeof globalThis.crypto?.randomUUID !== "function") {
+    throw new TypeError("Practice goal IDs require crypto.randomUUID().");
+  }
+
+  return crypto.randomUUID();
+}
+
 export function createPracticeGoalService({
   repository,
   sessionRepository,
@@ -11,19 +19,19 @@ export function createPracticeGoalService({
   now = () => new Date()
 }: CreatePracticeGoalServiceOptions): PracticeGoalService {
   return {
-    listPracticeGoals() {
+    async listPracticeGoals() {
       return repository.listGoals();
     },
 
-    getPracticeGoal(goalId) {
+    async getPracticeGoal(goalId) {
       return repository.getGoal(goalId);
     },
 
-    savePracticeGoal(goal) {
+    async savePracticeGoal(goal) {
       return repository.saveGoal(goal);
     },
 
-    deletePracticeGoal(goalId) {
+    async deletePracticeGoal(goalId) {
       return repository.deleteGoal(goalId);
     },
 

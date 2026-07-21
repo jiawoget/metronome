@@ -95,6 +95,17 @@ const xoConfig = [
 	},
 
 	{
+		name: 'metronome/typescript-target',
+		files: [
+			'**/*.{ts,tsx,mts,cts}',
+		],
+		rules: {
+			// XO 4 defaults to the ES2024-only `v` flag; TypeScript targets ES2022.
+			'require-unicode-regexp': ['error', {requireFlag: 'u'}],
+		},
+	},
+
+	{
 		name: 'metronome/ui-architecture-boundaries',
 		files: [
 			'src/components/**/*.{ts,tsx}',
