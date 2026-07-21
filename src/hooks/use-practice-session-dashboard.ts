@@ -6,6 +6,8 @@ import {
   DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
   DEFAULT_HOME_RECENT_ACTIVITY_LIMIT,
   DEFAULT_SESSION_COMPARISON_LIMIT,
+  formatPracticeMinuteDuration,
+  formatPracticeUtcMinuteTimestamp,
   type ContinuePracticeTarget,
   type ContinuePracticeTargetsResult,
   type GoalCompletionEvaluation,
@@ -527,9 +529,9 @@ function createHomeSessionComparisonCandidate(
     sessionId: candidate.sessionId,
     label: candidate.label.replace(" - ", " · "),
     sourceTypeLabel,
-    startedText: formatSessionComparisonTimestamp(candidate.startedAt),
-    updatedText: formatSessionComparisonTimestamp(candidate.updatedAt),
-    durationText: formatSessionComparisonDuration(candidate.durationMs),
+    startedText: formatPracticeUtcMinuteTimestamp(candidate.startedAt),
+    updatedText: formatPracticeUtcMinuteTimestamp(candidate.updatedAt),
+    durationText: formatPracticeMinuteDuration(candidate.durationMs),
     bpmText: candidate.bpm === null ? "Not set" : `${candidate.bpm} BPM`,
     timeSignatureText: candidate.timeSignature ?? "Not set",
     recordingsText: formatSessionComparisonRecordings(
@@ -602,55 +604,8 @@ function formatSessionComparisonRecordings(sessionRecordingCount: number, linked
 }
 
 function formatSessionComparisonGoalContribution(durationMs: number, linkedSheetTakes: number) {
-  const minutes = formatSessionComparisonMinutes(durationMs);
+  const minutes = formatPracticeMinuteDuration(durationMs);
   const takeLabel = linkedSheetTakes === 1 ? "1 sheet take linked" : `${linkedSheetTakes} sheet takes linked`;
 
   return `Counts as 1 session; adds ${minutes}; ${takeLabel}`;
-}
-
-function formatSessionComparisonDuration(value: number) {
-  if (!Number.isFinite(value) || value <= 0) {
-    return "0 min";
-  }
-
-  if (value < 60_000) {
-    return "<1 min";
-  }
-
-  const totalMinutes = Math.floor(value / 60_000);
-
-  if (totalMinutes < 60) {
-    return `${totalMinutes} min`;
-  }
-
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  return minutes > 0 ? `${hours} hr ${minutes} min` : `${hours} hr`;
-}
-
-function formatSessionComparisonMinutes(value: number) {
-  const durationText = formatSessionComparisonDuration(value);
-
-  return durationText === "<1 min" ? "<1 min" : durationText;
-}
-
-function formatSessionComparisonTimestamp(value: string | null) {
-  if (!value) {
-    return "Unknown time";
-  }
-
-  const date = new Date(value);
-
-  if (!Number.isFinite(date.getTime())) {
-    return "Unknown time";
-  }
-
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
 }

@@ -24,6 +24,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
   DEFAULT_HOME_RECENT_ACTIVITY_LIMIT,
+  formatPracticeMinuteDuration,
+  formatPracticeUtcMinuteTimestamp,
   type ContinuePracticeTarget,
   type ContinuePracticeTargetIdentity,
   type ContinuePracticeTargetsResult,
@@ -1020,7 +1022,7 @@ function PracticeAnalyticsPanel({
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <AnalyticsMetric
                 label="Total practice"
-                value={formatAnalyticsDuration(analytics.totals.durationMs)}
+                value={formatPracticeMinuteDuration(analytics.totals.durationMs)}
                 testId="home-analytics-total-practice"
               />
               <AnalyticsMetric
@@ -1046,7 +1048,7 @@ function PracticeAnalyticsPanel({
             </dl>
 
             <p className="text-xs leading-5 text-muted-foreground">
-              Local history totals{hasGeneratedAt ? ` · Updated ${formatAnalyticsTimestamp(analytics.generatedAt)}` : ""}
+              Local history totals{hasGeneratedAt ? ` · Updated ${formatPracticeUtcMinuteTimestamp(analytics.generatedAt, "Unknown update time")}` : ""}
             </p>
           </div>
         )}
@@ -1240,7 +1242,7 @@ function getContinuePracticeRowContent(target: ContinuePracticeTargetIdentity) {
       return {
         title: "Quick practice",
         typeLabel: "Quick",
-        metadata: `Recent quick practice: ${formatActivityTime(target.sortTimestamp ?? target.occurredAt)}`,
+        metadata: `Recent quick practice: ${formatPracticeUtcMinuteTimestamp(target.sortTimestamp ?? target.occurredAt)}`,
         accessibleName: "Continue quick practice"
       };
     case "sheet": {
@@ -1332,7 +1334,7 @@ function RecentActivityPanel({
 
 function RecentActivityRow({ item }: { item: HomeRecentActivityItem }) {
   const status = getActivityStatus(item.targetState);
-  const timestamp = formatActivityTime(item.sortTimestamp);
+  const timestamp = formatPracticeUtcMinuteTimestamp(item.sortTimestamp);
   const isStale = item.targetState !== "valid" && item.targetState !== "quick";
 
   return (
@@ -1445,63 +1447,6 @@ function getActivityStatus(targetState: HomeRecentActivityTargetState) {
         className: "border-border bg-muted text-muted-foreground"
       };
   }
-}
-
-function formatActivityTime(value: string | null) {
-  if (!value) {
-    return "Unknown time";
-  }
-
-  const date = new Date(value);
-
-  if (!Number.isFinite(date.getTime())) {
-    return "Unknown time";
-  }
-
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
-}
-
-function formatAnalyticsDuration(value: number) {
-  if (!Number.isFinite(value) || value <= 0) {
-    return "0 min";
-  }
-
-  if (value < 60_000) {
-    return "<1 min";
-  }
-
-  const totalMinutes = Math.floor(value / 60_000);
-
-  if (totalMinutes < 60) {
-    return `${totalMinutes} min`;
-  }
-
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  return minutes > 0 ? `${hours} hr ${minutes} min` : `${hours} hr`;
-}
-
-function formatAnalyticsTimestamp(value: string) {
-  const date = new Date(value);
-
-  if (!Number.isFinite(date.getTime())) {
-    return "Unknown update time";
-  }
-
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
 }
 
 function createDefaultPracticeGoalDraft(): PracticeGoalDraft {

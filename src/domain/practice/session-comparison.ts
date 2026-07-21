@@ -1,3 +1,4 @@
+import { formatPracticeUtcMinuteTimestamp } from "@/domain/practice/format";
 import {
   createSessionHistorySegmentTargetKey,
   type SessionHistoryLookupResult,
@@ -270,7 +271,9 @@ function target(
 }
 
 function createCandidateLabel(session: PracticeSession, target: ResolvedTarget) {
-  const timestamp = formatTimestamp(validTimestamp(session.updatedAt || session.startedAt));
+  const timestamp = formatPracticeUtcMinuteTimestamp(
+    validTimestamp(session.updatedAt || session.startedAt)
+  );
 
   if (session.sourceType === "quick") {
     return `Quick practice - ${timestamp}`;
@@ -357,7 +360,7 @@ function value(text: string, tone: SessionComparisonValueTone = "neutral") {
 }
 
 function timestampValue(timestamp: string) {
-  const formattedTimestamp = formatTimestamp(validTimestamp(timestamp));
+  const formattedTimestamp = formatPracticeUtcMinuteTimestamp(validTimestamp(timestamp));
 
   return value(formattedTimestamp, formattedTimestamp === "Unknown time" ? "muted" : "neutral");
 }
@@ -482,26 +485,6 @@ function getSortValue(candidate: SessionComparisonCandidate) {
 
 function compareSortValues(left: number, right: number) {
   return left === right ? 0 : right > left ? 1 : -1;
-}
-
-function formatTimestamp(value: string | null) {
-  if (!value) {
-    return "Unknown time";
-  }
-
-  const date = new Date(value);
-
-  if (!Number.isFinite(date.getTime())) {
-    return "Unknown time";
-  }
-
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
 }
 
 function formatDuration(durationMs: number) {

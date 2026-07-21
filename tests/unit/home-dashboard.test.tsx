@@ -238,6 +238,34 @@ function createServiceSessionComparisonResult(
   };
 }
 
+function createServiceSessionComparisonCandidate(
+  overrides: Partial<SessionComparisonResult["candidates"][number]> = {}
+): SessionComparisonResult["candidates"][number] {
+  return {
+    sessionId: "quick-session",
+    label: "Quick practice - 2026-06-21 12:01 UTC",
+    sourceType: "quick",
+    startedAt: "2026-06-21T12:00:00.000Z",
+    endedAt: null,
+    updatedAt: "2026-06-21T12:01:00.000Z",
+    sortTimestamp: "2026-06-21T12:01:00.000Z",
+    durationMs: 60_000,
+    bpm: null,
+    timeSignature: null,
+    recordingCount: 0,
+    linkedRecordingMetadataCount: 0,
+    linkedRecordingDurationMs: 0,
+    latestRecordingId: null,
+    sheetId: null,
+    sheetName: null,
+    segmentId: null,
+    segmentName: null,
+    segmentRangeLabel: null,
+    targetState: "quick",
+    ...overrides
+  };
+}
+
 function createDashboardData(overrides: Partial<HomeDashboardData> = {}): HomeDashboardData {
   return {
     summary: {
@@ -2078,5 +2106,198 @@ describe("HomeDashboard", () => {
 
       expect(unsubscribe).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("characterizes selected Home timestamp and minute-duration formatting", () => {
+    const timestampActivities = [
+      createActivityItem({
+        id: "session:null-timestamp",
+        label: "Null timestamp activity",
+        sortTimestamp: null,
+        targetState: "quick"
+      }),
+      createActivityItem({
+        id: "session:empty-timestamp",
+        label: "Empty timestamp activity",
+        sortTimestamp: "",
+        targetState: "quick"
+      }),
+      createActivityItem({
+        id: "session:invalid-timestamp",
+        label: "Invalid timestamp activity",
+        sortTimestamp: "not-a-date",
+        targetState: "quick"
+      }),
+      createActivityItem({
+        id: "session:offset-timestamp",
+        label: "Offset timestamp activity",
+        sortTimestamp: "2026-06-21T23:04:59.999-05:00",
+        targetState: "quick"
+      })
+    ];
+    const whitespaceTimestamp = " ".repeat(3);
+    const { rerender } = render(
+      <HomeDashboard
+        data={createDashboardData({
+          recentActivity: createActivityResult(timestampActivities),
+          analytics: createAnalyticsSource({
+            generatedAt: whitespaceTimestamp,
+            totals: { durationMs: NaN },
+            emptyState: { hasPracticeHistory: true }
+          })
+        })}
+      />
+    );
+
+    for (const label of [
+      "Null timestamp activity",
+      "Empty timestamp activity",
+      "Invalid timestamp activity"
+    ]) {
+      expect(screen.getByText(label).closest("[data-testid='recent-activity-row']")).toHaveTextContent(
+        "Quick practice · Unknown time"
+      );
+    }
+
+    expect(
+      screen.getByText("Offset timestamp activity").closest("[data-testid='recent-activity-row']")
+    ).toHaveTextContent("Quick practice · 2026-06-22 04:04 UTC");
+
+    const analyticsPanel = screen.getByRole("region", { name: "Practice Analytics" });
+
+    expect(within(analyticsPanel).getByText("Local history totals")).toBeVisible();
+    expect(analyticsPanel).not.toHaveTextContent("Updated");
+
+    const durationCases = [
+      [NaN, "0 min"],
+      [Infinity, "0 min"],
+      [-Infinity, "0 min"],
+      [-1, "0 min"],
+      [0, "0 min"],
+      [1, "<1 min"],
+      [59_999, "<1 min"],
+      [60_000, "1 min"],
+      [119_999, "1 min"],
+      [3_599_999, "59 min"],
+      [3_600_000, "1 hr"],
+      [3_660_000, "1 hr 1 min"],
+      [90_060_000, "25 hr 1 min"]
+    ] as const;
+
+    for (const [durationMs, expected] of durationCases) {
+      rerender(
+        <HomeDashboard
+          data={createDashboardData({
+            analytics: createAnalyticsSource({
+              generatedAt: whitespaceTimestamp,
+              totals: { durationMs },
+              emptyState: { hasPracticeHistory: true }
+            })
+          })}
+        />
+      );
+      expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent(expected);
+    }
+
+    rerender(
+      <HomeDashboard
+        data={createDashboardData({
+          analytics: createAnalyticsSource({
+            generatedAt: "not-a-date",
+            emptyState: { hasPracticeHistory: true }
+          })
+        })}
+      />
+    );
+    expect(screen.getByText("Local history totals · Updated Unknown update time")).toBeVisible();
+
+    rerender(
+      <HomeDashboard
+        data={createDashboardData({
+          analytics: createAnalyticsSource({
+            generatedAt: "2026-06-21T23:04:59.999-05:00",
+            emptyState: { hasPracticeHistory: true }
+          })
+        })}
+      />
+    );
+    expect(screen.getByText("Local history totals · Updated 2026-06-22 04:04 UTC")).toBeVisible();
+  });
+
+  it("characterizes dashboard-hook comparison timestamps, durations, and goal wording", async () => {
+    vi.stubGlobal("indexedDB", {});
+    serviceMocks.getSessionComparison.mockResolvedValue(
+      createServiceSessionComparisonResult({
+        candidates: [
+          createServiceSessionComparisonCandidate({
+            sessionId: "invalid-time",
+            label: "Quick practice - Unknown time",
+            startedAt: "not-a-date",
+            updatedAt: "still-not-a-date",
+            sortTimestamp: null,
+            durationMs: 30_000
+          }),
+          createServiceSessionComparisonCandidate({
+            sessionId: "offset-time",
+            label: "Quick practice - 2026-06-22 04:59 UTC",
+            startedAt: "2026-06-21T23:59:59.999-05:00",
+            updatedAt: "2026-06-21T23:59:59.999-05:00",
+            sortTimestamp: "2026-06-21T23:59:59.999-05:00",
+            durationMs: 119_999,
+            bpm: 84,
+            timeSignature: "3/4",
+            linkedRecordingMetadataCount: 1
+          }),
+          createServiceSessionComparisonCandidate({
+            sessionId: "hour-time",
+            label: "Quick practice - 2026-06-21 12:02 UTC",
+            startedAt: "2026-06-21T12:01:00.000Z",
+            endedAt: "2026-06-21T13:02:00.000Z",
+            updatedAt: "2026-06-21T12:02:00.000Z",
+            sortTimestamp: "2026-06-21T12:02:00.000Z",
+            durationMs: 3_660_000,
+            bpm: 96,
+            timeSignature: "4/4",
+            linkedRecordingMetadataCount: 2
+          })
+        ]
+      })
+    );
+    const user = userEvent.setup();
+
+    render(<HomeDashboard />);
+
+    const panel = await screen.findByRole("region", { name: "Session Comparison" });
+
+    await user.click(
+      within(panel).getByRole("checkbox", {
+        name: "Compare Quick practice Quick practice · Unknown time"
+      })
+    );
+    await user.click(
+      within(panel).getByRole("checkbox", {
+        name: "Compare Quick practice Quick practice · 2026-06-22 04:59 UTC"
+      })
+    );
+    await user.click(
+      within(panel).getByRole("checkbox", {
+        name: "Compare Quick practice Quick practice · 2026-06-21 12:02 UTC"
+      })
+    );
+
+    expect(within(panel).getAllByText("Unknown time").length).toBeGreaterThanOrEqual(2);
+    expect(within(panel).getAllByText("2026-06-22 04:59 UTC").length).toBeGreaterThanOrEqual(2);
+    expect(within(panel).getByText("<1 min")).toBeVisible();
+    expect(within(panel).getByText("1 min")).toBeVisible();
+    expect(within(panel).getByText("1 hr 1 min")).toBeVisible();
+    expect(
+      within(panel).getByText("Counts as 1 session; adds <1 min; 0 sheet takes linked")
+    ).toBeVisible();
+    expect(
+      within(panel).getByText("Counts as 1 session; adds 1 min; 1 sheet take linked")
+    ).toBeVisible();
+    expect(
+      within(panel).getByText("Counts as 1 session; adds 1 hr 1 min; 2 sheet takes linked")
+    ).toBeVisible();
   });
 });
