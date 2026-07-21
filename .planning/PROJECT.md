@@ -16,7 +16,8 @@ Musicians can move from a score and practice target to a repeatable local practi
 - Search current code semantically for duplicated behavior before choosing a target.
 - Inspect installed dependencies and authoritative online OSS APIs before approving new implementation logic.
 - Select exactly one evidence-backed refactor boundary; do not inherit the superseded R01 pilot's target or conclusions.
-- Retire more production code than is added, preserve observable behavior, avoid new parallel abstractions, and pass tests plus Code Health safeguards.
+- Retire more production code than is added, preserve observable behavior, avoid new parallel abstractions, and produce a complete, immutable, reversible, clean reviewed product revision ready to enter native verification, validation, and security.
+- Close the separate Milestone Release Exit only after native shipping, exact-head CI and `@codex` review, GitHub merge, and a clean local `main` synchronized to `origin/main`.
 
 ## Requirements
 
@@ -28,7 +29,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 - Discover one bounded reuse-first refactor candidate from current `main` through local semantic, installed-dependency, and authoritative OSS API evidence.
 - Replace the selected duplicate or custom implementation with an existing reusable implementation and achieve a net reduction in production LOC without observable behavior change.
-- Verify the bounded result through behavior tests, repository gates, Code Health evidence, review, merge, and a clean updated `main`.
+- Verify the bounded product result through behavior tests, repository gates, Code Health evidence, rollback, and clean source/configuration state; then pass the separate native verification, validation, and security preconditions before shipping and the separate Release Exit after shipping.
 
 ### Deferred
 
@@ -59,6 +60,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 - **Lifecycle**: Continue the active v1.1 milestone through native `$gsd-next` or the active phase. This supports maintenance work without creating a second scheduler or state machine.
 - **Deferred-capability carrier**: Before requirement approval, the dormant seed is the sole carrier. The same planning commit that approves the matching requirement deletes the seed; afterward native requirement, plan, verification, and archive artifacts carry the truth. OpenGSD does not perform this deletion automatically.
 - **Completion truth**: A product requirement is complete only when every mapped legacy slice is verified and reachable runtime plus automated or repeatable acceptance evidence is linked — prevents false promotion during import.
+- **Lifecycle boundary**: Phase requirement completion establishes only that the immutable reviewed product revision is ready to enter native verification, validation, and security. Passing VERIFICATION, current Nyquist VALIDATION, and SECURITY with `threats_open: 0` is mandatory before `$gsd-ship` but receives no Phase 1 requirement credit. The active goal and milestone remain incomplete until the separate Milestone Release Exit proves native shipping, exact-head CI and review, merge, and clean synchronized `main`.
 - **Local first**: Existing browser-local storage and audio boundaries remain authoritative unless a future requirement explicitly changes them.
 - **Reuse first**: Agents must inspect existing project code, installed dependencies, and relevant external APIs before adding parallel implementations.
 - **Historical evidence**: Legacy product contracts, pack specifications, and slice plans remain evidence, but they no longer own current lifecycle state.
@@ -80,4 +82,4 @@ Musicians can move from a score and practice target to a repeatable local practi
 The shipped v1.0 archive retains the 32 validated capabilities. The remaining 32 capability identities currently live in native dormant seeds. Milestone v1.1 is now active from updated `main` through native OpenGSD. Its discovery uses current code, installed dependencies, and authoritative OSS evidence; frozen legacy R01 artifacts are comparison evidence only and cannot preselect the target or conclusions. R01 is maintenance/refactor work and does not consume a dormant product seed unless a separately approved product requirement exactly matches that seed. Normal seed selection still keeps a seed until matching requirement approval; the approval commit deletes it so the capability is represented by exactly one authoritative carrier before and after promotion.
 
 ---
-*Last updated: 2026-07-20 after starting milestone v1.1 R01 Evidence-First Code Slimming*
+*Last updated: 2026-07-21 after finalizing the v1.1 R01 Phase 1 plan*

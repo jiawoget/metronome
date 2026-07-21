@@ -10,7 +10,7 @@ Phase 1 should consolidate exactly two pure presentation behaviors—fixed UTC-m
 
 Four timestamp bodies, two identical minute-duration bodies, and one no-op minute wrapper remain at the selected Home, dashboard-hook, and session-comparison locations. They have seven timestamp call expressions and three minute-duration call expressions. The existing practice barrel already exports `format.ts`, so the consolidation requires no new module, barrel, wrapper, facade, adapter, compatibility alias, feature flag, dependency, or owner move. [VERIFIED: current HEAD source]
 
-**Primary recommendation:** characterize every selected output through existing public seams before production edits, then add the two admitted exports to `src/domain/practice/format.ts`, redirect only the verified callers, delete all seven superseded functions atomically, and accept only a strictly net-negative virtually normalized `src/**` result from immutable `$productionBaseSha`/`$reviewedHeadSha` blobs that passes the exact reviewed-revision gates. [VERIFIED: REQUIREMENTS.md and current HEAD source]
+**Primary recommendation:** characterize every selected output through existing public seams before production edits, then add the two admitted exports to `src/domain/practice/format.ts`, redirect only the verified callers, delete all seven superseded functions atomically, and accept only a strictly net-negative virtually normalized `src/**` result from immutable `$productionBaseSha`/`$reviewedProductionSha` blobs that passes the exact reviewed-revision gates. [VERIFIED: REQUIREMENTS.md and current HEAD source]
 
 <phase_requirements>
 ## Phase Requirements
@@ -23,7 +23,7 @@ Four timestamp bodies, two identical minute-duration bodies, and one no-op minut
 | SLIM-01 | Finish strictly net-negative in tracked production `src/**`. | The immutable baseline and final calculation exclude tests, planning, generated files, renames, moves, and formatting churn. [VERIFIED: `.planning/REQUIREMENTS.md`] |
 | QUAL-01 | Characterize first and pass focused plus repository gates. | Validation Architecture gives exact tests, mutation checks, commands, artifacts, and stop conditions. [VERIFIED: `.planning/REQUIREMENTS.md`; `package.json`] |
 | HEALTH-01 | Pass exact-revision CodeScene policy. | The CodeScene gate requires no changed-source decline, no new severe finding, and the touched Home hotspot at least 7.0. [VERIFIED: `.codescene/quality-gate-policy.md`] |
-| SHIP-01 | Obtain independent review, prove rollback, merge natively, and leave updated `main` clean. | Delivery obligations below make review, one-change revert, native merge, and clean-main checks terminal gates. [VERIFIED: `.planning/REQUIREMENTS.md`; `AGENTS.md`] |
+| DELIV-01 | Prove the immutable reviewed product revision has complete product evidence, is reversible and clean, and is ready to enter native verification, validation, and security. | These product/repository facts are provable inside execute-plan. Passing the later native gates is mandatory before `$gsd-ship` but receives no Phase 1 requirement credit; post-ship review, CI, merge, and clean-main facts remain the separate Milestone Release Exit. [VERIFIED: `.planning/REQUIREMENTS.md`; native execute-plan ordering; `AGENTS.md`] |
 </phase_requirements>
 
 ## Capability Admission
@@ -245,6 +245,8 @@ All characterization changes occur before any `src/**` edit. Before adding tests
 & .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/home-dashboard.test.tsx tests/unit/session-comparison.test.ts
 ```
 
+Immediately before staging the T1 commit, require the complete index to be empty with unscoped `git diff --cached --quiet`. Stage only `tests/unit/home-dashboard.test.tsx` and `tests/unit/session-comparison.test.ts`; require the complete unscoped `git diff --cached --name-status --no-renames` output to equal exactly two non-empty `M` rows for those paths. Only then write the staged tree, capture the full cached diff, and commit. After commit require an empty complete index and `git diff-tree --no-commit-id --name-status -r HEAD` to equal those same two rows. Any unrelated staged planning, config, production, or test path is `BLOCK`. [VERIFIED: complete-index commit boundary]
+
 Resolve the test-only checkpoint to immutable `CHARACTERIZATION_SHA` with `git rev-parse --verify HEAD^{commit}`. Require `git rev-parse "${CHARACTERIZATION_SHA}:src"` to equal `PRODUCTION_BASE_SRC_TREE`, and require `git status --porcelain=v1 --untracked-files=all -- src` to return no rows. A tree mismatch or any unstaged, staged, or untracked `src/**` path is `BLOCK`; a mutable working-tree diff alone is not characterization proof. [VERIFIED: QUAL-01 and SLIM-01]
 
 ### Required mutation-sensitivity evidence
@@ -261,106 +263,111 @@ The checked-in admitted files do not currently pass Prettier 3.9.5, so an in-wor
 
 ### Clean reviewed-HEAD and exact-source prerequisites
 
-Record `PRODUCTION_BASE_SHA` before characterization. At review entry, resolve `HEAD^{commit}` once to an immutable `$reviewedHeadSha`; final evidence is always `$productionBaseSha..$reviewedHeadSha`, never a dynamic `HEAD` after that resolution or a working-tree diff. The baseline must be an ancestor of the reviewed commit. At final review, worktree/index/untracked status must be clean for both the four Approved Surface source paths and formatter inputs `prettier.config.mjs`, `package.json`, and `package-lock.json`. The changed `src/**` set in the committed range must still be exactly the four approved paths with status `M`; any added/deleted/renamed/moved production file or any fifth source path is `BLOCK`. [VERIFIED: SLIM-01 and Approved Surface]
+Record `PRODUCTION_BASE_SHA` and `IMPLEMENTATION_BRANCH` before characterization; the latter must be the non-empty result of `git symbolic-ref -q --short HEAD`. Before T3, after T3, and immediately before native closeout, that command must still resolve the recorded named branch and `git rev-parse --verify "${IMPLEMENTATION_BRANCH}^{commit}"` must equal immutable `reviewedProductionSha`; detached HEAD is `BLOCK`. Final evidence is always `$productionBaseSha..$reviewedProductionSha`, never a dynamic HEAD or working-tree diff. The baseline must be an ancestor of the reviewed commit. At final review, worktree/index/untracked status must be clean for both the four Approved Surface source paths and formatter inputs `prettier.config.mjs`, `.prettierignore`, `package.json`, and `package-lock.json`; an absent `.prettierignore` must remain absent and untracked. The changed `src/**` set in the committed range must still be exactly the four approved paths with status `M`; any added/deleted/renamed/moved production file or any fifth source path is `BLOCK`. Rollback may run only in a disposable context and must never detach or move the intended implementation branch. [VERIFIED: SLIM-01, Approved Surface, and named-branch closeout invariant]
 
 ### Reproducible virtual normalization and calculation
 
-Run the following from the repository root after replacing the baseline placeholder with the recorded immutable commit. It resolves both commit IDs, proves ancestry and range configuration immutability, then proves the checked-out formatter inputs and approved sources have no worktree, index, or untracked drift before invoking Prettier. Normalization is invalid if checked-out `prettier.config.mjs`, `package.json`, or `package-lock.json` differs from `$reviewedHeadSha`, even when the base-to-reviewed range itself is clean. The recipe reads only `<sha>:<path>` blobs, sends each blob through locked Prettier 3.9.5 using repository-local Node and `--stdin-filepath`, and reuses exactly two individual UTF-8-without-BOM temp files across all four paths. Every native command is an individual gate: any unexpected nonzero exit is `BLOCK`; exit `1` is accepted only from `git diff --no-index` when normalized files differ. [VERIFIED: locked local tool paths and validation design]
+Run the following 89-physical-line recipe from the repository root after replacing the three placeholders with the recorded immutable baseline SHA, reviewed product SHA, and intended implementation branch. The retained categories are necessary and non-duplicative: immutable revision/branch and clean-scope identity; formatter-input immutability; locked Git/Node/Prettier/plugin identity; UTF-8 immutable-blob normalization; exact four-file inventory; per-file numstat plus every hunk; aggregate strict-net-negative assertion; and encoding/temp cleanup. Explicit `--config`, `--no-editorconfig`, and `--ignore-path .prettierignore` close discovery; an absent `.prettierignore` remains an input whose range and untracked state must stay absent. Every native command is an individual gate: any unexpected nonzero exit is `BLOCK`; exit `1` is accepted only from `git diff --no-index` when normalized files differ. [VERIFIED: locked local tool paths and validation design]
 
 ```powershell
 $ErrorActionPreference = "Stop"
 if (Test-Path Variable:PSNativeCommandUseErrorActionPreference) { $PSNativeCommandUseErrorActionPreference = $false }
-$productionBaseSha = "<recorded-PRODUCTION_BASE_SHA>"
+$productionBaseSha = "<recorded-PRODUCTION_BASE_SHA>"; $reviewedProductionSha = "<recorded-reviewedProductionSha>"; $intendedBranch = "<recorded-IMPLEMENTATION_BRANCH>"
 $approvedPaths = @("src/domain/practice/format.ts", "src/domain/practice/session-comparison.ts", "src/hooks/use-practice-session-dashboard.ts", "src/components/home/home-dashboard.tsx")
-$formatterInputs = @("prettier.config.mjs", "package.json", "package-lock.json")
+$formatterInputs = @("prettier.config.mjs", ".prettierignore", "package.json", "package-lock.json")
 $cleanPaths = $approvedPaths + $formatterInputs
 $nodeExe = (Resolve-Path -LiteralPath ".\.tools\node-v24.17.0-win-x64\node.exe").Path
 $prettierCli = (Resolve-Path -LiteralPath ".\node_modules\prettier\bin\prettier.cjs").Path
+$prettierConfig = (Resolve-Path -LiteralPath ".\prettier.config.mjs").Path
+$utf8NoBom = [Text.UTF8Encoding]::new($false)
+$previousOutputEncoding = $OutputEncoding
+$previousConsoleEncoding = [Console]::OutputEncoding
+$baseTemp = $null
+$reviewedTemp = $null
 $baseRef = @(& git rev-parse --verify ($productionBaseSha + "^{commit}") 2>&1)
 if ($LASTEXITCODE -ne 0) { throw "Invalid PRODUCTION_BASE_SHA: $($baseRef -join "`n")" }
 $productionBaseSha = ($baseRef -join "").Trim()
 $headRef = @(& git rev-parse --verify "HEAD^{commit}" 2>&1)
 if ($LASTEXITCODE -ne 0) { throw "Cannot resolve reviewed HEAD: $($headRef -join "`n")" }
-$reviewedHeadSha = ($headRef -join "").Trim()
-& git merge-base --is-ancestor $productionBaseSha $reviewedHeadSha 2>&1
-if ($LASTEXITCODE -ne 0) { throw "PRODUCTION_BASE_SHA is not an ancestor of reviewedHeadSha." }
-$range = "$productionBaseSha..$reviewedHeadSha"
-$configDelta = @(& git diff --name-only $range -- @formatterInputs 2>&1)
-if ($LASTEXITCODE -ne 0) { throw "Configuration immutability check failed: $($configDelta -join "`n")" }
-if ($configDelta.Count -ne 0) { throw "Prettier or package configuration changed in review range: $($configDelta -join ', ')" }
-$version = @(& $nodeExe $prettierCli --version 2>&1)
-if ($LASTEXITCODE -ne 0) { throw "Prettier version probe failed: $($version -join "`n")" }
-if ((($version -join "").Trim()) -ne "3.9.5") { throw "Expected locked Prettier 3.9.5, got $($version -join '')" }
-$status = @(& git status --porcelain=v1 --untracked-files=all -- @cleanPaths 2>&1)
+$resolvedHeadSha = ($headRef -join "").Trim(); if ($resolvedHeadSha -ne $reviewedProductionSha) { throw "HEAD is not reviewedProductionSha." }
+$branchRef = @(& git symbolic-ref -q --short HEAD 2>&1); if ($LASTEXITCODE -ne 0 -or ($branchRef -join "").Trim() -ne $intendedBranch) { throw "Detached or wrong implementation branch." }
+$branchTip = @(& git rev-parse --verify ($intendedBranch + "^{commit}") 2>&1); if ($LASTEXITCODE -ne 0 -or ($branchTip -join "").Trim() -ne $reviewedProductionSha) { throw "Implementation branch tip is not reviewedProductionSha." }
+& git merge-base --is-ancestor $productionBaseSha $reviewedProductionSha 2>&1
+if ($LASTEXITCODE -ne 0) { throw "PRODUCTION_BASE_SHA is not an ancestor of reviewedProductionSha." }
+$range = "$productionBaseSha..$reviewedProductionSha"
+& git diff --quiet --no-ext-diff --no-textconv $range -- @formatterInputs
+$configExit = $LASTEXITCODE
+if ($configExit -eq 1) { throw "Formatter inputs changed in $range." }
+if ($configExit -ne 0) { throw "Formatter-input immutability check failed with exit $configExit." }
+$gitVersion = @(& git --version 2>&1); if ($LASTEXITCODE -ne 0 -or ($gitVersion -join "").Trim() -ne "git version 2.55.0.windows.3") { throw "Expected Git 2.55.0.windows.3, got $($gitVersion -join '')" }
+$nodeVersion = @(& $nodeExe --version 2>&1); if ($LASTEXITCODE -ne 0 -or ($nodeVersion -join "").Trim() -ne "v24.17.0") { throw "Expected Node v24.17.0, got $($nodeVersion -join '')" }
+$prettierVersion = @(& $nodeExe $prettierCli --version 2>&1); if ($LASTEXITCODE -ne 0 -or ($prettierVersion -join "").Trim() -ne "3.9.5") { throw "Expected Prettier 3.9.5, got $($prettierVersion -join '')" }
+$pluginVersion = @(& $nodeExe -p "require('./node_modules/prettier-plugin-tailwindcss/package.json').version" 2>&1); if ($LASTEXITCODE -ne 0 -or ($pluginVersion -join "").Trim() -ne "0.8.0") { throw "Expected prettier-plugin-tailwindcss 0.8.0, got $($pluginVersion -join '')" }
+$status = @(& git status --porcelain=v2 --branch --untracked-files=all -- @cleanPaths 2>&1)
 if ($LASTEXITCODE -ne 0) { throw "Scoped status failed: $($status -join "`n")" }
-if ($status.Count -ne 0) { throw "Approved source or formatter-input paths are not clean: $($status -join "`n")" }
-& git diff --quiet $reviewedHeadSha -- @cleanPaths
-if ($LASTEXITCODE -ne 0) { throw "Scoped worktree differs from reviewedHeadSha." }
-& git diff --cached --quiet $reviewedHeadSha -- @cleanPaths
-if ($LASTEXITCODE -ne 0) { throw "Scoped index differs from reviewedHeadSha." }
+$headRows = @($status | Where-Object { $_ -like "# branch.head *" })
+$oidRows = @($status | Where-Object { $_ -like "# branch.oid *" })
+$dirtyRows = @($status | Where-Object { -not $_.StartsWith("# ") })
+if ($headRows.Count -ne 1 -or $headRows[0] -ne "# branch.head $intendedBranch" -or $oidRows.Count -ne 1 -or $oidRows[0] -ne "# branch.oid $reviewedProductionSha" -or $dirtyRows.Count -ne 0) { throw "Scoped checkout is not clean on intended reviewed branch: $($status -join "`n")" }
 $changedRows = @(& git diff --name-status --no-renames $range -- src 2>&1)
 if ($LASTEXITCODE -ne 0) { throw "Changed-source inventory failed: $($changedRows -join "`n")" }
-$actualPaths = @()
-foreach ($row in $changedRows) {
-  if ($row -notmatch "^M`t(.+)$") { throw "Added/deleted/renamed/moved or non-M source status is forbidden: $row" }
-  $actualPaths += $Matches[1].Replace("\", "/")
-}
-$allowlistDelta = @(Compare-Object ($approvedPaths | Sort-Object) ($actualPaths | Sort-Object))
-if ($allowlistDelta.Count -ne 0) { throw "Changed src set is not the exact four-file Approved Surface: $($allowlistDelta | Out-String)" }
-$utf8NoBom = [Text.UTF8Encoding]::new($false)
-$addedTotal = 0
-$deletedTotal = 0
+$actualRows = @($changedRows | Sort-Object)
+$expectedRows = @($approvedPaths | ForEach-Object { "M`t$_" } | Sort-Object)
+if (($actualRows -join "`n") -ne ($expectedRows -join "`n")) { throw "Changed src rows are not the exact four M-only Approved Surface rows: $($changedRows -join "`n")" }
+@("CHANGED_SOURCE_ROWS_BEGIN", ($changedRows -join "`n"), "CHANGED_SOURCE_ROWS_END") | Write-Output
+$addedTotal, $deletedTotal = 0, 0
 try {
+  $OutputEncoding = $utf8NoBom
+  [Console]::OutputEncoding = $utf8NoBom
   $baseTemp = New-TemporaryFile
   $reviewedTemp = New-TemporaryFile
   foreach ($path in $approvedPaths) {
-    $blobPairs = @(@($productionBaseSha, $baseTemp.FullName), @($reviewedHeadSha, $reviewedTemp.FullName))
+    $blobPairs = @(@($productionBaseSha, $baseTemp.FullName), @($reviewedProductionSha, $reviewedTemp.FullName))
     foreach ($pair in $blobPairs) {
       $spec = "$($pair[0]):$path"
-      $sourceLines = @(& git show --no-ext-diff --no-textconv $spec 2>&1)
-      if ($LASTEXITCODE -ne 0) { throw "git show failed for $spec`: $($sourceLines -join "`n")" }
+      $sourceLines = @(& git cat-file blob $spec 2>&1)
+      if ($LASTEXITCODE -ne 0) { throw "git cat-file failed for $spec`: $($sourceLines -join "`n")" }
       $sourceText = ($sourceLines -join "`n") + "`n"
-      $normalizedLines = @($sourceText | & $nodeExe $prettierCli --stdin-filepath $path 2>&1)
+      $normalizedLines = @($sourceText | & $nodeExe $prettierCli --config $prettierConfig --no-editorconfig --ignore-path ".prettierignore" --stdin-filepath $path 2>&1)
       if ($LASTEXITCODE -ne 0) { throw "Prettier normalization failed for $spec`: $($normalizedLines -join "`n")" }
-      $normalizedText = ($normalizedLines -join "`n") + "`n"
-      [IO.File]::WriteAllText($pair[1], $normalizedText, $utf8NoBom)
+      [IO.File]::WriteAllText($pair[1], (($normalizedLines -join "`n") + "`n"), $utf8NoBom)
     }
-    $numstat = @(& git -c core.autocrlf=false diff --no-index --numstat -- $baseTemp.FullName $reviewedTemp.FullName 2>&1)
-    $numstatExit = $LASTEXITCODE
-    if ($numstatExit -notin 0, 1) { throw "Normalized numstat failed for $path`: $($numstat -join "`n")" }
+    $normalizedDiff = @(& git -c core.autocrlf=false diff --no-index --numstat --patch --unified=0 --diff-algorithm=myers --no-indent-heuristic -- $baseTemp.FullName $reviewedTemp.FullName 2>&1)
+    $diffExit = $LASTEXITCODE
+    if ($diffExit -notin 0, 1) { throw "Normalized diff failed for $path`: $($normalizedDiff -join "`n")" }
+    $numstatRows = @($normalizedDiff | Where-Object { $_ -match "^\d+`t\d+`t" })
+    if (($diffExit -eq 0 -and $numstatRows.Count -ne 0) -or ($diffExit -eq 1 -and $numstatRows.Count -ne 1)) { throw "Unexpected normalized numstat for $path`: $($normalizedDiff -join "`n")" }
     $added = 0
     $deleted = 0
-    if ($numstat.Count -gt 0) {
-      $fields = $numstat[0] -split "`t"
-      if ($fields.Count -lt 2 -or $fields[0] -notmatch "^\d+$" -or $fields[1] -notmatch "^\d+$") { throw "Unparseable normalized numstat for $path`: $($numstat -join "`n")" }
+    if ($numstatRows.Count -eq 1) {
+      $fields = $numstatRows[0] -split "`t"
       $added = [int]$fields[0]
       $deleted = [int]$fields[1]
     }
     $addedTotal += $added
     $deletedTotal += $deleted
     Write-Output ("NORMALIZED_NUMSTAT path={0} added={1} deleted={2} net={3}" -f $path, $added, $deleted, ($added - $deleted))
-    $patch = @(& git -c core.autocrlf=false diff --no-index --unified=0 -- $baseTemp.FullName $reviewedTemp.FullName 2>&1)
-    $patchExit = $LASTEXITCODE
-    if ($patchExit -notin 0, 1) { throw "Normalized diff failed for $path`: $($patch -join "`n")" }
-    @("NORMALIZED_HUNKS_BEGIN path=$path", ($patch -join "`n"), "NORMALIZED_HUNKS_END path=$path") | Write-Output
+    @("NORMALIZED_DIFF_BEGIN path=$path", ($normalizedDiff -join "`n"), "NORMALIZED_DIFF_END path=$path") | Write-Output
   }
   $net = $addedTotal - $deletedTotal
   @("REVIEW_RANGE=$range", "NORMALIZED_ADDED=$addedTotal", "NORMALIZED_DELETED=$deletedTotal", "NORMALIZED_NET=$net") | Write-Output
   if ($net -ge 0) { throw "SLIM-01 failed: normalized production LOC is not strictly net-negative." }
 }
 finally {
+  $OutputEncoding = $previousOutputEncoding
+  [Console]::OutputEncoding = $previousConsoleEncoding
   if ($null -ne $baseTemp) { Remove-Item -LiteralPath $baseTemp.FullName -Force }
   if ($null -ne $reviewedTemp) { Remove-Item -LiteralPath $reviewedTemp.FullName -Force }
 }
 ```
 
-The evidence record must contain the resolved baseline SHA, resolved reviewed SHA, successful ancestry/range-configuration/checked-out-cleanliness gates, exact four-file name/status set, locked Prettier version, normalized added/deleted totals, net `added - deleted`, and every normalized hunk. The recipe never formats or writes a worktree source file. [VERIFIED: validation procedure]
+The evidence record must contain the resolved baseline/reviewed SHAs, intended named branch and matching tip, successful ancestry/formatter-input/scoped-cleanliness gates, exact four-file name/status rows, locked Git/Node/Prettier/plugin versions, normalized added/deleted totals, net `added - deleted`, and every normalized hunk. The recipe never formats or writes a worktree source file. [VERIFIED: validation procedure]
 
 ### Separate semantic-deletion audit
 
 Normalized net-negative LOC is necessary but not sufficient. Review every normalized addition/deletion hunk and create a fail-closed mapping with columns `path`, `hunk header`, `CAP`, `allowed addition/deletion`, `retired symbol/caller`, and `evidence`. Every hunk must map only to one of: the two canonical function bodies, their direct imports/calls, or the seven named retired bodies/caller rewires. [VERIFIED: Approved Surface and SLIM-01]
 
-No credit is permitted for comment-only deletion, relocated logic in any existing or new path, formatting-only hunks, tests/planning/generated files, new production files, renames, moves, minification, or unrelated cleanup. Search all `src/**` for retired symbols and distinctive algorithms/fallback strings, inspect `$productionBaseSha..$reviewedHeadSha` with `--no-renames`, and block on any unmapped hunk or surviving/relocated duplicate. Raw worktree or commit `numstat` alone never proves semantic deletion. [VERIFIED: SLIM-01 and metronome policy]
+No credit is permitted for comment-only deletion, relocated logic in any existing or new path, formatting-only hunks, tests/planning/generated files, new production files, renames, moves, minification, or unrelated cleanup. Search all `src/**` for retired symbols and distinctive algorithms/fallback strings, inspect `$productionBaseSha..$reviewedProductionSha` with `--no-renames`, and block on any unmapped hunk or surviving/relocated duplicate. Raw worktree or commit `numstat` alone never proves semantic deletion. [VERIFIED: SLIM-01 and metronome policy]
 
 ## Dependency and OSS Conclusion
 
@@ -374,7 +381,7 @@ This conclusion does not reopen candidate selection: Dexie, `dequal`, React hydr
 |---|---|---|
 | Four fixed-UTC timestamp bodies across domain, hook, and Home | One deterministic export in the existing practice formatting owner | Preserves exact text while deleting duplicate ownership. [VERIFIED: current source and Approved Surface] |
 | Two identical minute-duration bodies plus a no-op wrapper | One minute-scale export in the same existing owner | Preserves floor/threshold/hour wording and removes three bodies. [VERIFIED: current source and Approved Surface] |
-| Runtime fallback kept for refactor safety | Version-control rollback before merge | Avoids parallel production paths and requires no data repair. [VERIFIED: SHIP-01 and Runtime State Inventory] |
+| Runtime fallback kept for refactor safety | Version-control rollback before entering native verification | Avoids parallel production paths and requires no data repair. [VERIFIED: DELIV-01 and Runtime State Inventory] |
 
 **Deprecated/outdated for this phase:** locale-sensitive `Intl` replacement, helper facades, compatibility aliases, parallel old/new paths, and dependency-based formatting are rejected by the locked exact-output and slimming contract. [VERIFIED: REQUIREMENTS.md and Capability Admission]
 
@@ -404,7 +411,7 @@ This conclusion does not reopen candidate selection: Dexie, `dequal`, React hydr
 
 ### Pitfall 4: Slimming is only movement
 
-**What goes wrong:** duplicate logic moves to a new/existing path or survives behind aliases while raw `--stat` appears smaller. **Avoidance:** enforce the exact four-file `M` allowlist, virtual-normalized `$productionBaseSha`/`$reviewedHeadSha` hunks, separate semantic-hunk mapping, deletion searches, and zero new production files. [VERIFIED: SLIM-01]
+**What goes wrong:** duplicate logic moves to a new/existing path or survives behind aliases while raw `--stat` appears smaller. **Avoidance:** enforce the exact four-file `M` allowlist, virtual-normalized `$productionBaseSha`/`$reviewedProductionSha` hunks, separate semantic-hunk mapping, deletion searches, and zero new production files. [VERIFIED: SLIM-01]
 
 ### Pitfall 5: Evidence is stale
 
@@ -426,14 +433,14 @@ Long-lived MCP counts retained across an ignore change are not fresh evidence. A
 
 | Layer | Scope | Command / evidence | Failure mode and stop condition |
 |---|---|---|---|
-| Characterization | Existing public Home, hook/service, and domain seams | Focused Vitest command below; green before any `src/**` edit | Missing branch, flaky result, or a deliberate mutation that stays green is `BLOCK`. [VERIFIED: QUAL-01] |
+| Characterization | Existing public Home, hook/service, and domain seams | Focused Vitest command below; measure a <=30-second quick-feedback target before relying on it; green before any `src/**` edit | Runtime above 30 seconds, missing branch, flaky result, or a deliberate mutation that stays green is `BLOCK`; do not claim an unmeasured target as observed. [VERIFIED: QUAL-01] |
 | Focused regression | Same two files on the implemented revision | `& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/home-dashboard.test.tsx tests/unit/session-comparison.test.ts` | Any changed string, rounding, or fallback is `BLOCK`. [VERIFIED: package scripts] |
 | Architecture | Existing dependency boundaries and excluded paths | `& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/architecture-boundaries.test.ts` | New boundary exception, UI-to-infrastructure edge, or local-worker regression is `BLOCK`. [VERIFIED: existing architecture suite] |
 | Static/debt | Gate self-test, changed Semgrep, changed XO, ESLint, TypeScript | Exact commands below | Any failure, suppression, or skipped check is `BLOCK`. [VERIFIED: package scripts and AGENTS.md] |
 | Full behavior/build | Entire unit suite and production build | Exact commands below | Any failure or skipped test is `BLOCK`. [VERIFIED: AGENTS.md] |
-| LOC/deletion | Immutable baseline and reviewed-commit blobs for the exact four-file allowlist | Clean four-source-plus-three-formatter-input checkout, Prettier 3.9.5 virtual normalization, normalized A/D/net plus hunks, and separate semantic-hunk mapping | Non-negative normalized net, source/formatter-input drift, unmapped hunk, new production path, rename/move, relocation, or surviving duplicate is `BLOCK`. Raw `numstat` alone is insufficient. [VERIFIED: SLIM-01] |
+| LOC/deletion | Immutable baseline and reviewed-commit blobs for the exact four-file allowlist | Clean four-source-plus-four-formatter-input checkout, locked Git/Node/Prettier/plugin virtual normalization, normalized A/D/net plus hunks, and separate semantic-hunk mapping | Non-negative normalized net, source/formatter-input drift, Unicode loss, unmapped hunk, new production path, rename/move, relocation, or surviving duplicate is `BLOCK`. Raw `numstat` alone is insufficient. [VERIFIED: SLIM-01] |
 | CodeScene | Fresh baseline and final outputs for every changed source file plus full branch vs baseline | Raw MCP score/review outputs bound to exact revisions/blobs/paths; pre-commit safeguard bound first to parent/staged-tree/diff/blob identity and only then to the verified resulting commit; change-set results bound to exact refs | Decline, severe finding, Home below 7.0, identity mismatch, provider error, stale/session-only result, unattributable output, or unavailable evidence is `BLOCK`. [VERIFIED: HEALTH-01 and CodeScene policy] |
-| Independent review/delivery | Real PR diff and native artifacts | `@codex` read-only review using `skills/reviewing-metronome-prs/SKILL.md` | Missing CAP/PLAN/diff/test traceability or implementation outside Approved Surface is `BLOCK`. [VERIFIED: AGENTS.md and review skill] |
+| Product delivery boundary | Immutable reviewed product revision, complete product evidence, rollback result, named-branch identity, and clean scoped checkout | T3 product/repository evidence | Missing product evidence, wrong/detached branch, dirty scoped path, or failed rollback blocks DELIV-01. Passing native verification/validation/security remains a later `$gsd-ship` precondition with no Phase 1 requirement credit. [VERIFIED: REQUIREMENTS.md, native execute-plan ordering, and AGENTS.md] |
 
 ### Exact repository commands for the reviewed revision
 
@@ -455,14 +462,14 @@ The local pre-commit hook runs the same debt self-test, changed Semgrep/XO, lint
 
 1. Treat prior session-derived numbers (`6.46`, `8.11`, `8.54`) and project lead `82174` only as discovery leads. They are not repository-verifiable current evidence and cannot satisfy HEALTH-01. [VERIFIED: factual audit]
 2. Before production edits, from a clean source checkout matching the recorded baseline blobs, freshly invoke MCP `code_health_score` and `code_health_review` for all four admitted production files. Retain each complete raw output in an external evidence record bound to the exact baseline SHA, analyzed blob ID, repository path, invocation time, and tool name. [VERIFIED: CodeScene workflow and HEALTH-01]
-3. Before each implementation commit, require a non-empty intended staged diff; require `git diff --quiet -- src` and `git ls-files --others --exclude-standard -- src` to show no unstaged or untracked source; and require every staged `src/**` name-status row to be status `M` within the four-path Approved Surface. Capture `PARENT_HEAD_SHA` from `git rev-parse --verify HEAD^{commit}`, `STAGED_TREE` from `git write-tree`, the complete staged name-status and staged diff, and the staged blob IDs for all four approved source paths from `STAGED_TREE`. Then freshly run MCP `pre_commit_code_health_safeguard` on `C:\Users\wsuto\metronome` and bind its complete raw output only to those pre-commit identities plus repository root, invocation time, and tool name. After committing, require `git rev-parse --verify HEAD^` to equal `PARENT_HEAD_SHA` and `git rev-parse --verify HEAD^{tree}` to equal `STAGED_TREE`; only after both equalities hold may the safeguard result be bound to the resulting commit. Any staged identity, parent, or tree mismatch is `BLOCK`. Before final review, require clean scoped paths and freshly run `analyze_change_set` against `$productionBaseSha`. Its evidence must retain the guaranteed `quality_gates` and `results` fields together with the exact baseline SHA and `$reviewedHeadSha`; missing either field is `BLOCK`. [VERIFIED: CodeScene MCP workflow guidance]
-4. At the exact clean `$reviewedHeadSha`, freshly run `code_health_score` and `code_health_review` for every changed source file and bind each complete raw output to that exact commit SHA, analyzed blob ID, repository path, invocation time, and tool name. Compare only these fresh baseline/final pairs. Acceptance requires no file decline, no new severe finding, and `src/components/home/home-dashboard.tsx >= 7.0` because it is a named touched hotspot. No new CodeScene directive is permitted. [VERIFIED: `.codescene/quality-gate-policy.md`]
+3. Before T2 staging, require the complete index empty with unscoped `git diff --cached --quiet`. Stage only the four Approved Surface source paths, then require complete unscoped cached name-status to equal exactly four non-empty `M` rows for those paths; no planning/config/test/fifth-source row may be staged. Also require no unstaged or untracked `src/**` path. Establish this exact staged identity **before** running changed Semgrep/XO and the rest of the seven-gate T2 block. Only after it passes capture `PARENT_HEAD_SHA`, `STAGED_TREE`, complete staged rows/diff, and four staged blob IDs; then run MCP `pre_commit_code_health_safeguard` and bind its raw output to those identities. Commit with the elevated full hook, require an empty complete index afterward, and require commit parent/tree plus complete `git diff-tree` rows to equal the captured parent/tree/four-row allowlist. Any unrelated index row, identity mismatch, or gate run before the exact allowlist is `BLOCK`. Before final review, require clean scoped paths and freshly run `analyze_change_set` against `$productionBaseSha`; retain `quality_gates` and `results` with exact baseline and `reviewedProductionSha`. [VERIFIED: CodeScene MCP workflow guidance and complete-index boundary]
+4. At the exact clean `reviewedProductionSha` on `IMPLEMENTATION_BRANCH`, freshly run `code_health_score` and `code_health_review` for every changed source file and bind each complete raw output to that exact commit SHA, analyzed blob ID, repository path, invocation time, and tool name. Compare only these fresh baseline/final pairs. Acceptance requires no file decline, no new severe finding, and `src/components/home/home-dashboard.tsx >= 7.0` because it is a named touched hotspot. No new CodeScene directive is permitted. [VERIFIED: `.codescene/quality-gate-policy.md`]
 5. Project/config identifiers and analysis/result IDs are optional metadata: retain them when the provider actually returns them, but never require or invent them. Any provider error or output that cannot be attributed through the external revision/blob/path/time/tool binding is `BLOCK`. [VERIFIED: CodeScene MCP output contract and fail-closed policy]
 6. When the repository CLI environment is provisioned, also run the checked-in delta gate with exact immutable refs and retain its complete raw JSON and any view URL actually returned:
 
 ```powershell
 $env:BASE_REF = $productionBaseSha
-$env:HEAD_REF = $reviewedHeadSha
+$env:HEAD_REF = $reviewedProductionSha
 & .\scripts\npm-local.ps1 --% run lint:codescene:changed
 ```
 
@@ -475,19 +482,20 @@ The current interactive PowerShell environment has no `cs` command and no shell 
 | FMT-01 | New characterization in Home and session-comparison suites; focused command | Existing files, new test cases required before production edits. [VERIFIED: test inventory] |
 | FMT-02 | Focused tests plus exact zero-match deletion searches and diff trace | Tests exist; deletion evidence generated after implementation. [VERIFIED: source inventory] |
 | EVID-01 | HEAD/source-tree/index hash record and refreshed Lumen/literal audit on drift | Evidence procedure required before production edits. [VERIFIED: research identity] |
-| SLIM-01 | Clean exact-four-file allowlist, virtual Prettier normalization of `$productionBaseSha`/`$reviewedHeadSha` blobs, normalized A/D/net plus hunks, and semantic-hunk audit | Evidence generated from `$productionBaseSha..$reviewedHeadSha`; raw worktree/numstat evidence is insufficient. [VERIFIED: validation design] |
+| SLIM-01 | Clean exact-four-file allowlist, virtual Prettier normalization of `$productionBaseSha`/`$reviewedProductionSha` blobs, normalized A/D/net plus hunks, and semantic-hunk audit | Evidence generated from `$productionBaseSha..$reviewedProductionSha`; raw worktree/numstat evidence is insufficient. [VERIFIED: validation design] |
 | QUAL-01 | Mutation-sensitive focused tests plus all repository commands | Existing framework/config; cases are Wave 0. [VERIFIED: package/test inventory] |
 | HEALTH-01 | Fresh exact-revision CodeScene baseline, staged-identity safeguard, branch analysis, and per-file final review | Score/review outputs carry exact revision/blob/path/time/tool bindings; safeguard evidence carries verified parent/staged-tree/diff/blob/resulting-commit identity; `analyze_change_set` retains `quality_gates` and `results`; prior session values do not count. [VERIFIED: factual audit and CodeScene policy] |
-| SHIP-01 | Independent `@codex` review, revert proof, native merge, clean `main` | Manual/repository evidence generated at delivery. [VERIFIED: AGENTS.md] |
+| DELIV-01 | Immutable reviewed-product/named-branch identity, complete product evidence, clean disposable revert proof, and clean scoped state ready to enter native verification/validation/security | Product/repository evidence generated inside execute-plan; later native pass facts receive no Phase 1 requirement credit. [VERIFIED: REQUIREMENTS.md and native execute-plan ordering] |
 
 ### Evidence artifacts
 
 - Characterization commit/test-only diff, green focused output, and recorded failing mutation outputs. [VERIFIED: QUAL-01]
 - Immutable `PRODUCTION_BASE_SHA`, `PRODUCTION_BASE_SRC_TREE`, four source blob IDs, and `.lumenignore` blob. [VERIFIED: EVID-01/SLIM-01]
-- Clean worktree/index/untracked status for four source plus three formatter-input paths, exact four-file committed `M` allowlist, normalized `A`, `D`, `A-D`, every normalized hunk, and the separate semantic-hunk mapping. [VERIFIED: FMT-02/SLIM-01]
-- Full command outputs tied to `$reviewedHeadSha`. [VERIFIED: QUAL-01]
+- Clean worktree/index/untracked status for four source plus four formatter-input paths, exact four-file committed `M` allowlist, UTF-8-safe normalized `A`, `D`, `A-D`, every normalized hunk, and the separate semantic-hunk mapping. [VERIFIED: FMT-02/SLIM-01]
+- Full command outputs tied to `reviewedProductionSha` and `IMPLEMENTATION_BRANCH`. [VERIFIED: QUAL-01]
 - Fresh CodeScene pre/post per-file scores/reviews and branch change-set raw outputs externally bound to exact revisions/blobs/paths/invocation times/tool names; pre-commit safeguard raw output with recorded parent SHA, staged tree/name-status/diff/blob IDs, and verified resulting commit/tree; optional returned metadata and any repository delta view URL actually returned. [VERIFIED: HEALTH-01]
-- Independent review verdict, clean revert demonstration, merge result, updated `main` SHA, and empty final `git status --porcelain=v1 --untracked-files=all`. [VERIFIED: SHIP-01]
+- DELIV-01 evidence: complete product evidence, clean disposable revert demonstration, immutable product SHA/tree/config/named-branch bindings, and clean scoped state ready to enter native verification/validation/security. Later pass artifacts are ship preconditions only. [VERIFIED: REQUIREMENTS.md and native workflows]
+- Milestone Release Exit evidence, carried externally rather than credited to Phase 1: actual final PR-head SHA, independent `@codex` verdict, exact-head CI result, GitHub merge record, updated `main` SHA, and empty final `git status --porcelain=v1 --untracked-files=all`. [VERIFIED: AGENTS.md]
 
 ### Wave 0 gaps
 
@@ -498,10 +506,10 @@ The current interactive PowerShell environment has no `cs` command and no shell 
 
 ### Sampling rate
 
-- **Per test-only characterization checkpoint:** focused Home + session-comparison tests and mutation sensitivity. [VERIFIED: QUAL-01]
-- **Per production task commit:** focused tests, architecture test, debt self-test, changed Semgrep/XO, lint, typecheck, and CodeScene safeguard. [VERIFIED: AGENTS.md and CodeScene guidance]
+- **Per test-only characterization checkpoint:** focused Home + session-comparison tests and mutation sensitivity; measure the quick invocation against a <=30-second target and block rather than claim success if it exceeds the target. [VERIFIED: QUAL-01]
+- **Per production task commit:** first establish the exact complete staged four-file allowlist, then run focused tests, architecture test, debt self-test, changed Semgrep/XO, lint, typecheck, and CodeScene safeguard. [VERIFIED: AGENTS.md and CodeScene guidance]
 - **Per wave merge/final reviewed revision:** full unit suite, build, LOC/deletion proof, full CodeScene change-set/per-file evidence. [VERIFIED: requirements]
-- **Phase gate:** all evidence conjunctively green before native verification/ship; unavailable, skipped, stale, or mismatched-revision evidence is `BLOCK`. [VERIFIED: metronome fail-closed policy]
+- **Phase product gate:** all DELIV-01 product/repository evidence is conjunctively green before entering native verification; unavailable, skipped, stale, detached/wrong-branch, or mismatched-revision evidence is `BLOCK`. Passing verification/validation/security is then mandatory before ship but carries no Phase 1 requirement credit. [VERIFIED: metronome fail-closed policy]
 
 ## Security Domain
 
@@ -531,22 +539,25 @@ The current interactive PowerShell environment has no `cs` command and no shell 
 | Repository npm wrapper | All npm scripts | Yes | npm 11.17.0 | None needed. [VERIFIED: current environment] |
 | Git | baseline/diff/rollback | Yes | 2.55.0.windows.3 | None needed. [VERIFIED: current environment] |
 | ripgrep | literal/deletion audits | Yes | 15.1.0 | `git grep` only if `rg` becomes unavailable. [VERIFIED: current environment] |
-| Vitest / Prettier | tests/virtual LOC normalization | Yes | 4.1.9 / 3.9.5 installed | Prettier is invoked only through repo-local Node with stdin blobs; never `--write` on source. [VERIFIED: lockfile and current CLI] |
+| Vitest / Prettier | tests/virtual LOC normalization | Yes | Vitest 4.1.9; Node 24.17.0; Prettier 3.9.5; Tailwind plugin 0.8.0 | Prettier is invoked only through repo-local Node with explicit config/ignore controls and UTF-8 stdin blobs; never `--write` on source. [VERIFIED: lockfile and current CLI] |
 | Lumen semantic provider | EVID-01 refresh | MCP exposed; approved rebuild recorded | Ignore-aware approved index 345 files / 2,859 chunks | Explicit rebuilt CLI index or freshly loaded MCP host; otherwise block. [VERIFIED: approved FEATURES research and current tool exposure] |
 | CodeScene MCP | HEALTH-01 | Tools exposed; fresh analysis still required | Prior project `82174` is a session-derived lead, not current repository evidence | Retain complete raw results with exact external revision/blob/path/time/tool bindings; provider errors, unattributable output, or unavailable evidence block. [VERIFIED: factual audit] |
 | `cs` shell CLI/token | Checked-in `lint:codescene:changed` | No in current PowerShell environment | command/token aliases absent | Use CodeScene MCP exact-revision gates, or provision CLI/token; never skip. [VERIFIED: current environment] |
+| Installed Codex agent bake | Native execute-phase routing | Stale at planning time | `init.execute-phase 1` warns that `.planning/config.json` changed after agents were baked | Before the controller invokes execute-phase or dispatches its executor, use `scripts/npm-local.ps1` to run the pinned `@opengsd/gsd-core@1.7.0` `gsd-core --codex --global` installer, rerun native `init.execute-phase 1`, and require the warning absent. This lifecycle/tool install is not a product dependency and receives no requirement credit. [VERIFIED: current native init output, installed `VERSION`, and native update workflow command shape] |
 
 **Missing dependency with no fallback:** none for research or implementation. [VERIFIED: environment audit]
 
 **Missing dependency with fallback:** the shell `cs` entrypoint/token is absent; CodeScene MCP tools are exposed as the required current fallback, but they count only when fresh output is attributable to the exact revisions through the evidence contract above. [VERIFIED: environment audit and factual audit]
 
-## Rollback, Review, and Clean-Main Obligations
+## Rollback, Product Readiness, and Native Ship Preconditions
 
-The production change must remain one bounded source refactor with no schema/key/dependency migration. Demonstrate rollback before merge by reverting the implementation revision in a clean disposable verification context or by applying its exact reverse diff, running the focused tests to prove old behavior is restored, and then returning to the reviewed revision without retaining a runtime fallback. [VERIFIED: SHIP-01 and Runtime State Inventory]
+The production change must remain one bounded source refactor with no schema/key/dependency migration. Satisfy DELIV-01 inside execute-plan by reversing only the implementation revision in a clean disposable verification context, running focused tests to prove old behavior is restored, disposing that context, and returning to `IMPLEMENTATION_BRANCH` with its tip equal to immutable `reviewedProductionSha`, complete product evidence, and clean scoped source/formatter inputs. The intended branch must be verified before T3, after T3, and immediately before native closeout; rollback must never detach or move it. This establishes readiness to **enter** native verification, validation, and security. Passing `01-VERIFICATION.md`, current Nyquist `01-VALIDATION.md`, and `01-SECURITY.md` with `threats_open: 0` is separately mandatory before `$gsd-ship` but receives no Phase 1 requirement credit. None of these facts claims that a future PR has been reviewed or merged. [VERIFIED: DELIV-01, Runtime State Inventory, native execute-plan ordering, and native ship gates]
+
+## Milestone Release Exit
 
 Final review is read-only and performed by `@codex` using `skills/reviewing-metronome-prs/SKILL.md`. The reviewer must trace every changed production surface through plan task -> CAP decision -> Approved Surface -> tests -> verification, independently recheck reuse/dependency/OSS rejection evidence, and report production LOC and Code Health separately. [VERIFIED: AGENTS.md and review skill]
 
-Merge only through the native OpenGSD lifecycle after all requirements are verified. After merge, update local `main`, require it to match the intended remote revision, and require `git status --porcelain=v1 --untracked-files=all` to be empty; any data repair, user action, stray worktree change, unresolved review finding, or dirty updated `main` blocks SHIP-01. [VERIFIED: AGENTS.md, STATE.md, and SHIP-01]
+This release exit is deliberately external to Phase 1 requirement completion because native execute-plan and phase completion run before `$gsd-ship`. After native ship has made its final post-ship update, resolve the actual PR-head SHA without writing that SHA into a commit that would change it. Require CI for that exact head, a finding-free `@codex` review of the same head, and merge through the GitHub PR lifecycle. After merge, update local `main`, require it to match the intended remote merge revision, and require `git status --porcelain=v1 --untracked-files=all` to be empty. Missing exact-head CI, a stale review, an unresolved finding, failed merge, data/user repair, or dirty updated `main` leaves the Milestone Release Exit open; `verification.status=passed` never substitutes for it. [VERIFIED: AGENTS.md and native ship behavior]
 
 ## Assumptions Log
 
@@ -572,7 +583,7 @@ None. `format.ts` CodeScene baseline capture, characterization additions, mutati
 
 ### Primary (HIGH confidence)
 
-- Current HEAD `19b17b530736d2e51a6a9ee24cfdf6c092fb5b66`, `src` tree `a53cc5795216a48cbd89b79eccf5805b780c7c08`, and exact production/test files cited above. [VERIFIED: git and source inspection]
+- Research-input commit `19b17b530736d2e51a6a9ee24cfdf6c092fb5b66`, its `src` tree `a53cc5795216a48cbd89b79eccf5805b780c7c08`, the later planning-only HEAD with the same `src` tree, and the exact production/test files cited above. [VERIFIED: git and source inspection]
 - `.planning/{PROJECT,STATE,ROADMAP,REQUIREMENTS}.md` and `.planning/research/{SUMMARY,FEATURES,PITFALLS,ARCHITECTURE,STACK}.md`. [VERIFIED: repository artifacts]
 - `AGENTS.md`, `skills/metronome-policy/SKILL.md`, `skills/reviewing-metronome-prs/SKILL.md`, `.planning/config.json`, `.lumenignore`, `package.json`, `package-lock.json`, `.codescene/*`, and `docs/architecture/debt-gate-map.md`. [VERIFIED: repository artifacts]
 - CodeScene MCP workflow guidance; prior numeric scores/project selection are session-derived leads only and are excluded from acceptance evidence. [VERIFIED: installed skill and factual audit]

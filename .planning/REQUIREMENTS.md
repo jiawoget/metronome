@@ -24,7 +24,23 @@ Requirements for this maintenance milestone. Each requirement must map to exactl
 
 ### Delivery
 
-- [ ] **SHIP-01**: The bounded refactor receives independent review, demonstrates a clean version-control rollback without data migration or user repair, merges through the native lifecycle, and leaves updated `main` clean.
+- [ ] **DELIV-01**: The immutable reviewed product revision has complete product evidence, demonstrates a clean version-control rollback without data migration or user repair, leaves relevant source and configuration state clean, and is ready to enter native verification, validation, and security.
+
+Passing VERIFICATION, current Nyquist VALIDATION, and SECURITY with `threats_open: 0` is a mandatory native `$gsd-ship` precondition, but those later lifecycle facts receive no Phase 1 requirement credit.
+
+## Milestone Release Exit
+
+This is explicitly outside Phase 1 requirement completion. All gates below are conjunctive and remain pending:
+
+1. Run native `$gsd-ship` to create or prepare the PR.
+2. After any ship-note or update, resolve the actual final post-ship PR head.
+3. Ensure CI applies to that exact head; re-run or refresh CI if `[ci skip]` prevents it.
+4. Obtain a mandatory, finding-free, read-only `@codex` review of that same head using `skills/reviewing-metronome-prs/SKILL.md`.
+5. Merge the GitHub PR.
+6. Update local `main` to the intended `origin` merge revision.
+7. Verify `main == origin/main`, no `MERGE_HEAD`, an empty index, and empty `git status --porcelain=v1 --untracked-files=all` output.
+
+`verification.status=passed` and milestone requirement completion do not prove this exit. The active goal and milestone must not be reported complete until every gate above is true.
 
 ## Future Requirements
 
@@ -57,7 +73,7 @@ Every v1.1 requirement maps to the single bounded roadmap phase.
 | SLIM-01 | Phase 1 | Pending |
 | QUAL-01 | Phase 1 | Pending |
 | HEALTH-01 | Phase 1 | Pending |
-| SHIP-01 | Phase 1 | Pending |
+| DELIV-01 | Phase 1 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 7 total

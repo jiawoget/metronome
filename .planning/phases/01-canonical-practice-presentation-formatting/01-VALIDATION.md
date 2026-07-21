@@ -1,8 +1,6 @@
 ---
 phase: 1
 slug: canonical-practice-presentation-formatting
-# status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false)
 status: draft
 nyquist_compliant: false
 wave_0_complete: false
@@ -11,75 +9,131 @@ created: 2026-07-21
 
 # Phase 1 — Validation Strategy
 
-> Per-phase validation contract for feedback sampling during execution. The planner must replace provisional task IDs with its final task IDs without dropping requirement, threat, command, or evidence coverage.
+This contract binds product evidence to `reviewedProductionSha` on recorded `IMPLEMENTATION_BRANCH`. Draft status remains until native validation confirms its evidence.
 
----
-
-## Test Infrastructure
+## Test Infrastructure and Latency
 
 | Property | Value |
 |----------|-------|
-| **Framework** | Vitest 4.1.9 |
-| **Config file** | `vitest.config.ts` |
-| **Quick run command** | `& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/home-dashboard.test.tsx tests/unit/session-comparison.test.ts` |
-| **Full suite command** | `& .\scripts\npm-local.ps1 --% run test:unit` |
-| **Estimated runtime** | Quick ~15 seconds; full ~45 seconds |
+| Framework/config | Vitest 4.1.9 / `vitest.config.ts` |
+| Quick target | existing `test:unit` invocation for `home-dashboard.test.tsx` plus `session-comparison.test.ts` |
+| Full target | repository `test:unit` script |
+| Latency contract | measure the quick invocation during T1; target <=30 seconds; if it exceeds 30 seconds, block rather than claim the unobserved target passed |
 
----
+## Controller Pre-Dispatch Preflight — no product credit
 
-## Sampling Rate
+Before invoking native execute-phase or dispatching its executor, the controller must rebake stale Codex agents and rerun phase init. The init output must not contain `changed since agents were last baked`; no already-spawned executor may perform this preflight for itself.
 
-- **After the characterization task:** Run the quick command on the unchanged production tree, then record each required deliberate mutation failing and the immutable source tree/blobs being restored.
-- **After every production task commit:** Run the quick command plus `tests/unit/architecture-boundaries.test.ts`, debt-gate self-test, changed Semgrep, changed XO, lint, and typecheck; run the CodeScene pre-commit safeguard against the recorded staged identity before committing.
-- **After every plan wave:** Run the full suite and production build; preserve outputs against the exact wave HEAD.
-- **Before `$gsd-verify-work`:** Full repository gates, virtual-normalized LOC/deletion evidence, final CodeScene evidence, and semantic-hunk mapping must all be green for the same immutable reviewed revision.
-- **Max feedback latency:** 60 seconds for automated unit feedback; external CodeScene analysis is fail-closed but recorded separately.
+```powershell
+& .\scripts\npm-local.ps1 --% exec --yes --package=@opengsd/gsd-core@1.7.0 -- gsd-core --codex --global
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+$phaseInit = @(& .\.tools\node-v24.17.0-win-x64\node.exe C:\Users\wsuto\.codex\gsd-core\bin\gsd-tools.cjs query init.execute-phase 1 --raw 2>&1)
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if (($phaseInit -join "`n") -match "changed since agents were last baked") { throw "Codex agents remain stale." }
+```
 
----
+Record `IMPLEMENTATION_BRANCH` from `git symbolic-ref -q --short HEAD`; empty output/detached HEAD blocks execution. This lifecycle/tool installation changes no product dependency and satisfies no requirement.
 
-## Per-Task Verification Map
+## Managed Windows Classification
 
-| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
-|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| provisional-W0-characterization | TBD | 0 | FMT-01, QUAL-01 | T-01 | Invalid input is replaced by fixed labels and raw values are never rendered. | unit + mutation | Quick command; required deliberate mutations from `01-RESEARCH.md` | ✅ existing files; ❌ W0 cases | ⬜ pending |
-| provisional-W0-evidence | TBD | 0 | EVID-01, SLIM-01, HEALTH-01 | T-02 | No dependency/config drift; evidence is attributable to immutable source and provider state. | evidence gate | Lumen freshness, immutable source/tree/blob capture, virtual-normalization baseline probe, fresh four-file CodeScene baseline | ❌ W0 evidence | ⬜ pending |
-| provisional-consolidation | TBD | TBD | FMT-01, FMT-02, SLIM-01, QUAL-01 | T-01, T-02 | Only the two approved local exports and four approved source files change; seven old bodies disappear with behavior preserved. | unit + architecture + static | Quick command; architecture boundaries; debt self-test; changed Semgrep/XO; lint; typecheck | ✅ infrastructure | ⬜ pending |
-| provisional-final-revision | TBD | TBD | EVID-01, SLIM-01, QUAL-01, HEALTH-01, SHIP-01 | T-01, T-02 | The immutable reviewed revision is net-negative, attributable, healthy, reversible, independently reviewed, and cleanly mergeable. | full + external evidence | Full unit suite; build; virtual LOC/hunk contract; CodeScene change-set/per-file gates; rollback proof | ✅ commands; ❌ final evidence | ⬜ pending |
+- Run `validate:debt-gates`, `lint:debt:changed`, and every hook-bearing commit elevated.
+- A non-elevated settings/tempfile loop is `EXECUTION_ENVIRONMENT_BLOCKED`; retry elevated without weakening, skipping, suppressing, or reclassifying a gate.
+- Every command below is fail-closed and has an immediate exit guard.
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+## Complete-Index Commit Protocol
 
----
+- **T1:** immediately before staging, require the complete index empty. Stage only the two named tests; complete cached name-status must be exactly two non-empty `M` rows. Only then capture tree/diff and commit. Afterward require empty complete index and the same two-row commit inventory.
+- **T2:** immediately before staging, require the complete index empty. Stage only the four approved source paths; complete cached name-status must be exactly four non-empty `M` rows, with no planning/config/test/fifth-source row and no unstaged/untracked source. Establish this allowlist before changed Semgrep/XO or any T2 gate; only after gates pass capture tree/diff/blobs, safeguard, and commit. Afterward require empty complete index and matching parent/tree/four-row inventory.
 
-## Wave 0 Requirements
+## Executable Task Gates
 
-- [ ] `tests/unit/home-dashboard.test.tsx` — add Home and dashboard-hook timestamp/duration characterization, including trimmed analytics suppression and `119_999 -> 1 min`.
-- [ ] `tests/unit/session-comparison.test.ts` — add public UTC-minute/invalid timestamp characterization while pinning excluded seconds-scale behavior.
-- [ ] Record focused green output plus failing evidence for every deliberate mutation, then prove immutable `src` tree and four production blobs were restored with no staged, unstaged, or untracked `src/**` path.
-- [ ] Record `PRODUCTION_BASE_SHA`, `PRODUCTION_BASE_SRC_TREE`, four Approved Surface blob IDs, `.lumenignore` identity, and current semantic-index identity.
-- [ ] Prove the existing Git + Prettier 3.9.5 virtual-normalization recipe works on immutable baseline blobs without writing source or creating a repository helper.
-- [ ] Freshly capture attributable baseline `code_health_score` and `code_health_review` outputs for all four Approved Surface files.
-- [ ] No framework, dependency, test-config, fixture-file, repository helper, compatibility layer, or parallel runtime path may be added.
+### T1 quick characterization gate
 
----
+```powershell
+& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/home-dashboard.test.tsx tests/unit/session-comparison.test.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+```
 
-## Manual-Only Verifications
+### T2 production gate — run elevated after exact four-row staging
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| Semantic deletion rather than relocation or formatting churn | FMT-02, SLIM-01 | Normalized line counts alone cannot classify semantic ownership. | Map every normalized hunk to CAP-01/CAP-02, the two canonical exports/direct callers, or one of the seven retired bodies; reject comments-only deletion, moves, aliases, wrappers, unrelated cleanup, and surviving distinctive algorithms. |
-| Exact-revision CodeScene policy | HEALTH-01 | Provider output is external and tool schemas differ in optional metadata. | Retain fresh raw baseline/final score/review outputs and change-set `quality_gates`/`results`, bound to the required revision/blob/path/time/tool or staged-tree identity; require no decline, no new severe finding, and Home >= 7.0. |
-| Independent review, rollback, merge, and clean main | SHIP-01 | These are version-control and review lifecycle outcomes. | Obtain read-only `@codex` review using the indexed skill, demonstrate a clean version-control rollback in a disposable context, merge through native OpenGSD, update `main`, and require empty porcelain status. |
+```powershell
+& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/home-dashboard.test.tsx tests/unit/session-comparison.test.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/architecture-boundaries.test.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run validate:debt-gates
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run lint:debt:changed
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run lint:xo:changed
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run lint
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run typecheck
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+```
 
----
+### T3 reviewed-product gate — run elevated on named branch
+
+Before and after this block, and again immediately before native closeout, require symbolic HEAD = `IMPLEMENTATION_BRANCH` and that branch tip = `reviewedProductionSha`.
+
+```powershell
+& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/home-dashboard.test.tsx tests/unit/session-comparison.test.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/architecture-boundaries.test.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run validate:debt-gates
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run lint:debt:changed
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run lint:xo:changed
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run lint
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run typecheck
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run test:unit
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& .\scripts\npm-local.ps1 --% run build
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+```
+
+## Sampling and Task Map
+
+| Task | Requirements | Automated/product evidence | Manual/provider evidence |
+|------|--------------|----------------------------|--------------------------|
+| `01-01-T1` | FMT-01, EVID-01, SLIM-01, QUAL-01, HEALTH-01 | T1 gate, <=30-second measurement, four mutation-red/restorations, exact two-row commit | immutable base/index/normalizer identities and four-file CodeScene baseline |
+| `01-01-T2` | FMT-01, FMT-02, SLIM-01, QUAL-01, HEALTH-01 | exact four-row staging before T2 seven-gate block; elevated hook; matching commit | staged-identity CodeScene safeguard |
+| `01-01-T3` | EVID-01, SLIM-01, QUAL-01, HEALTH-01, DELIV-01 | T3 nine-gate block, canonical LOC, deletion searches, disposable rollback | every-hunk audit, final CodeScene, named-branch/scoped-clean evidence |
+
+- T1 must finish before any production edit. T2 staging must precede its changed-file gates. T3 must not check out a detached revision.
+- Rollback occurs only in a disposable context; after disposal the intended branch/tip invariants must still hold.
+
+## Wave 0 and Canonical LOC Gates
+
+- [ ] Add exactly the three research-named cases; retain focused green, four separate mutation-red results, exact restorations, and measured quick latency <=30 seconds.
+- [ ] Record base SHA/src tree/four blobs, `.lumenignore` and semantic-index identities, write-free normalizer probe, and attributable four-file CodeScene baselines.
+- [ ] Pin Git `2.55.0.windows.3`, Node `24.17.0`, Prettier `3.9.5`, plugin `0.8.0`, explicit config, absent/untracked `.prettierignore`, and unchanged package files.
+- [ ] Run RESEARCH `Reproducible virtual normalization and calculation` exactly as 89 physical lines, substituting the three recorded placeholders.
+- [ ] Require named branch/tip/reviewed SHA, ancestry, clean scoped status, unchanged formatter inputs, exact four committed `M` rows, raw rows, Unicode-safe blobs, per-file A/D/net, every hunk, aggregate net `< 0`, restored encodings, and both temp files removed.
+- [ ] Map every hunk to the Approved Surface and separately prove retired-body/distinctive-algorithm searches empty; reject relocation, wrappers, comments-only credit, formatting churn, and unrelated cleanup.
+
+## Provider, Rollback, and Lifecycle Gates
+
+| Gate | Requirement credit | Acceptance |
+|------|--------------------|------------|
+| Exact-revision CodeScene | HEALTH-01 | Fresh attributable baseline/final score/review and change-set `quality_gates`/`results`; no decline/new severe finding; Home >=7.0. Missing/stale/provider-error output blocks. |
+| Disposable rollback and clean named branch | DELIV-01 | Reverse only production commit in disposable context; baseline tree plus focused green; dispose; return to unchanged named branch at reviewedProductionSha with clean four-source/four-input scope. |
+| Native VERIFICATION/VALIDATION/SECURITY | none | After execute-plan marks requirements, require passing `01-VERIFICATION.md`, current Nyquist `01-VALIDATION.md`, and `01-SECURITY.md` with `threats_open: 0` before `$gsd-ship`. These later facts cannot satisfy DELIV-01. |
+| Milestone Release Exit | none | Preserve REQUIREMENTS/ROADMAP Release Exit exactly; no PR/CI/review/merge/clean-main fact is Phase 1 validation credit. |
 
 ## Validation Sign-Off
 
-- [ ] Planner replaced all provisional task IDs and every final task has `<automated>` verification or a Wave 0 dependency.
-- [ ] All seven phase requirements appear in final plan task frontmatter and this verification map with no silent omission.
-- [ ] Sampling continuity: no production task can commit without focused automated feedback and staged-identity CodeScene safeguard evidence.
-- [ ] Wave 0 characterization is green on unchanged production code and red under every required deliberate mutation.
-- [ ] No watch-mode flags, skipped repository gate, unavailable provider evidence, or mismatched revision is accepted.
-- [ ] Feedback latency is under 60 seconds for the quick automated loop.
-- [ ] `nyquist_compliant: true` and `wave_0_complete: true` are set only after the evidence above exists.
+- [x] All seven requirements appear; DELIV-01 ends at readiness to enter native verification/validation/security.
+- [x] T1/T2/T3 contain 1/7/9 runnable guarded commands; T2 gates are explicitly post-stage.
+- [ ] The controller clears the stale-agent preflight before execute-phase dispatch; exact complete-index transactions pass for T1/T2.
+- [ ] T3 exact 89-line verifier parses in PowerShell 5.1 and all product/branch/LOC/semantic/CodeScene/rollback evidence passes.
+- [ ] Native artifact and key-link discovery totals are nonzero; all final-state checks pass after implementation, while pre-implementation missing exports/links are reported accurately.
+- [ ] Later native ship preconditions pass without Phase 1 requirement credit; Release Exit remains separate.
 
 **Approval:** pending

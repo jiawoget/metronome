@@ -14,6 +14,15 @@
     "pattern_mapper": false,
     "use_worktrees": false
   },
+  "ship": {
+    "pr_body_sections": [
+      {
+        "heading": "Release Exit Criteria",
+        "enabled": true,
+        "source": "REQUIREMENTS.md ## Milestone Release Exit"
+      }
+    ]
+  },
   "parallelization": false,
   "agent_skills": {
     "gsd-assumptions-analyzer": ["skills/metronome-policy"],

@@ -16,6 +16,11 @@
 - Before reviewing, read and use `skills/reviewing-metronome-prs/SKILL.md`.
 - This is a read-only terminal gate and does not replace the native OpenGSD lifecycle.
 
+## Release exit
+- `$gsd-ship` creates or prepares a pull request; it does not prove that the pull request merged.
+- Do not report the active goal or milestone complete until all release-exit facts are true: after any ship-note or update, resolve the actual final PR head; ensure CI applies to that exact head (re-run or refresh it when `[ci skip]` prevents this); obtain a mandatory finding-free, read-only `@codex` review of that same head using `skills/reviewing-metronome-prs/SKILL.md`; merge the GitHub PR; update local `main` to the intended `origin` merge revision; then verify `main == origin/main`, no `MERGE_HEAD`, an empty index, and empty `git status --porcelain=v1 --untracked-files=all` output.
+- Never put a post-merge fact in a pre-ship phase requirement or claim it from `verification.status=passed` or other verifier status.
+
 ## Git hooks
 - This repo uses a local `pre-commit` hook for gate checks.
 - Before committing, the hook runs:
