@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import {
   SUPPORTED_TIME_SIGNATURES,
   isSupportedTimeSignature
@@ -32,19 +33,14 @@ export function parsePracticeTimeSignature(value: unknown) {
 
 const practiceTimeSignatureSchema = z.enum(SUPPORTED_TIME_SIGNATURES);
 const LOCAL_PRACTICE_GOAL_STATUSES = ["active", "completed", "invalid"] as const;
-const localPracticeGoalKindSchema = z.enum(["minutes", "sessions", "takes"]);
-const localPracticeGoalPeriodSchema = z.enum(["today", "all-time"]);
 const localPracticeGoalStatusSchema = z.enum(LOCAL_PRACTICE_GOAL_STATUSES);
-const practiceGoalTargetTextSchema = z.string().trim().regex(/^\d+$/u);
-const practiceGoalSafeTargetSchema = z.number().int().positive();
-const MAX_PRACTICE_GOAL_TARGET = 1_000_000;
 const trimmedRequiredStringSchema = z.string().trim().min(1);
 const segmentNameSchema = z.string().trim().min(1).max(80);
-const targetBpmSchema = z.number().int().min(30).max(300).nullable();
+const targetBpmSchema = z.number().finite().int().min(30).max(300).nullable();
 const measureRangeMsSchema = z
   .object({
-    startMs: z.number().int().nonnegative(),
-    endMs: z.number().int().nonnegative()
+    startMs: z.number().finite().int().nonnegative(),
+    endMs: z.number().finite().int().nonnegative()
   })
   .superRefine((range, context) => {
     if (range.endMs < range.startMs) {
@@ -109,10 +105,10 @@ const practiceSessionSchema = z
     sheetId: z.string().trim().min(1).nullable(),
     startedAt: isoDateSchema,
     endedAt: isoDateSchema.nullable(),
-    durationMs: z.number().int().nonnegative(),
-    bpm: z.number().int().min(30).max(300).nullable(),
+    durationMs: z.number().finite().int().nonnegative(),
+    bpm: z.number().finite().int().min(30).max(300).nullable(),
     timeSignature: practiceTimeSignatureSchema.nullable(),
-    recordingCount: z.number().int().nonnegative(),
+    recordingCount: z.number().finite().int().nonnegative(),
     latestRecordingId: z.string().trim().min(1).nullable(),
     updatedAt: isoDateSchema,
     segmentContext: sheetRecordingSegmentContextFieldSchema
@@ -161,102 +157,21 @@ const sheetRecordingMetadataSchema = z.object({
   sheetId: trimmedRequiredStringSchema,
   sheetName: z.string().trim().min(1).nullable(),
   createdAt: isoDateSchema,
-  durationMs: z.number().int().nonnegative(),
-  bpm: z.number().int().min(30).max(300).nullable(),
+  durationMs: z.number().finite().int().nonnegative(),
+  bpm: z.number().finite().int().min(30).max(300).nullable(),
   timeSignature: practiceTimeSignatureSchema.nullable(),
   segmentContext: sheetRecordingSegmentContextFieldSchema
 });
 
 const localPracticeGoalSchema = z.object({
   id: trimmedRequiredStringSchema,
-  kind: localPracticeGoalKindSchema,
-  target: z.number().int().positive(),
-  period: localPracticeGoalPeriodSchema,
+  kind: z.enum(["minutes", "sessions", "takes"]),
+  target: z.number().finite().int().positive(),
+  period: z.enum(["today", "all-time"]),
   createdAt: isoDateSchema,
   completedAt: isoDateSchema.nullable().optional().transform((value) => value ?? null),
   status: localPracticeGoalStatusSchema.optional().transform((value) => value ?? "active")
 });
-
-type PracticeGoalDraftInput = Record<"kind" | "period" | "targetText", unknown>;
-
-export type PracticeGoalDraftErrorCode =
-  | "unsupported-kind"
-  | "unsupported-period"
-  | "target-whole-number"
-  | "target-safe-integer"
-  | "target-too-large";
-
-export type PracticeGoalDraftResult =
-  | { success: true; goal: LocalPracticeGoal }
-  | { success: false; error: { code: PracticeGoalDraftErrorCode } };
-
-type PracticeGoalDraftOptions = {
-  baseGoal?: LocalPracticeGoal | null;
-  createId: () => string;
-  now: () => Date;
-};
-
-function getPracticeGoalIdentity(
-  baseGoal: LocalPracticeGoal | null,
-  createId: () => string,
-  now: () => Date
-) {
-  return baseGoal
-    ? { id: baseGoal.id, createdAt: baseGoal.createdAt }
-    : { id: createId(), createdAt: now().toISOString() };
-}
-
-export function parsePracticeGoalDraft(
-  draft: PracticeGoalDraftInput,
-  {
-    baseGoal = null,
-    createId,
-    now
-  }: PracticeGoalDraftOptions
-): PracticeGoalDraftResult {
-  const kindResult = localPracticeGoalKindSchema.safeParse(draft.kind);
-
-  if (!kindResult.success) {
-    return { success: false, error: { code: "unsupported-kind" } };
-  }
-
-  const periodResult = localPracticeGoalPeriodSchema.safeParse(draft.period);
-
-  if (!periodResult.success) {
-    return { success: false, error: { code: "unsupported-period" } };
-  }
-
-  const targetTextResult = practiceGoalTargetTextSchema.safeParse(draft.targetText);
-
-  if (!targetTextResult.success) {
-    return { success: false, error: { code: "target-whole-number" } };
-  }
-
-  const targetResult = practiceGoalSafeTargetSchema.safeParse(
-    Number(targetTextResult.data)
-  );
-
-  if (!targetResult.success) {
-    return { success: false, error: { code: "target-safe-integer" } };
-  }
-
-  if (targetResult.data > MAX_PRACTICE_GOAL_TARGET) {
-    return { success: false, error: { code: "target-too-large" } };
-  }
-
-  const identity = getPracticeGoalIdentity(baseGoal, createId, now);
-
-  return {
-    success: true,
-    goal: {
-      id: identity.id,
-      kind: kindResult.data,
-      target: targetResult.data,
-      period: periodResult.data,
-      createdAt: identity.createdAt
-    }
-  };
-}
 
 export function parsePracticeSession(value: unknown): PracticeSession | null {
   const result = practiceSessionSchema.safeParse(value);

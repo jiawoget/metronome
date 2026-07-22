@@ -1,0 +1,4 @@
+interface:
+  display_name: "Promote Dormant Seeds"
+  short_description: "Safely promote approved dormant legacy seeds"
+  default_prompt: "Use $promoting-dormant-seeds to promote an approved legacy seed atomically."

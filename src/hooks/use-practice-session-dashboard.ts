@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import {
   DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
   DEFAULT_HOME_RECENT_ACTIVITY_LIMIT,
   DEFAULT_SESSION_COMPARISON_LIMIT,
-  formatPracticeMinuteDuration,
-  formatPracticeUtcMinuteTimestamp,
   type ContinuePracticeTarget,
   type ContinuePracticeTargetsResult,
   type GoalCompletionEvaluation,
@@ -19,7 +18,6 @@ import {
   type SessionComparisonResult
 } from "@/domain/practice";
 import { browserPracticeSessionService } from "@/services/practice-session/browser";
-import { createPracticeGoalId } from "@/services/practice-goals";
 import { practiceGoalService } from "@/services/practice-goals/browser-service";
 
 export type PracticeSessionDashboardReadStatus = "idle" | "loading" | "loaded" | "error";
@@ -96,27 +94,28 @@ export type PracticeSessionDashboardActions = {
   refreshPracticeGoals: () => Promise<void>;
   savePracticeGoal: (goal: LocalPracticeGoal) => Promise<void>;
   deletePracticeGoal: (goalId: string) => Promise<void>;
-  createPracticeGoalId: () => string;
+  onSavePracticeGoal: (goal: LocalPracticeGoal) => Promise<void>;
+  onDeletePracticeGoal: (goalId: string) => Promise<void>;
 };
 
 export type PracticeSessionDashboardResult =
   PracticeSessionDashboardState &
   PracticeSessionDashboardActions;
 
-export const emptyContinueTargets: ContinuePracticeTargetsResult = {
+const emptyContinueTargets: ContinuePracticeTargetsResult = {
   targets: [],
   generatedAt: "",
   limit: DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
   rejected: []
 };
 
-export const emptyRecentActivity: HomeRecentActivityResult = {
+const emptyRecentActivity: HomeRecentActivityResult = {
   items: [],
   generatedAt: "",
   limit: DEFAULT_HOME_RECENT_ACTIVITY_LIMIT
 };
 
-export const emptyAnalytics: HomeDashboardAnalyticsSource = {
+const emptyAnalytics: HomeDashboardAnalyticsSource = {
   generatedAt: "",
   summary: {
     durationMs: 0,
@@ -140,7 +139,7 @@ export const emptyAnalytics: HomeDashboardAnalyticsSource = {
   }
 };
 
-export const emptyStreaks: HomePracticeStreaks = {
+const emptyStreaks: HomePracticeStreaks = {
   generatedAt: "",
   currentStreakDays: 0,
   longestStreakDays: 0,
@@ -151,7 +150,7 @@ export const emptyStreaks: HomePracticeStreaks = {
   }
 };
 
-export const emptySessionComparison: HomeSessionComparisonData = {
+const emptySessionComparison: HomeSessionComparisonData = {
   generatedAt: "",
   candidates: [],
   limit: DEFAULT_SESSION_COMPARISON_LIMIT,
@@ -362,7 +361,7 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
             ? "loaded"
             : "idle"
           : currentState.practiceGoalProgressStatus,
-        practiceGoalsErrorMessage,
+        practiceGoalsErrorMessage: practiceGoalsErrorMessage,
         practiceGoalProgressErrorMessage: evaluationRefreshId === latestPracticeGoalEvaluationRefreshIdRef.current
           ? null
           : currentState.practiceGoalProgressErrorMessage
@@ -422,7 +421,6 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
           practiceGoalMutationErrorMessage: practiceGoalSaveErrorMessage
         }));
       }
-
       throw new Error(practiceGoalSaveErrorMessage);
     }
 
@@ -457,7 +455,6 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
           practiceGoalMutationErrorMessage: practiceGoalDeleteErrorMessage
         }));
       }
-
       throw new Error(practiceGoalDeleteErrorMessage);
     }
 
@@ -499,7 +496,8 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
     refreshPracticeGoals,
     savePracticeGoal,
     deletePracticeGoal,
-    createPracticeGoalId
+    onSavePracticeGoal: savePracticeGoal,
+    onDeletePracticeGoal: deletePracticeGoal
   };
 }
 
@@ -529,9 +527,9 @@ function createHomeSessionComparisonCandidate(
     sessionId: candidate.sessionId,
     label: candidate.label.replace(" - ", " · "),
     sourceTypeLabel,
-    startedText: formatPracticeUtcMinuteTimestamp(candidate.startedAt),
-    updatedText: formatPracticeUtcMinuteTimestamp(candidate.updatedAt),
-    durationText: formatPracticeMinuteDuration(candidate.durationMs),
+    startedText: formatSessionComparisonTimestamp(candidate.startedAt),
+    updatedText: formatSessionComparisonTimestamp(candidate.updatedAt),
+    durationText: formatSessionComparisonDuration(candidate.durationMs),
     bpmText: candidate.bpm === null ? "Not set" : `${candidate.bpm} BPM`,
     timeSignatureText: candidate.timeSignature ?? "Not set",
     recordingsText: formatSessionComparisonRecordings(
@@ -604,8 +602,55 @@ function formatSessionComparisonRecordings(sessionRecordingCount: number, linked
 }
 
 function formatSessionComparisonGoalContribution(durationMs: number, linkedSheetTakes: number) {
-  const minutes = formatPracticeMinuteDuration(durationMs);
+  const minutes = formatSessionComparisonMinutes(durationMs);
   const takeLabel = linkedSheetTakes === 1 ? "1 sheet take linked" : `${linkedSheetTakes} sheet takes linked`;
 
   return `Counts as 1 session; adds ${minutes}; ${takeLabel}`;
+}
+
+function formatSessionComparisonDuration(value: number) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "0 min";
+  }
+
+  if (value < 60_000) {
+    return "<1 min";
+  }
+
+  const totalMinutes = Math.floor(value / 60_000);
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return minutes > 0 ? `${hours} hr ${minutes} min` : `${hours} hr`;
+}
+
+function formatSessionComparisonMinutes(value: number) {
+  const durationText = formatSessionComparisonDuration(value);
+
+  return durationText === "<1 min" ? "<1 min" : durationText;
+}
+
+function formatSessionComparisonTimestamp(value: string | null) {
+  if (!value) {
+    return "Unknown time";
+  }
+
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "Unknown time";
+  }
+
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
 }

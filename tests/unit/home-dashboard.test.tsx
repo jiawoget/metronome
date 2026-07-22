@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { HomeDashboard, type HomeDashboardData } from "@/components/home/home-dashboard";
 import type {
   ContinuePracticeTargetIdentity,
@@ -237,34 +238,6 @@ function createServiceSessionComparisonResult(
   };
 }
 
-function createServiceSessionComparisonCandidate(
-  overrides: Partial<SessionComparisonResult["candidates"][number]> = {}
-): SessionComparisonResult["candidates"][number] {
-  return {
-    sessionId: "quick-session",
-    label: "Quick practice - 2026-06-21 12:01 UTC",
-    sourceType: "quick",
-    startedAt: "2026-06-21T12:00:00.000Z",
-    endedAt: null,
-    updatedAt: "2026-06-21T12:01:00.000Z",
-    sortTimestamp: "2026-06-21T12:01:00.000Z",
-    durationMs: 60_000,
-    bpm: null,
-    timeSignature: null,
-    recordingCount: 0,
-    linkedRecordingMetadataCount: 0,
-    linkedRecordingDurationMs: 0,
-    latestRecordingId: null,
-    sheetId: null,
-    sheetName: null,
-    segmentId: null,
-    segmentName: null,
-    segmentRangeLabel: null,
-    targetState: "quick",
-    ...overrides
-  };
-}
-
 function createDashboardData(overrides: Partial<HomeDashboardData> = {}): HomeDashboardData {
   return {
     summary: {
@@ -425,12 +398,12 @@ describe("HomeDashboard", () => {
       "href",
       "/quick-metronome"
     );
-    expect(screen.getByText(/no sheets imported yet/i)).toBeVisible();
-    expect(screen.getByText(/opens the sheet library import flow/i)).toBeVisible();
-    expect(screen.getByText(/quick takes appear after recording/i)).toBeVisible();
+    expect(screen.getByText(/No sheets imported yet/i)).toBeVisible();
+    expect(screen.getByText(/Opens the Sheet Library import flow/i)).toBeVisible();
+    expect(screen.getByText(/Quick takes appear after recording/i)).toBeVisible();
     expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
     expect(screen.getByText("No local practice activity yet.")).toBeVisible();
-    expect(screen.getByText(/no recording or playback active/i)).toBeVisible();
+    expect(screen.getByText(/No recording or playback active/i)).toBeVisible();
   });
 
   it("shows the Continue Practice loading row on initial live mount before targets resolve", () => {
@@ -891,7 +864,7 @@ describe("HomeDashboard", () => {
     expect(within(panel).getByTestId("continue-practice-row-disabled")).toBeVisible();
     expect(within(panel).getByText("Target unavailable.")).toBeVisible();
     expect(
-      within(panel).queryByRole("link", { name: /missing segment id/i })
+      within(panel).queryByRole("link", { name: /Missing segment id/i })
     ).not.toBeInTheDocument();
     expect(
       within(panel).queryByRole("link", { name: "Continue sheet practice Delta Sheet" })
@@ -1213,13 +1186,13 @@ describe("HomeDashboard", () => {
     const { unmount } = render(<HomeDashboard />);
 
     await waitFor(() =>
-      { expect(serviceMocks.getContinuePracticeTargets).toHaveBeenCalledWith({ limit: 5 }); }
+      expect(serviceMocks.getContinuePracticeTargets).toHaveBeenCalledWith({ limit: 5 })
     );
-    await waitFor(() => { expect(serviceMocks.getHomeRecentActivity).toHaveBeenCalled(); });
-    await waitFor(() => { expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalled(); });
-    await waitFor(() => { expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalled(); });
+    await waitFor(() => expect(serviceMocks.getHomeRecentActivity).toHaveBeenCalled());
+    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalled());
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalled());
     await waitFor(() =>
-      { expect(serviceMocks.getSessionComparison).toHaveBeenCalledWith({ limit: 8 }); }
+      expect(serviceMocks.getSessionComparison).toHaveBeenCalledWith({ limit: 8 })
     );
     expect(await screen.findByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
       "href",
@@ -1256,9 +1229,9 @@ describe("HomeDashboard", () => {
   it("does not read practice analytics or streaks when IndexedDB is unavailable", async () => {
     render(<HomeDashboard />);
 
-    await waitFor(() => { expect(serviceMocks.getHomeDashboardAnalyticsSource).not.toHaveBeenCalled(); });
-    await waitFor(() => { expect(serviceMocks.getHomePracticeStreaks).not.toHaveBeenCalled(); });
-    await waitFor(() => { expect(serviceMocks.getSessionComparison).not.toHaveBeenCalled(); });
+    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).not.toHaveBeenCalled());
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).not.toHaveBeenCalled());
+    await waitFor(() => expect(serviceMocks.getSessionComparison).not.toHaveBeenCalled());
     expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
     expect(screen.getByText("No local practice analytics yet.")).toBeVisible();
     expect(screen.getByRole("region", { name: "Practice Streaks" })).toBeVisible();
@@ -1308,7 +1281,7 @@ describe("HomeDashboard", () => {
 
     expect(await screen.findByTestId("home-analytics-total-practice")).toHaveTextContent("1 hr 5 min");
 
-    const {refresh} = subscription;
+    const refresh = subscription.refresh;
 
     if (!refresh) {
       throw new Error("Dashboard subscription was not registered.");
@@ -1351,7 +1324,7 @@ describe("HomeDashboard", () => {
 
     expect(await screen.findByTestId("home-streak-current")).toHaveTextContent("4 days");
 
-    const {refresh} = subscription;
+    const refresh = subscription.refresh;
 
     if (!refresh) {
       throw new Error("Dashboard subscription was not registered.");
@@ -1424,16 +1397,16 @@ describe("HomeDashboard", () => {
 
     render(<HomeDashboard />);
 
-    await waitFor(() => { expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalledTimes(1); });
+    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalledTimes(1));
 
-    const {refresh} = subscription;
+    const refresh = subscription.refresh;
 
     if (!refresh) {
       throw new Error("Dashboard subscription was not registered.");
     }
 
     refresh();
-    await waitFor(() => { expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalledTimes(2); });
+    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalledTimes(2));
 
     newerAnalyticsRead.resolve(newerAnalytics);
 
@@ -1495,16 +1468,16 @@ describe("HomeDashboard", () => {
 
     render(<HomeDashboard />);
 
-    await waitFor(() => { expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(1); });
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(1));
 
-    const {refresh} = subscription;
+    const refresh = subscription.refresh;
 
     if (!refresh) {
       throw new Error("Dashboard subscription was not registered.");
     }
 
     refresh();
-    await waitFor(() => { expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(2); });
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(2));
 
     newerStreakRead.resolve(newerStreaks);
 
@@ -1530,7 +1503,6 @@ describe("HomeDashboard", () => {
 
       return { promise, reject: rejectStreaks };
     }
-
     function createDeferredResolvedStreakRead() {
       let resolveStreaks!: (streaks: HomePracticeStreaks) => void;
       const promise = new Promise<HomePracticeStreaks>((resolve) => {
@@ -1564,16 +1536,16 @@ describe("HomeDashboard", () => {
 
     render(<HomeDashboard />);
 
-    await waitFor(() => { expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(1); });
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(1));
 
-    const {refresh} = subscription;
+    const refresh = subscription.refresh;
 
     if (!refresh) {
       throw new Error("Dashboard subscription was not registered.");
     }
 
     refresh();
-    await waitFor(() => { expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(2); });
+    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(2));
 
     newerStreakRead.resolve(newerStreaks);
 
@@ -1644,8 +1616,8 @@ describe("HomeDashboard", () => {
             practiceGoalEvaluations: [],
             practiceGoalsStatus: "loaded",
             practiceGoalProgressStatus: "loaded",
-            savePracticeGoal: vi.fn(),
-            deletePracticeGoal: vi.fn()
+            onSavePracticeGoal: vi.fn(),
+            onDeletePracticeGoal: vi.fn()
           })}
         />
       );
@@ -1661,8 +1633,8 @@ describe("HomeDashboard", () => {
             practiceGoalEvaluations: evaluations,
             practiceGoalsStatus: "loaded",
             practiceGoalProgressStatus: "loaded",
-            savePracticeGoal: vi.fn(),
-            deletePracticeGoal: vi.fn()
+            onSavePracticeGoal: vi.fn(),
+            onDeletePracticeGoal: vi.fn()
           })}
         />
       );
@@ -1679,7 +1651,7 @@ describe("HomeDashboard", () => {
       expect(rows[1]).toHaveTextContent("All-time sessions");
       expect(rows[1]).toHaveTextContent("Completed");
       expect(progressRows[1]).toHaveTextContent("5 / 5 sessions");
-      expect(rows[2]).toHaveTextContent(/today .*takes/i);
+      expect(rows[2]).toHaveTextContent(/Today .*takes/i);
       expect(rows[2]).toHaveTextContent("Not started");
       expect(progressRows[2]).toHaveTextContent("0 / 3 sheet takes");
       expect(screen.getByText("Today Practice Summary")).toBeVisible();
@@ -1732,8 +1704,8 @@ describe("HomeDashboard", () => {
             ],
             practiceGoalsStatus: "loaded",
             practiceGoalProgressStatus: "loaded",
-            savePracticeGoal: vi.fn(),
-            deletePracticeGoal: vi.fn()
+            onSavePracticeGoal: vi.fn(),
+            onDeletePracticeGoal: vi.fn()
           })}
         />
       );
@@ -1762,9 +1734,10 @@ describe("HomeDashboard", () => {
             practiceGoalEvaluations: [],
             practiceGoalsStatus: "loaded",
             practiceGoalProgressStatus: "loaded",
-            savePracticeGoal,
-            deletePracticeGoal: vi.fn(),
-            createPracticeGoalId: () => "goal-test-1"
+            onSavePracticeGoal: savePracticeGoal,
+            onDeletePracticeGoal: vi.fn(),
+            createPracticeGoalId: () => "goal-test-1",
+            getPracticeGoalNow: () => new Date("2026-06-21T12:00:00.000Z")
           })}
         />
       );
@@ -1796,52 +1769,20 @@ describe("HomeDashboard", () => {
       await user.type(screen.getByLabelText("Target"), "5");
       await user.click(screen.getByRole("button", { name: "Create goal" }));
 
-      await waitFor(() => {
-        expect(savePracticeGoal).toHaveBeenCalledOnce();
-      });
-      const savedGoal = savePracticeGoal.mock.calls[0]?.[0] as
-        | LocalPracticeGoal
-        | undefined;
-      expect(savedGoal).toMatchObject({
-        id: "goal-test-1",
-        kind: "sessions",
-        period: "all-time",
-        target: 5
-      });
-      expect(typeof savedGoal?.createdAt).toBe("string");
-      expect(savedGoal).not.toHaveProperty("status");
-      expect(savedGoal).not.toHaveProperty("completedAt");
+      await waitFor(() =>
+        expect(savePracticeGoal).toHaveBeenCalledWith({
+          id: "goal-test-1",
+          kind: "sessions",
+          period: "all-time",
+          target: 5,
+          createdAt: "2026-06-21T12:00:00.000Z"
+        })
+      );
+      expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("status");
+      expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("completedAt");
       expect(screen.getByText("Goal could not be saved.")).toBeVisible();
       expect(screen.getByRole("form", { name: "Create practice goal" })).toBeVisible();
       expect(within(panel).queryByText("All-time sessions")).not.toBeInTheDocument();
-    });
-
-    it("keeps WebCrypto ID failures contained in the create form", async () => {
-      const user = userEvent.setup();
-      const savePracticeGoal = vi.fn();
-
-      render(
-        <HomeDashboard
-          data={createDashboardData({
-            practiceGoals: [],
-            practiceGoalEvaluations: [],
-            practiceGoalsStatus: "loaded",
-            practiceGoalProgressStatus: "loaded",
-            savePracticeGoal,
-            deletePracticeGoal: vi.fn(),
-            createPracticeGoalId() {
-              throw new TypeError("crypto.randomUUID is unavailable");
-            }
-          })}
-        />
-      );
-
-      await user.click(screen.getByRole("button", { name: "New goal" }));
-      await user.click(screen.getByRole("button", { name: "Create goal" }));
-
-      expect(await screen.findByText("Goal could not be saved.")).toBeVisible();
-      expect(screen.getByRole("form", { name: "Create practice goal" })).toBeVisible();
-      expect(savePracticeGoal).not.toHaveBeenCalled();
     });
 
     it("edits goals with preserved identity and confirms deletes before service mutation", async () => {
@@ -1870,8 +1811,8 @@ describe("HomeDashboard", () => {
             ],
             practiceGoalsStatus: "loaded",
             practiceGoalProgressStatus: "loaded",
-            savePracticeGoal,
-            deletePracticeGoal
+            onSavePracticeGoal: savePracticeGoal,
+            onDeletePracticeGoal: deletePracticeGoal
           })}
         />
       );
@@ -1885,13 +1826,13 @@ describe("HomeDashboard", () => {
       await user.click(screen.getByRole("button", { name: "Save goal" }));
 
       await waitFor(() =>
-        { expect(savePracticeGoal).toHaveBeenCalledWith({
+        expect(savePracticeGoal).toHaveBeenCalledWith({
           id: "goal-edit",
           kind: "takes",
           period: "all-time",
           target: 7,
           createdAt: "2026-06-21T08:00:00.000Z"
-        }); }
+        })
       );
       expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("status");
       expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("completedAt");
@@ -1901,7 +1842,7 @@ describe("HomeDashboard", () => {
       await user.click(screen.getByTestId("practice-goal-delete-confirm-button"));
 
       await waitFor(() =>
-        { expect(deletePracticeGoal).toHaveBeenCalledWith("goal-edit"); }
+        expect(deletePracticeGoal).toHaveBeenCalledWith("goal-edit")
       );
     });
 
@@ -1934,8 +1875,8 @@ describe("HomeDashboard", () => {
             ],
             practiceGoalsStatus: "loaded",
             practiceGoalProgressStatus: "loaded",
-            savePracticeGoal,
-            deletePracticeGoal: vi.fn()
+            onSavePracticeGoal: savePracticeGoal,
+            onDeletePracticeGoal: vi.fn()
           })}
         />
       );
@@ -1949,7 +1890,7 @@ describe("HomeDashboard", () => {
       await user.type(screen.getByLabelText("Target"), "7");
       await user.click(screen.getByRole("button", { name: "Save goal" }));
 
-      await waitFor(() => { expect(savePracticeGoal).toHaveBeenCalledTimes(1); });
+      await waitFor(() => expect(savePracticeGoal).toHaveBeenCalledTimes(1));
 
       const savedGoal = savePracticeGoal.mock.calls[0]?.[0] as LocalPracticeGoal;
 
@@ -1976,8 +1917,8 @@ describe("HomeDashboard", () => {
             practiceGoalEvaluations: [],
             practiceGoalsStatus: "error",
             practiceGoalsErrorMessage: "Practice goals could not be loaded.",
-            savePracticeGoal: vi.fn(),
-            deletePracticeGoal: vi.fn()
+            onSavePracticeGoal: vi.fn(),
+            onDeletePracticeGoal: vi.fn()
           })}
         />
       );
@@ -1997,8 +1938,8 @@ describe("HomeDashboard", () => {
             practiceGoalsStatus: "loaded",
             practiceGoalProgressStatus: "error",
             practiceGoalProgressErrorMessage: "Goal progress could not be loaded.",
-            savePracticeGoal: vi.fn(),
-            deletePracticeGoal
+            onSavePracticeGoal: vi.fn(),
+            onDeletePracticeGoal: deletePracticeGoal
           })}
         />
       );
@@ -2055,14 +1996,14 @@ describe("HomeDashboard", () => {
       render(<HomeDashboard />);
 
       const panel = await screen.findByRole("region", { name: "Practice Goals" });
-      const {refresh} = subscription;
+      const refresh = subscription.refresh;
 
       if (!refresh) {
         throw new Error("Dashboard subscription was not registered.");
       }
 
       await waitFor(() =>
-        { expect(goalServiceMocks.getPracticeGoalEvaluations).toHaveBeenCalledTimes(1); }
+        expect(goalServiceMocks.getPracticeGoalEvaluations).toHaveBeenCalledTimes(1)
       );
       expect(within(panel).getByTestId("practice-goal-row")).toHaveTextContent("In progress");
       expect(within(panel).getByTestId("practice-goal-progress")).toHaveTextContent("12 / 20 min");
@@ -2070,7 +2011,7 @@ describe("HomeDashboard", () => {
       refresh();
 
       await waitFor(() =>
-        { expect(goalServiceMocks.getPracticeGoalEvaluations).toHaveBeenCalledTimes(2); }
+        expect(goalServiceMocks.getPracticeGoalEvaluations).toHaveBeenCalledTimes(2)
       );
       expect(within(panel).getByTestId("practice-goal-row")).toHaveTextContent("Completed");
       expect(within(panel).getByTestId("practice-goal-progress")).toHaveTextContent("20 / 20 min");
@@ -2095,16 +2036,16 @@ describe("HomeDashboard", () => {
 
       const { unmount } = render(<HomeDashboard />);
 
-      await waitFor(() => { expect(goalServiceMocks.subscribe).toHaveBeenCalledTimes(1); });
+      await waitFor(() => expect(goalServiceMocks.subscribe).toHaveBeenCalledTimes(1));
 
-      const {refresh} = subscription;
+      const refresh = subscription.refresh;
 
       if (!refresh) {
         throw new Error("Goal subscription was not registered.");
       }
 
       refresh();
-      await waitFor(() => { expect(goalServiceMocks.listPracticeGoals).toHaveBeenCalledTimes(2); });
+      await waitFor(() => expect(goalServiceMocks.listPracticeGoals).toHaveBeenCalledTimes(2));
 
       newerRead.resolve([
         createGoal({
@@ -2137,198 +2078,5 @@ describe("HomeDashboard", () => {
 
       expect(unsubscribe).toHaveBeenCalledTimes(1);
     });
-  });
-
-  it("characterizes selected Home timestamp and minute-duration formatting", () => {
-    const timestampActivities = [
-      createActivityItem({
-        id: "session:null-timestamp",
-        label: "Null timestamp activity",
-        sortTimestamp: null,
-        targetState: "quick"
-      }),
-      createActivityItem({
-        id: "session:empty-timestamp",
-        label: "Empty timestamp activity",
-        sortTimestamp: "",
-        targetState: "quick"
-      }),
-      createActivityItem({
-        id: "session:invalid-timestamp",
-        label: "Invalid timestamp activity",
-        sortTimestamp: "not-a-date",
-        targetState: "quick"
-      }),
-      createActivityItem({
-        id: "session:offset-timestamp",
-        label: "Offset timestamp activity",
-        sortTimestamp: "2026-06-21T23:04:59.999-05:00",
-        targetState: "quick"
-      })
-    ];
-    const whitespaceTimestamp = " ".repeat(3);
-    const { rerender } = render(
-      <HomeDashboard
-        data={createDashboardData({
-          recentActivity: createActivityResult(timestampActivities),
-          analytics: createAnalyticsSource({
-            generatedAt: whitespaceTimestamp,
-            totals: { durationMs: NaN },
-            emptyState: { hasPracticeHistory: true }
-          })
-        })}
-      />
-    );
-
-    for (const label of [
-      "Null timestamp activity",
-      "Empty timestamp activity",
-      "Invalid timestamp activity"
-    ]) {
-      expect(screen.getByText(label).closest("[data-testid='recent-activity-row']")).toHaveTextContent(
-        "Quick practice · Unknown time"
-      );
-    }
-
-    expect(
-      screen.getByText("Offset timestamp activity").closest("[data-testid='recent-activity-row']")
-    ).toHaveTextContent("Quick practice · 2026-06-22 04:04 UTC");
-
-    const analyticsPanel = screen.getByRole("region", { name: "Practice Analytics" });
-
-    expect(within(analyticsPanel).getByText("Local history totals")).toBeVisible();
-    expect(analyticsPanel).not.toHaveTextContent("Updated");
-
-    const durationCases = [
-      [NaN, "0 min"],
-      [Infinity, "0 min"],
-      [-Infinity, "0 min"],
-      [-1, "0 min"],
-      [0, "0 min"],
-      [1, "<1 min"],
-      [59_999, "<1 min"],
-      [60_000, "1 min"],
-      [119_999, "1 min"],
-      [3_599_999, "59 min"],
-      [3_600_000, "1 hr"],
-      [3_660_000, "1 hr 1 min"],
-      [90_060_000, "25 hr 1 min"]
-    ] as const;
-
-    for (const [durationMs, expected] of durationCases) {
-      rerender(
-        <HomeDashboard
-          data={createDashboardData({
-            analytics: createAnalyticsSource({
-              generatedAt: whitespaceTimestamp,
-              totals: { durationMs },
-              emptyState: { hasPracticeHistory: true }
-            })
-          })}
-        />
-      );
-      expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent(expected);
-    }
-
-    rerender(
-      <HomeDashboard
-        data={createDashboardData({
-          analytics: createAnalyticsSource({
-            generatedAt: "not-a-date",
-            emptyState: { hasPracticeHistory: true }
-          })
-        })}
-      />
-    );
-    expect(screen.getByText("Local history totals · Updated Unknown update time")).toBeVisible();
-
-    rerender(
-      <HomeDashboard
-        data={createDashboardData({
-          analytics: createAnalyticsSource({
-            generatedAt: "2026-06-21T23:04:59.999-05:00",
-            emptyState: { hasPracticeHistory: true }
-          })
-        })}
-      />
-    );
-    expect(screen.getByText("Local history totals · Updated 2026-06-22 04:04 UTC")).toBeVisible();
-  });
-
-  it("characterizes dashboard-hook comparison timestamps, durations, and goal wording", async () => {
-    vi.stubGlobal("indexedDB", {});
-    serviceMocks.getSessionComparison.mockResolvedValue(
-      createServiceSessionComparisonResult({
-        candidates: [
-          createServiceSessionComparisonCandidate({
-            sessionId: "invalid-time",
-            label: "Quick practice - Unknown time",
-            startedAt: "not-a-date",
-            updatedAt: "still-not-a-date",
-            sortTimestamp: null,
-            durationMs: 30_000
-          }),
-          createServiceSessionComparisonCandidate({
-            sessionId: "offset-time",
-            label: "Quick practice - 2026-06-22 04:59 UTC",
-            startedAt: "2026-06-21T23:59:59.999-05:00",
-            updatedAt: "2026-06-21T23:59:59.999-05:00",
-            sortTimestamp: "2026-06-21T23:59:59.999-05:00",
-            durationMs: 119_999,
-            bpm: 84,
-            timeSignature: "3/4",
-            linkedRecordingMetadataCount: 1
-          }),
-          createServiceSessionComparisonCandidate({
-            sessionId: "hour-time",
-            label: "Quick practice - 2026-06-21 12:02 UTC",
-            startedAt: "2026-06-21T12:01:00.000Z",
-            endedAt: "2026-06-21T13:02:00.000Z",
-            updatedAt: "2026-06-21T12:02:00.000Z",
-            sortTimestamp: "2026-06-21T12:02:00.000Z",
-            durationMs: 3_660_000,
-            bpm: 96,
-            timeSignature: "4/4",
-            linkedRecordingMetadataCount: 2
-          })
-        ]
-      })
-    );
-    const user = userEvent.setup();
-
-    render(<HomeDashboard />);
-
-    const panel = await screen.findByRole("region", { name: "Session Comparison" });
-
-    await user.click(
-      within(panel).getByRole("checkbox", {
-        name: "Compare Quick practice Quick practice · Unknown time"
-      })
-    );
-    await user.click(
-      within(panel).getByRole("checkbox", {
-        name: "Compare Quick practice Quick practice · 2026-06-22 04:59 UTC"
-      })
-    );
-    await user.click(
-      within(panel).getByRole("checkbox", {
-        name: "Compare Quick practice Quick practice · 2026-06-21 12:02 UTC"
-      })
-    );
-
-    expect(within(panel).getAllByText("Unknown time").length).toBeGreaterThanOrEqual(2);
-    expect(within(panel).getAllByText("2026-06-22 04:59 UTC").length).toBeGreaterThanOrEqual(2);
-    expect(within(panel).getByText("<1 min")).toBeVisible();
-    expect(within(panel).getByText("1 min")).toBeVisible();
-    expect(within(panel).getByText("1 hr 1 min")).toBeVisible();
-    expect(
-      within(panel).getByText("Counts as 1 session; adds <1 min; 0 sheet takes linked")
-    ).toBeVisible();
-    expect(
-      within(panel).getByText("Counts as 1 session; adds 1 min; 1 sheet take linked")
-    ).toBeVisible();
-    expect(
-      within(panel).getByText("Counts as 1 session; adds 1 hr 1 min; 2 sheet takes linked")
-    ).toBeVisible();
   });
 });

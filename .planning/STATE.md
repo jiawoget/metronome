@@ -4,15 +4,16 @@ milestone: v1.1
 milestone_name: R01 Evidence-First Code Slimming
 current_phase: 01
 current_phase_name: canonical-practice-presentation-formatting
-status: executing
-stopped_at: Formatter consolidation preserved at ef98c28; Goals-first Home repair approved before one final evidence retry
-last_updated: "2026-07-21T21:26:44+08:00"
-last_activity: 2026-07-21
-last_activity_desc: Phase 01 execution loop repaired without product changes
+status: paused
+stopped_at: Known workflow remediations implemented but not yet current-diff verified or durable
+paused_at: .planning/forensics/report-20260722-124111.md
+last_updated: "2026-07-22T15:10:09.6789212+08:00"
+last_activity: 2026-07-22
+last_activity_desc: Failed R01 product, test, and config paths restored to origin/main in the working tree
 progress:
   total_phases: 1
   completed_phases: 0
-  total_plans: 1
+  total_plans: 0
   completed_plans: 0
 ---
 
@@ -27,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 
 ## Current Position
 
-Phase: 01 (canonical-practice-presentation-formatting) — EXECUTING
-Plan: 1 of 1
-Status: Executing Phase 01
-Last activity: 2026-07-21 — Approved bounded Goals-first repair after the original health gate stopped at 6.86
+Phase: 01 (canonical-practice-presentation-formatting) — PAUSED
+Plan: no active plan; failed attempt quarantined; phase incomplete
+Status: Paused for workflow remediation; no R01 product execution is authorized
+Last activity: 2026-07-22 — failed R01 product, test, and config paths restored to origin/main in the working tree
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -46,12 +47,12 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Canonical Practice Presentation Formatting | 0 | 1 | — |
+| 1. Canonical Practice Presentation Formatting | 0 | 0 | — |
 
 **Recent Trend:**
 
-- Last 5 plans: —
-- Trend: —
+- Last 5 plans: no active plan; failed 01-01 attempt retained only as forensic evidence
+- Trend: paused with known code and authority remediations implemented but not yet current-diff verified or durable
 
 ## Accumulated Context
 
@@ -63,24 +64,23 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 1]: The only selected target is the bounded canonical UTC-minute timestamp and minute-scale duration consolidation in the existing practice formatting boundary.
 - [Phase 1]: Characterization, production edits and deletion, LOC proof, full gates, final-revision CodeScene evidence, immutable reviewed revision evidence, clean rollback, and clean relevant source/configuration state remain open DELIV-01 obligations; satisfying them makes the product ready to enter native verification, validation, and security.
 - [Native ship preconditions]: Passing VERIFICATION, current Nyquist VALIDATION, and SECURITY with `threats_open: 0` remain mandatory before `$gsd-ship` but receive no Phase 1 requirement credit.
-- [Milestone Release Exit]: Native shipping, applicable exact-head CI/delivery, and clean synchronized `main` remain outside Phase 1 requirement completion; the normal read-only `@codex` review is explicitly waived only for this migration/repair run, and `verification.status=passed` never proves release exit by itself.
+- [Milestone Release Exit]: Native shipping, applicable exact-head CI/delivery, a mandatory finding-free read-only `@codex` review of that same final PR head, and clean synchronized `main` remain outside Phase 1 requirement completion; no review waiver applies, and `verification.status=passed` never proves release exit by itself.
 - [Phase 1]: No new dependency, target, wrapper, dormant seed, or historical pilot scope is admitted.
-- [Phase 1 execution]: Research remains the sole reuse/OSS evidence producer; execution consumes a compact fingerprinted receipt and never repeats discovery on a cache hit.
-- [Phase 1 execution]: Pre-edit is local-only; one final immutable step owns CodeScene, LOC, rollback, and full-hook evidence. Interrupted work is logged and never automatically retried.
-- [Phase 1 execution]: Project-local `.logs/gsd-observability/` records exact step timing, rollout token dimensions, I/O paths, cache/resume identity, and soft-budget status without becoming lifecycle truth or agent context.
-- [Phase 1 amendment]: Preserve formatter commit `ef98c28`; do not repeat T1/T2 or discovery. Extract the Goals responsibility into exactly two cohesive sibling components, remove duplicate plumbing where tests permit, and perform exactly one final evidence retry without lowering Home Code Health 7.0.
-- [Phase 1 amendment]: After the six-file attempt stopped on ownership debt, the project owner approved a narrow ten-file boundary: goal-draft parsing/building moves to the existing domain validation owner and WebCrypto-only ID creation moves to the existing goal service; no dependency, persistence, stored-schema, fallback, or generic abstraction is admitted.
-- [Phase 1 amendment]: The first full-hook attempt exposed XO 4 forcing the ES2024-only regexp `v` flag into TypeScript while `tsconfig.json` targets ES2022. The project owner approved one tooling-contract correction in `xo.config.js`: TypeScript extensions require `u`, JS/MJS retain the native XO rule, and unrelated `/v` suggestion churn is excluded.
-- [Phase 1 amendment]: Evaluate slimming over `3370d2f..reviewedProductionSha`; the exact `6M + 2A` combined normalized production LOC must stay strictly negative, so moving the existing block without deletion is insufficient.
-- [Milestone Release Exit]: The project owner waived the separate `@codex` PR review for this one migration/repair run; native verification/validation/security, applicable CI/delivery, and clean synchronized `main` remain mandatory.
+- [Workflow forensics]: R01 is a frozen incident specimen. The complete failed `01-01` attempt, unapproved `01-02` artifacts, and non-native receipt/recovery files are quarantined under `.planning/forensics/` and are not executable lifecycle artifacts.
+- [Workflow architecture]: Native OpenGSD exclusively owns plan checking, revision, retry, execution, verification, and routing. Product attempts do not repair their own control plane.
+- [Reuse governance]: Native `RESEARCH.md` records decision-bearing local/dependency/platform/OSS evidence; native `PLAN.md` records integration. No execution receipt, fingerprint transaction, pre-edit lifecycle, or parallel validator is active.
+- [Observability]: Project-local logs record declared status, timing, and I/O only. Unavailable metrics remain unavailable and never block or advance lifecycle state.
+- [Baseline cleanup]: The non-planning paths introduced by failed product commits `ef98c287` and `884805f1` were selectively reversed in the primary working tree. All affected `src/**`, product-test, and `xo.config.js` paths now match `origin/main@9199d17`; Git history was not rewritten. All known code and authority remediations are implemented in the working tree, but the combined candidate is not yet current-diff verified or durable.
+- [Paused forensics authority]: While `paused_at` points to the forensic report, generic `continue`, `go`, `next`, or `resume` wording cannot authorize product work. The report must be read and the project owner must explicitly choose and approve a disposition before native discuss, plan, or execute routing resumes.
+- [Primary checkout authority]: While historical linked worktrees remain registered, every product-agent dispatch must first prove that the current working directory and Git top-level are the exact primary checkout recorded by the first `git worktree list --porcelain` entry. A mismatch stops dispatch without changing lifecycle state.
 
 ### Pending Todos
 
-- Execute only amended tasks T4-T5; preserve historical T1/T2 evidence and do not restart discovery or the original T3.
+- No R01 product task is authorized. Before asking the project owner whether R01 is abandoned, redesigned as a new native plan, or resumed under a separately approved boundary, complete exactly this finite workflow-repair closeout: (1) pass the consolidated required repository gate on the final candidate; (2) commit the baseline cleanup and workflow remediation and create or update its pull request; (3) pass CI on the exact final PR head, including the path-applicable Windows observability workflow; (4) obtain a finding-free, read-only `@codex` review of that exact head; (5) merge the PR; and (6) update local `main` and prove it equals `origin/main` with no `MERGE_HEAD`, an empty index, and empty status. Generic continuation wording is not an owner disposition.
 
 ### Blockers/Concerns
 
-The original final-evidence attempt is historically blocked at Home `6.86 < 7.0`; the approved CAP-03 repair is now active. Its implementation surface is exactly ten product/test paths plus the approved `xo.config.js` TypeScript-target correction. Any further expansion stops for an explicit user decision. No automatic retry or rediscovery is allowed.
+The prior R01 attempt is frozen because the product run modified and rechecked its own control plane. Its artifacts are no longer present in the active phase directory, and its non-planning implementation paths have been restored to `origin/main` in the working tree. All known code and authority remediations are implemented, but they remain unverified as one current diff and uncommitted. The only remaining workflow-repair blockers are the finite closeout in Pending Todos: consolidated repository gate; commit and PR; exact-head CI including path-applicable Windows observability; finding-free read-only exact-head `@codex` review; PR merge; and clean synchronized `main`.
 
 ## Deferred Items
 
@@ -90,6 +90,6 @@ The original final-evidence attempt is historically blocked at Home `6.86 < 7.0`
 
 ## Session Continuity
 
-Last session: 2026-07-21
-Stopped at: Execution recovery contract and observability gates implemented; ready for one formal run
-Resume file: None
+Last session: 2026-07-22T05:25:58.763Z
+Stopped at: known workflow remediations implemented; finite verification and release closeout still pending
+Resume file: .planning/forensics/report-20260722-124111.md

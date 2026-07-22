@@ -1,6 +1,7 @@
+import { Buffer } from "node:buffer";
 import { execFileSync, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -89,20 +90,10 @@ function baseStepArguments(cwd: string, step = "context-load") {
     step,
     "--stage",
     "execute",
-    "--name",
-    step,
-    "--gate-stage",
-    "pre_edit",
-    "--plane",
-    "control",
     "--budget",
     "quick",
     "--agent",
-    "controller",
-    "--rollout",
-    "rollout-a",
-    "--resume-key",
-    `${step}-resume`
+    "controller"
   ];
 }
 
@@ -118,14 +109,20 @@ describe("GSD observability writer", () => {
   it("writes a sanitized append-only event inside the repository log boundary", () => {
     const cwd = createRepository();
     write(cwd, ".gitignore", ".logs/\n");
+    const fingerprints = record([["product", "retired-fingerprint"]]);
+    const metadata = record([
+      ["api_key", "must-not-leak"],
+      ["cache_key", "retired-cache"],
+      ["fingerprints", fingerprints],
+      ["label", "safe"]
+    ]);
+    const payload = record([
+      ["inputs", [".planning/STATE.md"]],
+      ["input_attribution", "legacy-cache"],
+      ["metadata", metadata]
+    ]);
     const result = run(writer, ["start", ...baseStepArguments(cwd)], {
-      input: JSON.stringify({
-        inputs: [".planning/STATE.md"],
-        metadata: record([
-          ["api_key", "must-not-leak"],
-          ["label", "safe"]
-        ])
-      })
+      input: JSON.stringify(payload)
     });
 
     expect(result.status, result.stderr).toBe(0);
@@ -135,14 +132,20 @@ describe("GSD observability writer", () => {
       "utf8"
     );
     expect(log).not.toContain("must-not-leak");
-    expect(parseRecord(log)).toMatchObject(
+    const event = parseRecord(log);
+    expect(event).not.toHaveProperty("fingerprints");
+    expect(event).not.toHaveProperty("git");
+    expect(event.input_attribution).toBe("declared_only");
+    expect(event.metadata).toEqual(record([
+      ["api_key", "[REDACTED]"],
+      ["label", "safe"]
+    ]));
+    expect(event).toMatchObject(
       record([
         ["schema_version", 1],
         ["event", "started"],
         ["run_id", "run-1"],
         ["step_id", "context-load"],
-        ["plane", "control"],
-        ["git", record([["changed_paths", [".gitignore"]]])],
         [
           "metadata",
           record([
@@ -170,175 +173,296 @@ describe("GSD observability writer", () => {
     ).toThrow();
   });
 
-  it("blocks completed cache keys and requires explicit retry lineage after interruption", () => {
+  it("records repeated attempts without deciding whether the controller may retry", () => {
     const cwd = createRepository();
-    const common = [...baseStepArguments(cwd), "--cache-key", "cache-a"];
+    const common = baseStepArguments(cwd, "repeated-step");
     expect(run(writer, ["start", ...common]).status).toBe(0);
     expect(run(writer, ["complete", ...common]).status).toBe(0);
+    expect(run(writer, ["start", ...common]).status).toBe(0);
+    expect(run(writer, ["block", ...common]).status).toBe(0);
 
-    const duplicate = run(writer, [
-      "start",
-      ...baseStepArguments(cwd, "duplicate"),
-      "--cache-key",
-      "cache-a"
+    const events = readFileSync(
+      path.join(cwd, ".logs/gsd-observability/run-1/controller.jsonl"),
+      "utf8"
+    ).trim().split("\n").map((line) => parseRecord(line));
+    expect(events.map((event) => event.event)).toEqual([
+      "started",
+      "completed",
+      "started",
+      "blocked"
     ]);
-    expect(duplicate.status).not.toBe(0);
-    expect(duplicate.stderr).toContain("STEP_ALREADY_COMPLETED");
-
-    const interrupted = [...baseStepArguments(cwd, "external-a"), "--cache-key", "cache-b"];
-    expect(run(writer, ["start", ...interrupted]).status).toBe(0);
-    expect(run(writer, ["interrupt", ...interrupted]).status).toBe(0);
-    const implicitRetry = run(writer, [
-      "start",
-      ...baseStepArguments(cwd, "external-b"),
-      "--cache-key",
-      "cache-b"
-    ]);
-    expect(implicitRetry.status).not.toBe(0);
-    expect(implicitRetry.stderr).toContain("EXPLICIT_RETRY_REQUIRED");
-    expect(
-      run(writer, [
-        "start",
-        ...baseStepArguments(cwd, "external-b"),
-        "--cache-key",
-        "cache-b",
-        "--retry-of",
-        "external-a"
-      ]).status
-    ).toBe(0);
   });
 
-  it("accepts retry lineage for the chronologically newest terminal across controller and agent ledgers", () => {
+  it("rejects retired lifecycle commands and metadata instead of silently accepting them", () => {
     const cwd = createRepository();
-    const terminal = (step: string, timestamp: string) => JSON.stringify(record([
-      ["event", "blocked"],
-      ["step_id", step],
-      ["cache_key", "gap-plan-check"],
-      ["timestamp", timestamp],
-      ["git", record([["changed_paths", []]])]
-    ]));
-    write(
-      cwd,
-      ".logs/gsd-observability/run-1/controller.jsonl",
-      `${terminal("gap-plan-check-03", "2026-07-22T12:00:00.000Z")}\n`
-    );
-    write(
-      cwd,
-      ".logs/gsd-observability/run-1/agents/a-older.jsonl",
-      `${terminal("gap-plan-check-02", "2026-07-22T11:00:00.000Z")}\n`
-    );
-    write(
-      cwd,
-      ".logs/gsd-observability/run-1/agents/z-oldest.jsonl",
-      `${terminal("gap-plan-check-01", "2026-07-22T10:00:00.000Z")}\n`
-    );
+    for (const command of ["fingerprint", "validate-plan"]) {
+      const result = run(writer, [command, ...baseStepArguments(cwd)]);
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("OBSERVABILITY_ARGUMENT_REJECTED");
+    }
 
-    const retry = run(writer, [
+    const rollout = run(writer, [
       "start",
-      ...baseStepArguments(cwd, "gap-plan-check-04"),
-      "--cache-key",
-      "gap-plan-check",
-      "--retry-of",
-      "gap-plan-check-03"
+      ...baseStepArguments(cwd),
+      "--rollout",
+      "legacy-rollout"
     ]);
-
-    expect(retry.status, retry.stderr).toBe(0);
+    expect(rollout.status).not.toBe(0);
+    expect(rollout.stderr).toContain("OBSERVABILITY_ARGUMENT_REJECTED");
   });
 
-  it("separates product, dependency, search, and policy fingerprints and ignores logs", () => {
+  it("attributes outputs only when the controller declares them", () => {
     const cwd = createRepository();
-    const fingerprint = () => {
-      const result = run(writer, ["fingerprint", "--repo", cwd]);
-      expect(result.status, result.stderr).toBe(0);
-      return JSON.parse(result.stdout) as Record<string, string>;
-    };
+    const arguments_ = baseStepArguments(cwd, "declared-output");
+    expect(run(writer, ["start", ...arguments_]).status).toBe(0);
+    write(cwd, "src/other-agent.ts", "export const other = true;\n");
+    expect(run(writer, ["complete", ...arguments_]).status).toBe(0);
 
-    const initial = fingerprint();
-
-    write(cwd, ".logs/gsd-observability/noise.jsonl", "ignored\n");
-    expect(fingerprint()).toEqual(initial);
-
-    write(cwd, "src/example.ts", "export const value = 2;\n");
-    const productChange = fingerprint();
-    expect(productChange.product).not.toBe(initial.product);
-    expect(productChange.search).toBe(initial.search);
-    expect(productChange.dependency).toBe(initial.dependency);
-
-    write(cwd, "package-lock.json", '{"lockfileVersion":3,"changed":true}\n');
-    const dependencyChange = fingerprint();
-    expect(dependencyChange.dependency).not.toBe(productChange.dependency);
-
-    write(cwd, ".lumenignore", ".logs/\n.tmp/\n");
-    const searchChange = fingerprint();
-    expect(searchChange.search).not.toBe(dependencyChange.search);
-
-    write(cwd, "skills/metronome-policy/SKILL.md", "# Changed policy\n");
-    expect(fingerprint().policy).not.toBe(searchChange.policy);
+    const events = readFileSync(
+      path.join(cwd, ".logs/gsd-observability/run-1/controller.jsonl"),
+      "utf8"
+    ).trim().split("\n").map((line) => parseRecord(line));
+    expect(events.at(-1)?.outputs).toEqual([]);
   });
 });
 
-describe("GSD plan liveness", () => {
-  it("passes a staged, receipt-driven plan and rejects known reset-loop shapes", () => {
-    const cwd = createRepository();
-    const receipt = "approved execution evidence\n";
-    const receiptHash = createHash("sha256").update(receipt).digest("hex");
-    write(cwd, "01-EXECUTION-RECEIPT.md", receipt);
-    const goodPlan = `
-<execution_contract evidence_receipt="01-EXECUTION-RECEIPT.md" receipt_sha256="${receiptHash}" no_auto_retry="true" />
-<context>\n@01-EXECUTION-RECEIPT.md\n@src/domain/practice/validation.ts\n@src/services/research-client.ts\n</context>
-<task id="T1" gate_stage="pre_edit" budget="quick" plane="control" resumable="true" resume_key="t1" cache_key="product+search" inputs="receipt,tests" outputs="tests">
-  <action>Check fingerprints and run focused tests.</action>
-</task>
-<task id="T2" gate_stage="task" budget="standard" plane="product" resumable="true" resume_key="t2" cache_key="product+policy" inputs="receipt,tests,source" outputs="source">
-  <action>Implement only the approved surface.</action>
-</task>
-<task id="T3" gate_stage="pre_merge" budget="external" plane="external" resumable="true" resume_key="t3" cache_key="final-revision" inputs="final-revision" outputs="evidence" external_job_id="required">
-  <action>Run final CodeScene and the 89-line LOC verifier.</action>
-</task>`;
-    write(cwd, "good-plan.md", goodPlan);
-    const good = run(writer, [
-      "validate-plan",
-      "--repo",
-      cwd,
-      "--plan",
-      "good-plan.md"
-    ]);
-    expect(good.status, good.stderr).toBe(0);
-    expect(good.stdout.startsWith("PLAN_LIVENESS_OK")).toBe(true);
+const localCorepack = path.join(
+  repositoryRoot,
+  ".tools",
+  "node-v24.17.0-win-x64",
+  "corepack.cmd"
+);
+const windowsPipelineTest = process.platform === "win32" && existsSync(localCorepack)
+  ? it
+  : it.skip;
 
-    const wrongReceiptHash = "0000000000000000000000000000000000000000000000000000000000000000";
-    const badPlans = [
-      goodPlan.split(` receipt_sha256="${receiptHash}"`).join(""),
-      goodPlan.split(receiptHash).join(wrongReceiptHash),
-      goodPlan.replace("Check fingerprints", "Run CodeScene then check fingerprints"),
-      goodPlan.replace("@01-EXECUTION-RECEIPT.md", "@01-RESEARCH.md"),
-      goodPlan.replace("@01-EXECUTION-RECEIPT.md", "@01-VALIDATION.md"),
-      goodPlan.replace('resumable="true"', 'resumable="false"'),
-      goodPlan.replace('gate_stage="task"', ""),
-      goodPlan.replace(' cache_key="product+policy"', ""),
-      goodPlan.replace(' outputs="source"', ""),
-      goodPlan.replace("Implement only", "Automatically retry and implement only"),
-      goodPlan.replace("Check fingerprints", "Reindex Lumen and search installed dependencies"),
-      goodPlan.replace("Implement only", "Run CodeScene and implement only")
-    ];
-    for (const [index, plan] of badPlans.entries()) {
-      const planPath = `bad-${index}.md`;
-      write(cwd, planPath, plan);
-      const result = run(writer, [
-        "validate-plan",
-        "--repo",
-        cwd,
-        "--plan",
-        planPath
-      ]);
-      expect(result.status, `${planPath}: ${result.stderr}`).not.toBe(0);
-      expect(result.stderr).toContain("PLAN_LIVENESS_BLOCKED");
+describe("repository-local npm wrapper", () => {
+  windowsPipelineTest("forwards pipeline JSON to observability commands", () => {
+    const runId = `npm-local-pipeline-${process.pid}-${Date.now()}`;
+    const runDirectory = path.join(
+      repositoryRoot,
+      ".logs",
+      "gsd-observability",
+      runId
+    );
+    const payload = JSON.stringify({ inputs: ["AGENTS.md"] });
+    const invocation = [
+      String.raw`& .\scripts\npm-local.ps1 --% run gsd:observe -- start`,
+      "--repo .",
+      `--run ${runId}`,
+      "--step pipeline-input",
+      "--stage workflow-debug",
+      "--budget quick",
+      "--agent controller"
+    ].join(" ");
+    const command = `$payload = '${payload}'; $payload | ${invocation}`;
+    const encodedCommand = Buffer.from(command, "utf16le").toString("base64");
+    const powerShell = path.join(
+      process.env.SystemRoot ?? String.raw`C:\Windows`,
+      "System32",
+      "WindowsPowerShell",
+      "v1.0",
+      "powershell.exe"
+    );
+
+    try {
+      const result = spawnSync(
+        powerShell,
+        ["-NoProfile", "-NonInteractive", "-EncodedCommand", encodedCommand],
+        { cwd: repositoryRoot, encoding: "utf8" }
+      );
+      expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+      const event = parseRecord(
+        readFileSync(path.join(runDirectory, "controller.jsonl"), "utf8")
+      );
+      expect(event.inputs).toEqual(["AGENTS.md"]);
+    } finally {
+      rmSync(runDirectory, { recursive: true, force: true });
     }
   });
 });
 
 describe("GSD observability summarizer", () => {
-  it("streams rollout tokens, reports durations and soft budgets, and tolerates a truncated tail", () => {
+  it("measures an in-progress step up to summary time for soft-budget visibility", () => {
+    const cwd = createRepository();
+    const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
+    mkdirSync(runDirectory, { recursive: true });
+    const startedAt = new Date(Date.now() - 3_720_000).toISOString();
+    const started = record([
+      ["event", "started"],
+      ["run_id", "run-1"],
+      ["step_id", "long-step"],
+      ["stage", "planning"],
+      ["step", "long-step"],
+      ["timestamp", startedAt],
+      ["budget_class", "quick"],
+      ["agent_session_id", "planner"],
+      ["inputs", []],
+      ["outputs", []]
+    ]);
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${JSON.stringify(started)}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    const summary = parseRecord(
+      readFileSync(path.join(runDirectory, "summary.json"), "utf8")
+    );
+    const [step] = summary.steps as Array<Record<string, unknown>>;
+    expect(step.wall_duration_ms).toBeGreaterThanOrEqual(3_719_000);
+    expect(step.budget_status).toBe("severe_over_budget");
+    expect(summary.milestone_progress_status).toBe("warning_no_test_change");
+  });
+
+  it("preserves sequential attempts instead of folding repeated work into one step", () => {
+    const cwd = createRepository();
+    const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
+    mkdirSync(runDirectory, { recursive: true });
+    const event = (name: string, timestamp: string) => record([
+      ["event", name],
+      ["run_id", "run-1"],
+      ["step_id", "plan-check"],
+      ["stage", "planning"],
+      ["step", "plan-check"],
+      ["timestamp", timestamp],
+      ["budget_class", "quick"],
+      ["agent_session_id", "checker"],
+      ["inputs", []],
+      ["outputs", []]
+    ]);
+    const events = [
+      event("started", "2026-07-22T10:00:00.000Z"),
+      event("completed", "2026-07-22T10:01:00.000Z"),
+      event("started", "2026-07-22T10:02:00.000Z"),
+      event("blocked", "2026-07-22T10:05:00.000Z")
+    ];
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${events.map((item) => JSON.stringify(item)).join("\n")}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    const summary = parseRecord(
+      readFileSync(path.join(runDirectory, "summary.json"), "utf8")
+    );
+    expect(summary.steps).toMatchObject([
+      record([["status", "completed"], ["wall_duration_ms", 60_000]]),
+      record([["status", "blocked"], ["wall_duration_ms", 180_000]])
+    ]);
+    expect(summary.run_wall_duration_ms).toBe(300_000);
+  });
+
+  it("marks an unmatched terminal event as incomplete instead of on track", () => {
+    const cwd = createRepository();
+    const terminal = run(writer, ["block", ...baseStepArguments(cwd, "missing-start")]);
+    expect(terminal.status).toBe(0);
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    const summary = parseRecord(
+      readFileSync(path.join(cwd, ".logs/gsd-observability/run-1/summary.json"), "utf8")
+    );
+    expect(summary).toMatchObject(record([
+      ["metrics_incomplete", true],
+      ["milestone_progress_status", "metrics_incomplete"],
+      ["run_wall_duration_ms", null],
+      ["steps", []]
+    ]));
+  });
+
+  it("reports unavailable measurements as unknown instead of measured zero", () => {
+    const cwd = createRepository();
+    const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
+    mkdirSync(runDirectory, { recursive: true });
+    const started = record([
+      ["event", "started"],
+      ["run_id", "run-1"],
+      ["step_id", "plan-check"],
+      ["stage", "planning"],
+      ["step", "plan-check"],
+      ["timestamp", "2026-07-22T10:00:00.000Z"],
+      ["budget_class", "quick"],
+      ["agent_session_id", "checker"],
+      ["inputs", [".planning/ROADMAP.md"]],
+      ["outputs", []]
+    ]);
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${JSON.stringify(started)}\n${JSON.stringify({ ...started, event: "blocked", timestamp: "2026-07-22T10:01:00.000Z" })}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    const summary = parseRecord(
+      readFileSync(path.join(runDirectory, "summary.json"), "utf8")
+    );
+    const steps = summary.steps as Array<Record<string, unknown>>;
+    expect(steps[0]).toMatchObject(record([
+      ["external_wait_ms", null],
+      ["active_duration_ms", null],
+      ["tool_duration_ms", null],
+      ["tokens", null],
+      ["measurement_notices", [
+        "tokens_unavailable:host_does_not_expose_step_usage",
+        "external_wait_unavailable:caller_did_not_supply_timing",
+        "tool_duration_unavailable:caller_did_not_supply_timing"
+      ]]
+    ]));
+    expect(summary.metrics_incomplete_reasons).toEqual([
+      "external_wait_unavailable",
+      "token_attribution_unavailable",
+      "tool_duration_unavailable"
+    ]);
+  });
+
+  it("marks impossible external-wait timing unavailable instead of clamping active time", () => {
+    const cwd = createRepository();
+    const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
+    mkdirSync(runDirectory, { recursive: true });
+    const started = record([
+      ["event", "started"],
+      ["run_id", "run-1"],
+      ["step_id", "external"],
+      ["stage", "verify"],
+      ["timestamp", "2026-07-22T10:00:00.000Z"],
+      ["budget_class", "quick"],
+      ["agent_session_id", "controller"],
+      ["inputs", []],
+      ["outputs", []]
+    ]);
+    const completed = {
+      ...started,
+      event: "completed",
+      timestamp: "2026-07-22T10:01:00.000Z",
+      timing: record([["external_wait_ms", 120_000]])
+    };
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${JSON.stringify(started)}\n${JSON.stringify(completed)}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    const summary = parseRecord(
+      readFileSync(path.join(runDirectory, "summary.json"), "utf8")
+    );
+    const [step] = summary.steps as Array<Record<string, unknown>>;
+    expect(step).toMatchObject(record([
+      ["external_wait_ms", null],
+      ["active_duration_ms", null],
+      ["measurement_notices", expect.arrayContaining([
+        "external_wait_unavailable:exceeds_wall_duration"
+      ])]
+    ]));
+  });
+
+  it("reports supplied timings while leaving unavailable token attribution unknown", () => {
     const cwd = createRepository();
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
@@ -346,19 +470,18 @@ describe("GSD observability summarizer", () => {
       ["schema_version", 1],
       ["event", "started"],
       ["run_id", "run-1"],
-      ["step_id", "external"],
+      ["step_id", "codescene"],
       ["stage", "execute"],
-      ["step", "codescene"],
       ["timestamp", "2026-07-21T10:00:00.000Z"],
-      ["plane", "external"],
       ["budget_class", "quick"],
       ["agent_session_id", "agent-a"],
-      ["rollout_id", "rollout-a"],
+      ["metadata", record([
+        ["agent_type", "gsd-planner"],
+        ["model", "gpt-5.6-sol"],
+        ["reasoning_effort", "xhigh"]
+      ])],
       ["inputs", ["src/example.ts"]],
       ["outputs", []],
-      ["resume_key", "external-resume"],
-      ["cache_key", "cache-a"],
-      ["fingerprints", { product: "p", dependency: "d", search: "s", policy: "x" }],
       ["git", record([["head", "before"], ["changed_paths", []]])]
     ]);
     const completed = {
@@ -376,81 +499,58 @@ describe("GSD observability summarizer", () => {
       ".logs/gsd-observability/run-1/controller.jsonl",
       `${JSON.stringify(started)}\n${JSON.stringify(completed)}\n`
     );
-    const rollout = path.join(cwd, "rollout.jsonl");
-    const tokenEvent = (usage: {
-      timestamp: string;
-      input: number;
-      cached: number;
-      output: number;
-      reasoning: number;
-    }) =>
-      JSON.stringify({
-        timestamp: usage.timestamp,
-        type: "event_msg",
-        payload: {
-          type: "token_count",
-          info: record([
-            [
-              "last_token_usage",
-              record([
-                ["input_tokens", usage.input],
-                ["cached_input_tokens", usage.cached],
-                ["output_tokens", usage.output],
-                ["reasoning_output_tokens", usage.reasoning],
-                ["total_tokens", usage.input + usage.output]
-              ])
-            ]
-          ])
-        }
-      });
-    writeFileSync(
-      rollout,
-      `${tokenEvent({ timestamp: "2026-07-21T10:01:00.000Z", input: 200_000, cached: 170_000, output: 20_000, reasoning: 5000 })}\n${tokenEvent({ timestamp: "2026-07-21T10:02:00.000Z", input: 150_000, cached: 140_000, output: 15_000, reasoning: 3000 })}\n{"truncated":`,
-      "utf8"
+    const result = run(summarizer, [
+      "--repo",
+      cwd,
+      "--run",
+      "run-1"
+    ]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim().split("\n")).toHaveLength(1);
+    expect(result.stdout).toContain("over_budget");
+    expect(result.stdout).toContain("codescene");
+    expect(result.stdout).toContain("model=gpt-5.6-sol");
+    expect(result.stdout).toContain("effort=xhigh");
+    const summary = parseRecord(
+      readFileSync(path.join(runDirectory, "summary.json"), "utf8")
     );
+    const summaryFields = new Map(Object.entries(summary));
+    expect(summaryFields.get("metrics_incomplete")).toBe(true);
+    expect(summaryFields.get("metrics_incomplete_reasons")).toEqual(["token_attribution_unavailable"]);
+    const steps = summaryFields.get("steps");
+    expect(Array.isArray(steps)).toBe(true);
+    expect((steps as unknown[])[0]).toMatchObject(
+      record([
+        ["step_id", "codescene"],
+        ["wall_duration_ms", 180_000],
+        ["external_wait_ms", 120_000],
+        ["active_duration_ms", 60_000],
+        ["tool_duration_ms", 30_000],
+        ["agent_type", "gsd-planner"],
+        ["agent_model", "gpt-5.6-sol"],
+        ["reasoning_effort", "xhigh"],
+        ["attribution_granularity", "turn"],
+        ["budget_status", "over_budget"],
+        ["tokens", null],
+        ["measurement_notices", ["tokens_unavailable:host_does_not_expose_step_usage"]],
+        ["inputs", ["src/example.ts"]],
+        ["outputs", ["src/example.ts"]]
+      ])
+    );
+    expect(summaryFields.get("time_to_first_product_change_ms")).toBe(180_000);
+  });
 
+  it("rejects retired rollout attribution instead of silently ignoring it", () => {
+    const cwd = createRepository();
     const result = run(summarizer, [
       "--repo",
       cwd,
       "--run",
       "run-1",
       "--rollout",
-      `rollout-a=${rollout}`
+      "legacy=rollout.jsonl"
     ]);
-    expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout.trim().split("\n")).toHaveLength(1);
-    expect(result.stdout).toContain("over_budget");
-    expect(result.stdout).toContain("codescene");
-    const summary = parseRecord(
-      readFileSync(path.join(runDirectory, "summary.json"), "utf8")
-    );
-    const summaryFields = new Map(Object.entries(summary));
-    expect(summaryFields.get("metrics_incomplete")).toBe(true);
-    const steps = summaryFields.get("steps");
-    expect(Array.isArray(steps)).toBe(true);
-    expect((steps as unknown[])[0]).toMatchObject(
-      record([
-        ["step_id", "external"],
-        ["wall_duration_ms", 180_000],
-        ["external_wait_ms", 120_000],
-        ["active_duration_ms", 60_000],
-        ["attribution_granularity", "turn"],
-        ["budget_status", "over_budget"],
-        [
-          "tokens",
-          record([
-            ["input_tokens", 350_000],
-            ["cached_input_tokens", 310_000],
-            ["output_tokens", 35_000],
-            ["reasoning_output_tokens", 8000],
-            ["processed_tokens", 393_000],
-            ["new_tokens", 83_000]
-          ])
-        ],
-        ["inputs", ["src/example.ts"]],
-        ["outputs", ["src/example.ts"]]
-      ])
-    );
-    expect(summaryFields.get("time_to_first_product_change_ms")).toBe(180_000);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("METRICS_ARGUMENT_ERROR");
   });
 });

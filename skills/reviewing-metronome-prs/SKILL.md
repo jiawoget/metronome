@@ -20,23 +20,22 @@ Act as the terminal evidence gate. Never edit files, repair artifacts, merge the
 
 - For production behavior or surface changes, also read `skills/metronome-policy/SKILL.md`.
 - Inventory every added, changed, moved, and removed production surface, including dependencies, modules, helpers, services, hooks, repositories, schemas, public APIs, owners, and generic algorithms.
-- Trace each surface through: real diff -> PLAN task -> `CAP-xx` Capability Admission decision -> Approved Surface -> tests -> verification evidence. Flag missing traceability, widened scope, conflicting decisions, and any implementation outside the approved surface.
+- Trace each surface through the real diff, native PLAN task, tests, and verification evidence. For a new or replaced generic capability, API, algorithm, shared surface, or dependency, also trace it to the applicable `RESEARCH.md` reuse decision. Flag missing traceability, widened scope, conflicting decisions, and unplanned parallel implementations.
 - Compare observable behavior and boundaries with current requirements and plan acceptance criteria; do not trust summaries as proof.
-- For a deferred legacy-capability promotion, verify the same legacy ID, feature key, and required behavior across seed and requirement: selection keeps the seed until approval, and only native lifecycle artifacts carry truth afterward. Inspect the approval commit itself and require its exact name/status set to contain only added/modified `.planning/REQUIREMENTS.md` plus deleted matching selected seeds. Require controller evidence that immediately before the commit the index was empty, no merge was in progress, and the `.planning` worktree set was exactly those paths; confirm the native OpenGSD 1.7 helper was scoped to `.planning/REQUIREMENTS.md` and the existing `.planning/seeds` directory, never explicit deleted seed paths, an unscoped call, or merge fallback. A duplicate or missing carrier, any extra path, missing atomicity evidence, or change to a rejected, unmatched, or unselected seed is a finding.
+- For a deferred legacy-capability promotion, read and apply `skills/promoting-dormant-seeds/SKILL.md` to the requirements commit. Do not load or impose that migration-only contract on unrelated pull requests.
 
 ## Verify reuse independently
 
+- Apply the full dependency/platform/OSS checks only when the diff adds or replaces a generic capability, API, shared surface, or dependency. Every production diff still requires the compact local-reuse result from `RESEARCH.md`.
 - Recheck decision-bearing local candidates through source, types, call sites, and tests.
-- Confirm installed and transitive dependency evidence against the manifest, lockfile, exact declarations/source, and promotion decision where relevant.
-- Confirm platform and OSS claims through authoritative version-matched evidence and concrete rejection mismatches. No result or unavailable evidence is not proof of absence.
-- Verify that the diff uses the exact approved symbol or API. Do not suggest an alternative that falls outside Approved Surface.
+- Confirm dependency, platform, and OSS claims against the locked version and authoritative sources where they affected the decision. A verified fitting local or installed candidate ends the search; do not repeat a full ecosystem survey merely for review volume.
+- Verify that the diff uses the selected owner, symbol, API, or dependency and does not add a parallel implementation.
 
 ## Verify outcomes
 
 - Check tests and verification against changed observable behavior, boundary cases, and regressions.
-- Report retired, added, and net production LOC separately across all touched production files; relocation is not retirement.
-- Compare before/after Code Health for the meaningful affected scope and report remaining complexity separately. Metrics never replace behavior or traceability evidence.
+- When the current requirement explicitly asks for LOC reduction or slimming, report retired, added, and net production LOC separately. When it explicitly asks for Code Health or CodeScene evidence, compare before/after Code Health for the meaningful affected scope. Relocation is not retirement, and metrics never replace behavior evidence.
 
 ## Report
 
-Lead with findings ordered by severity. Each finding includes severity, `file:line`, the violated requirement/CAP/plan/contract, concrete impact, and supporting evidence. Then report open questions, scope assessment, reuse assessment, and verification summary, including LOC and Code Health evidence. If there are no findings, say so explicitly and state any residual evidence limits.
+Lead with findings ordered by severity. Each finding includes severity, `file:line`, the violated requirement, plan, reuse decision, or contract, concrete impact, and supporting evidence. Then report open questions, scope assessment, applicable reuse assessment, and verification summary. Include LOC and Code Health only when required above. If there are no findings, say so explicitly and state any residual evidence limits.

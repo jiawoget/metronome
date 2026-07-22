@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -10,46 +11,66 @@ import {
   LibraryBig,
   Mic2,
   Music2,
-  Settings
+  Pencil,
+  Plus,
+  Settings,
+  Trash2,
+  X
 } from "lucide-react";
 import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  formatPracticeMinuteDuration,
-  formatPracticeUtcMinuteTimestamp,
+  DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
+  DEFAULT_HOME_RECENT_ACTIVITY_LIMIT,
   type ContinuePracticeTarget,
   type ContinuePracticeTargetIdentity,
   type ContinuePracticeTargetsResult,
+  type GoalCompletionEvaluation,
   type HomeDashboardAnalyticsSource,
   type HomePracticeStreaks,
   type HomeRecentActivityItem,
   type HomeRecentActivityResult,
   type HomeRecentActivityTargetState,
+  type LocalPracticeGoal,
+  type LocalPracticeGoalKind,
+  type LocalPracticeGoalPeriod,
   type PracticeSession
 } from "@/domain/practice";
 import {
-  emptyAnalytics,
-  emptyContinueTargets,
-  emptyRecentActivity,
-  emptySessionComparison,
-  emptyStreaks,
   usePracticeSessionDashboard,
   type PracticeSessionDashboardAnalyticsStatus,
   type PracticeSessionDashboardContinueTargetsStatus,
+  type PracticeSessionDashboardReadStatus,
   type PracticeSessionDashboardRecentActivityStatus,
   type PracticeSessionDashboardSessionComparisonStatus,
   type PracticeSessionDashboardStreaksStatus,
+  type PracticeSessionDashboardState,
   type HomeSessionComparisonData
 } from "@/hooks/use-practice-session-dashboard";
 import { getContinuePracticeTargetHref } from "@/components/home/continue-practice-navigation";
-import {
-  PracticeGoalsPanel,
-  type HomeGoalManagementData
-} from "@/components/home/practice-goals-panel";
 import { SessionComparisonPanel } from "@/components/home/session-comparison-panel";
 
-export type { HomeGoalManagementData } from "@/components/home/practice-goals-panel";
+export type PracticeGoalManagementReadStatus = PracticeSessionDashboardReadStatus;
+export type PracticeGoalManagementMutationStatus = "idle" | "saving" | "deleting" | "error";
+
+export type HomeGoalManagementData = {
+  practiceGoals?: LocalPracticeGoal[];
+  practiceGoalEvaluations?: GoalCompletionEvaluation[];
+  practiceGoalsStatus?: PracticeGoalManagementReadStatus;
+  practiceGoalProgressStatus?: PracticeGoalManagementReadStatus;
+  practiceGoalsErrorMessage?: string | null;
+  practiceGoalProgressErrorMessage?: string | null;
+  practiceGoalMutationStatus?: PracticeGoalManagementMutationStatus;
+  practiceGoalMutationErrorMessage?: string | null;
+  savePracticeGoal?: (goal: LocalPracticeGoal) => Promise<void | boolean> | void | boolean;
+  deletePracticeGoal?: (goalId: string) => Promise<void | boolean> | void | boolean;
+  onSavePracticeGoal?: (goal: LocalPracticeGoal) => Promise<void | boolean> | void | boolean;
+  onDeletePracticeGoal?: (goalId: string) => Promise<void | boolean> | void | boolean;
+  createPracticeGoalId?: () => string;
+  getPracticeGoalNow?: () => Date;
+};
 
 export type HomeDashboardData = HomeGoalManagementData & {
   summary: {
@@ -79,24 +100,129 @@ export type HomeDashboardData = HomeGoalManagementData & {
   recentRecordings: [];
 };
 
-export function HomeDashboard({ data }: { data?: HomeDashboardData }) {
+type HomeDashboardRenderableData = (HomeDashboardData | PracticeSessionDashboardState) & Partial<HomeGoalManagementData>;
+
+const practiceGoalKinds = ["minutes", "sessions", "takes"] as const;
+const practiceGoalPeriods = ["today", "all-time"] as const;
+const maxPracticeGoalTarget = 1_000_000;
+
+const emptyContinuePracticeTargets: ContinuePracticeTargetsResult = {
+  targets: [],
+  generatedAt: "",
+  limit: DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT,
+  rejected: []
+};
+
+const emptyHomeRecentActivity: HomeRecentActivityResult = {
+  items: [],
+  generatedAt: "",
+  limit: DEFAULT_HOME_RECENT_ACTIVITY_LIMIT
+};
+
+const emptyHomeAnalytics: HomeDashboardAnalyticsSource = {
+  generatedAt: "",
+  summary: {
+    durationMs: 0,
+    minutesToday: 0,
+    sessionsToday: 0,
+    recordingsToday: 0
+  },
+  totals: {
+    durationMs: 0,
+    sessions: 0,
+    sheetTakes: 0,
+    practicedSheets: 0,
+    segmentSessions: 0
+  },
+  emptyState: {
+    hasPracticeHistory: false,
+    hasSheetPractice: false,
+    hasSegmentPractice: false,
+    hasRecordings: false,
+    hasGoals: false
+  }
+};
+
+const emptyHomeStreaks: HomePracticeStreaks = {
+  generatedAt: "",
+  currentStreakDays: 0,
+  longestStreakDays: 0,
+  practicedToday: false,
+  lastPracticedLocalDay: null,
+  emptyState: {
+    hasPracticeHistory: false
+  }
+};
+
+const emptyHomeSessionComparison: HomeSessionComparisonData = {
+  generatedAt: "",
+  candidates: [],
+  limit: 8,
+  maxSelected: 3
+};
+
+const emptyHomeDashboardData: HomeDashboardData = {
+  summary: {
+    durationMs: 0,
+    minutesToday: 0,
+    sessionsToday: 0,
+    recordingsToday: 0
+  },
+  recentSession: null,
+  continueTarget: null,
+  continueTargets: emptyContinuePracticeTargets,
+  continueTargetsStatus: "idle",
+  continueTargetsErrorMessage: null,
+  recentActivity: emptyHomeRecentActivity,
+  recentActivityStatus: "idle",
+  recentActivityErrorMessage: null,
+  analytics: emptyHomeAnalytics,
+  analyticsStatus: "idle",
+  analyticsErrorMessage: null,
+  streaks: emptyHomeStreaks,
+  streaksStatus: "idle",
+  streaksErrorMessage: null,
+  sessionComparison: emptyHomeSessionComparison,
+  sessionComparisonStatus: "idle",
+  sessionComparisonErrorMessage: null,
+  practiceGoals: [],
+  practiceGoalEvaluations: [],
+  practiceGoalsStatus: "loaded",
+  practiceGoalProgressStatus: "loaded",
+  practiceGoalsErrorMessage: null,
+  practiceGoalProgressErrorMessage: null,
+  practiceGoalMutationStatus: "idle",
+  practiceGoalMutationErrorMessage: null,
+  recentSheets: [],
+  recentRecordings: []
+};
+
+export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDashboardData }) {
   const liveData = usePracticeSessionDashboard();
-  const dashboardData = data ?? liveData;
-  const continueTargets = dashboardData.continueTargets ?? emptyContinueTargets;
+  const dashboardData = (data === emptyHomeDashboardData ? liveData : data) as HomeDashboardRenderableData;
+  const continueTargets = dashboardData.continueTargets ?? emptyContinuePracticeTargets;
   const continueTargetsStatus = dashboardData.continueTargetsStatus ?? "idle";
   const continueTargetsErrorMessage = dashboardData.continueTargetsErrorMessage ?? null;
-  const recentActivity = dashboardData.recentActivity ?? emptyRecentActivity;
+  const recentActivity = dashboardData.recentActivity ?? emptyHomeRecentActivity;
   const recentActivityStatus = dashboardData.recentActivityStatus ?? "idle";
   const recentActivityErrorMessage = dashboardData.recentActivityErrorMessage ?? null;
-  const analytics = dashboardData.analytics ?? emptyAnalytics;
+  const analytics = dashboardData.analytics ?? emptyHomeAnalytics;
   const analyticsStatus = dashboardData.analyticsStatus ?? "idle";
   const analyticsErrorMessage = dashboardData.analyticsErrorMessage ?? null;
-  const streaks = dashboardData.streaks ?? emptyStreaks;
+  const streaks = dashboardData.streaks ?? emptyHomeStreaks;
   const streaksStatus = dashboardData.streaksStatus ?? "idle";
   const streaksErrorMessage = dashboardData.streaksErrorMessage ?? null;
-  const sessionComparison = dashboardData.sessionComparison ?? emptySessionComparison;
+  const sessionComparison = dashboardData.sessionComparison ?? emptyHomeSessionComparison;
   const sessionComparisonStatus = dashboardData.sessionComparisonStatus ?? "idle";
   const sessionComparisonErrorMessage = dashboardData.sessionComparisonErrorMessage ?? null;
+  const practiceGoals = dashboardData.practiceGoals ?? [];
+  const practiceGoalEvaluations = dashboardData.practiceGoalEvaluations ?? [];
+  const practiceGoalsStatus = dashboardData.practiceGoalsStatus ?? "idle";
+  const practiceGoalProgressStatus = dashboardData.practiceGoalProgressStatus ?? "idle";
+  const practiceGoalsErrorMessage = dashboardData.practiceGoalsErrorMessage ?? null;
+  const practiceGoalProgressErrorMessage = dashboardData.practiceGoalProgressErrorMessage ?? null;
+  const practiceGoalMutationStatus = dashboardData.practiceGoalMutationStatus ?? "idle";
+  const practiceGoalMutationErrorMessage = dashboardData.practiceGoalMutationErrorMessage ?? null;
 
   return (
     <section aria-labelledby="home-title" className="mx-auto flex w-full max-w-6xl flex-col gap-5">
@@ -187,7 +313,20 @@ export function HomeDashboard({ data }: { data?: HomeDashboardData }) {
             errorMessage={streaksErrorMessage}
           />
 
-          <PracticeGoalsPanel data={dashboardData} />
+          <PracticeGoalsPanel
+            goals={practiceGoals}
+            evaluations={practiceGoalEvaluations}
+            status={practiceGoalsStatus}
+            progressStatus={practiceGoalProgressStatus}
+            errorMessage={practiceGoalsErrorMessage}
+            progressErrorMessage={practiceGoalProgressErrorMessage}
+            mutationStatus={practiceGoalMutationStatus}
+            mutationErrorMessage={practiceGoalMutationErrorMessage}
+            onSavePracticeGoal={dashboardData.onSavePracticeGoal ?? dashboardData.savePracticeGoal}
+            onDeletePracticeGoal={dashboardData.onDeletePracticeGoal ?? dashboardData.deletePracticeGoal}
+            createPracticeGoalId={dashboardData.createPracticeGoalId}
+            getPracticeGoalNow={dashboardData.getPracticeGoalNow}
+          />
 
           <SessionComparisonPanel
             comparison={sessionComparison}
@@ -265,6 +404,451 @@ export function HomeDashboard({ data }: { data?: HomeDashboardData }) {
         </Card>
       </div>
     </section>
+  );
+}
+
+type PracticeGoalDraft = {
+  kind: LocalPracticeGoalKind;
+  period: LocalPracticeGoalPeriod;
+  targetText: string;
+};
+
+type PracticeGoalFormMode =
+  | {
+      kind: "create";
+    }
+  | {
+      kind: "edit";
+      goal: LocalPracticeGoal;
+    };
+
+function PracticeGoalsPanel({
+  goals,
+  evaluations,
+  status,
+  progressStatus,
+  errorMessage,
+  progressErrorMessage,
+  mutationStatus,
+  mutationErrorMessage,
+  onSavePracticeGoal,
+  onDeletePracticeGoal,
+  createPracticeGoalId = createDefaultPracticeGoalId,
+  getPracticeGoalNow = () => new Date()
+}: {
+  goals: LocalPracticeGoal[];
+  evaluations: GoalCompletionEvaluation[];
+  status: PracticeGoalManagementReadStatus;
+  progressStatus: PracticeGoalManagementReadStatus;
+  errorMessage: string | null;
+  progressErrorMessage: string | null;
+  mutationStatus: PracticeGoalManagementMutationStatus;
+  mutationErrorMessage: string | null;
+  onSavePracticeGoal?: (goal: LocalPracticeGoal) => Promise<void | boolean> | void | boolean;
+  onDeletePracticeGoal?: (goalId: string) => Promise<void | boolean> | void | boolean;
+  createPracticeGoalId?: () => string;
+  getPracticeGoalNow?: () => Date;
+}) {
+  const isMountedRef = useRef(false);
+  const [formMode, setFormMode] = useState<PracticeGoalFormMode | null>(null);
+  const [draft, setDraft] = useState<PracticeGoalDraft>(createDefaultPracticeGoalDraft());
+  const [targetError, setTargetError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [confirmDeleteGoalId, setConfirmDeleteGoalId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [localMutationStatus, setLocalMutationStatus] = useState<PracticeGoalManagementMutationStatus>("idle");
+  const evaluationsByGoalId = new Map(evaluations.map((evaluation) => [evaluation.goalId, evaluation]));
+  const hasGoalSurface =
+    status !== "idle" ||
+    goals.length > 0 ||
+    evaluations.length > 0 ||
+    Boolean(onSavePracticeGoal) ||
+    Boolean(onDeletePracticeGoal);
+  const isInitialLoading = status === "loading" && goals.length === 0;
+  const isUnavailable = !hasGoalSurface;
+  const isSaving = mutationStatus === "saving" || localMutationStatus === "saving";
+  const isDeleting = mutationStatus === "deleting" || localMutationStatus === "deleting";
+  const visibleMutationError = formError ?? mutationErrorMessage;
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  function openCreateForm() {
+    setDraft(createDefaultPracticeGoalDraft());
+    setTargetError(null);
+    setFormError(null);
+    setFormMode({ kind: "create" });
+  }
+
+  function openEditForm(goal: LocalPracticeGoal) {
+    setDraft({
+      kind: goal.kind,
+      period: goal.period,
+      targetText: String(goal.target)
+    });
+    setTargetError(null);
+    setFormError(null);
+    setFormMode({ kind: "edit", goal });
+  }
+
+  function closeForm() {
+    setFormMode(null);
+    setTargetError(null);
+    setFormError(null);
+  }
+
+  function updateDraft(field: keyof PracticeGoalDraft, value: string) {
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      [field]: value
+    }));
+    setTargetError(null);
+    setFormError(null);
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const validation = validatePracticeGoalDraft(draft);
+
+    if (!validation.valid) {
+      setTargetError(validation.message);
+      return;
+    }
+
+    if (!onSavePracticeGoal) {
+      setFormError("Practice goals could not be loaded.");
+      return;
+    }
+
+    const goal = buildLocalPracticeGoalFromDraft({
+      draft,
+      target: validation.target,
+      baseGoal: formMode?.kind === "edit" ? formMode.goal : null,
+      createGoalId: createPracticeGoalId,
+      now: getPracticeGoalNow
+    });
+
+    try {
+      setLocalMutationStatus("saving");
+      setFormError(null);
+      const result = await Promise.resolve(onSavePracticeGoal(goal));
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      if (result === false) {
+        setFormError("Goal could not be saved.");
+        return;
+      }
+
+      closeForm();
+    } catch {
+      if (isMountedRef.current) {
+        setFormError("Goal could not be saved.");
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLocalMutationStatus("idle");
+      }
+    }
+  }
+
+  async function handleDelete(goal: LocalPracticeGoal) {
+    if (!onDeletePracticeGoal) {
+      setDeleteError("Practice goals could not be loaded.");
+      return;
+    }
+
+    try {
+      setLocalMutationStatus("deleting");
+      setDeleteError(null);
+      const result = await Promise.resolve(onDeletePracticeGoal(goal.id));
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      if (result === false) {
+        setDeleteError("Goal could not be deleted.");
+        return;
+      }
+
+      setConfirmDeleteGoalId(null);
+    } catch {
+      if (isMountedRef.current) {
+        setDeleteError("Goal could not be deleted.");
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLocalMutationStatus("idle");
+      }
+    }
+  }
+
+  return (
+    <Card role="region" aria-labelledby="practice-goals-title" data-testid="practice-goals-panel">
+      <CardHeader className="flex-row items-center justify-between gap-3">
+        <CardTitle id="practice-goals-title">Practice Goals</CardTitle>
+        <Button
+          type="button"
+          variant="secondary"
+          size="default"
+          className="shrink-0"
+          data-testid="practice-goals-new"
+          onClick={openCreateForm}
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          New goal
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-3">
+          {isInitialLoading ? (
+            <div
+              role="status"
+              className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground"
+            >
+              Loading practice goals.
+            </div>
+          ) : status === "error" || isUnavailable ? (
+            <div
+              role="status"
+              className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3 text-sm leading-6 text-destructive"
+            >
+              {errorMessage ?? "Practice goals could not be loaded."}
+            </div>
+          ) : status === "loading" ? (
+            <div
+              role="status"
+              className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground"
+            >
+              Refreshing practice goals.
+            </div>
+          ) : null}
+
+          {progressStatus === "error" && goals.length > 0 ? (
+            <div
+              role="status"
+              data-testid="practice-goals-progress-error"
+              className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3 text-sm leading-6 text-destructive"
+            >
+              {progressErrorMessage ?? "Goal progress could not be loaded."}
+            </div>
+          ) : null}
+
+          {visibleMutationError ? (
+            <div
+              role="status"
+              data-testid="practice-goals-mutation-error"
+              className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3 text-sm leading-6 text-destructive"
+            >
+              {visibleMutationError}
+            </div>
+          ) : null}
+
+          {formMode ? (
+            <form
+              aria-label={formMode.kind === "create" ? "Create practice goal" : "Edit practice goal"}
+              data-testid="practice-goal-form"
+              className="grid gap-3 rounded-md border border-border bg-muted px-3 py-3"
+              onSubmit={handleSubmit}
+            >
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+                  Goal kind
+                  <select
+                    data-testid="practice-goal-kind"
+                    className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={draft.kind}
+                    onChange={(event: ChangeEvent<HTMLSelectElement>) => updateDraft("kind", event.target.value)}
+                  >
+                    <option value="minutes">Minutes</option>
+                    <option value="sessions">Sessions</option>
+                    <option value="takes">Sheet takes</option>
+                  </select>
+                </label>
+                <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+                  Period
+                  <select
+                    data-testid="practice-goal-period"
+                    className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={draft.period}
+                    onChange={(event: ChangeEvent<HTMLSelectElement>) => updateDraft("period", event.target.value)}
+                  >
+                    <option value="today">Today</option>
+                    <option value="all-time">All-time</option>
+                  </select>
+                </label>
+                <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+                  Target
+                  <input
+                    data-testid="practice-goal-target"
+                    className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    inputMode="numeric"
+                    value={draft.targetText}
+                    aria-invalid={targetError ? "true" : "false"}
+                    aria-describedby={targetError ? "practice-goal-target-error" : undefined}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) => updateDraft("targetText", event.target.value)}
+                  />
+                </label>
+              </div>
+              {targetError ? (
+                <p id="practice-goal-target-error" className="text-xs leading-5 text-destructive">
+                  {targetError}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="submit" disabled={isSaving} data-testid="practice-goal-save">
+                  {isSaving ? "Saving" : formMode.kind === "create" ? "Create goal" : "Save goal"}
+                </Button>
+                <Button type="button" variant="ghost" onClick={closeForm} data-testid="practice-goal-cancel">
+                  <X className="h-4 w-4" aria-hidden="true" />
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          ) : null}
+
+          {goals.length === 0 && !isInitialLoading && !isUnavailable && status !== "error" ? (
+            <div
+              data-testid="practice-goals-empty"
+              className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground"
+            >
+              No local goals yet.
+            </div>
+          ) : null}
+
+          {goals.length > 0 ? (
+            <ul className="divide-y divide-border" aria-label="Local practice goals">
+              {goals.map((goal) => (
+                <PracticeGoalRow
+                  key={goal.id}
+                  goal={goal}
+                  evaluation={evaluationsByGoalId.get(goal.id) ?? null}
+                  isDeleting={isDeleting && confirmDeleteGoalId === goal.id}
+                  isConfirmingDelete={confirmDeleteGoalId === goal.id}
+                  deleteError={confirmDeleteGoalId === goal.id ? deleteError : null}
+                  onEdit={() => openEditForm(goal)}
+                  onRequestDelete={() => {
+                    setDeleteError(null);
+                    setConfirmDeleteGoalId(goal.id);
+                  }}
+                  onCancelDelete={() => {
+                    setDeleteError(null);
+                    setConfirmDeleteGoalId(null);
+                  }}
+                  onConfirmDelete={() => void handleDelete(goal)}
+                />
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PracticeGoalRow({
+  goal,
+  evaluation,
+  isDeleting,
+  isConfirmingDelete,
+  deleteError,
+  onEdit,
+  onRequestDelete,
+  onCancelDelete,
+  onConfirmDelete
+}: {
+  goal: LocalPracticeGoal;
+  evaluation: GoalCompletionEvaluation | null;
+  isDeleting: boolean;
+  isConfirmingDelete: boolean;
+  deleteError: string | null;
+  onEdit: () => void;
+  onRequestDelete: () => void;
+  onCancelDelete: () => void;
+  onConfirmDelete: () => void;
+}) {
+  const status = getGoalEvaluationStatus(evaluation);
+  const progressRatio = evaluation ? clampGoalProgressRatio(evaluation.progressRatio) : 0;
+
+  return (
+    <li data-testid="practice-goal-row" data-goal-id={goal.id} className="grid gap-3 py-3 first:pt-0 last:pb-0">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="min-w-0 break-words text-sm font-semibold leading-5">
+              {getPracticeGoalLabel(goal)}
+            </p>
+            <span
+              data-goal-id={goal.id}
+              className={`rounded-md border px-2 py-0.5 text-xs font-medium leading-5 ${status.className}`}
+            >
+              {status.label}
+            </span>
+          </div>
+          <p
+            data-testid="practice-goal-progress"
+            data-goal-id={goal.id}
+            className="mt-1 break-words text-xs leading-5 text-muted-foreground"
+          >
+            {formatPracticeGoalProgress(goal, evaluation)}
+          </p>
+          <div className="mt-2 h-2 overflow-hidden rounded-md bg-muted" aria-hidden="true">
+            <div className="h-full bg-primary" style={{ width: `${progressRatio * 100}%` }} />
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button type="button" variant="ghost" size="icon" title="Edit goal" aria-label="Edit goal" onClick={onEdit}>
+            <Pencil className="h-4 w-4" aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            title="Delete goal"
+            aria-label="Delete goal"
+            onClick={onRequestDelete}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </div>
+      </div>
+
+      {isConfirmingDelete ? (
+        <div
+          role="group"
+          aria-label={`Confirm delete ${getPracticeGoalLabel(goal)}`}
+          data-testid="practice-goal-delete-confirm"
+          className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3"
+        >
+          <p className="text-sm leading-6 text-destructive">Delete this goal?</p>
+          {deleteError ? (
+            <p className="mt-1 text-xs leading-5 text-destructive">{deleteError}</p>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" disabled={isDeleting} onClick={onCancelDelete}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isDeleting}
+              data-testid="practice-goal-delete-confirm-button"
+              aria-label="Confirm delete goal"
+              onClick={onConfirmDelete}
+            >
+              {isDeleting ? "Deleting" : "Delete goal"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </li>
   );
 }
 
@@ -436,7 +1020,7 @@ function PracticeAnalyticsPanel({
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <AnalyticsMetric
                 label="Total practice"
-                value={formatPracticeMinuteDuration(analytics.totals.durationMs)}
+                value={formatAnalyticsDuration(analytics.totals.durationMs)}
                 testId="home-analytics-total-practice"
               />
               <AnalyticsMetric
@@ -462,7 +1046,7 @@ function PracticeAnalyticsPanel({
             </dl>
 
             <p className="text-xs leading-5 text-muted-foreground">
-              Local history totals{hasGeneratedAt ? ` · Updated ${formatPracticeUtcMinuteTimestamp(analytics.generatedAt, "Unknown update time")}` : ""}
+              Local history totals{hasGeneratedAt ? ` · Updated ${formatAnalyticsTimestamp(analytics.generatedAt)}` : ""}
             </p>
           </div>
         )}
@@ -656,7 +1240,7 @@ function getContinuePracticeRowContent(target: ContinuePracticeTargetIdentity) {
       return {
         title: "Quick practice",
         typeLabel: "Quick",
-        metadata: `Recent quick practice: ${formatPracticeUtcMinuteTimestamp(target.sortTimestamp ?? target.occurredAt)}`,
+        metadata: `Recent quick practice: ${formatActivityTime(target.sortTimestamp ?? target.occurredAt)}`,
         accessibleName: "Continue quick practice"
       };
     case "sheet": {
@@ -748,7 +1332,7 @@ function RecentActivityPanel({
 
 function RecentActivityRow({ item }: { item: HomeRecentActivityItem }) {
   const status = getActivityStatus(item.targetState);
-  const timestamp = formatPracticeUtcMinuteTimestamp(item.sortTimestamp);
+  const timestamp = formatActivityTime(item.sortTimestamp);
   const isStale = item.targetState !== "valid" && item.targetState !== "quick";
 
   return (
@@ -861,4 +1445,230 @@ function getActivityStatus(targetState: HomeRecentActivityTargetState) {
         className: "border-border bg-muted text-muted-foreground"
       };
   }
+}
+
+function formatActivityTime(value: string | null) {
+  if (!value) {
+    return "Unknown time";
+  }
+
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "Unknown time";
+  }
+
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
+}
+
+function formatAnalyticsDuration(value: number) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "0 min";
+  }
+
+  if (value < 60_000) {
+    return "<1 min";
+  }
+
+  const totalMinutes = Math.floor(value / 60_000);
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return minutes > 0 ? `${hours} hr ${minutes} min` : `${hours} hr`;
+}
+
+function formatAnalyticsTimestamp(value: string) {
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "Unknown update time";
+  }
+
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
+}
+
+function createDefaultPracticeGoalDraft(): PracticeGoalDraft {
+  return {
+    kind: "minutes",
+    period: "today",
+    targetText: "20"
+  };
+}
+
+function createDefaultPracticeGoalId() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `local-goal-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function buildLocalPracticeGoalFromDraft({
+  draft,
+  target,
+  baseGoal,
+  createGoalId,
+  now
+}: {
+  draft: PracticeGoalDraft;
+  target: number;
+  baseGoal: LocalPracticeGoal | null;
+  createGoalId: () => string;
+  now: () => Date;
+}): LocalPracticeGoal {
+  return {
+    id: baseGoal?.id ?? createGoalId(),
+    kind: draft.kind,
+    target,
+    period: draft.period,
+    createdAt: baseGoal?.createdAt ?? now().toISOString()
+  };
+}
+
+function validatePracticeGoalDraft(draft: PracticeGoalDraft):
+  | {
+      valid: true;
+      target: number;
+    }
+  | {
+      valid: false;
+      message: string;
+    } {
+  if (!isPracticeGoalKind(draft.kind)) {
+    return { valid: false, message: "Choose a supported goal kind." };
+  }
+
+  if (!isPracticeGoalPeriod(draft.period)) {
+    return { valid: false, message: "Choose a supported goal period." };
+  }
+
+  const targetText = draft.targetText.trim();
+
+  if (targetText.length === 0) {
+    return { valid: false, message: "Enter a positive whole-number target." };
+  }
+
+  if (!/^\d+$/.test(targetText)) {
+    return { valid: false, message: "Enter a positive whole-number target." };
+  }
+
+  const target = Number(targetText);
+
+  if (!Number.isSafeInteger(target) || target <= 0) {
+    return { valid: false, message: "Enter a positive safe-integer target." };
+  }
+
+  if (target > maxPracticeGoalTarget) {
+    return { valid: false, message: `Enter a target of ${maxPracticeGoalTarget} or less.` };
+  }
+
+  return { valid: true, target };
+}
+
+function isPracticeGoalKind(value: string): value is LocalPracticeGoalKind {
+  return practiceGoalKinds.includes(value as LocalPracticeGoalKind);
+}
+
+function isPracticeGoalPeriod(value: string): value is LocalPracticeGoalPeriod {
+  return practiceGoalPeriods.includes(value as LocalPracticeGoalPeriod);
+}
+
+function getPracticeGoalLabel(goal: LocalPracticeGoal) {
+  const period = goal.period === "today" ? "Today" : "All-time";
+
+  switch (goal.kind) {
+    case "minutes":
+      return `${period} practice minutes`;
+    case "sessions":
+      return `${period} sessions`;
+    case "takes":
+      return `${period} sheet takes`;
+  }
+}
+
+function getGoalEvaluationStatus(evaluation: GoalCompletionEvaluation | null) {
+  if (!evaluation) {
+    return {
+      label: "Unavailable",
+      className: "border-border bg-muted text-muted-foreground"
+    };
+  }
+
+  switch (evaluation.status) {
+    case "not-started":
+      return {
+        label: "Not started",
+        className: "border-border bg-muted text-muted-foreground"
+      };
+    case "in-progress":
+      return {
+        label: "In progress",
+        className: "border-border bg-muted text-foreground"
+      };
+    case "completed":
+      return {
+        label: "Completed",
+        className: "border-border bg-primary/20 text-foreground"
+      };
+    case "invalid":
+      return {
+        label: "Invalid",
+        className: "border-destructive/30 bg-destructive/5 text-destructive"
+      };
+  }
+}
+
+function formatPracticeGoalProgress(goal: LocalPracticeGoal, evaluation: GoalCompletionEvaluation | null) {
+  if (!evaluation || evaluation.status === "invalid" || evaluation.target === null) {
+    return "Progress unavailable.";
+  }
+
+  const unit = getPracticeGoalUnit(goal.kind, evaluation.target);
+
+  return `${formatPracticeGoalProgressValue(evaluation.progress)} / ${evaluation.target} ${unit}`;
+}
+
+function getPracticeGoalUnit(kind: LocalPracticeGoalKind, target: number) {
+  if (kind === "minutes") {
+    return "min";
+  }
+
+  if (kind === "sessions") {
+    return target === 1 ? "session" : "sessions";
+  }
+
+  return target === 1 ? "sheet take" : "sheet takes";
+}
+
+function formatPracticeGoalProgressValue(value: number) {
+  if (!Number.isFinite(value)) {
+    return "0";
+  }
+
+  return String(Math.max(0, Math.floor(value)));
+}
+
+function clampGoalProgressRatio(value: number) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.min(1, Math.max(0, value));
 }

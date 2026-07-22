@@ -14,7 +14,7 @@ Requirements for this maintenance milestone. Each requirement must map to exactl
 
 ### Evidence and Slimming
 
-- [ ] **EVID-01**: The selected refactor remains supported by reproducible current-product semantic evidence, installed-dependency inspection, and authoritative OSS/platform API evidence, adds no dependency, and refreshes selection evidence if the selected product fingerprint or semantic-index configuration changes before implementation.
+- [ ] **EVID-01**: The selected refactor remains supported by reproducible current-product semantic evidence, installed-dependency inspection, and authoritative OSS/platform API evidence, adds no dependency, and refreshes selection evidence if the source HEAD or semantic-index configuration changes before implementation.
 - [ ] **SLIM-01**: The final formatted diff is strictly net-negative in tracked production code under `src/**`, with no deletion credit from tests, planning, generated files, renames, formatting-only churn, or logic moved into a new production path.
 
 ### Quality and Code Health
@@ -35,7 +35,7 @@ This is explicitly outside Phase 1 requirement completion. All gates below are c
 1. Run native `$gsd-ship` to create or prepare the PR.
 2. After any ship-note or update, resolve the actual final post-ship PR head.
 3. Ensure CI applies to that exact head; re-run or refresh CI if `[ci skip]` prevents it.
-4. For this migration/repair run only, apply the project owner's explicit waiver of the separate `@codex` review; future runs continue to use the repository's normal final-review policy.
+4. Obtain a mandatory finding-free, read-only `@codex` review of that exact final PR head using `skills/reviewing-metronome-prs/SKILL.md`; no review waiver applies.
 5. Merge the GitHub PR.
 6. Update local `main` to the intended `origin` merge revision.
 7. Verify `main == origin/main`, no `MERGE_HEAD`, an empty index, and empty `git status --porcelain=v1 --untracked-files=all` output.

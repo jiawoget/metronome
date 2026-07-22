@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import {
-  createReadStream,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -9,15 +8,17 @@ import {
 } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import readline from "node:readline";
 
 const SAFE_ID = /^[\dA-Za-z][\w\-.]*$/v;
+const IDENTITY_CHARACTERS = new Set("-./:0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz");
 const TERMINAL = new Set(["completed", "interrupted", "blocked"]);
+const OPTIONS = new Set(["repo", "run"]);
+const SORT_TEXT = (left, right) => left.localeCompare(right);
 const BUDGETS = {
-  quick: { wall: 120_000, processed: 300_000, fresh: 50_000 },
-  standard: { wall: 900_000, processed: 1_500_000, fresh: 200_000 },
-  heavy: { wall: 2_700_000, processed: 4_000_000, fresh: 500_000 },
-  external: { active: 300_000, wait: 1_200_000, processed: 500_000, fresh: 75_000 }
+  quick: 120_000,
+  standard: 900_000,
+  heavy: 2_700_000,
+  external: 1_500_000
 };
 
 function stop(code, detail) {
@@ -26,7 +27,7 @@ function stop(code, detail) {
 }
 
 function argumentsFrom(values) {
-  const options = { rollouts: new Map() };
+  const options = {};
   for (let index = 0; index < values.length; index += 2) {
     const name = values[index];
     const value = values[index + 1];
@@ -34,16 +35,9 @@ function argumentsFrom(values) {
       stop("METRICS_ARGUMENT_ERROR", name);
     }
 
-    if (name === "--rollout") {
-      const split = value.indexOf("=");
-      if (split < 1 || split === value.length - 1) {
-        stop("METRICS_ARGUMENT_ERROR", "--rollout must be ID=PATH");
-      }
-
-      options.rollouts.set(value.slice(0, split), path.resolve(value.slice(split + 1)));
-    } else {
-      options[name.slice(2)] = value;
-    }
+    const key = name.slice(2);
+    if (!OPTIONS.has(key)) {stop("METRICS_ARGUMENT_ERROR", name);}
+    options[key] = value;
   }
 
   return options;
@@ -82,152 +76,143 @@ function wireValue(record, name) {
   return record?.[name];
 }
 
+function optionalNumber(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
+}
+
+function optionalIdentity(value) {
+  return typeof value === "string" && value.length > 0
+    && [...value].every((character) => IDENTITY_CHARACTERS.has(character))
+    ? value
+    : null;
+}
+
 function stepTiming(start, end) {
   const startMs = Date.parse(start.timestamp);
-  const endTimestamp = end?.timestamp ?? start.timestamp;
+  const endTimestamp = end?.timestamp ?? new Date().toISOString();
   const endMs = Date.parse(endTimestamp);
   const wallDuration = Math.max(0, endMs - startMs);
-  const externalWait = Number(wireValue(end?.timing, "external_wait_ms") ?? 0);
-  return { startMs, endMs, wallDuration, externalWait };
+  const suppliedExternalWait = optionalNumber(wireValue(end?.timing, "external_wait_ms"));
+  const isExternalWaitBeyondWall = suppliedExternalWait !== null && suppliedExternalWait > wallDuration;
+  const externalWait = isExternalWaitBeyondWall ? null : suppliedExternalWait;
+  return { startMs, endMs, wallDuration, externalWait, isExternalWaitBeyondWall };
+}
+
+function externalWaitNotices(timing) {
+  if (timing.isExternalWaitBeyondWall) {
+    return ["external_wait_unavailable:exceeds_wall_duration"];
+  }
+
+  return timing.externalWait === null
+    ? ["external_wait_unavailable:caller_did_not_supply_timing"]
+    : [];
 }
 
 function stepFromGroup(group) {
-  const {start} = group;
-  const {end} = group;
+  const { start } = group;
+  const { end } = group;
   const timing = stepTiming(start, end);
   return {
     stepId: wireValue(start, "step_id"),
     stage: start.stage,
-    step: start.step,
-    gateStage: wireValue(start, "gate_stage"),
-    plane: start.plane,
+    step: start.step ?? wireValue(start, "step_id"),
     budgetClass: wireValue(start, "budget_class"),
     agentSessionId: wireValue(start, "agent_session_id"),
-    rolloutId: wireValue(start, "rollout_id"),
+    agentType: optionalIdentity(wireValue(start.metadata, "agent_type")),
+    agentModel: optionalIdentity(wireValue(start.metadata, "model")),
+    reasoningEffort: optionalIdentity(wireValue(start.metadata, "reasoning_effort")),
     status: end?.event ?? "in_progress",
     startedAt: start.timestamp,
     endedAt: end?.timestamp ?? null,
     wallDuration: timing.wallDuration,
     externalWait: timing.externalWait,
-    activeDuration: Math.max(0, timing.wallDuration - timing.externalWait),
-    toolDuration: Number(wireValue(end?.timing, "tool_ms") ?? 0),
+    activeDuration: timing.externalWait === null
+      ? null
+      : Math.max(0, timing.wallDuration - timing.externalWait),
+    toolDuration: optionalNumber(wireValue(end?.timing, "tool_ms")),
     attributionGranularity: "turn",
     inputs: start.inputs ?? [],
     outputs: end?.outputs ?? [],
-    cacheKey: wireValue(start, "cache_key"),
-    resumeKey: wireValue(start, "resume_key"),
-    retryOf: wireValue(start, "retry_of") ?? null,
-    tokens: {
-      input: 0,
-      cachedInput: 0,
-      output: 0,
-      reasoningOutput: 0,
-      processed: 0,
-      fresh: 0
-    },
+    tokens: null,
     notices: group.notices,
+    measurementNotices: [
+      "tokens_unavailable:host_does_not_expose_step_usage",
+      ...externalWaitNotices(timing),
+      ...(optionalNumber(wireValue(end?.timing, "tool_ms")) === null
+        ? ["tool_duration_unavailable:caller_did_not_supply_timing"]
+        : [])
+    ],
     startMs: timing.startMs,
     endMs: timing.endMs
   };
 }
 
 function stepsFrom(events) {
-  const groups = new Map();
-  for (const event of events) {
+  const groups = [];
+  const open = new Map();
+  let hasUnmatchedEvent = false;
+  const orderedEvents = events.toSorted((first, second) =>
+    Date.parse(first.timestamp) - Date.parse(second.timestamp)
+  );
+  for (const event of orderedEvents) {
     const stepId = wireValue(event, "step_id");
     const agentSessionId = wireValue(event, "agent_session_id");
-    if (!stepId || !event?.timestamp) {continue;}
-    const key = `${agentSessionId ?? "controller"}\0${stepId}`;
-    const group = groups.get(key) ?? { notices: [] };
-    if (event.event === "started" && !group.start) {group.start = event;}
-    else if (TERMINAL.has(event.event)) {group.end = event;}
-    else {group.notices.push(event.event);}
+    if (!stepId || !Number.isFinite(Date.parse(event?.timestamp))) {
+      hasUnmatchedEvent = true;
+      continue;
+    }
 
-    groups.set(key, group);
+    const key = `${agentSessionId ?? "controller"}\0${stepId}`;
+    if (event.event === "started") {
+      const prior = open.get(key);
+      if (prior) {prior.notices.push("overlapping_start");}
+
+      const group = { start: event, notices: [] };
+      groups.push(group);
+      open.set(key, group);
+    } else {
+      const group = open.get(key);
+      if (!group) {
+        hasUnmatchedEvent = true;
+        continue;
+      }
+
+      if (TERMINAL.has(event.event)) {
+        group.end = event;
+        open.delete(key);
+      } else {
+        group.notices.push(event.event);
+      }
+    }
   }
 
-  return groups.values()
+  const steps = groups
     .filter((group) => group.start)
     .map((group) => stepFromGroup(group))
-    .toArray()
     .toSorted((first, second) => first.startMs - second.startMs);
-}
-
-function usageFrom(record) {
-  const usage = record?.type === "event_msg" && record.payload?.type === "token_count"
-    ? wireValue(record.payload.info, "last_token_usage")
-    : undefined;
-  if (!usage) {return undefined;}
-  const input = Number(wireValue(usage, "input_tokens") ?? 0);
-  const cached = Number(wireValue(usage, "cached_input_tokens") ?? 0);
-  const output = Number(wireValue(usage, "output_tokens") ?? 0);
-  const reasoning = Number(wireValue(usage, "reasoning_output_tokens") ?? 0);
-  if ([input, cached, output, reasoning].some((value) => !Number.isFinite(value))) {return undefined;}
-  return {
-    input,
-    cachedInput: cached,
-    output,
-    reasoningOutput: reasoning,
-    processed: input + output + reasoning,
-    fresh: Math.max(0, input - cached) + output + reasoning
-  };
-}
-
-function addUsage(steps, timestamp, usage) {
-  for (const step of steps) {
-    if (timestamp < step.startMs || timestamp > step.endMs) {continue;}
-    step.tokens.input += usage.input;
-    step.tokens.cachedInput += usage.cachedInput;
-    step.tokens.output += usage.output;
-    step.tokens.reasoningOutput += usage.reasoningOutput;
-    step.tokens.processed += usage.processed;
-    step.tokens.fresh += usage.fresh;
-  }
-}
-
-async function addRolloutTokens(file, steps) {
-  if (!existsSync(file)) {return true;}
-  let isIncomplete = false;
-  const lines = readline.createInterface({ input: createReadStream(file, "utf8"), crlfDelay: Infinity });
-  for await (const line of lines) {
-    if (!line.trim()) {continue;}
-    let record;
-    try { record = JSON.parse(line); } catch { isIncomplete = true; continue; }
-    const usage = usageFrom(record);
-    const timestamp = Date.parse(record.timestamp);
-    if (!usage || !Number.isFinite(timestamp)) {continue;}
-    addUsage(steps, timestamp, usage);
-  }
-
-  return isIncomplete;
+  return { steps, hasUnmatchedEvent };
 }
 
 function budgetStatus(step) {
   const budget = BUDGETS[step.budgetClass] ?? BUDGETS.standard;
-  const ratios = [
-    step.tokens.processed / budget.processed,
-    step.tokens.fresh / budget.fresh
-  ];
-  if (budget.wall) {ratios.push(step.wallDuration / budget.wall);}
-  else {ratios.push(step.activeDuration / budget.active, step.externalWait / budget.wait);}
+  const ratio = step.wallDuration / budget;
+  if (ratio > 2) {return "severe_over_budget";}
+  if (ratio > 1) {return "over_budget";}
 
-  const ratio = Math.max(...ratios.filter((value) => Number.isFinite(value)));
-  return ratio > 2 ? "severe_over_budget" : ratio > 1 ? "over_budget" : "within_budget";
+  return "within_budget";
 }
 
 function compact(step) {
-  return `[${step.budgetStatus}] ${step.stage}/${step.step} wall=${(step.wallDuration / 1000).toFixed(1)}s processed=${step.tokens.processed} new=${step.tokens.fresh} in=${step.inputs.length} out=${step.outputs.length} status=${step.status}`;
-}
-
-function wireTokens(tokens) {
-  return Object.fromEntries([
-    ["input_tokens", tokens.input],
-    ["cached_input_tokens", tokens.cachedInput],
-    ["output_tokens", tokens.output],
-    ["reasoning_output_tokens", tokens.reasoningOutput],
-    ["processed_tokens", tokens.processed],
-    ["new_tokens", tokens.fresh]
-  ]);
+  const processed = step.tokens?.processed ?? "n/a";
+  const fresh = step.tokens?.fresh ?? "n/a";
+  const identity = [
+    step.agentType ? `agent=${step.agentType}` : null,
+    step.agentModel ? `model=${step.agentModel}` : null,
+    step.reasoningEffort ? `effort=${step.reasoningEffort}` : null
+  ].filter(Boolean).join(" ");
+  return `[${step.budgetStatus}] ${step.stage}/${step.step} wall=${(step.wallDuration / 1000).toFixed(1)}s processed=${processed} new=${fresh} in=${step.inputs.length} out=${step.outputs.length} status=${step.status}${identity ? ` ${identity}` : ""}`;
 }
 
 function wireStep(step) {
@@ -235,11 +220,11 @@ function wireStep(step) {
     ["step_id", step.stepId],
     ["stage", step.stage],
     ["step", step.step],
-    ["gate_stage", step.gateStage],
-    ["plane", step.plane],
     ["budget_class", step.budgetClass],
     ["agent_session_id", step.agentSessionId],
-    ["rollout_id", step.rolloutId],
+    ["agent_type", step.agentType],
+    ["agent_model", step.agentModel],
+    ["reasoning_effort", step.reasoningEffort],
     ["status", step.status],
     ["started_at", step.startedAt],
     ["ended_at", step.endedAt],
@@ -250,21 +235,11 @@ function wireStep(step) {
     ["attribution_granularity", step.attributionGranularity],
     ["inputs", step.inputs],
     ["outputs", step.outputs],
-    ["cache_key", step.cacheKey],
-    ["resume_key", step.resumeKey],
-    ["retry_of", step.retryOf],
-    ["tokens", wireTokens(step.tokens)],
+    ["tokens", null],
     ["notices", step.notices],
+    ["measurement_notices", step.measurementNotices],
     ["budget_status", step.budgetStatus]
   ]);
-}
-
-async function readRolloutUsage(options, steps) {
-  const checks = options.rollouts.entries().map(async ([rolloutId, file]) =>
-    addRolloutTokens(file, steps.filter((step) => step.rolloutId === rolloutId))
-  ).toArray();
-  const results = await Promise.all(checks);
-  return results.some(Boolean);
 }
 
 function firstChangeAfter(steps, runStart, prefix) {
@@ -274,21 +249,29 @@ function firstChangeAfter(steps, runStart, prefix) {
     : null;
 }
 
-function progressStatus(firstTestChange, firstProductChange, elapsed) {
+function progressStatus(firstTestChange, firstProductChange, elapsed, isEventSequenceComplete) {
+  if (!isEventSequenceComplete) {return "metrics_incomplete";}
   if (firstProductChange === null && elapsed > 7_200_000) {return "severe_no_product_change";}
   if (firstTestChange === null && elapsed > 3_600_000) {return "warning_no_test_change";}
   return "on_track";
 }
 
-function wireSummary(run, incomplete, timings, steps) {
+function wireSummary({ run, incompleteReasons, timings, steps, isEventSequenceComplete }) {
   return Object.fromEntries([
     ["schema_version", 1],
     ["run_id", run],
     ["generated_at", new Date().toISOString()],
-    ["metrics_incomplete", incomplete],
+    ["metrics_incomplete", incompleteReasons.length > 0],
+    ["metrics_incomplete_reasons", incompleteReasons],
+    ["run_wall_duration_ms", timings.elapsed],
     ["time_to_first_test_change_ms", timings.firstTestChange],
     ["time_to_first_product_change_ms", timings.firstProductChange],
-    ["milestone_progress_status", progressStatus(timings.firstTestChange, timings.firstProductChange, timings.elapsed)],
+    ["milestone_progress_status", progressStatus(
+      timings.firstTestChange,
+      timings.firstProductChange,
+      timings.elapsed,
+      isEventSequenceComplete
+    )],
     ["steps", steps.map((step) => wireStep(step))]
   ]);
 }
@@ -299,36 +282,57 @@ function timingSummary(events, steps) {
   const firstTestChange = firstChangeAfter(steps, runStart, "tests/");
   const firstProductChange = firstChangeAfter(steps, runStart, "src/");
   const elapsed = Number.isFinite(runStart)
-    ? Math.max(runStart, ...steps.map((step) => Date.parse(step.endedAt ?? step.startedAt))) - runStart
-    : 0;
+    ? Math.max(runStart, ...steps.map((step) => step.endMs)) - runStart
+    : null;
   return { firstTestChange, firstProductChange, elapsed };
 }
 
-async function summarize(options, runDirectory) {
+function summarize(options, runDirectory) {
   const ledger = ledgerEvents(runDirectory);
-  const steps = stepsFrom(ledger.events);
-  const rolloutIncomplete = await readRolloutUsage(options, steps);
-  const missingRollout = steps.some((step) => step.rolloutId && !options.rollouts.has(step.rolloutId));
-  const inProgress = steps.some((step) => step.status === "in_progress");
+  const { steps, hasUnmatchedEvent } = stepsFrom(ledger.events);
+  const hasInProgressStep = steps.some((step) => step.status === "in_progress");
   for (const step of steps) {
     step.budgetStatus = budgetStatus(step);
   }
 
-  const incomplete = ledger.incomplete || inProgress || rolloutIncomplete || missingRollout;
-  const summary = wireSummary(options.run, incomplete, timingSummary(ledger.events, steps), steps);
+  const incompleteReasons = new Set();
+  if (ledger.incomplete) {incompleteReasons.add("ledger_incomplete");}
+  if (hasUnmatchedEvent) {incompleteReasons.add("event_sequence_incomplete");}
+  if (steps.length === 0) {incompleteReasons.add("no_usable_steps");}
+  if (hasInProgressStep) {incompleteReasons.add("step_in_progress");}
+  for (const step of steps) {
+    for (const notice of step.measurementNotices) {
+      if (notice.startsWith("tokens_unavailable")) {incompleteReasons.add("token_attribution_unavailable");}
+      else if (notice.startsWith("external_wait_unavailable")) {incompleteReasons.add("external_wait_unavailable");}
+      else if (notice.startsWith("tool_duration_unavailable")) {incompleteReasons.add("tool_duration_unavailable");}
+    }
+  }
+
+  const isEventSequenceComplete = !ledger.incomplete
+    && !hasUnmatchedEvent
+    && steps.length > 0;
+
+  const summary = wireSummary({
+    run: options.run,
+    incompleteReasons: [...incompleteReasons].toSorted(SORT_TEXT),
+    timings: timingSummary(ledger.events, steps),
+    steps,
+    isEventSequenceComplete
+  });
+
   mkdirSync(runDirectory, { recursive: true });
   writeFileSync(path.join(runDirectory, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`, "utf8");
   console.log(steps.length > 0 ? steps.map((step) => compact(step)).join("\n") : `[METRICS_INCOMPLETE] ${options.run} steps=0`);
 }
 
-async function main() {
+function main() {
   const options = argumentsFrom(process.argv.slice(2));
   if (!options.repo || !SAFE_ID.test(options.run ?? "")) {
     stop("METRICS_ARGUMENT_ERROR", "--repo and a safe --run are required");
   }
 
   const runDirectory = path.join(path.resolve(options.repo), ".logs", "gsd-observability", options.run);
-  await summarize(options, runDirectory);
+  summarize(options, runDirectory);
 }
 
-await main();
+main();

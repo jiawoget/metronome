@@ -28,9 +28,9 @@ Milestone v1.1 delivers one reuse-first maintenance outcome: Home, the practice-
   4. Pre-change characterization locks the selected valid, invalid, UTC, fallback, rounding, sub-minute, and hour/minute behavior; the final formatted `src/**` diff is strictly net-negative without credit for tests, planning, generated files, renames, formatting churn, or moved logic; and the exact reviewed revision passes focused behavior tests plus lint, typecheck, unit, build, architecture, and debt gates, while final-revision CodeScene shows no changed-source decline, no new severe finding, and every applicable touched hotspot at the repository policy threshold.
   5. The immutable reviewed product revision has complete product evidence, cleanly rolls back through version control without data migration or user repair, leaves relevant source and configuration state clean, and is ready to enter native verification, validation, and security.
 
-**Plans**: 1/1 plans executed
+**Plans**: 0 active
 
-- [x] 01-01-PLAN.md
+The failed `01-01` attempt is frozen intact under `.planning/forensics/r01-incident-artifacts/01-01-native-attempt/`. It is not resumable lifecycle state. Its non-planning implementation paths have been restored in the primary working tree to `origin/main@9199d17`, without rewriting history. All known code and authority remediations are implemented but are not yet current-diff verified or durable. Before any explicit project-owner decision can authorize a newly generated Phase 1 plan, complete exactly: the consolidated required repository gate; commit and PR creation/update; CI on the exact final PR head including the path-applicable Windows observability workflow; a finding-free, read-only `@codex` review of that exact head; PR merge; and clean synchronization of local `main` with `origin/main`. Generic `continue`, `go`, `next`, or `resume` wording is not that decision. While historical linked worktrees remain registered, any later product-agent dispatch must first satisfy the exact-primary-checkout precondition in `AGENTS.md`.
 
 **UI hint**: no
 
@@ -43,7 +43,7 @@ This is explicitly outside Phase 1 requirement completion. All gates below are c
 1. Run native `$gsd-ship` to create or prepare the PR.
 2. After any ship-note or update, resolve the actual final post-ship PR head.
 3. Ensure CI applies to that exact head; re-run or refresh CI if `[ci skip]` prevents it.
-4. For this migration/repair run only, apply the project owner's explicit waiver of the separate `@codex` review; future runs continue to use the repository's normal final-review policy.
+4. Obtain a mandatory finding-free, read-only `@codex` review of that exact final PR head using `skills/reviewing-metronome-prs/SKILL.md`; no review waiver applies.
 5. Merge the GitHub PR.
 6. Update local `main` to the intended `origin` merge revision.
 7. Verify `main == origin/main`, no `MERGE_HEAD`, an empty index, and empty `git status --porcelain=v1 --untracked-files=all` output.
@@ -54,7 +54,7 @@ This is explicitly outside Phase 1 requirement completion. All gates below are c
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Canonical Practice Presentation Formatting | 1/1 | In Progress|  |
+| 1. Canonical Practice Presentation Formatting | — | Paused — needs new plan |  |
 
 ---
 *Roadmap created: 2026-07-21 for milestone v1.1 R01 Evidence-First Code Slimming*

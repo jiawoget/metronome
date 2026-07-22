@@ -306,59 +306,6 @@ describe("session comparison read model", () => {
     expect(renderedWords).not.toMatch(/\b(score|rank|recommend|better|worse|improved)\b/);
   });
 
-  it("characterizes UTC-minute session-comparison timestamps without changing seconds-scale duration", () => {
-    const result = getSessionComparison({
-      sessions: [
-        createSession({
-          id: "offset-time",
-          startedAt: "2026-06-21T23:59:59.999-05:00",
-          updatedAt: "2026-06-21T23:59:59.999-05:00",
-          durationMs: 65_000
-        }),
-        createSession({
-          id: "empty-time",
-          startedAt: "",
-          updatedAt: "",
-          durationMs: 0
-        }),
-        createSession({
-          id: "invalid-time",
-          startedAt: "not-a-date",
-          updatedAt: "still-not-a-date",
-          durationMs: 500
-        })
-      ],
-      recordings: [],
-      generatedAt: "2026-06-21T12:00:00.000Z",
-      selectedSessionIds: ["offset-time", "empty-time", "invalid-time"]
-    });
-
-    expect(result.candidates.find((candidate) => candidate.sessionId === "offset-time")?.label).toBe(
-      "Quick practice - 2026-06-22 04:59 UTC"
-    );
-    expect(result.candidates.find((candidate) => candidate.sessionId === "empty-time")?.label).toBe(
-      "Quick practice - Unknown time"
-    );
-    expect(result.candidates.find((candidate) => candidate.sessionId === "invalid-time")?.label).toBe(
-      "Quick practice - Unknown time"
-    );
-    expect(getMetric(result.metrics, "started").values.map((entry) => entry.text)).toEqual([
-      "2026-06-22 04:59 UTC",
-      "Unknown time",
-      "Unknown time"
-    ]);
-    expect(getMetric(result.metrics, "updated").values.map((entry) => entry.text)).toEqual([
-      "2026-06-22 04:59 UTC",
-      "Unknown time",
-      "Unknown time"
-    ]);
-    expect(getMetric(result.metrics, "duration").values.map((entry) => entry.text)).toEqual([
-      "1m 5s",
-      "0s",
-      "<1s"
-    ]);
-  });
-
   it("represents missing, failed, and blank sheet or segment targets honestly", () => {
     const targets: SessionComparisonTargetResolution = {
       sheets: {

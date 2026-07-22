@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import type {
   LocalPracticeGoal,
   PracticeSession,
@@ -6,7 +7,6 @@ import type {
 } from "@/domain/practice";
 import {
   parseLocalPracticeGoal,
-  parsePracticeGoalDraft,
   validateLocalPracticeGoal
 } from "@/domain/practice/validation";
 import {
@@ -104,115 +104,16 @@ describe("practice goal validation", () => {
   });
 
   it("rejects malformed goal records through parsing", () => {
-    expect(parseLocalPracticeGoal({ ...createGoal(), id: " ".repeat(3) })).toBeNull();
+    expect(parseLocalPracticeGoal({ ...createGoal(), id: "   " })).toBeNull();
     expect(parseLocalPracticeGoal({ ...createGoal(), kind: "weekly" })).toBeNull();
     expect(parseLocalPracticeGoal({ ...createGoal(), period: "forever" })).toBeNull();
     expect(parseLocalPracticeGoal({ ...createGoal(), status: "paused" })).toBeNull();
     expect(parseLocalPracticeGoal({ ...createGoal(), target: 0 })).toBeNull();
     expect(parseLocalPracticeGoal({ ...createGoal(), target: 1.5 })).toBeNull();
-    expect(parseLocalPracticeGoal({ ...createGoal(), target: NaN })).toBeNull();
-    expect(parseLocalPracticeGoal({ ...createGoal(), target: Infinity })).toBeNull();
+    expect(parseLocalPracticeGoal({ ...createGoal(), target: Number.NaN })).toBeNull();
+    expect(parseLocalPracticeGoal({ ...createGoal(), target: Number.POSITIVE_INFINITY })).toBeNull();
     expect(parseLocalPracticeGoal({ ...createGoal(), createdAt: "not-a-date" })).toBeNull();
     expect(parseLocalPracticeGoal({ ...createGoal(), completedAt: "not-a-date" })).toBeNull();
-  });
-
-  it.each([
-    ["minutes", "today"],
-    ["sessions", "all-time"],
-    ["takes", "today"]
-  ] as const)("builds a %s/%s goal from a valid draft", (kind, period) => {
-    expect(
-      parsePracticeGoalDraft(
-        { kind, period, targetText: " 00042 " },
-        {
-          createId: () => "goal-created",
-          now: () => new Date("2026-06-21T10:00:00.000Z")
-        }
-      )
-    ).toEqual({
-      success: true,
-      goal: {
-        id: "goal-created",
-        kind,
-        target: 42,
-        period,
-        createdAt: "2026-06-21T10:00:00.000Z"
-      }
-    });
-  });
-
-  it.each([
-    [
-      { kind: "weekly", period: "today", targetText: "1" },
-      "unsupported-kind"
-    ],
-    [
-      { kind: "minutes", period: "forever", targetText: "1" },
-      "unsupported-period"
-    ],
-    [
-      { kind: "minutes", period: "today", targetText: "1.5" },
-      "target-whole-number"
-    ],
-    [
-      { kind: "minutes", period: "today", targetText: "0" },
-      "target-safe-integer"
-    ],
-    [
-      {
-        kind: "minutes",
-        period: "today",
-        targetText: String(Number.MAX_SAFE_INTEGER + 1)
-      },
-      "target-safe-integer"
-    ],
-    [
-      { kind: "minutes", period: "today", targetText: "1000001" },
-      "target-too-large"
-    ]
-  ] as const)("returns the stable %s draft error", (draft, errorCode) => {
-    expect(
-      parsePracticeGoalDraft(draft, {
-        createId: () => "unused",
-        now: () => new Date("2026-06-21T10:00:00.000Z")
-      })
-    ).toEqual({
-      success: false,
-      error: { code: errorCode }
-    });
-  });
-
-  it("preserves the id and creation time when building an edited goal", () => {
-    const baseGoal = createGoal({
-      id: "goal-existing",
-      createdAt: "2026-06-20T08:00:00.000Z",
-      completedAt: "2026-06-21T09:00:00.000Z",
-      status: "completed"
-    });
-
-    expect(
-      parsePracticeGoalDraft(
-        { kind: "takes", period: "all-time", targetText: "7" },
-        {
-          baseGoal,
-          createId() {
-            throw new Error("createId must not run while editing");
-          },
-          now() {
-            throw new Error("now must not run while editing");
-          }
-        }
-      )
-    ).toEqual({
-      success: true,
-      goal: {
-        id: "goal-existing",
-        kind: "takes",
-        target: 7,
-        period: "all-time",
-        createdAt: "2026-06-20T08:00:00.000Z"
-      }
-    });
   });
 });
 
@@ -220,13 +121,13 @@ describe("practice goal browser repository", () => {
   beforeEach(async () => {
     await clearPracticeGoalDatabaseForTests();
     await clearPracticeSessionDatabaseForTests();
-    localStorage.clear();
+    window.localStorage.clear();
   });
 
   afterEach(() => {
     resetPracticeGoalDatabaseConnectionForTests();
     resetPracticeSessionDatabaseConnectionForTests();
-    localStorage.clear();
+    window.localStorage.clear();
   });
 
   it("saves a valid goal, trims its id, and reads it back by trimmed lookup", async () => {
@@ -357,10 +258,10 @@ describe("practice goal browser repository", () => {
   it("rejects blank getGoal and deleteGoal ids and ignores missing non-blank deletes", async () => {
     await practiceGoalRepository.saveGoal(createGoal());
 
-    await expect(practiceGoalRepository.getGoal(" ".repeat(3))).rejects.toThrow(
+    await expect(practiceGoalRepository.getGoal("   ")).rejects.toThrow(
       "Practice goal id is required."
     );
-    await expect(practiceGoalRepository.deleteGoal(" ".repeat(3))).rejects.toThrow(
+    await expect(practiceGoalRepository.deleteGoal("   ")).rejects.toThrow(
       "Practice goal id is required."
     );
     await expect(practiceGoalRepository.deleteGoal("missing-goal")).resolves.toBeUndefined();
@@ -389,8 +290,8 @@ describe("practice goal browser repository", () => {
         })
       )
     ).rejects.toThrow();
-    await expect(practiceGoalRepository.getGoal(" ".repeat(3))).rejects.toThrow();
-    await expect(practiceGoalRepository.deleteGoal(" ".repeat(3))).rejects.toThrow();
+    await expect(practiceGoalRepository.getGoal("   ")).rejects.toThrow();
+    await expect(practiceGoalRepository.deleteGoal("   ")).rejects.toThrow();
     await practiceGoalRepository.deleteGoal("missing-goal");
     expect(notifications).toBe(1);
 
@@ -565,7 +466,7 @@ describe("practice goal browser repository", () => {
     ]);
 
     await practiceSessionRepository.clear();
-    localStorage.clear();
+    window.localStorage.clear();
     resetPracticeGoalDatabaseConnectionForTests();
     resetPracticeSessionDatabaseConnectionForTests();
 

@@ -1,16 +1,14 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { describe, expect, it, vi } from "vitest";
+
 import type {
   LocalPracticeGoal,
   PracticeSession,
   SheetRecordingMetadata
 } from "@/domain/practice";
-import {
-  createPracticeGoalId,
-  createPracticeGoalService,
-  type PracticeGoalRepository
-} from "@/services/practice-goals";
+import { createPracticeGoalService, type PracticeGoalRepository } from "@/services/practice-goals";
 
 function createGoal(overrides: Partial<LocalPracticeGoal> = {}): LocalPracticeGoal {
   return {
@@ -79,7 +77,7 @@ function createMemoryGoalRepository(
 } {
   const goals = new Map(initialGoals.map((goal) => [goal.id, structuredClone(goal)]));
   const listGoals = vi.fn<PracticeGoalRepository["listGoals"]>(async () =>
-    Array.from(goals.values(), (goal) => structuredClone(goal))
+    Array.from(goals.values()).map((goal) => structuredClone(goal))
   );
   const getGoal = vi.fn<PracticeGoalRepository["getGoal"]>(async (goalId) =>
     goals.get(goalId.trim()) ? structuredClone(goals.get(goalId.trim())!) : null
@@ -96,35 +94,12 @@ function createMemoryGoalRepository(
     getGoal,
     saveGoal,
     deleteGoal,
-    async clear() {
+    clear: async () => {
       goals.clear();
     },
     subscribe: () => () => undefined
   };
 }
-
-describe("practice goal identity", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
-
-  it("uses the platform UUID provider without a local random fallback", () => {
-    const generatedId = "00000000-0000-4000-8000-000000000001";
-    const randomUuid = vi.spyOn(crypto, "randomUUID").mockReturnValue(generatedId);
-
-    expect(createPracticeGoalId()).toBe(generatedId);
-    expect(randomUuid).toHaveBeenCalledOnce();
-  });
-
-  it("fails closed when the platform UUID provider is unavailable", () => {
-    vi.stubGlobal("crypto", {});
-
-    expect(() => createPracticeGoalId()).toThrow(
-      "Practice goal IDs require crypto.randomUUID()."
-    );
-  });
-});
 
 describe("practice goal service", () => {
   it("delegates goal CRUD and list operations to the goal repository", async () => {
@@ -342,7 +317,7 @@ describe("practice goal service", () => {
       createPracticeGoalService({
         repository: createMemoryGoalRepository([goal]),
         sessionRepository: {
-          async listSessions() {
+          listSessions: async () => {
             throw new Error("session read failed");
           }
         },
@@ -359,7 +334,7 @@ describe("practice goal service", () => {
           listSessions: async () => []
         },
         recordingRepository: {
-          async listRecordingMetadata() {
+          listRecordingMetadata: async () => {
             throw new Error("recording read failed");
           }
         }

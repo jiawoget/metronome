@@ -1,91 +1,60 @@
 ---
 name: metronome-policy
-description: Use when OpenGSD agents handle Metronome production work, especially behavior changes, dependency decisions, slimming, or Code Health refactors.
+description: Use when OpenGSD agents handle Metronome production work that may duplicate local behavior or introduce or replace a generic capability, API, or dependency.
 ---
 
-# Metronome Capability Policy
+# Metronome Reuse Policy
 
-## Discovery level
+## Reuse boundary
 
-- Level 0 applies only when there is no production behavior, dependency, API, type, schema, persisted-format, branching, transformation, validation, fallback, or state change. It covers documentation, copy, formatting, generated-output refreshes, and provable pure renames or moves.
-- Level 1 applies to every bounded production behavior change inside a known owner when no generic capability or architectural surface is introduced.
-- Level 2 applies when behavior is generic; equality, diffing, parsing, validation, serialization, caching, retry, search, indexing, scheduling, state, time, storage, music, or audio is involved; a shared surface or dependency may change; ownership is unclear; or the goal includes slimming, consolidation, Code Health, or deletion.
-- Ambiguity, incomplete evidence, or insufficient confidence upgrades the level. Small diffs, private visibility, or refactor labels never reduce it.
-
-## Capability atoms
-
-For each required behavior, define one `CAP-xx` with:
-
-- intent;
-- inputs and outputs;
-- invariants and boundary behavior;
-- side effects;
-- lifecycle and current owner;
-- domain synonyms.
-
-Queries describe behavior, ownership, state transitions, and side effects rather than only names.
+- Every production change starts by searching the current owner and semantic equivalents in local code, then confirming candidates through source, types, call sites, and tests. A name-only search is insufficient.
+- Full dependency, platform, and OSS research is required only when the change proposes to add or replace a generic capability, API, algorithm, shared surface, or dependency.
+- Generic capabilities include parsing, validation, serialization, equality, diffing, search, indexing, caching, scheduling, time, storage, state, retry, music, and audio behavior.
+- If a verified local owner or already-installed API satisfies the behavior, reuse it and stop discovery. Do not invent a parallel helper or continue searching merely to produce more evidence.
+- Reuse the existing semantic index. Reindex only when a health or freshness check proves it stale; never rebuild it as a per-agent or per-attempt default.
+- A provider failure blocks only when the proposed outcome would otherwise be a new local implementation without adequate reuse evidence. It does not invalidate an already verified reusable candidate.
 
 ## Evidence waterfall
 
-1. Search local code semantically, then confirm candidates with exact source, types, call sites, tests, and applicable static rules.
-2. Inspect applicable directly installed dependencies using the manifest, lockfile, installed declarations and source, and official documentation for the locked version.
-3. Inspect relevant transitive dependencies; accidental availability is not permission to import, so record whether promotion to a direct dependency fits.
-4. For unresolved Level 2 atoms, inspect platform APIs and mature OSS through official documentation, source, releases, and registry provenance.
-5. Adopt a candidate or record a concrete behavioral mismatch. An empty search result is not proof of absence.
+For a change that crosses the full reuse boundary:
 
-Required provider evidence is fail-closed. If local semantic recall is unavailable or unhealthy, local evidence is incomplete. If online sources are unavailable, use an authoritative provider fallback or remain incomplete. Locked installed types and source win version disagreements; otherwise stop. Send only abstract capability descriptions online, never private source snippets.
+1. Search local code semantically and verify concrete candidates.
+2. Inspect applicable direct dependencies using the manifest, lockfile, installed types/source, and official documentation for the locked version.
+3. Inspect relevant transitive dependencies and record whether promotion to a direct dependency is appropriate.
+4. If still unresolved, inspect platform APIs and mature OSS through official documentation, source, releases, and registry provenance.
+5. Select a candidate or record a concrete behavioral mismatch. No result, provider failure, or an unsupported assertion is not proof that no reusable implementation exists.
 
-## Capability Admission
+Locked installed types and source win version disagreements. Send only abstract capability descriptions to online providers, never private source snippets.
 
-The phase researcher is the only writer of `RESEARCH.md`. Its `## Capability Admission` section records each `CAP-xx` with required behavior, local candidates, dependency/API candidates, OSS/platform candidates, decision, rejection mismatches, Approved Surface, and evidence.
+## Native artifact handoff
 
-Allowed decisions are `USE_LOCAL`, `USE_INSTALLED_API`, `PROMOTE_TRANSITIVE`, `USE_PLATFORM_API`, `ADD_OSS`, `LOCAL_NO_FIT`, and `NEEDS_SCOPE_DECISION`.
-
-`LOCAL_NO_FIT` requires completed local, dependency, and authoritative OSS/platform evidence plus mismatch reasons. Provider failure, no result, or assertion is insufficient. Approved Surface names the only dependency, module, symbol, algorithm, or owner change permitted; an empty value permits no new production surface.
-
-## Dormant seed promotion
-
-- Before approval, one deferred legacy capability has one carrier: its dormant seed. Surfacing or selecting the seed does not consume it.
-- If the current `REQUIREMENTS.md` approves the same legacy capability ID, feature key, and required behavior, delete that seed in the same planning commit. If approval does not occur, keep it. OpenGSD does not delete seeds automatically.
-- After that commit, native requirements and their PLAN/SUMMARY/VERIFICATION or milestone archive are the sole carrier; leave unselected seeds untouched and never invent consumed or implemented seed frontmatter.
+- Native OpenGSD `RESEARCH.md` is the sole durable source for reuse decisions. Record one compact local-reuse result for every production change: the reused owner/symbol or the concrete local mismatch. When the full reuse boundary applies, also record the required behavior, dependency/platform/OSS candidates, selected implementation, version evidence, and concrete rejection mismatches.
+- Native `PLAN.md` owns integration design: exact files, symbols or APIs, behavior, tests, and acceptance outcomes. Each production task references its compact local-reuse result and, when applicable, the full reuse decision instead of repeating discovery.
+- Native `SUMMARY.md` and `VERIFICATION.md` record what was implemented and whether the planned behavior and reuse decision held.
+- Do not create an execution receipt, receipt hash, project/search/policy fingerprints, cache-key protocol, pre-edit lifecycle, or another plan validator. Native OpenGSD owns planning, revision, execution, and verification identity.
+- The executor does not repeat research or silently change the chosen API or dependency. A changed reuse/dependency decision returns the affected work through the native phase workflow; ordinary integration corrections remain native planning or execution work.
 
 ## Role contract
 
 | Role | Responsibility | Prohibited |
 |---|---|---|
-| Assumptions analyzer | Atomize behavior; find local semantic candidates, owners, and unknowns. | Choose OSS, admit an implementation, or design file structure. |
-| Phase researcher | Verify local, dependency, platform, and OSS evidence; write `RESEARCH.md`; decide or block every CAP. | Prewrite implementation or disguise a preferred code shape as research. |
-| Planner | Compile approved CAP decisions into exact actions, tests, and outcomes. | Re-search, select another library, invent a capability, or widen Approved Surface. |
-| Plan checker | Reconcile every production task and surface to a CAP. | Repair the plan or silently fill missing admission evidence. |
-| Executor | Implement only the approved CAP and plan boundary. | Change API, library, owner, or add generic surface through ordinary deviation. |
-| Verifier | Check behavior, the real diff, evidence, and CAP/PLAN traceability. | Trust summaries, edit code, or ignore an unapproved surface. |
+| Assumptions analyzer | Identify required behavior, current owners, semantic candidates, and unknowns. | Select OSS or prewrite the implementation. |
+| Phase researcher | Produce the required local/dependency/platform/OSS evidence and reuse decisions in `RESEARCH.md`. | Design the integration file structure or pad research after a suitable candidate is known. |
+| Planner | Compile requirements and reuse decisions into a compact native plan. | Repeat discovery, invent another API, or embed monitoring and retry machinery. |
+| Plan checker | Reconcile every production task with its local-reuse result and any new generic surface with the full reuse decision. | Repair the plan or suggest changing project workflow/tooling inside the product attempt. |
+| Executor | Implement the native plan using the selected owner/API/dependency. | Replace the reuse decision or add an unplanned parallel capability. |
+| Verifier | Check observable behavior, the real diff, tests, and reuse-sensitive outcomes. | Trust summaries as proof or require unrelated refactor metrics. |
 
-## Traceability and change control
+## Process boundary
 
-- Every production plan task references its `CAP-xx`, exact reused symbol or API, and observable behavior.
-- Every dependency, shared helper, service, hook, module, protocol, schema, public API, and generic algorithm must be named in Approved Surface before implementation.
-- The real diff maps every production surface back to both its plan task and CAP decision.
-- Implementation corrections stay inside the approved boundary.
-- A newly required dependency, shared surface, business algorithm, owner move, or API replacement stops affected work and returns only that CAP to research.
-- Missing, unresolved, or contradictory evidence prevents planning or execution for the affected CAP.
-
-## Execution liveness and evidence handoff
-
-- Research is the sole producer of local semantic, installed-dependency, platform, and OSS selection evidence. The planner compiles approved decisions into one compact `*-EXECUTION-RECEIPT.md`; it must not repeat discovery.
-- The receipt records the approved CAP decisions and surface, behavior/stop conditions, allowed files, and separate product, dependency, search-config, and policy fingerprints. The PLAN pins its SHA-256. Executor context uses the receipt and exact task files, not complete `RESEARCH.md` or `VALIDATION.md` documents.
-- Every executable task declares `gate_stage="pre_edit|task|pre_merge"`, `budget="quick|standard|heavy|external"`, `plane="control|product|external"`, and `resumable="true"`. External work also declares a stable external job identity.
-- `pre_edit` permits fingerprint/freshness checks and fast local characterization only. Lumen rebuild, dependency/OSS discovery, CodeScene, full repository gates, and final LOC proof cannot run there. Fingerprint drift blocks execution and returns only the affected CAP to research; the executor never refreshes evidence itself.
-- Expensive external and repository-wide gates run once against the immutable final revision. Completed cache keys cannot run again. An interrupted or blocked step can be retried only through an explicit new step with `retry_of`; no role may auto-retry.
-- The planner and plan checker run `node scripts/gsd-observability-write.mjs validate-plan --repo . --plan <PLAN.md>`. Any nonzero result is `PLAN_BLOCKED`. The controller repeats the same check immediately before executor dispatch because OpenGSD 1.7 does not currently invoke its declared `execute:pre` hook.
-- Controllers and executors record named steps with the project-local writer. Logs are measurement only, never lifecycle truth or agent context; native OpenGSD remains the sole owner of milestone, phase, plan, summary, and verification state.
+- If product work reveals that project policy, plan checking, observability, lifecycle tooling, or an unavailable prerequisite without a documented repository fallback must change, stop that product attempt and open a separate workflow-forensics task.
+- With `workflow.use_worktrees=false`, work remains in the primary project folder; plans do not invoke `git worktree`.
+- Observability records declared timing, status, inputs, and outputs only. Missing measurements remain unavailable and never decide lifecycle state.
+- Expensive external analysis runs against the final candidate only when required by the current requirement or terminal review; it is not a default planning preflight.
 
 ## Outcome reporting
 
-Report these independently:
-
-- preserved or changed behavior and its evidence;
-- retired production LOC;
-- added and net production LOC across all touched production files;
-- before/after Code Health and remaining complexity.
-
-Moving code or improving Code Health is not evidence of deletion. No metric substitutes for behavior and traceability evidence.
+- Always report behavior and reuse-sensitive evidence required by the current plan.
+- Report retired, added, and net production LOC only when the current requirement explicitly asks for LOC reduction or slimming.
+- Run and report Code Health and remaining complexity only when the current requirement explicitly asks for Code Health or CodeScene evidence.
+- Moving code or improving a metric is never evidence that behavior was removed.
