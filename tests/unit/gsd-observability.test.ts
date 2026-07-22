@@ -254,6 +254,14 @@ describe("GSD observability writer", () => {
     expect(rollout.stderr).toContain("OBSERVABILITY_ARGUMENT_REJECTED");
   });
 
+  it("rejects commands inherited from Object.prototype", () => {
+    const cwd = createRepository();
+    const result = run(writer, ["constructor", ...baseStepArguments(cwd)]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("OBSERVABILITY_ARGUMENT_REJECTED");
+  });
+
   it("attributes outputs only when the controller declares them", () => {
     const cwd = createRepository();
     const arguments_ = baseStepArguments(cwd, "declared-output");
@@ -326,6 +334,41 @@ describe("repository-local npm wrapper", () => {
 });
 
 describe("GSD observability summarizer", () => {
+  it("uses the standard budget for an inherited-property-like unknown budget class", () => {
+    const cwd = createRepository();
+    const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
+    mkdirSync(runDirectory, { recursive: true });
+    const started = record([
+      ["event", "started"],
+      ["run_id", "run-1"],
+      ["step_id", "unknown-budget"],
+      ["stage", "planning"],
+      ["timestamp", "2026-07-22T10:00:00.000Z"],
+      ["budget_class", "constructor"],
+      ["agent_session_id", "planner"],
+      ["inputs", []],
+      ["outputs", []]
+    ]);
+    const completed = {
+      ...started,
+      event: "completed",
+      timestamp: "2026-07-22T10:15:01.000Z"
+    };
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${JSON.stringify(started)}\n${JSON.stringify(completed)}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    const summary = parseRecord(
+      readFileSync(path.join(runDirectory, "summary.json"), "utf8")
+    );
+    const [step] = summary.steps as Array<Record<string, unknown>>;
+    expect(step.budget_status).toBe("over_budget");
+  });
+
   it("measures an in-progress step up to summary time for soft-budget visibility", () => {
     const cwd = createRepository();
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");

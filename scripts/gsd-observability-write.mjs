@@ -9,13 +9,13 @@ import {
 import path from "node:path";
 import process from "node:process";
 
-const EVENTS = {
-  start: "started",
-  complete: "completed",
-  interrupt: "interrupted",
-  block: "blocked",
-  warning: "warning"
-};
+const EVENTS = new Map([
+  ["start", "started"],
+  ["complete", "completed"],
+  ["interrupt", "interrupted"],
+  ["block", "blocked"],
+  ["warning", "warning"]
+]);
 const RETIRED_METADATA_KEYS = new Set([
   "cache_key",
   "fingerprint",
@@ -186,7 +186,7 @@ function writeEvent(command, options, root) {
   const event = {
     schemaVersion: 1,
     eventId: randomUUID(),
-    event: Reflect.get(EVENTS, command),
+    event: EVENTS.get(command),
     runId: required(options, "run"),
     stepId: safeId(required(options, "step"), "step id"),
     stage: required(options, "stage"),
@@ -206,5 +206,5 @@ function writeEvent(command, options, root) {
 
 const { command, options } = parseArguments(process.argv.slice(2));
 const root = repository(options.repo);
-if (Reflect.get(EVENTS, command)) {writeEvent(command, options, root);}
+if (EVENTS.has(command)) {writeEvent(command, options, root);}
 else {stop("OBSERVABILITY_ARGUMENT_REJECTED", command);}

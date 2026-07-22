@@ -14,12 +14,12 @@ const IDENTITY_CHARACTERS = new Set("-./:0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_ab
 const TERMINAL = new Set(["completed", "interrupted", "blocked"]);
 const OPTIONS = new Set(["repo", "run"]);
 const SORT_TEXT = (left, right) => left.localeCompare(right);
-const BUDGETS = {
-  quick: 120_000,
-  standard: 900_000,
-  heavy: 2_700_000,
-  external: 1_500_000
-};
+const BUDGETS = new Map([
+  ["quick", 120_000],
+  ["standard", 900_000],
+  ["heavy", 2_700_000],
+  ["external", 1_500_000]
+]);
 const MEASUREMENT_INCOMPLETE_REASONS = [
   ["tokens_unavailable", "token_attribution_unavailable"],
   ["external_wait_unavailable", "external_wait_unavailable"],
@@ -215,7 +215,7 @@ function stepsFrom(events) {
 }
 
 function budgetStatus(step) {
-  const budget = BUDGETS[step.budgetClass] ?? BUDGETS.standard;
+  const budget = BUDGETS.get(step.budgetClass) ?? BUDGETS.get("standard");
   const ratio = step.wallDuration / budget;
   if (ratio > 2) {return "severe_over_budget";}
   if (ratio > 1) {return "over_budget";}
