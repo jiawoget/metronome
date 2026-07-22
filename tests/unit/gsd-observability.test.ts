@@ -70,6 +70,7 @@ function createRepository() {
   write(cwd, "src/example.ts", "export const value = 1;\n");
   write(cwd, "package.json", '{"name":"fixture"}\n');
   write(cwd, "package-lock.json", '{"lockfileVersion":3}\n');
+  write(cwd, ".gitignore", ".logs/\n");
   write(cwd, ".lumenignore", ".logs/\n");
   write(cwd, "AGENTS.md", "# Policy\n");
   write(cwd, ".planning/config.json", "{}\n");
@@ -133,8 +134,10 @@ function suppliedTimingEvents() {
     timestamp: "2026-07-21T10:03:00.000Z",
     outputs: ["src/example.ts"],
     timing: record([
-      ["external_wait_ms", 120_000],
-      ["tool_ms", 30_000]
+      ["active_ms", 45_000],
+      ["tool_ms", 30_000],
+      ["queue_ms", 15_000],
+      ["external_wait_ms", 90_000]
     ])
   };
   return { completed, started };
@@ -149,19 +152,15 @@ afterEach(() => {
 });
 
 describe("GSD observability writer", () => {
-  it("writes a sanitized append-only event inside the repository log boundary", () => {
+  it("writes explicit metadata inside the ignored repository log boundary", () => {
     const cwd = createRepository();
-    write(cwd, ".gitignore", ".logs/\n");
-    const fingerprints = record([["product", "retired-fingerprint"]]);
     const metadata = record([
-      ["api_key", "must-not-leak"],
-      ["cache_key", "retired-cache"],
-      ["fingerprints", fingerprints],
-      ["label", "safe"]
+      ["agent_type", "gsd-executor"],
+      ["model", "gpt-5.6-sol"],
+      ["reasoning_effort", "ultra"]
     ]);
     const payload = record([
       ["inputs", [".planning/STATE.md"]],
-      ["input_attribution", "legacy-cache"],
       ["metadata", metadata]
     ]);
     const result = run(writer, ["start", ...baseStepArguments(cwd)], {
@@ -174,15 +173,10 @@ describe("GSD observability writer", () => {
       path.join(cwd, ".logs/gsd-observability/run-1/controller.jsonl"),
       "utf8"
     );
-    expect(log).not.toContain("must-not-leak");
     const event = parseRecord(log);
-    expect(event).not.toHaveProperty("fingerprints");
     expect(event).not.toHaveProperty("git");
     expect(event.input_attribution).toBe("declared_only");
-    expect(event.metadata).toEqual(record([
-      ["api_key", "[REDACTED]"],
-      ["label", "safe"]
-    ]));
+    expect(event.metadata).toEqual(metadata);
     expect(event).toMatchObject(
       record([
         ["schema_version", 1],
@@ -191,13 +185,42 @@ describe("GSD observability writer", () => {
         ["step_id", "context-load"],
         [
           "metadata",
-          record([
-            ["api_key", "[REDACTED]"],
-            ["label", "safe"]
-          ])
+          metadata
         ]
       ])
     );
+    expect(git(cwd, ["status", "--porcelain=v1", "--untracked-files=all"])).toBe("");
+  });
+
+  it("repair contract rejects unsupported and secret-shaped metadata", () => {
+    const cwd = createRepository();
+    for (const metadata of [
+      record([["label", "unsupported"]]),
+      record([["api_key", "must-not-leak"]]),
+      record([["cache_key", "retired-cache"]]),
+      record([["agent_model", "gpt-5.6-sol"]])
+    ]) {
+      const result = run(writer, ["start", ...baseStepArguments(cwd)], {
+        input: JSON.stringify({ metadata })
+      });
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("OBSERVABILITY_PAYLOAD_REJECTED");
+    }
+  });
+
+  it("repair contract rejects unsupported or invalid host timing values", () => {
+    const cwd = createRepository();
+    for (const timing of [
+      record([["active_ms", -1]]),
+      record([["tool_ms", "1"]]),
+      record([["wall_ms", 1]])
+    ]) {
+      const result = run(writer, ["complete", ...baseStepArguments(cwd)], {
+        input: JSON.stringify({ timing })
+      });
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("OBSERVABILITY_PAYLOAD_REJECTED");
+    }
   });
 
   it("rejects path traversal and absolute log targets", () => {
@@ -334,8 +357,81 @@ describe("repository-local npm wrapper", () => {
 });
 
 describe("GSD observability summarizer", () => {
-  it("uses the standard budget for an inherited-property-like unknown budget class", () => {
+  it("repair contract uses one canonical Git root", () => {
     const cwd = createRepository();
+    const nested = path.join(cwd, "nested", "work");
+    mkdirSync(nested, { recursive: true });
+    const stepArguments = baseStepArguments(nested, "canonical-root");
+    expect(run(writer, ["start", ...stepArguments]).status).toBe(0);
+    expect(run(writer, ["complete", ...stepArguments]).status).toBe(0);
+
+    const result = run(summarizer, ["--repo", nested, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(existsSync(path.join(
+      cwd,
+      ".logs/gsd-observability/run-1/summary.json"
+    ))).toBe(true);
+    expect(existsSync(path.join(
+      nested,
+      ".logs/gsd-observability/run-1/summary.json"
+    ))).toBe(false);
+    expect(git(cwd, ["status", "--porcelain=v1", "--untracked-files=all"])).toBe("");
+  });
+
+  it("repair contract aggregates declared I/O from every event", () => {
+    const cwd = createRepository();
+    const arguments_ = baseStepArguments(cwd, "all-events");
+    const events = [
+      ["start", { inputs: ["AGENTS.md"], outputs: [".planning/STATE.md"] }],
+      ["warning", {
+        inputs: ["package.json"],
+        outputs: ["tests/unit/gsd-observability.test.ts"]
+      }],
+      ["complete", {
+        inputs: ["scripts/gsd-observability-write.mjs"],
+        outputs: ["scripts/gsd-observability-summarize.mjs"]
+      }]
+    ] as const;
+    for (const [event, payload] of events) {
+      const result = run(writer, [event, ...arguments_], {
+        input: JSON.stringify(payload)
+      });
+      expect(result.status, result.stderr).toBe(0);
+    }
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    const summary = parseRecord(readFileSync(
+      path.join(cwd, ".logs/gsd-observability/run-1/summary.json"),
+      "utf8"
+    ));
+    const [step] = summary.steps as Array<Record<string, unknown>>;
+    expect(step.inputs).toEqual(expect.arrayContaining([
+      "AGENTS.md",
+      "package.json",
+      "scripts/gsd-observability-write.mjs"
+    ]));
+    expect(step.outputs).toEqual(expect.arrayContaining([
+      ".planning/STATE.md",
+      "scripts/gsd-observability-summarize.mjs",
+      "tests/unit/gsd-observability.test.ts"
+    ]));
+    expect(step.inputs).toHaveLength(3);
+    expect(step.outputs).toHaveLength(3);
+    expect(step.input_attribution).toBe("declared_only");
+  });
+
+  it("repair contract rejects unknown budget classes", () => {
+    const cwd = createRepository();
+    const writerResult = run(writer, [
+      "start",
+      ...baseStepArguments(cwd),
+      "--budget",
+      "constructor"
+    ]);
+    expect(writerResult.status).not.toBe(0);
+    expect(writerResult.stderr).toContain("OBSERVABILITY_ARGUMENT_REJECTED");
+
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
     const started = record([
@@ -361,15 +457,11 @@ describe("GSD observability summarizer", () => {
     );
 
     const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
-    expect(result.status, result.stderr).toBe(0);
-    const summary = parseRecord(
-      readFileSync(path.join(runDirectory, "summary.json"), "utf8")
-    );
-    const [step] = summary.steps as Array<Record<string, unknown>>;
-    expect(step.budget_status).toBe("over_budget");
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("METRICS_DATA_ERROR");
   });
 
-  it("measures an in-progress step up to summary time for soft-budget visibility", () => {
+  it("repair contract names the in-progress controller-observed window", () => {
     const cwd = createRepository();
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
@@ -394,11 +486,14 @@ describe("GSD observability summarizer", () => {
 
     const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
     expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("tokens=unavailable");
+    expect(result.stdout).not.toContain("processed=n/a");
     const summary = parseRecord(
       readFileSync(path.join(runDirectory, "summary.json"), "utf8")
     );
     const [step] = summary.steps as Array<Record<string, unknown>>;
-    expect(step.wall_duration_ms).toBeGreaterThanOrEqual(3_719_000);
+    expect(step.observed_window_ms).toBeGreaterThanOrEqual(3_719_000);
+    expect(step).not.toHaveProperty("wall_duration_ms");
     expect(step.budget_status).toBe("severe_over_budget");
     expect(summary.milestone_progress_status).toBe("warning_no_test_change");
   });
@@ -437,10 +532,11 @@ describe("GSD observability summarizer", () => {
       readFileSync(path.join(runDirectory, "summary.json"), "utf8")
     );
     expect(summary.steps).toMatchObject([
-      record([["status", "completed"], ["wall_duration_ms", 60_000]]),
-      record([["status", "blocked"], ["wall_duration_ms", 180_000]])
+      record([["status", "completed"], ["observed_window_ms", 60_000]]),
+      record([["status", "blocked"], ["observed_window_ms", 180_000]])
     ]);
-    expect(summary.run_wall_duration_ms).toBe(300_000);
+    expect(summary.run_observed_window_ms).toBe(300_000);
+    expect(summary).not.toHaveProperty("run_wall_duration_ms");
   });
 
   it("marks an unmatched terminal event as incomplete instead of on track", () => {
@@ -455,12 +551,12 @@ describe("GSD observability summarizer", () => {
     expect(summary).toMatchObject(record([
       ["metrics_incomplete", true],
       ["milestone_progress_status", "metrics_incomplete"],
-      ["run_wall_duration_ms", null],
+      ["run_observed_window_ms", null],
       ["steps", []]
     ]));
   });
 
-  it("reports unavailable measurements as unknown instead of measured zero", () => {
+  it("repair contract makes unavailable token and host data explicit", () => {
     const cwd = createRepository();
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
@@ -489,24 +585,29 @@ describe("GSD observability summarizer", () => {
     );
     const steps = summary.steps as Array<Record<string, unknown>>;
     expect(steps[0]).toMatchObject(record([
-      ["external_wait_ms", null],
-      ["active_duration_ms", null],
-      ["tool_duration_ms", null],
+      ["host_active_ms", null],
+      ["host_tool_ms", null],
+      ["host_queue_ms", null],
+      ["host_external_wait_ms", null],
       ["tokens", null],
       ["measurement_notices", [
         "tokens_unavailable:host_does_not_expose_step_usage",
+        "active_time_unavailable:caller_did_not_supply_timing",
+        "tool_duration_unavailable:caller_did_not_supply_timing",
+        "queue_time_unavailable:caller_did_not_supply_timing",
         "external_wait_unavailable:caller_did_not_supply_timing",
-        "tool_duration_unavailable:caller_did_not_supply_timing"
       ]]
     ]));
     expect(summary.metrics_incomplete_reasons).toEqual([
+      "active_time_unavailable",
       "external_wait_unavailable",
+      "queue_time_unavailable",
       "token_attribution_unavailable",
       "tool_duration_unavailable"
     ]);
   });
 
-  it("marks impossible external-wait timing unavailable instead of clamping active time", () => {
+  it("repair contract never infers host active time", () => {
     const cwd = createRepository();
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
@@ -540,15 +641,14 @@ describe("GSD observability summarizer", () => {
     );
     const [step] = summary.steps as Array<Record<string, unknown>>;
     expect(step).toMatchObject(record([
-      ["external_wait_ms", null],
-      ["active_duration_ms", null],
-      ["measurement_notices", expect.arrayContaining([
-        "external_wait_unavailable:exceeds_wall_duration"
-      ])]
+      ["observed_window_ms", 60_000],
+      ["host_external_wait_ms", 120_000],
+      ["host_active_ms", null]
     ]));
+    expect(step).not.toHaveProperty("active_duration_ms");
   });
 
-  it("reports supplied timings while leaving unavailable token attribution unknown", () => {
+  it("repair contract uses canonical model and host timing fields", () => {
     const cwd = createRepository();
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
@@ -568,6 +668,9 @@ describe("GSD observability summarizer", () => {
     expect(result.stdout.trim().split("\n")).toHaveLength(1);
     expect(result.stdout).toContain("over_budget");
     expect(result.stdout).toContain("codescene");
+    expect(result.stdout).toContain("observed=180.0s");
+    expect(result.stdout).not.toContain("wall=");
+    expect(result.stdout).toContain("tokens=unavailable");
     expect(result.stdout).toContain("model=gpt-5.6-sol");
     expect(result.stdout).toContain("effort=xhigh");
     const summary = parseRecord(
@@ -581,14 +684,15 @@ describe("GSD observability summarizer", () => {
     expect((steps as unknown[])[0]).toMatchObject(
       record([
         ["step_id", "codescene"],
-        ["wall_duration_ms", 180_000],
-        ["external_wait_ms", 120_000],
-        ["active_duration_ms", 60_000],
-        ["tool_duration_ms", 30_000],
+        ["observed_window_ms", 180_000],
+        ["host_active_ms", 45_000],
+        ["host_tool_ms", 30_000],
+        ["host_queue_ms", 15_000],
+        ["host_external_wait_ms", 90_000],
         ["agent_type", "gsd-planner"],
-        ["agent_model", "gpt-5.6-sol"],
+        ["model", "gpt-5.6-sol"],
         ["reasoning_effort", "xhigh"],
-        ["attribution_granularity", "turn"],
+        ["input_attribution", "declared_only"],
         ["budget_status", "over_budget"],
         ["tokens", null],
         ["measurement_notices", ["tokens_unavailable:host_does_not_expose_step_usage"]],
@@ -596,6 +700,8 @@ describe("GSD observability summarizer", () => {
         ["outputs", ["src/example.ts"]]
       ])
     );
+    expect((steps as unknown[])[0]).not.toHaveProperty("agent_model");
+    expect((steps as unknown[])[0]).not.toHaveProperty("wall_duration_ms");
     expect(summaryFields.get("time_to_first_product_change_ms")).toBe(180_000);
   });
 
