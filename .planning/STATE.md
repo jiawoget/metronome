@@ -5,11 +5,11 @@ milestone_name: R01 Evidence-First Code Slimming
 current_phase: 01
 current_phase_name: canonical-practice-presentation-formatting
 status: paused
-stopped_at: Workflow repair implementation complete; live release-exit proof and explicit R01 disposition remain
-paused_at: .planning/forensics/report-20260722-124111.md
-last_updated: "2026-07-22T16:21:26.5049461+08:00"
+stopped_at: Owner-authorized workflow debt closure in progress; R01 remains paused
+paused_at: .planning/forensics/report-20260722-214242.md
+last_updated: "2026-07-22T21:42:42+08:00"
 last_activity: 2026-07-22
-last_activity_desc: Workflow repair implementation completed; R01 remains paused pending explicit owner disposition
+last_activity_desc: Independent audit found remaining process debt; owner approved the bounded native-first closure plan
 progress:
   total_phases: 1
   completed_phases: 0
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 
 Phase: 01 (canonical-practice-presentation-formatting) — PAUSED
 Plan: no active plan; failed attempt quarantined; phase incomplete
-Status: Paused after workflow repair implementation; no R01 product execution is authorized
-Last activity: 2026-07-22 — workflow repair implementation completed; R01 remains paused pending explicit owner disposition
+Status: Product phase paused; owner-authorized workflow debt closure is active and no R01 product execution is authorized
+Last activity: 2026-07-22 — independent audit found remaining process debt and the owner approved the bounded native-first closure plan
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -73,14 +73,15 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Baseline cleanup]: The non-planning paths introduced by failed product commits `ef98c287` and `884805f1` were selectively reversed in the primary checkout. All affected `src/**`, product-test, and `xo.config.js` paths match `origin/main@9199d17`; Git history was not rewritten. All known code and authority remediations are implemented. Their release-exit status must be proven from the live PR and Git state rather than inferred from this file.
 - [Paused forensics authority]: While `paused_at` points to the forensic report, generic `continue`, `go`, `next`, or `resume` wording cannot authorize product work. The report's **Authoritative outcome** is the sole owner-decision surface; the project owner must explicitly select and approve its disposition before native discuss, plan, or execute routing resumes.
 - [Historical worktree cleanup]: All nine linked historical worktrees were removed from the registry after their cleanliness was verified and the detached review chain was preserved under `codex/archive-legacy-overlay-review-7faa689f`. Project work remains confined to the primary checkout by `AGENTS.md` and `workflow.use_worktrees=false`.
+- [Workflow debt closure]: The owner approved `.planning/forensics/report-20260722-214242.md` after an independent audit found unresolved release enforcement, OpenGSD binding, mutating-agent, observability, Lumen, branch, and external legacy debt. That report is the exact repair and cleanup boundary. It does not authorize R01 product work.
 
 ### Pending Todos
 
-- No R01 product task is authorized. Before presenting the project owner with the forensic report's explicit disposition, the controller must prove every finite workflow-repair closeout fact in that report from live PR and Git evidence: final repository gate, committed PR head, exact-head CI including applicable Windows observability, finding-free read-only exact-head `@codex` review, merge, and clean synchronized `main`. This file neither pre-asserts nor caches those external facts. Generic continuation wording is not approval of that disposition.
+- Execute the approved tasks in `.planning/forensics/report-20260722-214242.md` through repository repair, exact-head review/merge, GitHub enforcement, legacy cleanup, official OpenGSD upgrade, durable Lumen migration, and a fresh 5.6 Sol Ultra zero-debt audit. No R01 product task is authorized.
 
 ### Blockers/Concerns
 
-The prior R01 attempt is frozen because the product run modified and rechecked its own control plane. Its artifacts are absent from the active phase directory, its non-planning implementation paths match the recorded `origin/main` baseline, and the known code and authority remediations are implemented. Product routing must treat every release-exit fact in Pending Todos as a live external precondition: until those checks prove it, the owner-disposition prompt is blocked. This state authorizes neither more workflow implementation nor R01 product work.
+The prior R01 attempt remains frozen because the product run modified and rechecked its own control plane. The owner has now explicitly authorized only the workflow-debt closure recorded in `.planning/forensics/report-20260722-214242.md`. Product routing remains blocked until that closure passes its independent final audit and the owner separately chooses an R01 disposition.
 
 ## Deferred Items
 
@@ -91,5 +92,5 @@ The prior R01 attempt is frozen because the product run modified and rechecked i
 ## Session Continuity
 
 Last session: 2026-07-22T05:25:58.763Z
-Stopped at: workflow repair implementation complete; live release-exit proof and explicit R01 disposition remain
-Resume file: .planning/forensics/report-20260722-124111.md
+Stopped at: owner-authorized workflow debt closure in progress; R01 remains paused
+Resume file: .planning/forensics/report-20260722-214242.md
