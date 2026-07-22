@@ -74,7 +74,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 | Keep the primary repository between milestones until governance acceptance | The superseded historical pilot did not advance lifecycle state; v1.1 began only after the governance migration merged into updated `main` | ✓ Good |
 | Import each completed legacy pack as one native PLAN/SUMMARY pair | Preserves eight completed phases without pretending 83 historical slices were executed natively | ✓ Good |
 | Use native OpenGSD as the sole project lifecycle and roadmap control plane | Cross-session planning, execution, verification, and progress already exist in OpenGSD | ✓ Good |
-| Discover the real R01 target fresh from current `main` | The historical pilot and temporary worktrees are comparison evidence only; reuse and OSS evidence must determine the bounded target | — Pending |
+| Discover the real R01 target fresh from current `main` | The historical pilot was not resumed, and its temporary worktrees were not used as current authority and have now been removed; the selected target was re-established from current `main` using reuse and OSS evidence | ✓ Good |
 | Reset v1.1 roadmap phase numbering to Phase 1 | The user explicitly chose milestone-local numbering while preserving the immutable v1.0 phase archive | — Pending |
 
 ## Evolution

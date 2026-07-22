@@ -72,7 +72,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Observability]: Project-local logs record declared status, timing, and I/O only. Unavailable metrics remain unavailable and never block or advance lifecycle state.
 - [Baseline cleanup]: The non-planning paths introduced by failed product commits `ef98c287` and `884805f1` were selectively reversed in the primary checkout. All affected `src/**`, product-test, and `xo.config.js` paths match `origin/main@9199d17`; Git history was not rewritten. All known code and authority remediations are implemented. Their release-exit status must be proven from the live PR and Git state rather than inferred from this file.
 - [Paused forensics authority]: While `paused_at` points to the forensic report, generic `continue`, `go`, `next`, or `resume` wording cannot authorize product work. The report's **Authoritative outcome** is the sole owner-decision surface; the project owner must explicitly select and approve its disposition before native discuss, plan, or execute routing resumes.
-- [Primary checkout authority]: While historical linked worktrees remain registered, every product-agent dispatch must first prove that the current working directory and Git top-level are the exact primary checkout recorded by the first `git worktree list --porcelain` entry. A mismatch stops dispatch without changing lifecycle state.
+- [Historical worktree cleanup]: All nine linked historical worktrees were removed from the registry after their cleanliness was verified and the detached review chain was preserved under `codex/archive-legacy-overlay-review-7faa689f`. Project work remains confined to the primary checkout by `AGENTS.md` and `workflow.use_worktrees=false`.
 
 ### Pending Todos
 
