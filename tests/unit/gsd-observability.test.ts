@@ -248,7 +248,7 @@ describe("GSD plan liveness", () => {
     write(cwd, "01-EXECUTION-RECEIPT.md", receipt);
     const goodPlan = `
 <execution_contract evidence_receipt="01-EXECUTION-RECEIPT.md" receipt_sha256="${receiptHash}" no_auto_retry="true" />
-<context>\n@01-EXECUTION-RECEIPT.md\n</context>
+<context>\n@01-EXECUTION-RECEIPT.md\n@src/domain/practice/validation.ts\n@src/services/research-client.ts\n</context>
 <task id="T1" gate_stage="pre_edit" budget="quick" plane="control" resumable="true" resume_key="t1" cache_key="product+search" inputs="receipt,tests" outputs="tests">
   <action>Check fingerprints and run focused tests.</action>
 </task>
@@ -275,6 +275,7 @@ describe("GSD plan liveness", () => {
       goodPlan.split(receiptHash).join(wrongReceiptHash),
       goodPlan.replace("Check fingerprints", "Run CodeScene then check fingerprints"),
       goodPlan.replace("@01-EXECUTION-RECEIPT.md", "@01-RESEARCH.md"),
+      goodPlan.replace("@01-EXECUTION-RECEIPT.md", "@01-VALIDATION.md"),
       goodPlan.replace('resumable="true"', 'resumable="false"'),
       goodPlan.replace('gate_stage="task"', ""),
       goodPlan.replace(' cache_key="product+policy"', ""),

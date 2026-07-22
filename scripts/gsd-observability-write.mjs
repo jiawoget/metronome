@@ -360,7 +360,7 @@ function executionContractProblems(root, plan) {
 
 function hasBroadContext(plan) {
   return plan.toLowerCase().split(/\s+/v)
-    .some((token) => token.startsWith("@") && (token.includes("research") || token.includes("validation")));
+    .some((token) => token.startsWith("@") && /^(?:.+-)?(?:research|validation)\.md$/v.test(token.slice(token.lastIndexOf("/") + 1)));
 }
 
 function planLevelProblems(plan) {
