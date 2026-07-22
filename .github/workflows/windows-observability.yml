@@ -2,25 +2,9 @@ name: Windows observability
 
 on:
   pull_request:
-    paths:
-      - ".github/workflows/windows-observability.yml"
-      - "package.json"
-      - "package-lock.json"
-      - "scripts/gsd-observability-summarize.mjs"
-      - "scripts/gsd-observability-write.mjs"
-      - "scripts/npm-local.ps1"
-      - "tests/unit/gsd-observability.test.ts"
   push:
     branches:
       - main
-    paths:
-      - ".github/workflows/windows-observability.yml"
-      - "package.json"
-      - "package-lock.json"
-      - "scripts/gsd-observability-summarize.mjs"
-      - "scripts/gsd-observability-write.mjs"
-      - "scripts/npm-local.ps1"
-      - "tests/unit/gsd-observability.test.ts"
 
 permissions:
   contents: read
