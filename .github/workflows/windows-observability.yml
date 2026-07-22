@@ -1,0 +1,55 @@
+name: Windows observability
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/windows-observability.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/gsd-observability-summarize.mjs"
+      - "scripts/gsd-observability-write.mjs"
+      - "scripts/npm-local.ps1"
+      - "tests/unit/gsd-observability.test.ts"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/windows-observability.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/gsd-observability-summarize.mjs"
+      - "scripts/gsd-observability-write.mjs"
+      - "scripts/npm-local.ps1"
+      - "tests/unit/gsd-observability.test.ts"
+
+permissions:
+  contents: read
+
+jobs:
+  observability:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.17.0
+
+      - name: Expose repository-local Node runtime
+        shell: powershell
+        run: |
+          $nodeRoot = Split-Path -Parent (Get-Command node.exe).Source
+          $toolsRoot = Join-Path (Get-Location).Path ".tools"
+          $localNodeRoot = Join-Path $toolsRoot "node-v24.17.0-win-x64"
+          New-Item -ItemType Directory -Force -Path $toolsRoot | Out-Null
+          New-Item -ItemType Junction -Path $localNodeRoot -Target $nodeRoot | Out-Null
+
+      - name: Install dependencies
+        shell: powershell
+        run: '& .\scripts\npm-local.ps1 --% ci'
+
+      - name: Run observability unit tests
+        shell: powershell
+        run: '& .\scripts\npm-local.ps1 --% run test:unit -- tests/unit/gsd-observability.test.ts'
