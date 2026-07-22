@@ -123,20 +123,29 @@ function hostTiming(events) {
   return result;
 }
 
-function metadataFrom(event) {
-  const metadata = explicitRecord(event, "metadata", METADATA_FIELDS);
-  for (const value of Object.values(metadata)) {
-    const hasControlCharacter = typeof value === "string"
-      && [...value].some((character) => {
-        const codePoint = character.codePointAt(0);
-        return codePoint < 32 || codePoint === 127;
-      });
-    if (typeof value !== "string" || !value || value.trim() !== value || hasControlCharacter) {
-      stop("METRICS_DATA_ERROR", "invalid metadata value");
+function metadataFrom(events) {
+  const result = {};
+  for (const event of events) {
+    const metadata = explicitRecord(event, "metadata", METADATA_FIELDS);
+    for (const [field, value] of Object.entries(metadata)) {
+      const hasControlCharacter = typeof value === "string"
+        && [...value].some((character) => {
+          const codePoint = character.codePointAt(0);
+          return codePoint < 32 || codePoint === 127;
+        });
+      if (typeof value !== "string" || !value || value.trim() !== value || hasControlCharacter) {
+        stop("METRICS_DATA_ERROR", "invalid metadata value");
+      }
+
+      if (Object.hasOwn(result, field) && result[field] !== value) {
+        stop("METRICS_DATA_ERROR", `conflicting metadata.${field}`);
+      }
+
+      result[field] = value;
     }
   }
 
-  return metadata;
+  return result;
 }
 
 function declaredPaths(events, field) {
@@ -207,9 +216,20 @@ function groupsFrom(events) {
   return { groups, hasUnmatchedEvent };
 }
 
-function budgetStatus(budgetClass, observedWindow) {
+function budgetStatus(events, observedWindow) {
+  const budgetClass = events[0].budget_class;
   const budget = BUDGETS.get(budgetClass);
   if (budget === undefined) {stop("METRICS_DATA_ERROR", `unknown budget class ${budgetClass}`);}
+  for (const event of events) {
+    if (!BUDGETS.has(event.budget_class)) {
+      stop("METRICS_DATA_ERROR", `unknown budget class ${event.budget_class}`);
+    }
+
+    if (event.budget_class !== budgetClass) {
+      stop("METRICS_DATA_ERROR", `budget class differs from attempt start ${event.budget_class}`);
+    }
+  }
+
   if (observedWindow > budget * 2) {return "severe_over_budget";}
   if (observedWindow > budget) {return "over_budget";}
   return "within_budget";
@@ -220,7 +240,7 @@ function stepFrom(group, generatedAt) {
   const endMs = Date.parse(group.end?.timestamp ?? generatedAt);
   const observedWindow = Math.max(0, endMs - startMs);
   const timing = hostTiming(group.events);
-  const metadata = metadataFrom(group.start);
+  const metadata = metadataFrom(group.events);
   const measurementNotices = [
     "tokens_unavailable:host_does_not_expose_step_usage",
     ...HOST_TIMING
@@ -247,7 +267,7 @@ function stepFrom(group, generatedAt) {
     outputs: declaredPaths(group.events, "outputs"),
     notices: group.notices,
     measurementNotices,
-    budgetStatus: budgetStatus(group.start.budget_class, observedWindow),
+    budgetStatus: budgetStatus(group.events, observedWindow),
     startMs,
     endMs
   };

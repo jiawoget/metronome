@@ -421,6 +421,144 @@ describe("GSD observability summarizer", () => {
     expect(step.input_attribution).toBe("declared_only");
   });
 
+  it("review contract aggregates compatible identity metadata from every event", () => {
+    const cwd = createRepository();
+    const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
+    const started = record([
+      ["event", "started"],
+      ["run_id", "run-1"],
+      ["step_id", "identity"],
+      ["stage", "planning"],
+      ["timestamp", "2026-07-22T10:00:00.000Z"],
+      ["budget_class", "quick"],
+      ["agent_session_id", "planner"],
+      ["metadata", record([["agent_type", "gsd-planner"]])],
+      ["inputs", []],
+      ["outputs", []]
+    ]);
+    const warning = {
+      ...started,
+      event: "warning",
+      timestamp: "2026-07-22T10:00:30.000Z",
+      metadata: record([["model", "gpt-5.6-sol"]])
+    };
+    const completed = {
+      ...started,
+      event: "completed",
+      timestamp: "2026-07-22T10:01:00.000Z",
+      metadata: record([["reasoning_effort", "ultra"]])
+    };
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${[started, warning, completed].map((event) => JSON.stringify(event)).join("\n")}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    const summary = parseRecord(readFileSync(
+      path.join(runDirectory, "summary.json"),
+      "utf8"
+    ));
+    expect(summary.steps).toMatchObject([
+      record([
+        ["agent_type", "gsd-planner"],
+        ["model", "gpt-5.6-sol"],
+        ["reasoning_effort", "ultra"]
+      ])
+    ]);
+  });
+
+  it("review contract rejects invalid or conflicting metadata on later events", () => {
+    const cases = [
+      ["warning", record([["api_key", "must-not-leak"]])],
+      ["completed", record([["agent_model", "retired-alias"]])],
+      ["completed", record([["model", "different-model"]])]
+    ] as const;
+    for (const [eventName, metadata] of cases) {
+      const cwd = createRepository();
+      const started = record([
+        ["event", "started"],
+        ["run_id", "run-1"],
+        ["step_id", "identity"],
+        ["stage", "planning"],
+        ["timestamp", "2026-07-22T10:00:00.000Z"],
+        ["budget_class", "quick"],
+        ["agent_session_id", "planner"],
+        ["metadata", record([["model", "gpt-5.6-sol"]])],
+        ["inputs", []],
+        ["outputs", []]
+      ]);
+      const later = {
+        ...started,
+        event: eventName,
+        timestamp: "2026-07-22T10:00:30.000Z",
+        metadata
+      };
+      const events = eventName === "warning"
+        ? [started, later, {
+          ...started,
+          event: "completed",
+          timestamp: "2026-07-22T10:01:00.000Z"
+        }]
+        : [started, later];
+      write(
+        cwd,
+        ".logs/gsd-observability/run-1/controller.jsonl",
+        `${events.map((event) => JSON.stringify(event)).join("\n")}\n`
+      );
+
+      const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("METRICS_DATA_ERROR");
+    }
+  });
+
+  it("review contract validates every event budget against the attempt start", () => {
+    const cases = [
+      ["warning", "constructor"],
+      ["completed", "constructor"],
+      ["warning", "standard"],
+      ["completed", "standard"]
+    ] as const;
+    for (const [eventName, budgetClass] of cases) {
+      const cwd = createRepository();
+      const started = record([
+        ["event", "started"],
+        ["run_id", "run-1"],
+        ["step_id", "budget"],
+        ["stage", "planning"],
+        ["timestamp", "2026-07-22T10:00:00.000Z"],
+        ["budget_class", "quick"],
+        ["agent_session_id", "planner"],
+        ["inputs", []],
+        ["outputs", []]
+      ]);
+      const later = {
+        ...started,
+        event: eventName,
+        timestamp: "2026-07-22T10:00:30.000Z",
+        ...record([["budget_class", budgetClass]])
+      };
+      const events = eventName === "warning"
+        ? [started, later, {
+          ...started,
+          event: "completed",
+          timestamp: "2026-07-22T10:01:00.000Z"
+        }]
+        : [started, later];
+      write(
+        cwd,
+        ".logs/gsd-observability/run-1/controller.jsonl",
+        `${events.map((event) => JSON.stringify(event)).join("\n")}\n`
+      );
+
+      const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("METRICS_DATA_ERROR");
+    }
+  });
+
   it("repair contract rejects unknown budget classes", () => {
     const cwd = createRepository();
     const writerResult = run(writer, [
