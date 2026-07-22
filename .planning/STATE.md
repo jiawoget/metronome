@@ -5,11 +5,11 @@ milestone_name: R01 Evidence-First Code Slimming
 current_phase: 01
 current_phase_name: canonical-practice-presentation-formatting
 status: paused
-stopped_at: Known workflow remediations implemented but not yet current-diff verified or durable
+stopped_at: Workflow repair implementation complete; live release-exit proof and explicit R01 disposition remain
 paused_at: .planning/forensics/report-20260722-124111.md
-last_updated: "2026-07-22T15:10:09.6789212+08:00"
+last_updated: "2026-07-22T16:21:26.5049461+08:00"
 last_activity: 2026-07-22
-last_activity_desc: Failed R01 product, test, and config paths restored to origin/main in the working tree
+last_activity_desc: Workflow repair implementation completed; R01 remains paused pending explicit owner disposition
 progress:
   total_phases: 1
   completed_phases: 0
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 
 Phase: 01 (canonical-practice-presentation-formatting) — PAUSED
 Plan: no active plan; failed attempt quarantined; phase incomplete
-Status: Paused for workflow remediation; no R01 product execution is authorized
-Last activity: 2026-07-22 — failed R01 product, test, and config paths restored to origin/main in the working tree
+Status: Paused after workflow repair implementation; no R01 product execution is authorized
+Last activity: 2026-07-22 — workflow repair implementation completed; R01 remains paused pending explicit owner disposition
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,7 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 **Recent Trend:**
 
 - Last 5 plans: no active plan; failed 01-01 attempt retained only as forensic evidence
-- Trend: paused with known code and authority remediations implemented but not yet current-diff verified or durable
+- Trend: paused after workflow repair implementation; release-exit facts remain live external evidence and no R01 disposition has been approved
 
 ## Accumulated Context
 
@@ -70,17 +70,17 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Workflow architecture]: Native OpenGSD exclusively owns plan checking, revision, retry, execution, verification, and routing. Product attempts do not repair their own control plane.
 - [Reuse governance]: Native `RESEARCH.md` records decision-bearing local/dependency/platform/OSS evidence; native `PLAN.md` records integration. No execution receipt, fingerprint transaction, pre-edit lifecycle, or parallel validator is active.
 - [Observability]: Project-local logs record declared status, timing, and I/O only. Unavailable metrics remain unavailable and never block or advance lifecycle state.
-- [Baseline cleanup]: The non-planning paths introduced by failed product commits `ef98c287` and `884805f1` were selectively reversed in the primary working tree. All affected `src/**`, product-test, and `xo.config.js` paths now match `origin/main@9199d17`; Git history was not rewritten. All known code and authority remediations are implemented in the working tree, but the combined candidate is not yet current-diff verified or durable.
+- [Baseline cleanup]: The non-planning paths introduced by failed product commits `ef98c287` and `884805f1` were selectively reversed in the primary checkout. All affected `src/**`, product-test, and `xo.config.js` paths match `origin/main@9199d17`; Git history was not rewritten. All known code and authority remediations are implemented. Their release-exit status must be proven from the live PR and Git state rather than inferred from this file.
 - [Paused forensics authority]: While `paused_at` points to the forensic report, generic `continue`, `go`, `next`, or `resume` wording cannot authorize product work. The report must be read and the project owner must explicitly choose and approve a disposition before native discuss, plan, or execute routing resumes.
 - [Primary checkout authority]: While historical linked worktrees remain registered, every product-agent dispatch must first prove that the current working directory and Git top-level are the exact primary checkout recorded by the first `git worktree list --porcelain` entry. A mismatch stops dispatch without changing lifecycle state.
 
 ### Pending Todos
 
-- No R01 product task is authorized. Before asking the project owner whether R01 is abandoned, redesigned as a new native plan, or resumed under a separately approved boundary, complete exactly this finite workflow-repair closeout: (1) pass the consolidated required repository gate on the final candidate; (2) commit the baseline cleanup and workflow remediation and create or update its pull request; (3) pass CI on the exact final PR head, including the path-applicable Windows observability workflow; (4) obtain a finding-free, read-only `@codex` review of that exact head; (5) merge the PR; and (6) update local `main` and prove it equals `origin/main` with no `MERGE_HEAD`, an empty index, and empty status. Generic continuation wording is not an owner disposition.
+- No R01 product task is authorized. Before presenting the project owner with the abandon, redesign, or separately bounded resume decision, the controller must prove every finite workflow-repair closeout fact in the forensic report from live PR and Git evidence: final repository gate, committed PR head, exact-head CI including applicable Windows observability, finding-free read-only exact-head `@codex` review, merge, and clean synchronized `main`. This file neither pre-asserts nor caches those external facts. Generic continuation wording is not an owner disposition.
 
 ### Blockers/Concerns
 
-The prior R01 attempt is frozen because the product run modified and rechecked its own control plane. Its artifacts are no longer present in the active phase directory, and its non-planning implementation paths have been restored to `origin/main` in the working tree. All known code and authority remediations are implemented, but they remain unverified as one current diff and uncommitted. The only remaining workflow-repair blockers are the finite closeout in Pending Todos: consolidated repository gate; commit and PR; exact-head CI including path-applicable Windows observability; finding-free read-only exact-head `@codex` review; PR merge; and clean synchronized `main`.
+The prior R01 attempt is frozen because the product run modified and rechecked its own control plane. Its artifacts are absent from the active phase directory, its non-planning implementation paths match the recorded `origin/main` baseline, and the known code and authority remediations are implemented. Product routing must treat every release-exit fact in Pending Todos as a live external precondition: until those checks prove it, the owner-disposition prompt is blocked. This state authorizes neither more workflow implementation nor R01 product work.
 
 ## Deferred Items
 
@@ -91,5 +91,5 @@ The prior R01 attempt is frozen because the product run modified and rechecked i
 ## Session Continuity
 
 Last session: 2026-07-22T05:25:58.763Z
-Stopped at: known workflow remediations implemented; finite verification and release closeout still pending
+Stopped at: workflow repair implementation complete; live release-exit proof and explicit R01 disposition remain
 Resume file: .planning/forensics/report-20260722-124111.md

@@ -30,13 +30,24 @@ function record(entries: ReadonlyArray<readonly [string, unknown]>) {
   return Object.fromEntries(entries);
 }
 
-function parseRecord(value: string): Record<string, unknown> {
-  const parsed: unknown = JSON.parse(value);
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new TypeError("Expected a JSON object");
-  }
+function parseJson(value: string): unknown {
+  return JSON.parse(value);
+}
 
-  return parsed as Record<string, unknown>;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  if (value === null) {return false;}
+  if (Array.isArray(value)) {return false;}
+  return typeof value === "object";
+}
+
+function assertRecord(value: unknown): asserts value is Record<string, unknown> {
+  if (!isRecord(value)) {throw new TypeError("Expected a JSON object");}
+}
+
+function parseRecord(value: string): Record<string, unknown> {
+  const parsed = parseJson(value);
+  assertRecord(parsed);
+  return parsed;
 }
 
 function git(cwd: string, arguments_: string[]) {
@@ -95,6 +106,38 @@ function baseStepArguments(cwd: string, step = "context-load") {
     "--agent",
     "controller"
   ];
+}
+
+function suppliedTimingEvents() {
+  const started = record([
+    ["schema_version", 1],
+    ["event", "started"],
+    ["run_id", "run-1"],
+    ["step_id", "codescene"],
+    ["stage", "execute"],
+    ["timestamp", "2026-07-21T10:00:00.000Z"],
+    ["budget_class", "quick"],
+    ["agent_session_id", "agent-a"],
+    ["metadata", record([
+      ["agent_type", "gsd-planner"],
+      ["model", "gpt-5.6-sol"],
+      ["reasoning_effort", "xhigh"]
+    ])],
+    ["inputs", ["src/example.ts"]],
+    ["outputs", []],
+    ["git", record([["head", "before"], ["changed_paths", []]])]
+  ]);
+  const completed = {
+    ...started,
+    event: "completed",
+    timestamp: "2026-07-21T10:03:00.000Z",
+    outputs: ["src/example.ts"],
+    timing: record([
+      ["external_wait_ms", 120_000],
+      ["tool_ms", 30_000]
+    ])
+  };
+  return { completed, started };
 }
 
 afterEach(() => {
@@ -466,34 +509,7 @@ describe("GSD observability summarizer", () => {
     const cwd = createRepository();
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
-    const started = record([
-      ["schema_version", 1],
-      ["event", "started"],
-      ["run_id", "run-1"],
-      ["step_id", "codescene"],
-      ["stage", "execute"],
-      ["timestamp", "2026-07-21T10:00:00.000Z"],
-      ["budget_class", "quick"],
-      ["agent_session_id", "agent-a"],
-      ["metadata", record([
-        ["agent_type", "gsd-planner"],
-        ["model", "gpt-5.6-sol"],
-        ["reasoning_effort", "xhigh"]
-      ])],
-      ["inputs", ["src/example.ts"]],
-      ["outputs", []],
-      ["git", record([["head", "before"], ["changed_paths", []]])]
-    ]);
-    const completed = {
-      ...started,
-      event: "completed",
-      timestamp: "2026-07-21T10:03:00.000Z",
-      outputs: ["src/example.ts"],
-      timing: record([
-        ["external_wait_ms", 120_000],
-        ["tool_ms", 30_000]
-      ])
-    };
+    const { completed, started } = suppliedTimingEvents();
     write(
       cwd,
       ".logs/gsd-observability/run-1/controller.jsonl",

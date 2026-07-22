@@ -90,12 +90,20 @@ function safeId(value, label) {
     : stop("OBSERVABILITY_PATH_REJECTED", label);
 }
 
+function isOutsideRoot(relative) {
+  if (relative === "..") {return true;}
+  return relative.startsWith(`..${path.sep}`);
+}
+
+function assertRelativePath(candidate, relative, label) {
+  if (path.isAbsolute(candidate)) {stop("OBSERVABILITY_PATH_REJECTED", label);}
+  if (isOutsideRoot(relative)) {stop("OBSERVABILITY_PATH_REJECTED", label);}
+}
+
 function relativePath(root, candidate, label) {
   const absolute = path.resolve(root, candidate);
   const relative = path.relative(root, absolute);
-  if (path.isAbsolute(candidate) || relative === ".." || relative.startsWith(`..${path.sep}`)) {
-    stop("OBSERVABILITY_PATH_REJECTED", label);
-  }
+  assertRelativePath(candidate, relative, label);
 
   return { absolute, relative: relative.replaceAll(path.sep, "/") };
 }

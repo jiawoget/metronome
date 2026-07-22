@@ -20,6 +20,11 @@ const BUDGETS = {
   heavy: 2_700_000,
   external: 1_500_000
 };
+const MEASUREMENT_INCOMPLETE_REASONS = [
+  ["tokens_unavailable", "token_attribution_unavailable"],
+  ["external_wait_unavailable", "external_wait_unavailable"],
+  ["tool_duration_unavailable", "tool_duration_unavailable"]
+];
 
 function stop(code, detail) {
   console.error(`${code}: ${detail}`);
@@ -149,6 +154,37 @@ function stepFromGroup(group) {
   };
 }
 
+function eventGroupKey(event) {
+  const stepId = wireValue(event, "step_id");
+  if (!stepId || !Number.isFinite(Date.parse(event?.timestamp))) {return null;}
+
+  const agentSessionId = wireValue(event, "agent_session_id");
+  return `${agentSessionId ?? "controller"}\0${stepId}`;
+}
+
+function openStartedGroup(event, key, groups, open) {
+  const prior = open.get(key);
+  if (prior) {prior.notices.push("overlapping_start");}
+
+  const group = { start: event, notices: [] };
+  groups.push(group);
+  open.set(key, group);
+}
+
+function appendGroupEvent(event, key, open) {
+  const group = open.get(key);
+  if (!group) {return false;}
+
+  if (TERMINAL.has(event.event)) {
+    group.end = event;
+    open.delete(key);
+  } else {
+    group.notices.push(event.event);
+  }
+
+  return true;
+}
+
 function stepsFrom(events) {
   const groups = [];
   const open = new Map();
@@ -157,35 +193,18 @@ function stepsFrom(events) {
     Date.parse(first.timestamp) - Date.parse(second.timestamp)
   );
   for (const event of orderedEvents) {
-    const stepId = wireValue(event, "step_id");
-    const agentSessionId = wireValue(event, "agent_session_id");
-    if (!stepId || !Number.isFinite(Date.parse(event?.timestamp))) {
+    const key = eventGroupKey(event);
+    if (key === null) {
       hasUnmatchedEvent = true;
       continue;
     }
 
-    const key = `${agentSessionId ?? "controller"}\0${stepId}`;
     if (event.event === "started") {
-      const prior = open.get(key);
-      if (prior) {prior.notices.push("overlapping_start");}
-
-      const group = { start: event, notices: [] };
-      groups.push(group);
-      open.set(key, group);
-    } else {
-      const group = open.get(key);
-      if (!group) {
-        hasUnmatchedEvent = true;
-        continue;
-      }
-
-      if (TERMINAL.has(event.event)) {
-        group.end = event;
-        open.delete(key);
-      } else {
-        group.notices.push(event.event);
-      }
+      openStartedGroup(event, key, groups, open);
+      continue;
     }
+
+    if (!appendGroupEvent(event, key, open)) {hasUnmatchedEvent = true;}
   }
 
   const steps = groups
@@ -287,30 +306,41 @@ function timingSummary(events, steps) {
   return { firstTestChange, firstProductChange, elapsed };
 }
 
+function withBudgetStatuses(steps) {
+  return steps.map((step) => ({ ...step, budgetStatus: budgetStatus(step) }));
+}
+
+function measurementIncompleteReason(notice) {
+  return MEASUREMENT_INCOMPLETE_REASONS
+    .find(([prefix]) => notice.startsWith(prefix))?.[1];
+}
+
+function incompleteReasonsFrom(ledger, steps, hasUnmatchedEvent) {
+  const structuralReasons = [
+    [ledger.incomplete, "ledger_incomplete"],
+    [hasUnmatchedEvent, "event_sequence_incomplete"],
+    [steps.length === 0, "no_usable_steps"],
+    [steps.some((step) => step.status === "in_progress"), "step_in_progress"]
+  ]
+    .filter(([isPresent]) => isPresent)
+    .map(([, reason]) => reason);
+  const measurementReasons = steps
+    .flatMap((step) => step.measurementNotices)
+    .map((notice) => measurementIncompleteReason(notice))
+    .filter(Boolean);
+  return new Set([...structuralReasons, ...measurementReasons]);
+}
+
+function isCompleteEventSequence(ledger, steps, hasUnmatchedEvent) {
+  return !ledger.incomplete && !hasUnmatchedEvent && steps.length > 0;
+}
+
 function summarize(options, runDirectory) {
   const ledger = ledgerEvents(runDirectory);
-  const { steps, hasUnmatchedEvent } = stepsFrom(ledger.events);
-  const hasInProgressStep = steps.some((step) => step.status === "in_progress");
-  for (const step of steps) {
-    step.budgetStatus = budgetStatus(step);
-  }
-
-  const incompleteReasons = new Set();
-  if (ledger.incomplete) {incompleteReasons.add("ledger_incomplete");}
-  if (hasUnmatchedEvent) {incompleteReasons.add("event_sequence_incomplete");}
-  if (steps.length === 0) {incompleteReasons.add("no_usable_steps");}
-  if (hasInProgressStep) {incompleteReasons.add("step_in_progress");}
-  for (const step of steps) {
-    for (const notice of step.measurementNotices) {
-      if (notice.startsWith("tokens_unavailable")) {incompleteReasons.add("token_attribution_unavailable");}
-      else if (notice.startsWith("external_wait_unavailable")) {incompleteReasons.add("external_wait_unavailable");}
-      else if (notice.startsWith("tool_duration_unavailable")) {incompleteReasons.add("tool_duration_unavailable");}
-    }
-  }
-
-  const isEventSequenceComplete = !ledger.incomplete
-    && !hasUnmatchedEvent
-    && steps.length > 0;
+  const grouped = stepsFrom(ledger.events);
+  const steps = withBudgetStatuses(grouped.steps);
+  const incompleteReasons = incompleteReasonsFrom(ledger, steps, grouped.hasUnmatchedEvent);
+  const isEventSequenceComplete = isCompleteEventSequence(ledger, steps, grouped.hasUnmatchedEvent);
 
   const summary = wireSummary({
     run: options.run,
