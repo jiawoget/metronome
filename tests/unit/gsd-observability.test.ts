@@ -208,6 +208,43 @@ describe("GSD observability writer", () => {
     ).toBe(0);
   });
 
+  it("accepts retry lineage for the chronologically newest terminal across controller and agent ledgers", () => {
+    const cwd = createRepository();
+    const terminal = (step: string, timestamp: string) => JSON.stringify(record([
+      ["event", "blocked"],
+      ["step_id", step],
+      ["cache_key", "gap-plan-check"],
+      ["timestamp", timestamp],
+      ["git", record([["changed_paths", []]])]
+    ]));
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${terminal("gap-plan-check-03", "2026-07-22T12:00:00.000Z")}\n`
+    );
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/agents/a-older.jsonl",
+      `${terminal("gap-plan-check-02", "2026-07-22T11:00:00.000Z")}\n`
+    );
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/agents/z-oldest.jsonl",
+      `${terminal("gap-plan-check-01", "2026-07-22T10:00:00.000Z")}\n`
+    );
+
+    const retry = run(writer, [
+      "start",
+      ...baseStepArguments(cwd, "gap-plan-check-04"),
+      "--cache-key",
+      "gap-plan-check",
+      "--retry-of",
+      "gap-plan-check-03"
+    ]);
+
+    expect(retry.status, retry.stderr).toBe(0);
+  });
+
   it("separates product, dependency, search, and policy fingerprints and ignores logs", () => {
     const cwd = createRepository();
     const fingerprint = () => {

@@ -218,14 +218,25 @@ function priorEvents(target) {
     readFileSync(file, "utf8").split(/\r?\n/v).filter(Boolean).map((line) => {
       try { return eventFromWire(JSON.parse(line)); } catch { return stop("OBSERVABILITY_LOG_CORRUPT", file); }
     })
-  );
+  ).toSorted((left, right) => {
+    const leftTime = Date.parse(left.timestamp);
+    const rightTime = Date.parse(right.timestamp);
+    const leftOrder = Number.isNaN(leftTime) ? -Infinity : leftTime;
+    const rightOrder = Number.isNaN(rightTime) ? -Infinity : rightTime;
+    return leftOrder - rightOrder
+      || (left.eventId < right.eventId ? -1 : left.eventId > right.eventId ? 1 : 0)
+      || (left.stepId < right.stepId ? -1 : left.stepId > right.stepId ? 1 : 0)
+      || (left.event < right.event ? -1 : left.event > right.event ? 1 : 0);
+  });
 }
 
 function eventFromWire(event) {
   return {
+    eventId: Reflect.get(event, "event_id") ?? "",
     event: event.event,
     stepId: Reflect.get(event, "step_id"),
     cacheKey: Reflect.get(event, "cache_key"),
+    timestamp: Reflect.get(event, "timestamp"),
     inputs: event.inputs,
     inputAttribution: Reflect.get(event, "input_attribution"),
     git: {
