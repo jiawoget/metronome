@@ -100,7 +100,7 @@ function evaluateCodexReview(input) {
     ...issueComments.map((item) => normalize(item, "issue-comment", head, commits)),
     ...reviews.map((item) => normalize(item, "review", head, commits))
   ].filter((artifact) => artifact && (artifact.time === undefined || artifact.time > barrier.time));
-  if (artifacts.some((artifact) => (artifact.isCurrent || artifact.isUncertain) && artifact.isMalformed)) {return RESULTS.failure;}
+  if (artifacts.some((artifact) => artifact.isMalformed)) {return RESULTS.failure;}
   if (artifacts.every((artifact) => !artifact.isCurrent)) {return RESULTS.pending;}
   const [latest] = artifacts.filter((artifact) => artifact.isCurrent || artifact.isUncertain)
     .toSorted((left, right) => right.time - left.time || Number(left.isClean) - Number(right.isClean) || right.id - left.id);

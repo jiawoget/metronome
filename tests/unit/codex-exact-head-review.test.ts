@@ -496,6 +496,22 @@ describe("Codex exact-head review evaluator", () => {
     expect(evaluate({ issueComments: [currentClean], reviews: [oldHeadFinding] }).state).toBe("success");
   });
 
+  it.each(["missing", "invalid"])(
+    "fails closed on an authenticated old-head review with a %s submitted_at",
+    (timestampKind) => {
+      const currentClean = issueComment({ updatedAt: "2026-07-20T09:00:00Z" });
+      const malformedOldHeadReview = review({
+        commitId: other,
+        submittedAt: "not-a-date"
+      });
+      if (timestampKind === "missing") {
+        Reflect.deleteProperty(malformedOldHeadReview, "submitted_at");
+      }
+
+      expect(evaluate({ issueComments: [currentClean], reviews: [malformedOldHeadReview] }).state).toBe("failure");
+    }
+  );
+
   it("fails closed on tied timestamps when one artifact is not clean", () => {
     expect(evaluate({ issueComments: [issueComment()], reviews: [review()] }).state).toBe("failure");
   });
