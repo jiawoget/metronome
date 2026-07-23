@@ -29,6 +29,8 @@
     "gsd-phase-researcher": ["skills/metronome-policy"],
     "gsd-planner": ["skills/metronome-policy"],
     "gsd-plan-checker": ["skills/metronome-policy"],
+    "gsd-code-fixer": ["skills/metronome-policy"],
+    "gsd-debugger": ["skills/metronome-policy"],
     "gsd-executor": ["skills/metronome-policy"],
     "gsd-verifier": ["skills/metronome-policy"]
   },

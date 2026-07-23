@@ -42,6 +42,8 @@ Locked installed types and source win version disagreements. Send only abstract 
 | Phase researcher | Produce the required local/dependency/platform/OSS evidence and reuse decisions in `RESEARCH.md`. | Design the integration file structure or pad research after a suitable candidate is known. |
 | Planner | Compile requirements and reuse decisions into a compact native plan. | Repeat discovery, invent another API, or embed monitoring and retry machinery. |
 | Plan checker | Reconcile every production task with its local-reuse result and any new generic surface with the full reuse decision. | Repair the plan or suggest changing project workflow/tooling inside the product attempt. |
+| Code fixer | Receive project policy context only; review findings return through the normal native executor boundary. | Project-controller dispatch, every auto-fix route, worktree creation, or mutation while the installed sandbox is read-only. |
+| Debugger | Investigate only after workspace-write, exact primary checkout, and policy resolution preconditions are proven. | Dispatch with any missing precondition or inherited or implicit typed binding. |
 | Executor | Implement the native plan using the selected owner/API/dependency. | Replace the reuse decision or add an unplanned parallel capability. |
 | Verifier | Check observable behavior, the real diff, tests, and reuse-sensitive outcomes. | Trust summaries as proof or require unrelated refactor metrics. |
 
