@@ -30,6 +30,29 @@ function record(entries: ReadonlyArray<readonly [string, unknown]>) {
   return Object.fromEntries(entries);
 }
 
+function ledgerEvent(entries: ReadonlyArray<readonly [string, unknown]>) {
+  return record([
+    ["schema_version", 1],
+    ["input_attribution", "declared_only"],
+    ...entries
+  ]);
+}
+
+const unsafeDeclaredPaths = [
+  "C:../outside",
+  String.raw`C:\outside`,
+  String.raw`\\server\share\outside`,
+  String.raw`\\?\C:\outside`,
+  String.raw`\\.\pipe\observability`,
+  "/outside",
+  "../outside",
+  "src/../../outside",
+  "src/./example.ts",
+  "src//example.ts",
+  "src/example.ts.",
+  "NUL"
+];
+
 function parseJson(value: string): unknown {
   return JSON.parse(value);
 }
@@ -110,8 +133,7 @@ function baseStepArguments(cwd: string, step = "context-load") {
 }
 
 function suppliedTimingEvents() {
-  const started = record([
-    ["schema_version", 1],
+  const started = ledgerEvent([
     ["event", "started"],
     ["run_id", "run-1"],
     ["step_id", "codescene"],
@@ -125,8 +147,7 @@ function suppliedTimingEvents() {
       ["reasoning_effort", "xhigh"]
     ])],
     ["inputs", ["src/example.ts"]],
-    ["outputs", []],
-    ["git", record([["head", "before"], ["changed_paths", []]])]
+    ["outputs", []]
   ]);
   const completed = {
     ...started,
@@ -237,6 +258,33 @@ describe("GSD observability writer", () => {
     expect(() =>
       readFileSync(path.join(cwd, ".logs/outside/controller.jsonl"), "utf8")
     ).toThrow();
+  });
+
+  it("rejects cross-platform unsafe declared paths", () => {
+    const cwd = createRepository();
+    for (const candidate of unsafeDeclaredPaths) {
+      const result = run(writer, ["start", ...baseStepArguments(cwd)], {
+        input: JSON.stringify({ inputs: [candidate] })
+      });
+      expect(result.status, candidate).not.toBe(0);
+      expect(result.stderr).toContain("OBSERVABILITY_PATH_REJECTED");
+    }
+  });
+
+  it("normalizes accepted declared paths to project-relative forward slashes", () => {
+    const cwd = createRepository();
+    const result = run(writer, ["start", ...baseStepArguments(cwd)], {
+      input: JSON.stringify({
+        inputs: [String.raw`tests\unit\gsd-observability.test.ts`]
+      })
+    });
+
+    expect(result.status, result.stderr).toBe(0);
+    const event = parseRecord(readFileSync(
+      path.join(cwd, ".logs/gsd-observability/run-1/controller.jsonl"),
+      "utf8"
+    ));
+    expect(event.inputs).toEqual(["tests/unit/gsd-observability.test.ts"]);
   });
 
   it("records repeated attempts without deciding whether the controller may retry", () => {
@@ -421,10 +469,156 @@ describe("GSD observability summarizer", () => {
     expect(step.input_attribution).toBe("declared_only");
   });
 
+  it("rejects cross-platform unsafe ledger paths before aggregation", () => {
+    const cwd = createRepository();
+    for (const [index, candidate] of unsafeDeclaredPaths.entries()) {
+      const runId = `path-${index}`;
+      const started = ledgerEvent([
+        ["event", "started"],
+        ["run_id", runId],
+        ["step_id", "unsafe-path"],
+        ["stage", "planning"],
+        ["timestamp", "2026-07-22T10:00:00.000Z"],
+        ["budget_class", "quick"],
+        ["agent_session_id", "planner"],
+        ["inputs", []],
+        ["outputs", [candidate]]
+      ]);
+      const completed = {
+        ...started,
+        event: "completed",
+        timestamp: "2026-07-22T10:01:00.000Z",
+        outputs: []
+      };
+      write(
+        cwd,
+        `.logs/gsd-observability/${runId}/controller.jsonl`,
+        `${JSON.stringify(started)}\n${JSON.stringify(completed)}\n`
+      );
+
+      const result = run(summarizer, ["--repo", cwd, "--run", runId]);
+      expect(result.status, candidate).not.toBe(0);
+      expect(result.stderr).toContain("METRICS_DATA_ERROR");
+    }
+  });
+
+  it("normalizes accepted ledger paths to project-relative forward slashes", () => {
+    const cwd = createRepository();
+    const started = ledgerEvent([
+      ["event", "started"],
+      ["run_id", "run-1"],
+      ["step_id", "normalized-path"],
+      ["stage", "planning"],
+      ["timestamp", "2026-07-22T10:00:00.000Z"],
+      ["budget_class", "quick"],
+      ["agent_session_id", "planner"],
+      ["inputs", [String.raw`scripts\gsd-observability-write.mjs`]],
+      ["outputs", [String.raw`tests\unit\gsd-observability.test.ts`]]
+    ]);
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${JSON.stringify(started)}\n${JSON.stringify({
+        ...started,
+        event: "completed",
+        timestamp: "2026-07-22T10:01:00.000Z"
+      })}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    const summary = parseRecord(readFileSync(
+      path.join(cwd, ".logs/gsd-observability/run-1/summary.json"),
+      "utf8"
+    ));
+    expect(summary.steps).toMatchObject([record([
+      ["inputs", ["scripts/gsd-observability-write.mjs"]],
+      ["outputs", ["tests/unit/gsd-observability.test.ts"]]
+    ])]);
+  });
+
+  it.each([
+    ["wrong schema version", record([["schema_version", 2]])],
+    ["wrong run", record([["run_id", "run-2"]])],
+    ["wrong attribution", record([["input_attribution", "inferred"]])],
+    ["unknown event kind", record([["event", "progress"]])],
+    ["unsafe step id", record([["step_id", "../unsafe"]])],
+    ["control-character step id", record([["step_id", "step\u{7}"]])],
+    ["unsafe agent id", record([["agent_session_id", "agent/unsafe"]])],
+    ["unsafe stage text", record([["stage", "planning\nforged"]])],
+    ["invalid timestamp", record([["timestamp", "not-a-timestamp"]])],
+    ["unknown envelope field", record([["unexpected", true]])]
+  ] as const)("rejects %s on every ledger event before grouping", (_name, override) => {
+    const cwd = createRepository();
+    const event = (kind: string, timestamp: string) => ledgerEvent([
+      ["event", kind],
+      ["run_id", "run-1"],
+      ["step_id", "envelope"],
+      ["stage", "planning"],
+      ["timestamp", timestamp],
+      ["budget_class", "quick"],
+      ["agent_session_id", "planner"],
+      ["inputs", []],
+      ["outputs", []]
+    ]);
+    const events = [
+      event("started", "2026-07-22T10:00:00.000Z"),
+      { ...event("warning", "2026-07-22T10:00:30.000Z"), ...override },
+      event("completed", "2026-07-22T10:01:00.000Z")
+    ];
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${events.map((item) => JSON.stringify(item)).join("\n")}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("METRICS_DATA_ERROR");
+  });
+
+  it.each([
+    ["start", [["started", 0, true], ["completed", 90, false]], 0],
+    ["warning", [["started", 0, false], ["warning", 20, true], ["completed", 90, false]], 20_000],
+    ["completion", [["started", 0, false], ["completed", 60, true]], 60_000],
+    ["in-progress warning", [["started", 0, false], ["warning", 30, true]], 30_000]
+  ] as const)("uses the earliest %s declared output timestamp", (_name, sequence, expected) => {
+    const cwd = createRepository();
+    const events = sequence.map(([kind, seconds, declaresOutput]) => ledgerEvent([
+      ["event", kind],
+      ["run_id", "run-1"],
+      ["step_id", "first-output"],
+      ["stage", "execute"],
+      ["timestamp", new Date(Date.parse("2026-07-22T10:00:00.000Z") + (seconds * 1000)).toISOString()],
+      ["budget_class", "quick"],
+      ["agent_session_id", "executor"],
+      ["inputs", []],
+      ["outputs", declaresOutput
+        ? ["src/example.ts", "tests/unit/gsd-observability.test.ts"]
+        : []]
+    ]));
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${events.map((event) => JSON.stringify(event)).join("\n")}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    const summary = parseRecord(readFileSync(
+      path.join(cwd, ".logs/gsd-observability/run-1/summary.json"),
+      "utf8"
+    ));
+    expect(summary.time_to_first_declared_test_output_ms).toBe(expected);
+    expect(summary.time_to_first_declared_product_output_ms).toBe(expected);
+    expect(summary).not.toHaveProperty("time_to_first_test_change_ms");
+    expect(summary).not.toHaveProperty("time_to_first_product_change_ms");
+  });
+
   it("review contract aggregates compatible identity metadata from every event", () => {
     const cwd = createRepository();
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
-    const started = record([
+    const started = ledgerEvent([
       ["event", "started"],
       ["run_id", "run-1"],
       ["step_id", "identity"],
@@ -477,7 +671,7 @@ describe("GSD observability summarizer", () => {
     ] as const;
     for (const [eventName, metadata] of cases) {
       const cwd = createRepository();
-      const started = record([
+      const started = ledgerEvent([
         ["event", "started"],
         ["run_id", "run-1"],
         ["step_id", "identity"],
@@ -523,7 +717,7 @@ describe("GSD observability summarizer", () => {
     ] as const;
     for (const [eventName, budgetClass] of cases) {
       const cwd = createRepository();
-      const started = record([
+      const started = ledgerEvent([
         ["event", "started"],
         ["run_id", "run-1"],
         ["step_id", "budget"],
@@ -572,7 +766,7 @@ describe("GSD observability summarizer", () => {
 
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
-    const started = record([
+    const started = ledgerEvent([
       ["event", "started"],
       ["run_id", "run-1"],
       ["step_id", "unknown-budget"],
@@ -604,12 +798,11 @@ describe("GSD observability summarizer", () => {
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
     const startedAt = new Date(Date.now() - 3_720_000).toISOString();
-    const started = record([
+    const started = ledgerEvent([
       ["event", "started"],
       ["run_id", "run-1"],
       ["step_id", "long-step"],
       ["stage", "planning"],
-      ["step", "long-step"],
       ["timestamp", startedAt],
       ["budget_class", "quick"],
       ["agent_session_id", "planner"],
@@ -633,19 +826,47 @@ describe("GSD observability summarizer", () => {
     expect(step.observed_window_ms).toBeGreaterThanOrEqual(3_719_000);
     expect(step).not.toHaveProperty("wall_duration_ms");
     expect(step.budget_status).toBe("severe_over_budget");
-    expect(summary.milestone_progress_status).toBe("warning_no_test_change");
+    expect(summary.milestone_progress_status).toBe("warning_no_declared_test_output");
+  });
+
+  it("uses declared-output wording for severe progress status", () => {
+    const cwd = createRepository();
+    const started = ledgerEvent([
+      ["event", "started"],
+      ["run_id", "run-1"],
+      ["step_id", "no-product-output"],
+      ["stage", "planning"],
+      ["timestamp", new Date(Date.now() - 7_300_000).toISOString()],
+      ["budget_class", "quick"],
+      ["agent_session_id", "planner"],
+      ["inputs", []],
+      ["outputs", []]
+    ]);
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${JSON.stringify(started)}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status, result.stderr).toBe(0);
+    const summary = parseRecord(readFileSync(
+      path.join(cwd, ".logs/gsd-observability/run-1/summary.json"),
+      "utf8"
+    ));
+    expect(summary.milestone_progress_status).toBe("severe_no_declared_product_output");
+    expect(JSON.stringify(summary)).not.toContain("_change");
   });
 
   it("preserves sequential attempts instead of folding repeated work into one step", () => {
     const cwd = createRepository();
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
-    const event = (name: string, timestamp: string) => record([
+    const event = (name: string, timestamp: string) => ledgerEvent([
       ["event", name],
       ["run_id", "run-1"],
       ["step_id", "plan-check"],
       ["stage", "planning"],
-      ["step", "plan-check"],
       ["timestamp", timestamp],
       ["budget_class", "quick"],
       ["agent_session_id", "checker"],
@@ -698,12 +919,11 @@ describe("GSD observability summarizer", () => {
     const cwd = createRepository();
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
-    const started = record([
+    const started = ledgerEvent([
       ["event", "started"],
       ["run_id", "run-1"],
       ["step_id", "plan-check"],
       ["stage", "planning"],
-      ["step", "plan-check"],
       ["timestamp", "2026-07-22T10:00:00.000Z"],
       ["budget_class", "quick"],
       ["agent_session_id", "checker"],
@@ -749,7 +969,7 @@ describe("GSD observability summarizer", () => {
     const cwd = createRepository();
     const runDirectory = path.join(cwd, ".logs/gsd-observability/run-1");
     mkdirSync(runDirectory, { recursive: true });
-    const started = record([
+    const started = ledgerEvent([
       ["event", "started"],
       ["run_id", "run-1"],
       ["step_id", "external"],
@@ -840,7 +1060,8 @@ describe("GSD observability summarizer", () => {
     );
     expect((steps as unknown[])[0]).not.toHaveProperty("agent_model");
     expect((steps as unknown[])[0]).not.toHaveProperty("wall_duration_ms");
-    expect(summaryFields.get("time_to_first_product_change_ms")).toBe(180_000);
+    expect(summaryFields.get("time_to_first_declared_product_output_ms")).toBe(180_000);
+    expect(summaryFields.get("time_to_first_declared_test_output_ms")).toBeNull();
   });
 
   it("rejects retired rollout attribution instead of silently ignoring it", () => {

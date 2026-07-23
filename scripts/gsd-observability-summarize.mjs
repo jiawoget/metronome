@@ -5,10 +5,13 @@ import path from "node:path";
 import process from "node:process";
 
 const OPTIONS = new Set(["repo", "run"]);
+const EVENTS = new Set(["started", "completed", "interrupted", "blocked", "warning"]);
 const TERMINAL = new Set(["completed", "interrupted", "blocked"]);
 const SAFE_ID = /^[\dA-Za-z][\w\-.]*$/v;
+const WINDOWS_DEVICE = /^(?:aux|con|nul|prn|com[1-9]|lpt[1-9])(?:\.|$)/iv;
 const SORT_TEXT = (left, right) => left.localeCompare(right);
 const METADATA_FIELDS = new Set(["agent_type", "model", "reasoning_effort"]);
+const EVENT_FIELDS = new Set(["schema_version", "event_id", "event", "run_id", "step_id", "stage", "timestamp", "budget_class", "agent_session_id", "inputs", "input_attribution", "outputs", "timing", "metadata"]);
 const HOST_TIMING = [
   ["active_ms", "active_time_unavailable"],
   ["tool_ms", "tool_duration_unavailable"],
@@ -89,54 +92,83 @@ function ledgerEvents(runDirectory) {
   return result;
 }
 
-function explicitRecord(event, field, allowed) {
+function hasControl(value) {
+  return [...value].some((character) => character.codePointAt(0) < 32 || character.codePointAt(0) === 127);
+}
+
+function isSafeText(value) {
+  return typeof value === "string" && Boolean(value) && value.trim() === value && !hasControl(value);
+}
+
+function explicitRecord(event, field, allowed, validate) {
   const value = event?.[field];
   if (value === undefined) {return {};}
   if (!value || Array.isArray(value) || typeof value !== "object") {
     stop("METRICS_DATA_ERROR", `${field} must be an object`);
   }
 
-  const unknown = Object.keys(value).find((key) => !allowed.has(key));
-  if (unknown) {stop("METRICS_DATA_ERROR", `${field}.${unknown}`);}
+  const invalid = Object.entries(value)
+    .find(([key, item]) => !allowed.has(key) || !validate(item));
+  if (invalid) {stop("METRICS_DATA_ERROR", `${field}.${invalid[0]}`);}
   return value;
 }
 
-function captureTiming(result, timing, field) {
-  if (!Object.hasOwn(timing, field)) {return;}
-  const value = timing[field];
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    stop("METRICS_DATA_ERROR", `timing.${field}`);
+function normalizedPath(value, field) {
+  const normalized = value.replaceAll("\\", "/");
+  const parts = normalized.split("/");
+  if (value.trim() !== value || hasControl(value) || /^[A-Za-z]:/v.test(normalized)
+    || parts.some((part) => !part || part === "." || part === ".." || part.includes(":")
+      || /[ .]$/v.test(part) || WINDOWS_DEVICE.test(part))) {
+    stop("METRICS_DATA_ERROR", field);
   }
 
-  result[field] = value;
+  return normalized;
 }
 
-function hostTiming(events) {
-  const result = {};
-  for (const event of events) {
-    const timing = explicitRecord(event, "timing", TIMING_FIELDS);
-    for (const [field] of HOST_TIMING) {
-      captureTiming(result, timing, field);
-    }
+function eventPaths(event, field) {
+  const values = event?.[field];
+  if (!Array.isArray(values) || values.some((value) => typeof value !== "string")) {
+    stop("METRICS_DATA_ERROR", field);
   }
 
-  return result;
+  return values.map((value) => normalizedPath(value, field));
+}
+
+function validateEvent(value, run) {
+  if (!value || Array.isArray(value) || typeof value !== "object") {
+    stop("METRICS_DATA_ERROR", "event must be an object");
+  }
+
+  const unknown = Object.keys(value).find((field) => !EVENT_FIELDS.has(field));
+  const timestamp = typeof value.timestamp === "string" ? Date.parse(value.timestamp) : NaN;
+  const hasMismatch = [
+    ["schema_version", 1], ["run_id", run], ["input_attribution", "declared_only"]
+  ].some(([field, expected]) => value[field] !== expected);
+  const isSafeId = (candidate) => typeof candidate === "string" && SAFE_ID.test(candidate);
+  const identifiers = [value.step_id, value.agent_session_id, value.event_id]
+    .filter((candidate) => candidate !== undefined);
+  const isSafeTimestamp = Number.isFinite(timestamp)
+    && new Date(timestamp).toISOString() === value.timestamp;
+  if (unknown || hasMismatch || !EVENTS.has(value.event) || !BUDGETS.has(value.budget_class)
+    || identifiers.some((candidate) => !isSafeId(candidate)) || !isSafeText(value.stage)
+    || !isSafeTimestamp) {
+    stop("METRICS_DATA_ERROR", unknown ?? "invalid event envelope");
+  }
+
+  explicitRecord(value, "metadata", METADATA_FIELDS, isSafeText);
+  explicitRecord(value, "timing", TIMING_FIELDS,
+    (item) => typeof item === "number" && Number.isFinite(item) && item >= 0);
+  return {
+    ...value,
+    inputs: eventPaths(value, "inputs"),
+    outputs: eventPaths(value, "outputs")
+  };
 }
 
 function metadataFrom(events) {
   const result = {};
   for (const event of events) {
-    const metadata = explicitRecord(event, "metadata", METADATA_FIELDS);
-    for (const [field, value] of Object.entries(metadata)) {
-      const hasControlCharacter = typeof value === "string"
-        && [...value].some((character) => {
-          const codePoint = character.codePointAt(0);
-          return codePoint < 32 || codePoint === 127;
-        });
-      if (typeof value !== "string" || !value || value.trim() !== value || hasControlCharacter) {
-        stop("METRICS_DATA_ERROR", "invalid metadata value");
-      }
-
+    for (const [field, value] of Object.entries(event.metadata ?? {})) {
       if (Object.hasOwn(result, field) && result[field] !== value) {
         stop("METRICS_DATA_ERROR", `conflicting metadata.${field}`);
       }
@@ -148,47 +180,12 @@ function metadataFrom(events) {
   return result;
 }
 
-function declaredPaths(events, field) {
-  const result = [];
-  for (const event of events) {
-    const values = event?.[field] ?? [];
-    if (!Array.isArray(values)) {stop("METRICS_DATA_ERROR", field);}
-    for (const value of values) {
-      if (typeof value !== "string" || path.isAbsolute(value)) {
-        stop("METRICS_DATA_ERROR", field);
-      }
-
-      const normalized = path.posix.normalize(value.replaceAll("\\", "/"));
-      if (!normalized || normalized === "." || normalized === ".." || normalized.startsWith("../")) {
-        stop("METRICS_DATA_ERROR", field);
-      }
-
-      result.push(normalized);
-    }
-  }
-
-  return [...new Set(result)].toSorted(SORT_TEXT);
-}
-
-function eventKey(event) {
-  if (typeof event?.step_id !== "string" || !Number.isFinite(Date.parse(event.timestamp))) {
-    return null;
-  }
-
-  return `${event.agent_session_id ?? "controller"}\0${event.step_id}`;
-}
-
 function groupsFrom(events) {
   const groups = [];
   const open = new Map();
   let hasUnmatchedEvent = false;
   for (const event of events.toSorted((left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp))) {
-    const key = eventKey(event);
-    if (key === null) {
-      hasUnmatchedEvent = true;
-      continue;
-    }
-
+    const key = `${event.agent_session_id}\0${event.step_id}`;
     if (event.event === "started") {
       const prior = open.get(key);
       if (prior) {prior.notices.push("overlapping_start");}
@@ -219,12 +216,7 @@ function groupsFrom(events) {
 function budgetStatus(events, observedWindow) {
   const budgetClass = events[0].budget_class;
   const budget = BUDGETS.get(budgetClass);
-  if (budget === undefined) {stop("METRICS_DATA_ERROR", `unknown budget class ${budgetClass}`);}
   for (const event of events) {
-    if (!BUDGETS.has(event.budget_class)) {
-      stop("METRICS_DATA_ERROR", `unknown budget class ${event.budget_class}`);
-    }
-
     if (event.budget_class !== budgetClass) {
       stop("METRICS_DATA_ERROR", `budget class differs from attempt start ${event.budget_class}`);
     }
@@ -239,8 +231,17 @@ function stepFrom(group, generatedAt) {
   const startMs = Date.parse(group.start.timestamp);
   const endMs = Date.parse(group.end?.timestamp ?? generatedAt);
   const observedWindow = Math.max(0, endMs - startMs);
-  const timing = hostTiming(group.events);
+  const timing = Object.assign({}, ...group.events.map((event) => event.timing ?? {}));
   const metadata = metadataFrom(group.events);
+  const paths = (field) => [...new Set(group.events.flatMap((event) => event[field]))]
+    .toSorted(SORT_TEXT);
+  const firstOutputAt = (prefix) => {
+    const declarations = group.events
+      .filter((event) => event.outputs.some((output) => output.startsWith(prefix)))
+      .map((event) => Date.parse(event.timestamp));
+    return declarations.length > 0 ? Math.min(...declarations) : null;
+  };
+
   const measurementNotices = [
     "tokens_unavailable:host_does_not_expose_step_usage",
     ...HOST_TIMING
@@ -263,11 +264,13 @@ function stepFrom(group, generatedAt) {
     hostTool: timing.tool_ms ?? null,
     hostQueue: timing.queue_ms ?? null,
     hostExternalWait: timing.external_wait_ms ?? null,
-    inputs: declaredPaths(group.events, "inputs"),
-    outputs: declaredPaths(group.events, "outputs"),
+    inputs: paths("inputs"),
+    outputs: paths("outputs"),
     notices: group.notices,
     measurementNotices,
     budgetStatus: budgetStatus(group.events, observedWindow),
+    firstDeclaredTestOutputAt: firstOutputAt("tests/"),
+    firstDeclaredProductOutputAt: firstOutputAt("src/"),
     startMs,
     endMs
   };
@@ -318,34 +321,34 @@ function compact(step) {
   return `[${step.budgetStatus}] ${step.stage}/${step.stepId} observed=${(step.observedWindow / 1000).toFixed(1)}s tokens=unavailable in=${step.inputs.length} out=${step.outputs.length} status=${step.status}${identity ? ` ${identity}` : ""}`;
 }
 
-function firstChangeAfter(steps, runStart, prefix) {
-  const step = steps.find((candidate) => candidate.outputs.some((output) => output.startsWith(prefix)));
-  return step && Number.isFinite(runStart) ? step.endMs - runStart : null;
-}
-
-function timingSummary(events, steps) {
-  const starts = events
-    .filter((event) => event.event === "started")
-    .map((event) => Date.parse(event.timestamp));
-  const runStart = Math.min(...starts);
+function timingSummary(steps) {
+  const runStart = Math.min(...steps.map((step) => step.startMs));
   const observedWindow = Number.isFinite(runStart)
     ? Math.max(runStart, ...steps.map((step) => step.endMs)) - runStart
     : null;
+  const firstOutputAfter = (field) => {
+    const declarations = steps.map((step) => step[field])
+      .filter((value) => Number.isFinite(value));
+    return declarations.length > 0 && Number.isFinite(runStart)
+      ? Math.min(...declarations) - runStart
+      : null;
+  };
+
   return {
     observedWindow,
-    firstTestChange: firstChangeAfter(steps, runStart, "tests/"),
-    firstProductChange: firstChangeAfter(steps, runStart, "src/")
+    firstDeclaredTestOutput: firstOutputAfter("firstDeclaredTestOutputAt"),
+    firstDeclaredProductOutput: firstOutputAfter("firstDeclaredProductOutputAt")
   };
 }
 
 function progressStatus(timings, isEventSequenceComplete) {
   if (!isEventSequenceComplete) {return "metrics_incomplete";}
-  if (timings.firstProductChange === null && timings.observedWindow > 7_200_000) {
-    return "severe_no_product_change";
+  if (timings.firstDeclaredProductOutput === null && timings.observedWindow > 7_200_000) {
+    return "severe_no_declared_product_output";
   }
 
-  if (timings.firstTestChange === null && timings.observedWindow > 3_600_000) {
-    return "warning_no_test_change";
+  if (timings.firstDeclaredTestOutput === null && timings.observedWindow > 3_600_000) {
+    return "warning_no_declared_test_output";
   }
 
   return "on_track";
@@ -369,9 +372,10 @@ function incompleteReasons(ledger, steps, hasUnmatchedEvent) {
 
 function summarize(options, runDirectory) {
   const ledger = ledgerEvents(runDirectory);
+  const events = ledger.events.map((event) => validateEvent(event, options.run));
   const generatedAt = new Date().toISOString();
-  const grouped = stepsFrom(ledger.events, generatedAt);
-  const timings = timingSummary(ledger.events, grouped.steps);
+  const grouped = stepsFrom(events, generatedAt);
+  const timings = timingSummary(grouped.steps);
   const reasons = incompleteReasons(ledger, grouped.steps, grouped.hasUnmatchedEvent);
   const isEventSequenceComplete = !ledger.incomplete
     && !grouped.hasUnmatchedEvent
@@ -383,8 +387,8 @@ function summarize(options, runDirectory) {
     ["metrics_incomplete", reasons.length > 0],
     ["metrics_incomplete_reasons", reasons],
     ["run_observed_window_ms", timings.observedWindow],
-    ["time_to_first_test_change_ms", timings.firstTestChange],
-    ["time_to_first_product_change_ms", timings.firstProductChange],
+    ["time_to_first_declared_test_output_ms", timings.firstDeclaredTestOutput],
+    ["time_to_first_declared_product_output_ms", timings.firstDeclaredProductOutput],
     ["milestone_progress_status", progressStatus(timings, isEventSequenceComplete)],
     ["steps", grouped.steps.map((step) => wireStep(step))]
   ]);
