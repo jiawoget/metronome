@@ -814,6 +814,46 @@ describe("GSD observability summarizer", () => {
     }
   });
 
+  it.each([
+    ["warning", "warning"],
+    ["terminal", "completed"]
+  ] as const)("review contract rejects %s stage drift within an attempt", (_name, eventName) => {
+    const cwd = createRepository();
+    const started = ledgerEvent([
+      ["event", "started"],
+      ["run_id", "run-1"],
+      ["step_id", "stage-integrity"],
+      ["stage", "planning"],
+      ["timestamp", "2026-07-22T10:00:00.000Z"],
+      ["budget_class", "quick"],
+      ["agent_session_id", "planner"],
+      ["inputs", []],
+      ["outputs", []]
+    ]);
+    const drifted = {
+      ...started,
+      event: eventName,
+      stage: "execute",
+      timestamp: "2026-07-22T10:00:30.000Z"
+    };
+    const events = eventName === "warning"
+      ? [started, drifted, {
+        ...started,
+        event: "completed",
+        timestamp: "2026-07-22T10:01:00.000Z"
+      }]
+      : [started, drifted];
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${events.map((event) => JSON.stringify(event)).join("\n")}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("METRICS_DATA_ERROR");
+  });
+
   it("review contract validates every event budget against the attempt start", () => {
     const cases = [
       ["warning", "constructor"],
@@ -1165,6 +1205,7 @@ describe("GSD observability summarizer", () => {
       ])
     );
     expect((steps as unknown[])[0]).not.toHaveProperty("agent_model");
+    expect((steps as unknown[])[0]).not.toHaveProperty("step");
     expect((steps as unknown[])[0]).not.toHaveProperty("wall_duration_ms");
     expect(summaryFields.get("time_to_first_declared_product_output_ms")).toBe(180_000);
     expect(summaryFields.get("time_to_first_declared_test_output_ms")).toBeNull();

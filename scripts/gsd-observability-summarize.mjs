@@ -213,12 +213,14 @@ function groupsFrom(events) {
 }
 
 function budgetStatus(events, observedWindow) {
-  const budgetClass = events[0].budget_class;
+  const { budget_class: budgetClass, stage } = events[0];
   const budget = BUDGETS.get(budgetClass);
   for (const event of events) {
     if (event.budget_class !== budgetClass) {
       stop("METRICS_DATA_ERROR", `budget class differs from attempt start ${event.budget_class}`);
     }
+
+    if (event.stage !== stage) {stop("METRICS_DATA_ERROR", "stage differs from attempt start");}
   }
 
   if (observedWindow > budget * 2) {return "severe_over_budget";}
@@ -247,6 +249,7 @@ function stepFrom(group, generatedAt) {
       .filter(([field]) => !Object.hasOwn(timing, field))
       .map(([, reason]) => `${reason}:caller_did_not_supply_timing`)
   ];
+  const budgetState = budgetStatus(group.events, observedWindow);
   return {
     stepId: group.start.step_id,
     stage: group.start.stage,
@@ -267,7 +270,7 @@ function stepFrom(group, generatedAt) {
     outputs: paths("outputs"),
     notices: group.notices,
     measurementNotices,
-    budgetStatus: budgetStatus(group.events, observedWindow),
+    budgetStatus: budgetState,
     firstDeclaredTestOutputAt: firstOutputAt("tests/"),
     firstDeclaredProductOutputAt: firstOutputAt("src/"),
     startMs,
@@ -287,7 +290,6 @@ function wireStep(step) {
   return Object.fromEntries([
     ["step_id", step.stepId],
     ["stage", step.stage],
-    ["step", step.stepId],
     ["budget_class", step.budgetClass],
     ["agent_session_id", step.agentSessionId],
     ["agent_type", step.agentType],
