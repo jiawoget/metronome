@@ -9,6 +9,7 @@ const CLEAN_RESULT = "Codex Review: Didn't find any major issues. :tada:";
 const REVIEWED_COMMIT = /^\*\*Reviewed commit:\*\* `(?<prefix>[\da-f]{7,40})`$/gmv;
 const REVIEW_REQUEST = /@codex\s+review\b/iv;
 const SHA = /^[\da-f]{40}$/v;
+const GITHUB_TIMESTAMP = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\dZ$/v;
 const POSITIVE_DECIMAL = /^[1-9]\d*$/v;
 const TRUSTED_ASSOCIATIONS = new Set(["COLLABORATOR", "MEMBER", "OWNER"]);
 const ABOUT_CODEX = [
@@ -24,9 +25,11 @@ const RESULTS = {
   pending: { description: "No verified Codex review for current head", state: "pending" },
   success: { description: "Verified clean Codex review for current head", state: "success" }
 };
-function timestamp(item) {
-  const parsed = Date.parse(item.updated_at ?? item.submitted_at ?? item.created_at ?? "");
-  return Number.isFinite(parsed) ? parsed : 0;
+function timestamp(item, kind) {
+  const value = kind === "review" ? item.submitted_at : item.updated_at;
+  if (typeof value !== "string" || !GITHUB_TIMESTAMP.test(value)) {return undefined;}
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value.replace(/Z$/v, ".000Z") ? parsed : undefined;
 }
 
 function isCleanReview(body, isPrefixHead, prefix) {
@@ -34,11 +37,20 @@ function isCleanReview(body, isPrefixHead, prefix) {
   return isPrefixHead && (body === core || body === `${core}\n\n${ABOUT_CODEX}`);
 }
 
-function artifactAssociation(item, head, prefixes, matches) {
+function reviewCommit(item, kind) {
+  const raw = kind === "review" ? item.commit_id : undefined;
+  if (raw === undefined || raw === null) {return { malformed: false, value: "" };}
+  if (raw === "") {return { malformed: false, value: "" };}
+  if (typeof raw !== "string") {return { malformed: true, value: "" };}
+  const value = raw.toLowerCase();
+  return SHA.test(value) ? { malformed: false, value } : { malformed: true, value: "" };
+}
+
+function artifactAssociation(commit, head, prefixes, matches) {
   const isPrefixHead = matches.length === 1 && matches[0] === head;
-  const commitId = typeof item.commit_id === "string" ? item.commit_id.toLowerCase() : "";
-  if (commitId === head || isPrefixHead) {return { association: "current", isPrefixHead };}
-  if (commitId || (prefixes.length === 1 && matches.length < 2)) {return { association: "elsewhere", isPrefixHead };}
+  if (commit.value === head || isPrefixHead) {return { association: "current", isPrefixHead };}
+  if (commit.malformed) {return { association: "uncertain", isPrefixHead };}
+  if (commit.value || (prefixes.length === 1 && matches.length < 2)) {return { association: "elsewhere", isPrefixHead };}
   return { association: "uncertain", isPrefixHead };
 }
 
@@ -47,10 +59,12 @@ function normalize(item, kind, head, commits) {
   const body = String(item.body).replaceAll("\r\n", "\n").replaceAll(/^[\t ]+$/gmv, "");
   const prefixes = body.matchAll(REVIEWED_COMMIT).map((match) => match.groups.prefix.toLowerCase()).toArray();
   const matches = prefixes.length === 1 ? commits.filter((commit) => commit.startsWith(prefixes[0])) : [];
-  const { association, isPrefixHead } = artifactAssociation(item, head, prefixes, matches);
+  const commit = reviewCommit(item, kind);
+  const { association, isPrefixHead } = artifactAssociation(commit, head, prefixes, matches);
   const state = kind === "review" && typeof item.state === "string" ? item.state : undefined;
+  const time = timestamp(item, kind);
   const isClean = isCleanReview(body, isPrefixHead, prefixes[0]) && (kind === "issue-comment" || state === "COMMENTED");
-  return { id: Number.isSafeInteger(Number(item.id)) ? Number(item.id) : 0, isClean, isCurrent: association === "current", isUncertain: association === "uncertain", kind, state, time: timestamp(item) };
+  return { id: Number.isSafeInteger(Number(item.id)) ? Number(item.id) : 0, isClean, isCurrent: association === "current", isMalformed: commit.malformed || time === undefined, isUncertain: association === "uncertain", kind, state, time };
 }
 
 function isTrustedReviewRequest(item) {
@@ -58,13 +72,16 @@ function isTrustedReviewRequest(item) {
   return !isCodexBot && TRUSTED_ASSOCIATIONS.has(item?.author_association) && typeof item.body === "string" && REVIEW_REQUEST.test(item.body);
 }
 
-function latestRequestTime(issueComments) {
+function requestBarrier(issueComments) {
   let latest = -Infinity;
   for (const item of issueComments) {
-    if (isTrustedReviewRequest(item)) {latest = Math.max(latest, timestamp(item));}
+    if (!isTrustedReviewRequest(item)) {continue;}
+    const time = timestamp(item, "issue-comment");
+    if (time === undefined) {return { isMalformed: true, time: latest };}
+    latest = Math.max(latest, time);
   }
 
-  return latest;
+  return { isMalformed: false, time: latest };
 }
 
 function evaluateCodexReview(input) {
@@ -77,11 +94,13 @@ function evaluateCodexReview(input) {
   const commits = [...new Set(suppliedCommits.map((sha) => sha.toLowerCase()))];
   const issueComments = Array.isArray(input.issueComments) ? input.issueComments : [];
   const reviews = Array.isArray(input.reviews) ? input.reviews : [];
-  const requestBarrier = latestRequestTime(issueComments);
+  const barrier = requestBarrier(issueComments);
+  if (barrier.isMalformed) {return RESULTS.failure;}
   const artifacts = [
     ...issueComments.map((item) => normalize(item, "issue-comment", head, commits)),
     ...reviews.map((item) => normalize(item, "review", head, commits))
-  ].filter((artifact) => artifact && artifact.time > requestBarrier);
+  ].filter((artifact) => artifact && (artifact.time === undefined || artifact.time > barrier.time));
+  if (artifacts.some((artifact) => (artifact.isCurrent || artifact.isUncertain) && artifact.isMalformed)) {return RESULTS.failure;}
   if (artifacts.every((artifact) => !artifact.isCurrent)) {return RESULTS.pending;}
   const [latest] = artifacts.filter((artifact) => artifact.isCurrent || artifact.isUncertain)
     .toSorted((left, right) => right.time - left.time || Number(left.isClean) - Number(right.isClean) || right.id - left.id);

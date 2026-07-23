@@ -1,21 +1,40 @@
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
 import process from "node:process";
 import type { Readable } from "node:stream";
 import { describe, expect, it } from "vitest";
 
+function sortedStrings(values: readonly string[]) {
+  const sorted: string[] = [];
+  for (const value of values) {
+    const index = sorted.findIndex((candidate) => value.localeCompare(candidate) < 0);
+    sorted.splice(index === -1 ? sorted.length : index, 0, value);
+  }
+
+  return sorted;
+}
+
 const evaluator = path.join(process.cwd(), "scripts", "evaluate-codex-exact-head-review.mjs");
-const workflow = readFileSync(
-  path.join(process.cwd(), ".github", "workflows", "codex-exact-head-review.yml"),
-  "utf8"
-);
-const windowsWorkflow = readFileSync(
-  path.join(process.cwd(), ".github", "workflows", "windows-observability.yml"),
-  "utf8"
-);
+const workflowDirectory = path.join(process.cwd(), ".github", "workflows");
+const workflowNames = sortedStrings(readdirSync(workflowDirectory)
+  .filter((name) => [".yaml", ".yml"].includes(path.extname(name).toLowerCase())));
+const workflowFiles = workflowNames
+  .map((name) => ({
+    name,
+    source: readFileSync(path.join(workflowDirectory, name), "utf8")
+  }));
+
+function workflowSource(name: string) {
+  const entry = workflowFiles.find((candidate) => candidate.name === name);
+  if (!entry) {throw new Error(`Missing workflow: ${name}`);}
+  return entry.source;
+}
+
+const workflow = workflowSource("codex-exact-head-review.yml");
+const windowsWorkflow = workflowSource("windows-observability.yml");
 const bot = { id: 199_175_422, login: "chatgpt-codex-connector[bot]" };
 const repositoryOwner = { id: 123, login: "repository-owner" };
 const repository = "jiawoget/metronome";
@@ -133,8 +152,16 @@ function evaluate(overrides: Record<string, unknown> = {}) {
   return JSON.parse(result.stdout) as { state: string };
 }
 
+function normalizeWorkflow(source: string) {
+  return source.replaceAll("\r\n", "\n").trim();
+}
+
+function topLevelYamlKeyCount(source: string, key: string) {
+  return normalizeWorkflow(source).split("\n").filter((line) => line === `${key}:`).length;
+}
+
 function topLevelYamlBlock(source: string, key: string) {
-  const lines = source.replaceAll("\r\n", "\n").split("\n");
+  const lines = normalizeWorkflow(source).split("\n");
   const start = lines.indexOf(`${key}:`);
   if (start === -1) {
     throw new Error(`Missing top-level YAML key: ${key}`);
@@ -157,6 +184,17 @@ function yamlKeys(block: string, indentation = 2) {
 
 function githubExpression(value: string) {
   return `\${{ ${value} }}`;
+}
+
+function usesProtectedStatusPublisher(source: string) {
+  const normalized = source.toLowerCase();
+  return [
+    "statuses: write",
+    "evaluate-codex-exact-head-review.mjs",
+    "/statuses/",
+    "createcommitstatus",
+    "create_commit_status"
+  ].some((token) => normalized.includes(token));
 }
 
 function pullResponse(headSha = head, headRepository: string | null = repository) {
@@ -386,6 +424,78 @@ describe("Codex exact-head review evaluator", () => {
     expect(evaluate({ issueComments: [request], reviews: [newerFinding] }).state).toBe("failure");
   });
 
+  it("fails closed on a dateless clean connector artifact", () => {
+    const datelessClean = issueComment();
+    Reflect.deleteProperty(datelessClean, "created_at");
+    Reflect.deleteProperty(datelessClean, "updated_at");
+
+    expect(evaluate({ issueComments: [datelessClean] }).state).toBe("failure");
+  });
+
+  it("fails closed when a trusted request barrier has an invalid date", () => {
+    const olderClean = issueComment({ updatedAt: "2026-07-20T09:00:00Z" });
+    const invalidRequest = reviewRequest({ updatedAt: "not-a-date" });
+
+    expect(evaluate({ issueComments: [olderClean, invalidRequest] }).state).toBe("failure");
+  });
+
+  it("does not let a trusted request borrow created_at when updated_at is missing", () => {
+    const olderClean = issueComment({ updatedAt: "2026-07-20T09:00:00Z" });
+    const requestWithoutUpdatedAt = reviewRequest();
+    Reflect.deleteProperty(requestWithoutUpdatedAt, "updated_at");
+
+    expect(evaluate({ issueComments: [olderClean, requestWithoutUpdatedAt] }).state).toBe("failure");
+  });
+
+  it.each(["0", "2026-02-30T11:00:00Z"])("rejects Date.parse-permissive timestamp %s", (updatedAt) => {
+    const olderClean = issueComment({ updatedAt: "2026-07-20T09:00:00Z" });
+    const permissiveRequest = reviewRequest({ updatedAt });
+
+    expect(evaluate({ issueComments: [olderClean, permissiveRequest] }).state).toBe("failure");
+  });
+
+  it("does not let a clean artifact outrank a missing-date PENDING review", () => {
+    const clean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
+    const pendingReview = review({ state: "PENDING" });
+    Reflect.deleteProperty(pendingReview, "submitted_at");
+
+    expect(evaluate({ issueComments: [clean], reviews: [pendingReview] }).state).toBe("failure");
+  });
+
+  it("does not let a review borrow updated_at when submitted_at is missing", () => {
+    const clean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
+    const pendingReview = review({ state: "PENDING" });
+    Reflect.deleteProperty(pendingReview, "submitted_at");
+    pendingReview.updated_at = "2026-07-20T09:00:00Z";
+
+    expect(evaluate({ issueComments: [clean], reviews: [pendingReview] }).state).toBe("failure");
+  });
+
+  it("does not classify a malformed nonempty review commit_id as elsewhere", () => {
+    const olderClean = issueComment({ updatedAt: "2026-07-20T09:00:00Z" });
+    const malformedFinding = review({
+      commitId: "not-a-full-sha",
+      submittedAt: "2026-07-20T11:00:00Z"
+    });
+
+    expect(evaluate({ issueComments: [olderClean], reviews: [malformedFinding] }).state).toBe("failure");
+  });
+
+  it("ignores malformed untrusted requests and valid old-head evidence", () => {
+    const currentClean = issueComment({ updatedAt: "2026-07-20T09:00:00Z" });
+    const untrustedRequest = reviewRequest({
+      authorAssociation: "CONTRIBUTOR",
+      updatedAt: "not-a-date"
+    });
+    const oldHeadFinding = review({
+      commitId: other,
+      submittedAt: "2026-07-20T11:00:00Z"
+    });
+
+    expect(evaluate({ issueComments: [currentClean, untrustedRequest] }).state).toBe("success");
+    expect(evaluate({ issueComments: [currentClean], reviews: [oldHeadFinding] }).state).toBe("success");
+  });
+
   it("fails closed on tied timestamps when one artifact is not clean", () => {
     expect(evaluate({ issueComments: [issueComment()], reviews: [review()] }).state).toBe("failure");
   });
@@ -575,6 +685,85 @@ describe("Codex exact-head review runtime", () => {
   });
 });
 
+const expectedPrivilegedWorkflow = [
+  "name: Codex exact-head review",
+  "",
+  "on:",
+  "  pull_request_target:",
+  "    branches: [main]",
+  "    types: [opened, reopened, synchronize, ready_for_review]",
+  "  issue_comment:",
+  "    types: [created, edited, deleted]",
+  "  repository_dispatch:",
+  "    types: [codex_exact_head_review_recovery]",
+  "",
+  "permissions:",
+  "  contents: read",
+  "  issues: read",
+  "  pull-requests: read",
+  "  statuses: write",
+  "",
+  "jobs:",
+  "  evaluate:",
+  "    if: >-",
+  "      github.event_name != 'issue_comment' ||",
+  "      (github.event.issue.pull_request &&",
+  "        ((github.event.comment.user.login == 'chatgpt-codex-connector[bot]' &&",
+  "          github.event.comment.user.id == 199175422) ||",
+  "         contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.comment.author_association)))",
+  "    concurrency:",
+  `      group: codex-exact-head-${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
+  "      cancel-in-progress: true",
+  "    runs-on: ubuntu-latest",
+  "    steps:",
+  "      - name: Check out default branch",
+  "        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4",
+  "        with:",
+  `          ref: ${githubExpression("github.event.repository.default_branch")}`,
+  "          persist-credentials: false",
+  "",
+  "      - name: Set up Node.js",
+  "        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5",
+  "        with:",
+  "          node-version-file: .nvmrc",
+  "",
+  "      - name: Evaluate current pull-request head",
+  "        run: node scripts/evaluate-codex-exact-head-review.mjs",
+  "        env:",
+  `          GITHUB_API_URL: ${githubExpression("github.api_url")}`,
+  `          GITHUB_REPOSITORY: ${githubExpression("github.repository")}`,
+  `          GITHUB_TOKEN: ${githubExpression("secrets.GITHUB_TOKEN")}`,
+  `          PR_NUMBER: ${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
+  `          RUN_URL: ${githubExpression("github.server_url")}/${githubExpression("github.repository")}/actions/runs/${githubExpression("github.run_id")}`
+].join("\n");
+
+describe("Repository workflow privilege boundary", () => {
+  it("enumerates workflows in sorted order and permits only one protected status publisher", () => {
+    const names = workflowFiles.map((entry) => entry.name);
+    const privileged = workflowFiles.filter((entry) => usesProtectedStatusPublisher(entry.source))
+      .map((entry) => entry.name);
+
+    for (let index = 1; index < names.length; index += 1) {
+      expect(names[index - 1].localeCompare(names[index])).toBeLessThanOrEqual(0);
+    }
+
+    expect(privileged).toEqual(["codex-exact-head-review.yml"]);
+  });
+
+  it("rejects duplicate top-level workflow control blocks", () => {
+    for (const entry of workflowFiles) {
+      expect(topLevelYamlKeyCount(entry.source, "on"), `${entry.name}: on`).toBe(1);
+      expect(topLevelYamlKeyCount(entry.source, "jobs"), `${entry.name}: jobs`).toBe(1);
+      expect(topLevelYamlKeyCount(entry.source, "permissions"), `${entry.name}: permissions`).toBeLessThanOrEqual(1);
+      expect(topLevelYamlKeyCount(entry.source, "concurrency"), `${entry.name}: concurrency`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("locks the complete normalized privileged workflow definition", () => {
+    expect(normalizeWorkflow(workflow)).toBe(expectedPrivilegedWorkflow);
+  });
+});
+
 describe("Codex exact-head review workflow", () => {
   it("uses only the owner-approved default-definition trigger allowlist", () => {
     const triggerBlock = topLevelYamlBlock(workflow, "on");
@@ -610,42 +799,27 @@ describe("Codex exact-head review workflow", () => {
       "  pull-requests: read",
       "  statuses: write"
     ].join("\n"));
-    expect(workflow).toContain("if: github.event_name != 'issue_comment' || github.event.issue.pull_request");
   });
 
-  it("uses one simple PR-scoped concurrency group for every trusted trigger", () => {
-    expect(topLevelYamlBlock(workflow, "concurrency")).toBe([
-      `  group: codex-exact-head-${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
-      "  cancel-in-progress: true"
+  it("filters issue comments before they enter trusted PR concurrency", () => {
+    const job = topLevelYamlBlock(workflow, "jobs");
+
+    expect(topLevelYamlKeyCount(workflow, "concurrency")).toBe(0);
+    expect(job).toContain([
+      "    if: >-",
+      "      github.event_name != 'issue_comment' ||",
+      "      (github.event.issue.pull_request &&",
+      "        ((github.event.comment.user.login == 'chatgpt-codex-connector[bot]' &&",
+      "          github.event.comment.user.id == 199175422) ||",
+      "         contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.comment.author_association)))",
+      "    concurrency:",
+      `      group: codex-exact-head-${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
+      "      cancel-in-progress: true"
     ].join("\n"));
   });
 
   it("locks the complete evaluator job to default-branch, evaluator-only execution", () => {
-    expect(topLevelYamlBlock(workflow, "jobs")).toBe([
-      "  evaluate:",
-      "    if: github.event_name != 'issue_comment' || github.event.issue.pull_request",
-      "    runs-on: ubuntu-latest",
-      "    steps:",
-      "      - name: Check out default branch",
-      "        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4",
-      "        with:",
-      `          ref: ${githubExpression("github.event.repository.default_branch")}`,
-      "          persist-credentials: false",
-      "",
-      "      - name: Set up Node.js",
-      "        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5",
-      "        with:",
-      "          node-version-file: .nvmrc",
-      "",
-      "      - name: Evaluate current pull-request head",
-      "        run: node scripts/evaluate-codex-exact-head-review.mjs",
-      "        env:",
-      `          GITHUB_API_URL: ${githubExpression("github.api_url")}`,
-      `          GITHUB_REPOSITORY: ${githubExpression("github.repository")}`,
-      `          GITHUB_TOKEN: ${githubExpression("secrets.GITHUB_TOKEN")}`,
-      `          PR_NUMBER: ${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
-      `          RUN_URL: ${githubExpression("github.server_url")}/${githubExpression("github.repository")}/actions/runs/${githubExpression("github.run_id")}`
-    ].join("\n"));
+    expect(topLevelYamlBlock(workflow, "jobs")).toBe(topLevelYamlBlock(expectedPrivilegedWorkflow, "jobs"));
   });
 });
 
