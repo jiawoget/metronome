@@ -12,7 +12,12 @@ const workflow = readFileSync(
   path.join(process.cwd(), ".github", "workflows", "codex-exact-head-review.yml"),
   "utf8"
 );
+const windowsWorkflow = readFileSync(
+  path.join(process.cwd(), ".github", "workflows", "windows-observability.yml"),
+  "utf8"
+);
 const bot = { id: 199_175_422, login: "chatgpt-codex-connector[bot]" };
+const repositoryOwner = { id: 123, login: "repository-owner" };
 const repository = "jiawoget/metronome";
 const head = "379bc414a9".padEnd(40, "1");
 const other = "50a083f2".padEnd(40, "2");
@@ -46,18 +51,21 @@ function cleanBody(prefix = "379bc414a9") {
 }
 
 function issueComment(options: {
+  authorAssociation?: string;
   body?: string;
   id?: number;
   updatedAt?: string;
   user?: User;
 } = {}) {
   const {
+    authorAssociation = "NONE",
     body = cleanBody(),
     id = 5_009_800_322,
     updatedAt = "2026-07-20T10:00:00Z",
     user = bot
   } = options;
   return record([
+    ["author_association", authorAssociation],
     ["body", body],
     ["created_at", updatedAt],
     ["id", id],
@@ -66,10 +74,26 @@ function issueComment(options: {
   ]);
 }
 
+function reviewRequest(options: {
+  authorAssociation?: string;
+  body?: string;
+  id?: number;
+  updatedAt?: string;
+} = {}) {
+  return issueComment({
+    authorAssociation: options.authorAssociation ?? "OWNER",
+    body: options.body ?? "@codex review",
+    id: options.id ?? 5_009_800_400,
+    updatedAt: options.updatedAt ?? "2026-07-20T11:00:00Z",
+    user: repositoryOwner
+  });
+}
+
 function review(options: {
   body?: string;
   commitId?: string;
   id?: number;
+  state?: string;
   submittedAt?: string;
   user?: User;
 } = {}) {
@@ -77,6 +101,7 @@ function review(options: {
     body = "### 💡 Codex Review\n\nHere are some automated review suggestions.",
     commitId = head,
     id = 4_753_387_658,
+    state = "COMMENTED",
     submittedAt = "2026-07-20T10:00:00Z",
     user = bot
   } = options;
@@ -84,7 +109,7 @@ function review(options: {
     ["body", body],
     ["commit_id", commitId],
     ["id", id],
-    ["state", "COMMENTED"],
+    ["state", state],
     ["submitted_at", submittedAt],
     ["user", user]
   ]);
@@ -106,6 +131,32 @@ function evaluate(overrides: Record<string, unknown> = {}) {
 
   expect(result.status, result.stderr).toBe(0);
   return JSON.parse(result.stdout) as { state: string };
+}
+
+function topLevelYamlBlock(source: string, key: string) {
+  const lines = source.replaceAll("\r\n", "\n").split("\n");
+  const start = lines.indexOf(`${key}:`);
+  if (start === -1) {
+    throw new Error(`Missing top-level YAML key: ${key}`);
+  }
+
+  let end = start + 1;
+  while (end < lines.length && (lines[end] === "" || lines[end].startsWith(" ") || lines[end].startsWith("\t"))) {
+    end += 1;
+  }
+
+  return lines.slice(start + 1, end).join("\n").trimEnd();
+}
+
+function yamlKeys(block: string, indentation = 2) {
+  const prefix = " ".repeat(indentation);
+  return block.split("\n")
+    .filter((line) => line.startsWith(prefix) && !line.startsWith(`${prefix} `))
+    .map((line) => line.slice(indentation).split(":", 1)[0]);
+}
+
+function githubExpression(value: string) {
+  return `\${{ ${value} }}`;
 }
 
 function pullResponse(headSha = head, headRepository: string | null = repository) {
@@ -201,7 +252,10 @@ async function answerRequest(
   }
 }
 
-async function runRuntime(respond: ResponsePlan) {
+async function runRuntime(
+  respond: ResponsePlan,
+  environmentOverrides: Readonly<Record<string, string>> = {}
+) {
   const requests: HttpRequest[] = [];
   const server = createServer((incoming, outgoing) => {
     void answerRequest(incoming, outgoing, requests, respond);
@@ -221,7 +275,8 @@ async function runRuntime(respond: ResponsePlan) {
       ["GITHUB_TOKEN", "test-token"],
       ["PR_NUMBER", "128"],
       ["RUN_URL", runUrl]
-    ])
+    ]),
+    ...environmentOverrides
   };
   const child = spawn(process.execPath, [evaluator], {
     cwd: process.cwd(),
@@ -283,6 +338,54 @@ describe("Codex exact-head review evaluator", () => {
     expect(evaluate({ issueComments: [olderClean], reviews: [newerFinding] }).state).toBe("failure");
   });
 
+  it.each(["OWNER", "MEMBER", "COLLABORATOR"])(
+    "treats a newer %s-authored @codex review request as a reset barrier",
+    (authorAssociation) => {
+      const olderClean = issueComment({ updatedAt: "2026-07-20T09:00:00Z" });
+      const request = reviewRequest({
+        authorAssociation,
+        body: "Please @codex review this pull request."
+      });
+
+      expect(evaluate({ issueComments: [olderClean, request] }).state).toBe("pending");
+    }
+  );
+
+  it("lets a trusted request reset an older finding and fails closed on a timestamp tie", () => {
+    const olderFinding = review({ submittedAt: "2026-07-20T09:00:00Z" });
+    const request = reviewRequest();
+    const tiedClean = issueComment({
+      id: 5_009_800_401,
+      updatedAt: "2026-07-20T11:00:00Z"
+    });
+
+    expect(evaluate({ issueComments: [request], reviews: [olderFinding] }).state).toBe("pending");
+    expect(evaluate({ issueComments: [request, tiedClean] }).state).toBe("pending");
+  });
+
+  it.each(["NONE", "CONTRIBUTOR", "FIRST_TIME_CONTRIBUTOR"])(
+    "does not let an untrusted %s-authored request reset clean evidence",
+    (authorAssociation) => {
+      const olderClean = issueComment({ updatedAt: "2026-07-20T09:00:00Z" });
+      const request = reviewRequest({ authorAssociation });
+
+      expect(evaluate({ issueComments: [olderClean, request] }).state).toBe("success");
+    }
+  );
+
+  it("lets newer connector evidence determine the result after a trusted request", () => {
+    const request = reviewRequest({
+      authorAssociation: "MEMBER",
+      body: "Could you @codex review this?",
+      updatedAt: "2026-07-20T10:00:00Z"
+    });
+    const newerClean = issueComment({ id: 5_009_800_401, updatedAt: "2026-07-20T11:00:00Z" });
+    const newerFinding = review({ id: 4_753_387_700, submittedAt: "2026-07-20T11:00:00Z" });
+
+    expect(evaluate({ issueComments: [request, newerClean] }).state).toBe("success");
+    expect(evaluate({ issueComments: [request], reviews: [newerFinding] }).state).toBe("failure");
+  });
+
   it("fails closed on tied timestamps when one artifact is not clean", () => {
     expect(evaluate({ issueComments: [issueComment()], reviews: [review()] }).state).toBe("failure");
   });
@@ -316,6 +419,26 @@ describe("Codex exact-head review evaluator", () => {
     expect(evaluate({ reviews: [review()] }).state).toBe("failure");
   });
 
+  it.each([
+    ["COMMENTED", "success"],
+    ["DISMISSED", "failure"],
+    ["APPROVED", "failure"],
+    ["CHANGES_REQUESTED", "failure"],
+    ["PENDING", "failure"],
+    ["UNKNOWN_STATE", "failure"]
+  ])("treats a clean-looking %s review as %s", (state, expected) => {
+    const cleanReview = review({ body: cleanBody(), state });
+
+    expect(evaluate({ reviews: [cleanReview] }).state).toBe(expected);
+  });
+
+  it("does not accept a clean-looking review whose state is missing", () => {
+    const cleanReview = review({ body: cleanBody() });
+    Reflect.deleteProperty(cleanReview, "state");
+
+    expect(evaluate({ reviews: [cleanReview] }).state).toBe("failure");
+  });
+
   it("keeps a service error pending and lets a newer one block an older clean result", () => {
     const serviceError = issueComment({
       body: "Codex couldn't create an environment for this repo.",
@@ -336,6 +459,17 @@ describe("Codex exact-head review evaluator", () => {
 });
 
 describe("Codex exact-head review runtime", () => {
+  it.each(["00128", "+128", "128.0", "1e2", " 128 "])(
+    "rejects the non-canonical pull-request number %j before API access",
+    async (prNumber) => {
+      const execution = await runRuntime(responses(), stringRecord([["PR_NUMBER", prNumber]]));
+
+      expect(execution.status).toBe(1);
+      expect(execution.stderr).toContain("Invalid repository or pull-request number");
+      expect(execution.requests).toEqual([]);
+    }
+  );
+
   it.each([
     ["missing", null],
     ["different", "contributor/metronome"]
@@ -385,6 +519,22 @@ describe("Codex exact-head review runtime", () => {
     expect(successIndex).toBeGreaterThan(pullIndexes[1]);
   });
 
+  it("derives the trusted review-request barrier from fetched issue-comment API data", async () => {
+    const olderClean = issueComment({ updatedAt: "2026-07-20T09:00:00Z" });
+    const request = reviewRequest({ authorAssociation: "COLLABORATOR" });
+    const execution = await runRuntime(responses({
+      [page(commentsPath)]: { body: [olderClean, request] },
+      [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+    }));
+
+    expect(execution.status, execution.stderr).toBe(0);
+    expect(execution.requests.filter((httpRequest) => httpRequest.method === "POST")).toEqual([
+      statusRequest(head, "pending", "No verified Codex review for current head"),
+      statusRequest(head, "pending", "No verified Codex review for current head")
+    ]);
+    expect(execution.requests.some((httpRequest) => hasState(httpRequest, "success"))).toBe(false);
+  });
+
   it("publishes error to the captured head when metadata retrieval fails", async () => {
     const execution = await runRuntime(responses({
       [page(`${pullPath}/reviews`)]: { body: {}, status: 500 }
@@ -426,15 +576,90 @@ describe("Codex exact-head review runtime", () => {
 });
 
 describe("Codex exact-head review workflow", () => {
-  it("keeps in-repository review recomputation but isolates and skips fork review events", () => {
-    expect(workflow).toContain("pull_request_review:");
-    expect(workflow).toContain("'fork-review-readonly' || 'trusted-writer'");
-    expect(workflow).toContain("github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name");
-    expect(workflow).toContain("github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name");
+  it("uses only the owner-approved default-definition trigger allowlist", () => {
+    const triggerBlock = topLevelYamlBlock(workflow, "on");
+
+    expect(yamlKeys(triggerBlock)).toEqual([
+      "pull_request_target",
+      "issue_comment",
+      "repository_dispatch"
+    ]);
+    expect(triggerBlock).toBe([
+      "  pull_request_target:",
+      "    branches: [main]",
+      "    types: [opened, reopened, synchronize, ready_for_review]",
+      "  issue_comment:",
+      "    types: [created, edited, deleted]",
+      "  repository_dispatch:",
+      "    types: [codex_exact_head_review_recovery]"
+    ].join("\n"));
+    for (const unsafeTrigger of [
+      "pull_request_review",
+      "workflow_dispatch",
+      "schedule",
+      "workflow_run"
+    ]) {
+      expect(yamlKeys(triggerBlock)).not.toContain(unsafeTrigger);
+    }
   });
 
-  it("pins privileged actions to immutable commits with readable version comments", () => {
-    expect(workflow).toContain("actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4");
-    expect(workflow).toContain("actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5");
+  it("keeps exact minimal permissions and filters issue comments to pull requests", () => {
+    expect(topLevelYamlBlock(workflow, "permissions")).toBe([
+      "  contents: read",
+      "  issues: read",
+      "  pull-requests: read",
+      "  statuses: write"
+    ].join("\n"));
+    expect(workflow).toContain("if: github.event_name != 'issue_comment' || github.event.issue.pull_request");
+  });
+
+  it("uses one simple PR-scoped concurrency group for every trusted trigger", () => {
+    expect(topLevelYamlBlock(workflow, "concurrency")).toBe([
+      `  group: codex-exact-head-${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
+      "  cancel-in-progress: true"
+    ].join("\n"));
+  });
+
+  it("locks the complete evaluator job to default-branch, evaluator-only execution", () => {
+    expect(topLevelYamlBlock(workflow, "jobs")).toBe([
+      "  evaluate:",
+      "    if: github.event_name != 'issue_comment' || github.event.issue.pull_request",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      "      - name: Check out default branch",
+      "        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4",
+      "        with:",
+      `          ref: ${githubExpression("github.event.repository.default_branch")}`,
+      "          persist-credentials: false",
+      "",
+      "      - name: Set up Node.js",
+      "        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5",
+      "        with:",
+      "          node-version-file: .nvmrc",
+      "",
+      "      - name: Evaluate current pull-request head",
+      "        run: node scripts/evaluate-codex-exact-head-review.mjs",
+      "        env:",
+      `          GITHUB_API_URL: ${githubExpression("github.api_url")}`,
+      `          GITHUB_REPOSITORY: ${githubExpression("github.repository")}`,
+      `          GITHUB_TOKEN: ${githubExpression("secrets.GITHUB_TOKEN")}`,
+      `          PR_NUMBER: ${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
+      `          RUN_URL: ${githubExpression("github.server_url")}/${githubExpression("github.repository")}/actions/runs/${githubExpression("github.run_id")}`
+    ].join("\n"));
+  });
+});
+
+describe("Windows observability workflow", () => {
+  it("always runs for pull requests and main pushes without path filters", () => {
+    const triggerBlock = topLevelYamlBlock(windowsWorkflow, "on");
+
+    expect(yamlKeys(triggerBlock)).toEqual(["pull_request", "push"]);
+    expect(triggerBlock).toBe([
+      "  pull_request:",
+      "  push:",
+      "    branches:",
+      "      - main"
+    ].join("\n"));
+    expect(triggerBlock.split("\n").some((line) => ["paths:", "paths-ignore:"].includes(line.trim()))).toBe(false);
   });
 });

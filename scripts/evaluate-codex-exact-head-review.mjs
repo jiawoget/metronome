@@ -7,7 +7,10 @@ const BOT_ID = 199_175_422;
 const CONTEXT = "Metronome Codex exact-head review";
 const CLEAN_RESULT = "Codex Review: Didn't find any major issues. :tada:";
 const REVIEWED_COMMIT = /^\*\*Reviewed commit:\*\* `(?<prefix>[\da-f]{7,40})`$/gmv;
+const REVIEW_REQUEST = /@codex\s+review\b/iv;
 const SHA = /^[\da-f]{40}$/v;
+const POSITIVE_DECIMAL = /^[1-9]\d*$/v;
+const TRUSTED_ASSOCIATIONS = new Set(["COLLABORATOR", "MEMBER", "OWNER"]);
 const ABOUT_CODEX = [
   "<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n",
   "[Your team has set up Codex to review pull requests in this repo](https://chatgpt.com/codex/cloud/settings/general). Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\".\n",
@@ -31,22 +34,37 @@ function isCleanReview(body, isPrefixHead, prefix) {
   return isPrefixHead && (body === core || body === `${core}\n\n${ABOUT_CODEX}`);
 }
 
-function normalize(item, head, commits) {
+function artifactAssociation(item, head, prefixes, matches) {
+  const isPrefixHead = matches.length === 1 && matches[0] === head;
+  const commitId = typeof item.commit_id === "string" ? item.commit_id.toLowerCase() : "";
+  if (commitId === head || isPrefixHead) {return { association: "current", isPrefixHead };}
+  if (commitId || (prefixes.length === 1 && matches.length < 2)) {return { association: "elsewhere", isPrefixHead };}
+  return { association: "uncertain", isPrefixHead };
+}
+
+function normalize(item, kind, head, commits) {
   if (item?.user?.login !== BOT_LOGIN || item.user.id !== BOT_ID) {return undefined;}
   const body = String(item.body).replaceAll("\r\n", "\n").replaceAll(/^[\t ]+$/gmv, "");
   const prefixes = body.matchAll(REVIEWED_COMMIT).map((match) => match.groups.prefix.toLowerCase()).toArray();
   const matches = prefixes.length === 1 ? commits.filter((commit) => commit.startsWith(prefixes[0])) : [];
-  const isPrefixHead = matches.length === 1 && matches[0] === head;
-  const commitId = typeof item.commit_id === "string" ? item.commit_id.toLowerCase() : "";
-  const isApiHead = commitId === head;
-  let association = "uncertain";
-  if (isApiHead || isPrefixHead) {
-    association = "current";
-  } else if (commitId || (prefixes.length === 1 && matches.length < 2)) {
-    association = "elsewhere";
+  const { association, isPrefixHead } = artifactAssociation(item, head, prefixes, matches);
+  const state = kind === "review" && typeof item.state === "string" ? item.state : undefined;
+  const isClean = isCleanReview(body, isPrefixHead, prefixes[0]) && (kind === "issue-comment" || state === "COMMENTED");
+  return { id: Number.isSafeInteger(Number(item.id)) ? Number(item.id) : 0, isClean, isCurrent: association === "current", isUncertain: association === "uncertain", kind, state, time: timestamp(item) };
+}
+
+function isTrustedReviewRequest(item) {
+  const isCodexBot = item?.user?.login === BOT_LOGIN && item.user.id === BOT_ID;
+  return !isCodexBot && TRUSTED_ASSOCIATIONS.has(item?.author_association) && typeof item.body === "string" && REVIEW_REQUEST.test(item.body);
+}
+
+function latestRequestTime(issueComments) {
+  let latest = -Infinity;
+  for (const item of issueComments) {
+    if (isTrustedReviewRequest(item)) {latest = Math.max(latest, timestamp(item));}
   }
 
-  return { id: Number.isSafeInteger(Number(item.id)) ? Number(item.id) : 0, isClean: isCleanReview(body, isPrefixHead, prefixes[0]), isCurrent: association === "current", isUncertain: association === "uncertain", time: timestamp(item) };
+  return latest;
 }
 
 function evaluateCodexReview(input) {
@@ -57,8 +75,13 @@ function evaluateCodexReview(input) {
   }
 
   const commits = [...new Set(suppliedCommits.map((sha) => sha.toLowerCase()))];
-  const items = [...(Array.isArray(input.issueComments) ? input.issueComments : []), ...(Array.isArray(input.reviews) ? input.reviews : [])];
-  const artifacts = items.map((item) => normalize(item, head, commits)).filter(Boolean);
+  const issueComments = Array.isArray(input.issueComments) ? input.issueComments : [];
+  const reviews = Array.isArray(input.reviews) ? input.reviews : [];
+  const requestBarrier = latestRequestTime(issueComments);
+  const artifacts = [
+    ...issueComments.map((item) => normalize(item, "issue-comment", head, commits)),
+    ...reviews.map((item) => normalize(item, "review", head, commits))
+  ].filter((artifact) => artifact && artifact.time > requestBarrier);
   if (artifacts.every((artifact) => !artifact.isCurrent)) {return RESULTS.pending;}
   const [latest] = artifacts.filter((artifact) => artifact.isCurrent || artifact.isUncertain)
     .toSorted((left, right) => right.time - left.time || Number(left.isClean) - Number(right.isClean) || right.id - left.id);
@@ -83,8 +106,8 @@ function settingsFromEnvironment() {
   }
 
   const [owner, name, extra] = repository.split("/", 3);
-  const prNumber = Number(prNumberText);
-  if (!owner || !name || extra || !Number.isSafeInteger(prNumber) || prNumber < 1) {
+  const prNumber = POSITIVE_DECIMAL.test(prNumberText) ? Number(prNumberText) : NaN;
+  if (!owner || !name || extra || !Number.isSafeInteger(prNumber)) {
     throw new Error("Invalid repository or pull-request number");
   }
 

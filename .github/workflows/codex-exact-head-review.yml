@@ -3,17 +3,11 @@ name: Codex exact-head review
 on:
   pull_request_target:
     branches: [main]
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, synchronize, ready_for_review]
   issue_comment:
     types: [created, edited, deleted]
-  pull_request_review:
-    types: [submitted, edited, dismissed]
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: Pull request number
-        required: true
-        type: number
+  repository_dispatch:
+    types: [codex_exact_head_review_recovery]
 
 permissions:
   contents: read
@@ -22,15 +16,12 @@ permissions:
   statuses: write
 
 concurrency:
-  group: codex-exact-head-${{ github.event_name == 'pull_request_review' && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name && 'fork-review-readonly' || 'trusted-writer' }}-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number }}
+  group: codex-exact-head-${{ github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number }}
   cancel-in-progress: true
 
 jobs:
   evaluate:
-    if: >-
-      (github.event_name != 'issue_comment' || github.event.issue.pull_request) &&
-      (github.event_name != 'pull_request_review' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) &&
-      (github.event_name != 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch)
+    if: github.event_name != 'issue_comment' || github.event.issue.pull_request
     runs-on: ubuntu-latest
     steps:
       - name: Check out default branch
@@ -50,5 +41,5 @@ jobs:
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
