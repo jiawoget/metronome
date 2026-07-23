@@ -49,6 +49,19 @@ describe("OpenGSD project binding", () => {
     );
   });
 
+  it("keeps the installed fixer isolated until both upstream incompatibilities are corrected", () => {
+    const fixerBoundary = contractLine(agents, "The fixer remains isolated");
+    expect(fixerBoundary).toContain(
+      'the installed OpenGSD `gsd-code-fixer` resolves `sandbox_mode = "read-only"` while its prompt requires edits and commits and unconditionally creates a worktree.'
+    );
+    expect(fixerBoundary).toContain(
+      "Do not copy or patch the generated agent."
+    );
+    expect(fixerBoundary).toContain(
+      'Keep this route prohibited until a later official OpenGSD version supplies `sandbox_mode = "workspace-write"` and respects `workflow.use_worktrees=false`.'
+    );
+  });
+
   it("conditions debugger dispatch on its writable sandbox, exact checkout, and policy resolution", () => {
     const debuggerBoundary = contractLine(
       agents,
