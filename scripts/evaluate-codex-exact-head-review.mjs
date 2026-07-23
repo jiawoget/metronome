@@ -5,12 +5,19 @@ import process from "node:process";
 const BOT_LOGIN = "chatgpt-codex-connector[bot]";
 const BOT_ID = 199_175_422;
 const CONTEXT = "Metronome Codex exact-head review";
-const CLEAN_SENTENCE = "Codex Review: Didn't find any major issues.";
-const REVIEWED_COMMIT = /^\*\*reviewed commit:\*\* `(?<prefix>[\da-f]{7,40})`$/gimv;
+const CLEAN_RESULT = "Codex Review: Didn't find any major issues. :tada:";
+const REVIEWED_COMMIT = /^\*\*Reviewed commit:\*\* `(?<prefix>[\da-f]{7,40})`$/gmv;
 const SHA = /^[\da-f]{40}$/v;
+const ABOUT_CODEX = [
+  "<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n",
+  "[Your team has set up Codex to review pull requests in this repo](https://chatgpt.com/codex/cloud/settings/general). Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\".\n",
+  "If Codex has suggestions, it will comment; otherwise it will react with 👍.\n\n\n\n\nCodex can also answer questions or update the PR. Try commenting \"@codex address that feedback\".\n",
+  "</details>"
+].join("\n");
 const RESULTS = {
   error: { description: "Codex review metadata could not be evaluated", state: "error" },
   failure: { description: "Latest Codex result is not verified clean", state: "failure" },
+  fork: { description: "Fork-origin pull requests are unsupported", state: "failure" },
   pending: { description: "No verified Codex review for current head", state: "pending" },
   success: { description: "Verified clean Codex review for current head", state: "success" }
 };
@@ -19,16 +26,14 @@ function timestamp(item) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function isCleanReview(body, isPrefixHead) {
-  return isPrefixHead
-    && body.includes(CLEAN_SENTENCE)
-    && !body.includes("automated review suggestions")
-    && !body.includes("create an environment for this repo");
+function isCleanReview(body, isPrefixHead, prefix) {
+  const core = `${CLEAN_RESULT}\n\n**Reviewed commit:** \`${prefix}\``;
+  return isPrefixHead && (body === core || body === `${core}\n\n${ABOUT_CODEX}`);
 }
 
 function normalize(item, head, commits) {
   if (item?.user?.login !== BOT_LOGIN || item.user.id !== BOT_ID) {return undefined;}
-  const body = String(item.body);
+  const body = String(item.body).replaceAll("\r\n", "\n").replaceAll(/^[\t ]+$/gmv, "");
   const prefixes = body.matchAll(REVIEWED_COMMIT).map((match) => match.groups.prefix.toLowerCase()).toArray();
   const matches = prefixes.length === 1 ? commits.filter((commit) => commit.startsWith(prefixes[0])) : [];
   const isPrefixHead = matches.length === 1 && matches[0] === head;
@@ -41,7 +46,7 @@ function normalize(item, head, commits) {
     association = "elsewhere";
   }
 
-  return { id: Number.isSafeInteger(Number(item.id)) ? Number(item.id) : 0, isClean: isCleanReview(body, isPrefixHead), isCurrent: association === "current", isUncertain: association === "uncertain", time: timestamp(item) };
+  return { id: Number.isSafeInteger(Number(item.id)) ? Number(item.id) : 0, isClean: isCleanReview(body, isPrefixHead, prefixes[0]), isCurrent: association === "current", isUncertain: association === "uncertain", time: timestamp(item) };
 }
 
 function evaluateCodexReview(input) {
@@ -108,6 +113,11 @@ function pullHead(pull) {
   return head;
 }
 
+function isFork(pull) {
+  const headRepository = pull?.head?.repo?.full_name;
+  return typeof headRepository !== "string" || headRepository !== pull?.base?.repo?.full_name;
+}
+
 async function publish(request, settings, head, result) {
   const payload = Object.fromEntries([["context", CONTEXT], ["description", result.description], ["state", result.state], ["target_url", settings.runUrl]]);
   await request(`${settings.base}/statuses/${head}`, {
@@ -127,17 +137,30 @@ async function run() {
   const settings = settingsFromEnvironment();
   const request = githubClient(settings);
   const pullPath = `${settings.base}/pulls/${settings.prNumber}`;
-  const head = pullHead(await request(pullPath));
+  const pull = await request(pullPath);
+  const head = pullHead(pull);
+  if (isFork(pull)) {
+    await publish(request, settings, head, RESULTS.fork);
+    return;
+  }
+
   await publish(request, settings, head, RESULTS.pending);
   let evaluation;
   let latestHead;
+  let latestPull;
   try {
     const [reviews, issueComments, commits] = await Promise.all([paginate(request, `${pullPath}/reviews`), paginate(request, `${settings.base}/issues/${settings.prNumber}/comments`), paginate(request, `${pullPath}/commits`)]);
     evaluation = evaluateCodexReview({ commits: commits.map((commit) => commit.sha), head, issueComments, reviews });
-    latestHead = pullHead(await request(pullPath));
+    latestPull = await request(pullPath);
+    latestHead = pullHead(latestPull);
   } catch (error) {
     await publish(request, settings, head, RESULTS.error);
     throw error;
+  }
+
+  if (isFork(latestPull)) {
+    await publish(request, settings, latestHead, RESULTS.fork);
+    return;
   }
 
   if (latestHead !== head) {
