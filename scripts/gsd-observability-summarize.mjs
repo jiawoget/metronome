@@ -9,6 +9,7 @@ const EVENTS = new Set(["started", "completed", "interrupted", "blocked", "warni
 const TERMINAL = new Set(["completed", "interrupted", "blocked"]);
 const SAFE_ID = /^[\dA-Za-z][\w\-.]*$/v;
 const WINDOWS_DEVICE = /^(?:aux|con|nul|prn|com[1-9]|lpt[1-9])(?:\.|$)/iv;
+const isSafeId = (value) => typeof value === "string" && SAFE_ID.test(value) && !/[ .]$/v.test(value) && !WINDOWS_DEVICE.test(value);
 const SORT_TEXT = (left, right) => left.localeCompare(right);
 const METADATA_FIELDS = new Set(["agent_type", "model", "reasoning_effort"]);
 const EVENT_FIELDS = new Set(["schema_version", "event_id", "event", "run_id", "step_id", "stage", "timestamp", "budget_class", "agent_session_id", "inputs", "input_attribution", "outputs", "timing", "metadata"]);
@@ -144,9 +145,7 @@ function validateEvent(value, run) {
   const hasMismatch = [
     ["schema_version", 1], ["run_id", run], ["input_attribution", "declared_only"]
   ].some(([field, expected]) => value[field] !== expected);
-  const isSafeId = (candidate) => typeof candidate === "string" && SAFE_ID.test(candidate);
-  const identifiers = [value.step_id, value.agent_session_id, value.event_id]
-    .filter((candidate) => candidate !== undefined);
+  const identifiers = [value.event_id, value.step_id, value.agent_session_id];
   const isSafeTimestamp = Number.isFinite(timestamp)
     && new Date(timestamp).toISOString() === value.timestamp;
   if (unknown || hasMismatch || !EVENTS.has(value.event) || !BUDGETS.has(value.budget_class)
@@ -400,7 +399,7 @@ function summarize(options, runDirectory) {
 }
 
 const options = argumentsFrom(process.argv.slice(2));
-if (!options.repo || !SAFE_ID.test(options.run ?? "")) {
+if (!options.repo || !isSafeId(options.run)) {
   stop("METRICS_ARGUMENT_ERROR", "--repo and a safe --run are required");
 }
 

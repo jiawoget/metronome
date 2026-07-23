@@ -25,18 +25,23 @@ const summarizer = path.join(
   "gsd-observability-summarize.mjs"
 );
 const temporaryRepositories: string[] = [];
+let ledgerEventId = 0;
 
 function record(entries: ReadonlyArray<readonly [string, unknown]>) {
   return Object.fromEntries(entries);
 }
 
 function ledgerEvent(entries: ReadonlyArray<readonly [string, unknown]>) {
+  ledgerEventId += 1;
   return record([
     ["schema_version", 1],
+    ["event_id", `fixture-event-${ledgerEventId}`],
     ["input_attribution", "declared_only"],
     ...entries
   ]);
 }
+
+const unsafePathIds = ["NUL", "nul.txt", "COM1.log", "run."];
 
 const unsafeDeclaredPaths = [
   "C:../outside",
@@ -167,6 +172,7 @@ function suppliedTimingEvents() {
 afterEach(() => {
   const repositories = [...temporaryRepositories];
   temporaryRepositories.length = 0;
+  ledgerEventId = 0;
   for (const cwd of repositories) {
     rmSync(cwd, { recursive: true, force: true });
   }
@@ -258,6 +264,22 @@ describe("GSD observability writer", () => {
     expect(() =>
       readFileSync(path.join(cwd, ".logs/outside/controller.jsonl"), "utf8")
     ).toThrow();
+  });
+
+  it("rejects Windows device and trailing-dot run or agent IDs", () => {
+    const cwd = createRepository();
+    for (const option of ["run", "agent"]) {
+      for (const candidate of unsafePathIds) {
+        const result = run(writer, [
+          "start",
+          ...baseStepArguments(cwd),
+          `--${option}`,
+          candidate
+        ]);
+        expect(result.status, `${option}=${candidate}`).not.toBe(0);
+        expect(result.stderr).toContain("OBSERVABILITY_PATH_REJECTED");
+      }
+    }
   });
 
   it("rejects cross-platform unsafe declared paths", () => {
@@ -535,6 +557,90 @@ describe("GSD observability summarizer", () => {
       ["inputs", ["scripts/gsd-observability-write.mjs"]],
       ["outputs", ["tests/unit/gsd-observability.test.ts"]]
     ])]);
+  });
+
+  it("rejects Windows device and trailing-dot summarizer run IDs", () => {
+    const cwd = createRepository();
+    for (const candidate of unsafePathIds) {
+      const result = run(summarizer, ["--repo", cwd, "--run", candidate]);
+      expect(result.status, candidate).not.toBe(0);
+      expect(result.stderr).toContain("METRICS_ARGUMENT_ERROR");
+    }
+  });
+
+  it.each([
+    ["event_id", "NUL"],
+    ["event_id", "nul.txt"],
+    ["step_id", "COM1.log"],
+    ["agent_session_id", "run."]
+  ] as const)("rejects unsafe ledger %s value %s", (field, candidate) => {
+    const cwd = createRepository();
+    const event = (kind: string, timestamp: string) => ledgerEvent([
+      ["event", kind],
+      ["run_id", "run-1"],
+      ["step_id", "safe-step"],
+      ["stage", "planning"],
+      ["timestamp", timestamp],
+      ["budget_class", "quick"],
+      ["agent_session_id", "planner"],
+      ["inputs", []],
+      ["outputs", []]
+    ]);
+    const events = [
+      event("started", "2026-07-22T10:00:00.000Z"),
+      { ...event("warning", "2026-07-22T10:00:30.000Z"), [field]: candidate },
+      event("completed", "2026-07-22T10:01:00.000Z")
+    ];
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${events.map((item) => JSON.stringify(item)).join("\n")}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("METRICS_DATA_ERROR");
+  });
+
+  it.each([
+    ["event_id", "started"],
+    ["step_id", "started"],
+    ["agent_session_id", "started"],
+    ["event_id", "warning"],
+    ["step_id", "warning"],
+    ["agent_session_id", "warning"],
+    ["event_id", "completed"],
+    ["step_id", "completed"],
+    ["agent_session_id", "completed"]
+  ] as const)("rejects missing %s on a %s ledger event", (field, position) => {
+    const cwd = createRepository();
+    const event = (kind: string, timestamp: string) => ledgerEvent([
+      ["event", kind],
+      ["run_id", "run-1"],
+      ["step_id", "required-ids"],
+      ["stage", "planning"],
+      ["timestamp", timestamp],
+      ["budget_class", "quick"],
+      ["agent_session_id", "planner"],
+      ["inputs", []],
+      ["outputs", []]
+    ]);
+    const events = [
+      event("started", "2026-07-22T10:00:00.000Z"),
+      event("warning", "2026-07-22T10:00:30.000Z"),
+      event("completed", "2026-07-22T10:01:00.000Z")
+    ];
+    const target = position === "started" ? 0 : position === "warning" ? 1 : 2;
+    events[target] = { ...events[target], [field]: undefined };
+    write(
+      cwd,
+      ".logs/gsd-observability/run-1/controller.jsonl",
+      `${events.map((item) => JSON.stringify(item)).join("\n")}\n`
+    );
+
+    const result = run(summarizer, ["--repo", cwd, "--run", "run-1"]);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("METRICS_DATA_ERROR");
   });
 
   it.each([

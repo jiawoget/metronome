@@ -42,7 +42,7 @@ function required(options, name) {
 }
 
 function safeId(value, label) {
-  return SAFE_ID.test(value) && value !== "." && value !== ".." ? value : stop("OBSERVABILITY_PATH_REJECTED", label);
+  return SAFE_ID.test(value) && !/[ .]$/v.test(value) && !WINDOWS_DEVICE.test(value) ? value : stop("OBSERVABILITY_PATH_REJECTED", label);
 }
 
 function repository(candidate) {
