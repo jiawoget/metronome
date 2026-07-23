@@ -4,6 +4,7 @@ import process from "node:process";
 
 const BOT_LOGIN = "chatgpt-codex-connector[bot]";
 const BOT_ID = 199_175_422;
+const BASE_REF = "main";
 const CONTEXT = "Metronome Codex exact-head review";
 const CLEAN_RESULT = "Codex Review: Didn't find any major issues. :tada:";
 const REVIEWED_COMMIT = /^\*\*Reviewed commit:\*\* `(?<prefix>[\da-f]{7,40})`$/gmv;
@@ -19,6 +20,7 @@ const ABOUT_CODEX = [
   "</details>"
 ].join("\n");
 const RESULTS = {
+  base: { description: "Pull request base is unsupported", state: "failure" },
   error: { description: "Codex review metadata could not be evaluated", state: "error" },
   failure: { description: "Latest Codex result is not verified clean", state: "failure" },
   fork: { description: "Fork-origin pull requests are unsupported", state: "failure" },
@@ -26,7 +28,9 @@ const RESULTS = {
   success: { description: "Verified clean Codex review for current head", state: "success" }
 };
 function timestamp(item, kind) {
-  const value = kind === "review" ? item.submitted_at : item.updated_at;
+  const value = kind === "review"
+    ? item.submitted_at
+    : kind === "issue-event" ? item.created_at : item.updated_at;
   if (typeof value !== "string" || !GITHUB_TIMESTAMP.test(value)) {return undefined;}
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) && new Date(parsed).toISOString() === value.replace(/Z$/v, ".000Z") ? parsed : undefined;
@@ -84,6 +88,27 @@ function requestBarrier(issueComments) {
   return { isMalformed: false, time: latest };
 }
 
+function baseBarrier(issueEvents) {
+  let latest = -Infinity;
+  for (const item of issueEvents) {
+    if (item?.event !== "base_ref_changed") {continue;}
+    const time = timestamp(item, "issue-event");
+    if (time === undefined) {return { isMalformed: true, time: latest };}
+    latest = Math.max(latest, time);
+  }
+
+  return { isMalformed: false, time: latest };
+}
+
+function evidenceBarrier(issueComments, issueEvents) {
+  const request = requestBarrier(issueComments);
+  const base = baseBarrier(issueEvents);
+  return {
+    isMalformed: request.isMalformed || base.isMalformed,
+    time: Math.max(request.time, base.time)
+  };
+}
+
 function evaluateCodexReview(input) {
   const head = typeof input?.head === "string" ? input.head.toLowerCase() : "";
   const suppliedCommits = Array.isArray(input?.commits) ? input.commits : [];
@@ -93,8 +118,9 @@ function evaluateCodexReview(input) {
 
   const commits = [...new Set(suppliedCommits.map((sha) => sha.toLowerCase()))];
   const issueComments = Array.isArray(input.issueComments) ? input.issueComments : [];
+  const issueEvents = Array.isArray(input.issueEvents) ? input.issueEvents : [];
   const reviews = Array.isArray(input.reviews) ? input.reviews : [];
-  const barrier = requestBarrier(issueComments);
+  const barrier = evidenceBarrier(issueComments, issueEvents);
   if (barrier.isMalformed) {return RESULTS.failure;}
   const artifacts = [
     ...issueComments.map((item) => normalize(item, "issue-comment", head, commits)),
@@ -130,7 +156,7 @@ function settingsFromEnvironment() {
     throw new Error("Invalid repository or pull-request number");
   }
 
-  return { apiUrl: apiUrl.replace(/\/$/v, ""), base: `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`, prNumber, runUrl, token };
+  return { apiUrl: apiUrl.replace(/\/$/v, ""), base: `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`, prNumber, repository, runUrl, token };
 }
 
 function githubClient(settings) {
@@ -155,9 +181,19 @@ function pullHead(pull) {
   return head;
 }
 
-function isFork(pull) {
+function pullIdentity(pull, repository) {
+  const head = pullHead(pull);
   const headRepository = pull?.head?.repo?.full_name;
-  return typeof headRepository !== "string" || headRepository !== pull?.base?.repo?.full_name;
+  if (typeof headRepository !== "string" || headRepository !== repository) {
+    return { head, result: RESULTS.fork };
+  }
+
+  const baseRepository = pull?.base?.repo?.full_name;
+  const baseRef = pull?.base?.ref;
+  const result = baseRepository === repository && baseRef === BASE_REF
+    ? undefined
+    : RESULTS.base;
+  return { head, result };
 }
 
 async function publish(request, settings, head, result) {
@@ -180,33 +216,33 @@ async function run() {
   const request = githubClient(settings);
   const pullPath = `${settings.base}/pulls/${settings.prNumber}`;
   const pull = await request(pullPath);
-  const head = pullHead(pull);
-  if (isFork(pull)) {
-    await publish(request, settings, head, RESULTS.fork);
+  const initial = pullIdentity(pull, settings.repository);
+  const { head } = initial;
+  if (initial.result) {
+    await publish(request, settings, head, initial.result);
     return;
   }
 
   await publish(request, settings, head, RESULTS.pending);
   let evaluation;
-  let latestHead;
-  let latestPull;
+  let latest;
   try {
-    const [reviews, issueComments, commits] = await Promise.all([paginate(request, `${pullPath}/reviews`), paginate(request, `${settings.base}/issues/${settings.prNumber}/comments`), paginate(request, `${pullPath}/commits`)]);
-    evaluation = evaluateCodexReview({ commits: commits.map((commit) => commit.sha), head, issueComments, reviews });
-    latestPull = await request(pullPath);
-    latestHead = pullHead(latestPull);
+    const issuePath = `${settings.base}/issues/${settings.prNumber}`;
+    const [reviews, issueComments, issueEvents, commits] = await Promise.all([paginate(request, `${pullPath}/reviews`), paginate(request, `${issuePath}/comments`), paginate(request, `${issuePath}/events`), paginate(request, `${pullPath}/commits`)]);
+    evaluation = evaluateCodexReview({ commits: commits.map((commit) => commit.sha), head, issueComments, issueEvents, reviews });
+    latest = pullIdentity(await request(pullPath), settings.repository);
   } catch (error) {
     await publish(request, settings, head, RESULTS.error);
     throw error;
   }
 
-  if (isFork(latestPull)) {
-    await publish(request, settings, latestHead, RESULTS.fork);
+  if (latest.result) {
+    await publish(request, settings, latest.head, latest.result);
     return;
   }
 
-  if (latestHead !== head) {
-    await publish(request, settings, latestHead, RESULTS.pending);
+  if (latest.head !== head) {
+    await publish(request, settings, latest.head, RESULTS.pending);
     return;
   }
 

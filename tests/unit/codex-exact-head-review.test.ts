@@ -43,6 +43,7 @@ const other = "50a083f2".padEnd(40, "2");
 const ambiguous = "379bc414a9".padEnd(40, "3");
 const pullPath = "/repos/jiawoget/metronome/pulls/128";
 const commentsPath = "/repos/jiawoget/metronome/issues/128/comments";
+const eventsPath = "/repos/jiawoget/metronome/issues/128/events";
 const context = "Metronome Codex exact-head review";
 const runUrl = "https://github.test/jiawoget/metronome/actions/runs/1";
 const aboutCodex = [
@@ -108,6 +109,18 @@ function reviewRequest(options: {
   });
 }
 
+function issueEvent(options: {
+  createdAt?: string;
+  event?: string;
+  id?: number;
+} = {}) {
+  return record([
+    ["created_at", options.createdAt ?? "2026-07-20T11:00:00Z"],
+    ["event", options.event ?? "base_ref_changed"],
+    ["id", options.id ?? 5_009_800_500]
+  ]);
+}
+
 function review(options: {
   body?: string;
   commitId?: string;
@@ -139,6 +152,7 @@ function evaluate(overrides: Record<string, unknown> = {}) {
     commits: [head, other],
     head,
     issueComments: [],
+    issueEvents: [],
     reviews: [],
     ...overrides
   };
@@ -197,9 +211,20 @@ function usesProtectedStatusPublisher(source: string) {
   ].some((token) => normalized.includes(token));
 }
 
-function pullResponse(headSha = head, headRepository: string | null = repository) {
+function pullResponse(
+  headSha = head,
+  headRepository: string | null = repository,
+  baseRepository: string | null = repository,
+  baseRef: unknown = "main"
+) {
   return record([
-    ["base", record([["repo", record([["full_name", repository]])]])],
+    [
+      "base",
+      record([
+        ["ref", baseRef],
+        ["repo", baseRepository === null ? null : record([["full_name", baseRepository]])]
+      ])
+    ],
     [
       "head",
       record([
@@ -208,6 +233,17 @@ function pullResponse(headSha = head, headRepository: string | null = repository
       ])
     ]
   ]);
+}
+
+function pullWithoutBaseField(field: "ref" | "repo") {
+  const pull = pullResponse();
+  const { base } = pull;
+  if (typeof base !== "object" || base === null || Array.isArray(base)) {
+    throw new TypeError("Expected pull-request base metadata");
+  }
+
+  Reflect.deleteProperty(base, field);
+  return pull;
 }
 
 function statusPath(sha: string) {
@@ -424,6 +460,43 @@ describe("Codex exact-head review evaluator", () => {
     expect(evaluate({ issueComments: [request], reviews: [newerFinding] }).state).toBe("failure");
   });
 
+  it.each([
+    ["before", "2026-07-20T10:00:00Z"],
+    ["at", "2026-07-20T11:00:00Z"]
+  ])("does not accept a clean artifact %s the latest base change", (_name, updatedAt) => {
+    const clean = issueComment({ updatedAt });
+    const baseChange = issueEvent({ createdAt: "2026-07-20T11:00:00Z" });
+
+    expect(evaluate({ issueComments: [clean], issueEvents: [baseChange] }).state).toBe("pending");
+  });
+
+  it("accepts a fresh clean artifact after the latest base change", () => {
+    const clean = issueComment({ updatedAt: "2026-07-20T12:00:00Z" });
+    const baseChanges = [
+      issueEvent({ createdAt: "2026-07-20T09:00:00Z", id: 5_009_800_499 }),
+      issueEvent({ createdAt: "2026-07-20T11:00:00Z" })
+    ];
+
+    expect(evaluate({ issueComments: [clean], issueEvents: baseChanges }).state).toBe("success");
+  });
+
+  it("does not invalidate clean evidence for an ordinary non-base edit", () => {
+    const clean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
+    const titleEdit = issueEvent({
+      createdAt: "2026-07-20T11:00:00Z",
+      event: "renamed"
+    });
+
+    expect(evaluate({ issueComments: [clean], issueEvents: [titleEdit] }).state).toBe("success");
+  });
+
+  it("fails closed when a base change has an invalid timestamp", () => {
+    const clean = issueComment({ updatedAt: "2026-07-20T12:00:00Z" });
+    const malformed = issueEvent({ createdAt: "not-a-date" });
+
+    expect(evaluate({ issueComments: [clean], issueEvents: [malformed] }).state).toBe("failure");
+  });
+
   it("fails closed on a dateless clean connector artifact", () => {
     const datelessClean = issueComment();
     Reflect.deleteProperty(datelessClean, "created_at");
@@ -610,6 +683,52 @@ describe("Codex exact-head review runtime", () => {
     expect(execution.requests.some((request) => hasState(request, "success"))).toBe(false);
   });
 
+  it.each([
+    ["a non-main ref", pullResponse(head, repository, repository, "release")],
+    ["a missing base repository", pullWithoutBaseField("repo")],
+    ["a malformed base repository", pullResponse(head, repository, null)],
+    ["an unexpected base repository", pullResponse(head, repository, "other/metronome")],
+    ["a missing base ref", pullWithoutBaseField("ref")],
+    ["a malformed base ref", pullResponse(head, repository, repository, 42)]
+  ])("keeps %s non-successful", async (_name, pull) => {
+    const execution = await runRuntime(responses({
+      [page(commentsPath)]: { body: [issueComment()] },
+      [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+    }, [pull]));
+
+    expect(execution.status, execution.stderr).toBe(0);
+    expect(execution.requests.some((request) => hasState(request, "success"))).toBe(false);
+  });
+
+  it("does not publish stale success when the final pull read changes away from main", async () => {
+    const execution = await runRuntime(responses({
+      [page(commentsPath)]: { body: [issueComment()] },
+      [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+    }, [
+      pullResponse(),
+      pullResponse(head, repository, repository, "release")
+    ]));
+
+    expect(execution.status, execution.stderr).toBe(0);
+    expect(execution.requests.some((request) => hasState(request, "success"))).toBe(false);
+  });
+
+  it("fetches issue events and rejects clean evidence before the latest base change", async () => {
+    const execution = await runRuntime(responses({
+      [page(commentsPath)]: {
+        body: [issueComment({ updatedAt: "2026-07-20T10:00:00Z" })]
+      },
+      [page(eventsPath)]: {
+        body: [issueEvent({ createdAt: "2026-07-20T11:00:00Z" })]
+      },
+      [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+    }));
+
+    expect(execution.status, execution.stderr).toBe(0);
+    expect(execution.requests).toContainEqual(getRequest(page(eventsPath)));
+    expect(execution.requests.some((request) => hasState(request, "success"))).toBe(false);
+  });
+
   it("aggregates metadata pages and publishes pending before reads then success after an unchanged-head read", async () => {
     const wrongUser = { id: 1, login: "someone-else" };
     const fillerComments = Array.from({ length: 100 }, (_, index) => issueComment({ id: index + 1, user: wrongUser }));
@@ -638,7 +757,7 @@ describe("Codex exact-head review runtime", () => {
     const pullIndexes = execution.requests
       .map((request, index) => request.method === "GET" && request.path === pullPath ? index : -1)
       .filter((index) => index >= 0);
-    expect(metadataIndexes).toHaveLength(6);
+    expect(metadataIndexes).toHaveLength(7);
     expect(Math.min(...metadataIndexes)).toBeGreaterThan(pendingIndex);
     expect(pullIndexes).toHaveLength(2);
     expect(pullIndexes[1]).toBeGreaterThan(Math.max(...metadataIndexes));
@@ -707,7 +826,7 @@ const expectedPrivilegedWorkflow = [
   "on:",
   "  pull_request_target:",
   "    branches: [main]",
-  "    types: [opened, reopened, synchronize, ready_for_review]",
+  "    types: [opened, reopened, synchronize, edited, ready_for_review]",
   "  issue_comment:",
   "    types: [created, edited, deleted]",
   "  repository_dispatch:",
@@ -792,7 +911,7 @@ describe("Codex exact-head review workflow", () => {
     expect(triggerBlock).toBe([
       "  pull_request_target:",
       "    branches: [main]",
-      "    types: [opened, reopened, synchronize, ready_for_review]",
+      "    types: [opened, reopened, synchronize, edited, ready_for_review]",
       "  issue_comment:",
       "    types: [created, edited, deleted]",
       "  repository_dispatch:",
