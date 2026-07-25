@@ -11,15 +11,10 @@
   "scripts": {
     "install:deps": "npm install",
     "dev": "node scripts/run-next-dev-stable-env.mjs",
-    "gsd:observe": "node scripts/gsd-observability-write.mjs",
-    "gsd:observe:summary": "node scripts/gsd-observability-summarize.mjs",
     "build": "node scripts/run-next-build-stable-env.mjs",
     "next-env:stable": "node scripts/stabilize-next-env.mjs",
     "start": "next start",
     "lint": "eslint .",
-    "lint:xo": "xo --suppressions-location .xo-suppressions.json",
-    "lint:xo:fix": "xo --suppressions-location .xo-suppressions.json --fix",
-    "lint:xo:changed": "node scripts/run-xo-changed.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run",
@@ -27,11 +22,6 @@
     "test:e2e": "node scripts/run-playwright-stable-env.mjs",
     "test:e2e:ui": "node scripts/run-playwright-stable-env.mjs --ui",
     "playwright:install": "playwright install chromium",
-    "lint:codescene:changed": "node scripts/run-codescene-debt-changed.mjs",
-    "lint:debt": "semgrep --config .semgrep --error",
-    "lint:debt:changed": "node scripts/run-metronome-semgrep-changed.mjs",
-    "lint:debt:inventory": "semgrep --config .semgrep --json --output semgrep-inventory.json || true",
-    "validate:debt-gates": "node scripts/run-metronome-semgrep-changed.selftest.mjs",
     "smoke": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run test:e2e"
   },
   "dependencies": {
@@ -54,7 +44,6 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@eslint-react/eslint-plugin": "^5.17.1",
     "@playwright/test": "^1.61.0",
     "@tailwindcss/postcss": "^4.3.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -75,8 +64,7 @@
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
-    "vitest": "^4.1.9",
-    "xo": "^4.0.0"
+    "vitest": "^4.1.9"
   },
   "overrides": {
     "next": {

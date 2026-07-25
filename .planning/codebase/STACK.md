@@ -38,7 +38,7 @@
 - Next.js CLI - Development, production build, and production start commands are defined in `package.json`; Node wrappers in `scripts/run-next-dev-stable-env.mjs` and `scripts/run-next-build-stable-env.mjs` run the stable environment setup.
 - TypeScript compiler 6.0.3 - `npm run typecheck` runs `tsc --noEmit` against `tsconfig.json`.
 - ESLint 9.39.4 with `eslint-config-next` - Lint configuration lives in `eslint.config.mjs`.
-- Prettier 3.8.4 with `prettier-plugin-tailwindcss` - Formatting conventions are configured in `prettier.config.mjs`.
+- Prettier 3.9.5 with `prettier-plugin-tailwindcss` - Formatting conventions are configured in `prettier.config.mjs`; `package.json` declares the compatible `^3.8.4` range.
 - Vite 8.0.16 - Vitest uses the Vite React plugin from `vitest.config.ts`; the application build remains Next.js.
 
 ## Key Dependencies

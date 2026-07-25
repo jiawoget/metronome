@@ -116,6 +116,12 @@
 
 ## Dependencies at Risk
 
+**Production dependency advisories:**
+- Risk: a live `npm audit --omit=dev` on 2026-07-25 reports high-severity advisories affecting the locked `next` 16.2.9, `postcss` 8.5.15, and transitive `sharp` 0.34.5 packages.
+- Impact: the reported ranges cover authorization bypass, denial-of-service, SSRF, source-map path traversal, and inherited libvips vulnerabilities; applicability varies with deployed Next.js features and image-processing paths.
+- Migration plan: handle upgrades as a separately reviewed dependency-maintenance change, move beyond the affected ranges, then run the standard lint/typecheck/unit/build suite plus relevant real-browser and image/PDF paths. Do not use an unreviewed blanket `npm audit fix`.
+- Files: `package.json`, `package-lock.json`, `next.config.mjs`, `postcss.config.mjs`.
+
 **PDF rendering stack:**
 - Risk: `pdfjs-dist` and `react-pdf` are direct dependencies, while three client modules set the PDF worker URL independently.
 - Impact: a version or worker-bundling mismatch can break import inspection, thumbnail generation, or interactive sheet viewing in different ways.

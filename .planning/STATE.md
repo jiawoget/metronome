@@ -4,34 +4,33 @@ milestone: v1.1
 milestone_name: R01 Evidence-First Code Slimming
 current_phase: 01
 current_phase_name: canonical-practice-presentation-formatting
-status: paused
-stopped_at: Task 2 corrected Semgrep fix committed and finding-free native rereview complete; next is the separately authorized workflow-debt release path
-last_updated: "2026-07-25T05:09:57.228Z"
-last_activity: 2026-07-22
-last_activity_desc: independent audit found remaining process debt and the owner approved the bounded native-first closure plan
+status: planning
+stopped_at: Native workflow cleanup implemented; R01 awaits explicit owner direction
+last_updated: "2026-07-25T10:37:29.846Z"
+last_activity: 2026-07-25
+last_activity_desc: native workflow cleanup implemented; R01 awaits explicit owner direction
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-paused_at: .planning/forensics/report-20260722-214242.md
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-21)
+See: .planning/PROJECT.md (updated 2026-07-25)
 
 **Core value:** Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
 **Current focus:** Phase 01 — canonical-practice-presentation-formatting
 
 ## Current Position
 
-Phase: 01 (canonical-practice-presentation-formatting) — PAUSED
-Plan: no active plan; failed attempt quarantined; phase incomplete
-Status: Product phase paused; owner-authorized workflow debt closure is active and no R01 product execution is authorized
-Last activity: 2026-07-22 — independent audit found remaining process debt and the owner approved the bounded native-first closure plan
+Phase: 01 (canonical-practice-presentation-formatting) — READY FOR OWNER-DIRECTED PLANNING
+Plan: No active plan; R01 remains unimplemented
+Status: Ready for future owner-directed native planning; workflow cleanup does not authorize product work
+Last activity: 2026-07-25 — native workflow cleanup implemented; R01 awaits explicit owner direction
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -47,12 +46,12 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Canonical Practice Presentation Formatting | 0 | 0 | — |
+| 01 | 0 | - | - |
 
 **Recent Trend:**
 
-- Last 5 plans: no active plan; failed 01-01 attempt retained only as forensic evidence
-- Trend: paused after workflow repair implementation; release-exit facts remain live external evidence and no R01 disposition has been approved
+- Last 5 plans: no active plan; the failed pre-redesign attempt is retained only as forensic evidence
+- Trend: Phase 1 is unimplemented and ready only for future owner-directed native planning
 
 ## Accumulated Context
 
@@ -61,27 +60,20 @@ Progress: [░░░░░░░░░░] 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 
 - [Phase 1]: Milestone-local numbering resets to Phase 1; v1.0 remains immutable archive history.
-- [Phase 1]: The only selected target is the bounded canonical UTC-minute timestamp and minute-scale duration consolidation in the existing practice formatting boundary.
-- [Phase 1]: Characterization, production edits and deletion, LOC proof, full gates, final-revision CodeScene evidence, immutable reviewed revision evidence, clean rollback, and clean relevant source/configuration state remain open DELIV-01 obligations; satisfying them makes the product ready to enter native verification, validation, and security.
-- [Native ship preconditions]: Passing VERIFICATION, current Nyquist VALIDATION, and SECURITY with `threats_open: 0` remain mandatory before `$gsd-ship` but receive no Phase 1 requirement credit.
-- [Milestone Release Exit]: Native shipping, applicable exact-head CI/delivery, a mandatory finding-free read-only `@codex` review of that same final PR head, and clean synchronized `main` remain outside Phase 1 requirement completion; no review waiver applies, and `verification.status=passed` never proves release exit by itself.
-- [Phase 1]: No new dependency, target, wrapper, dormant seed, or historical pilot scope is admitted.
-- [Workflow forensics]: R01 is a frozen incident specimen. The complete failed `01-01` attempt, unapproved `01-02` artifacts, and non-native receipt/recovery files are quarantined under `.planning/forensics/` and are not executable lifecycle artifacts.
-- [Workflow architecture]: Native OpenGSD exclusively owns plan checking, revision, retry, execution, verification, and routing. Product attempts do not repair their own control plane.
-- [Reuse governance]: Native `RESEARCH.md` records decision-bearing local/dependency/platform/OSS evidence; native `PLAN.md` records integration. No execution receipt, fingerprint transaction, pre-edit lifecycle, or parallel validator is active.
-- [Observability]: Project-local logs record declared status, timing, and I/O only. Unavailable metrics remain unavailable and never block or advance lifecycle state.
-- [Baseline cleanup]: The non-planning paths introduced by failed product commits `ef98c287` and `884805f1` were selectively reversed in the primary checkout. All affected `src/**`, product-test, and `xo.config.js` paths match `origin/main@9199d17`; Git history was not rewritten. All known code and authority remediations are implemented. Their release-exit status must be proven from the live PR and Git state rather than inferred from this file.
-- [Paused forensics authority]: While `paused_at` points to the forensic report, generic `continue`, `go`, `next`, or `resume` wording cannot authorize product work. The report's **Authoritative outcome** is the sole owner-decision surface; the project owner must explicitly select and approve its disposition before native discuss, plan, or execute routing resumes.
-- [Historical worktree cleanup]: All nine linked historical worktrees were removed from the registry after their cleanliness was verified and the detached review chain was preserved under `codex/archive-legacy-overlay-review-7faa689f`. Project work remains confined to the primary checkout by `AGENTS.md` and `workflow.use_worktrees=false`.
-- [Workflow debt closure]: The owner approved `.planning/forensics/report-20260722-214242.md` after an independent audit found unresolved release enforcement, OpenGSD binding, mutating-agent, observability, Lumen, branch, and external legacy debt. That report is the exact repair and cleanup boundary. It does not authorize R01 product work.
+- [Phase 1]: R01 has no active plan and remains unimplemented; no product target or implementation conclusion is selected.
+- [Forensics]: Pre-redesign R01 attempts, research, receipts, recovery files, and controller artifacts are frozen under `.planning/forensics/` and are not executable lifecycle inputs.
+- [Workflow]: Native OpenGSD exclusively owns lifecycle state, research, planning, checking, execution, verification, recovery, and shipping.
+- [Reuse]: When triggered, one compact contract at `skills/metronome-policy/SKILL.md` governs native research, planning, execution, verification, and review.
+- [Authorization]: Completing workflow cleanup does not authorize R01 product work; a future native lifecycle action requires explicit owner direction.
+- [Release exit]: Exact-final-head standard CI and applicable platform quality checks, a finding-free read-only `@codex` review of that head, merge, and clean synchronized `main` remain mandatory.
 
 ### Pending Todos
 
-- Execute the approved tasks in `.planning/forensics/report-20260722-214242.md` through repository repair, exact-head review/merge, GitHub enforcement, legacy cleanup, official OpenGSD upgrade, durable Lumen migration, and a fresh 5.6 Sol Ultra zero-debt audit. No R01 product task is authorized.
+None. Future R01 planning requires explicit owner direction.
 
 ### Blockers/Concerns
 
-The prior R01 attempt remains frozen because the product run modified and rechecked its own control plane. The owner has now explicitly authorized only the workflow-debt closure recorded in `.planning/forensics/report-20260722-214242.md`. Product routing remains blocked until that closure passes its independent final audit and the owner separately chooses an R01 disposition.
+None
 
 ## Deferred Items
 
@@ -91,6 +83,15 @@ The prior R01 attempt remains frozen because the product run modified and rechec
 
 ## Session Continuity
 
-Last session: 2026-07-25T05:09:57.221Z
-Stopped at: Task 2 corrected Semgrep fix committed and finding-free native rereview complete; next is the separately authorized workflow-debt release path
-Resume file: .planning/forensics/report-20260725-113737.md
+Last session: 2026-07-25T10:37:29.839Z
+Stopped at: Native workflow cleanup implemented; R01 awaits explicit owner direction
+Resume file: None
+
+## Rebuild Log
+
+- timestamp: 2026-07-25T10:05:09.430Z
+  kind: by-phase-table-reconciled
+  section: ## Performance Metrics
+  before: | Phase | Plans | Total | Avg/Plan | \n |-------|-------|-------|----------| \n | 1. Canonical Practice Presentation Formatting | 0 | 0 | — |
+  after: | Phase | Plans | Total | Avg/Plan | \n |-------|-------|-------|----------| \n | 01 | 0 | - | - |
+  reason: phase dirs on disk are canonical; rows for missing phases dropped, missing phases added

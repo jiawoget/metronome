@@ -14,13 +14,13 @@ Requirements for this maintenance milestone. Each requirement must map to exactl
 
 ### Evidence and Slimming
 
-- [ ] **EVID-01**: The selected refactor remains supported by reproducible current-product semantic evidence, installed-dependency inspection, and authoritative OSS/platform API evidence, adds no dependency, and refreshes selection evidence if the source HEAD or semantic-index configuration changes before implementation.
+- [ ] **EVID-01**: Before implementation, a current native `RESEARCH.md` records the compact reuse decision required by `skills/metronome-policy/SKILL.md` across local owners, installed APIs, and authoritative OSS/platform APIs; the selected refactor adds no dependency and any unavailable required evidence returns to the project owner.
 - [ ] **SLIM-01**: The final formatted diff is strictly net-negative in tracked production code under `src/**`, with no deletion credit from tests, planning, generated files, renames, formatting-only churn, or logic moved into a new production path.
 
 ### Quality and Code Health
 
-- [ ] **QUAL-01**: Pre-change characterization locks the selected valid, invalid, UTC, fallback, rounding, sub-minute, and hour/minute behavior before production edits, and the reviewed revision passes focused behavior tests plus all repository lint, typecheck, unit, build, architecture, and debt gates.
-- [ ] **HEALTH-01**: CodeScene analysis of the exact final revision shows no changed-source Code Health decline, no new severe finding, and every applicable touched hotspot meets the repository policy threshold.
+- [ ] **QUAL-01**: Pre-change characterization locks the selected valid, invalid, UTC, fallback, rounding, sub-minute, and hour/minute behavior before production edits, and the reviewed revision passes focused behavior tests plus the standard repository lint, typecheck, unit, and build checks.
+- [ ] **HEALTH-01**: The exact final revision introduces no parallel owner or replacement abstraction and has no actionable maintainability finding in the touched production scope under independent read-only review.
 
 ### Delivery
 
@@ -34,8 +34,8 @@ This is explicitly outside Phase 1 requirement completion. All gates below are c
 
 1. Run native `$gsd-ship` to create or prepare the PR.
 2. After any ship-note or update, resolve the actual final post-ship PR head.
-3. Ensure CI applies to that exact head; re-run or refresh CI if `[ci skip]` prevents it.
-4. Obtain a mandatory finding-free, read-only `@codex` review of that exact final PR head using `skills/reviewing-metronome-prs/SKILL.md`; no review waiver applies.
+3. Ensure standard CI and applicable GitHub CodeQL/code-quality checks apply to that exact head; re-run or refresh CI if `[ci skip]` prevents this.
+4. Obtain a mandatory finding-free, read-only `@codex` review of that exact final PR head; the reviewer applies `skills/metronome-policy/SKILL.md` when triggered, and no review waiver applies.
 5. Merge the GitHub PR.
 6. Update local `main` to the intended `origin` merge revision.
 7. Verify `main == origin/main`, no `MERGE_HEAD`, an empty index, and empty `git status --porcelain=v1 --untracked-files=all` output.
@@ -82,4 +82,4 @@ Every v1.1 requirement maps to the single bounded roadmap phase.
 
 ---
 *Requirements defined: 2026-07-21*
-*Last updated: 2026-07-21 after roadmap creation*
+*Last updated: 2026-07-25 after the native OpenGSD workflow cleanup migration*
