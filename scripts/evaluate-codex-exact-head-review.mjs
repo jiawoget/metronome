@@ -1,15 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import process from "node:process";
-import {
-  githubClient,
-  isSameIdentity,
-  publishTestMergeStatus,
-  readPullIdentity,
-  settingsFromEnvironment,
-  statusResult,
-  TEST_MERGE_CONTEXTS
-} from "./test-merge-status-reporter.mjs";
+import { githubClient, isSameIdentity, publishTestMergeStatus, readPullIdentity, settingsFromEnvironment, statusResult, TEST_MERGE_CONTEXTS } from "./test-merge-status-reporter.mjs";
 
 const BOT_LOGIN = "chatgpt-codex-connector[bot]";
 const BOT_ID = 199_175_422;
@@ -19,40 +11,36 @@ const REVIEWED_COMMIT = /^\*\*Reviewed commit:\*\* `(?<prefix>[\da-f]{7,40})`$/g
 const REVIEW_REQUEST = /@codex\s+review\b/iv;
 const SHA = /^[\da-f]{40}$/v;
 const GITHUB_TIMESTAMP = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\dZ$/v;
+const REVIEW_QUERY = "query CodexReviews($owner:String!,$name:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$name){pullRequest(number:$number){reviews(first:100,after:$cursor){nodes{author{login ... on Bot{databaseId} ... on User{databaseId}} body commit{oid} databaseId lastEditedAt state submittedAt updatedAt} pageInfo{endCursor hasNextPage}}}}}";
 const TRUSTED_ASSOCIATIONS = new Set(["COLLABORATOR", "MEMBER", "OWNER"]);
-const ABOUT_CODEX = [
-  "<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n",
-  "[Your team has set up Codex to review pull requests in this repo](https://chatgpt.com/codex/cloud/settings/general). Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\".\n",
-  "If Codex has suggestions, it will comment; otherwise it will react with 👍.\n\n\n\n\nCodex can also answer questions or update the PR. Try commenting \"@codex address that feedback\".\n",
-  "</details>"
-].join("\n");
-const RESULTS = {
-  error: statusResult(CONTEXT, "error"),
-  failure: statusResult(CONTEXT, "failure"),
-  pending: statusResult(CONTEXT, "pending"),
-  success: statusResult(CONTEXT, "success")
-};
-function timestamp(item, kind) {
-  const value = kind === "review"
-    ? item.submitted_at
-    : kind === "issue-event" ? item.created_at : item.updated_at;
+const ABOUT_CODEX = ["<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n", "[Your team has set up Codex to review pull requests in this repo](https://chatgpt.com/codex/cloud/settings/general). Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\".\n", "If Codex has suggestions, it will comment; otherwise it will react with 👍.\n\n\n\n\nCodex can also answer questions or update the PR. Try commenting \"@codex address that feedback\".\n", "</details>"].join("\n");
+const RESULTS = Object.fromEntries(["error", "failure", "pending", "success"].map((outcome) => [outcome, statusResult(CONTEXT, outcome)]));
+function parsedTimestamp(value) {
   if (typeof value !== "string" || !GITHUB_TIMESTAMP.test(value)) {return undefined;}
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) && new Date(parsed).toISOString() === value.replace(/Z$/v, ".000Z") ? parsed : undefined;
 }
 
-function isCleanReview(body, isPrefixHead, prefix) {
-  const core = `${CLEAN_RESULT}\n\n**Reviewed commit:** \`${prefix}\``;
-  return isPrefixHead && (body === core || body === `${core}\n\n${ABOUT_CODEX}`);
+function reviewTimestamp(item) {
+  if (!Object.hasOwn(item, "lastEditedAt")) {return undefined;}
+  const submitted = parsedTimestamp(item.submittedAt);
+  const updated = parsedTimestamp(item.updatedAt);
+  const lastEdited = item.lastEditedAt === null ? undefined : parsedTimestamp(item.lastEditedAt);
+  if (submitted === undefined || updated === undefined || updated < submitted) {return undefined;}
+  if (item.lastEditedAt !== null && (lastEdited === undefined || lastEdited < submitted || lastEdited > updated)) {return undefined;}
+  if (item.state === "DISMISSED" && updated === submitted) {return undefined;}
+  return updated;
 }
 
+function timestamp(item, kind) {return kind === "review" ? reviewTimestamp(item) : parsedTimestamp(kind === "issue-event" ? item.created_at : item.updated_at);}
+
+function isCleanReview(body, isPrefixHead, prefix) {const core = `${CLEAN_RESULT}\n\n**Reviewed commit:** \`${prefix}\``; return isPrefixHead && (body === core || body === `${core}\n\n${ABOUT_CODEX}`);}
+
 function reviewCommit(item, kind) {
-  const raw = kind === "review" ? item.commit_id : undefined;
-  if (raw === undefined || raw === null) {return { malformed: false, value: "" };}
-  if (raw === "") {return { malformed: false, value: "" };}
-  if (typeof raw !== "string") {return { malformed: true, value: "" };}
-  const value = raw.toLowerCase();
-  return SHA.test(value) ? { malformed: false, value } : { malformed: true, value: "" };
+  const raw = kind === "review" ? item.commit?.oid : undefined;
+  if ([undefined, null, ""].includes(raw)) {return { malformed: false, value: "" };}
+  const value = typeof raw === "string" ? raw.toLowerCase() : "";
+  return { malformed: !SHA.test(value), value: SHA.test(value) ? value : "" };
 }
 
 function artifactAssociation(commit, head, prefixes, matches) {
@@ -63,8 +51,13 @@ function artifactAssociation(commit, head, prefixes, matches) {
   return { association: "uncertain", isPrefixHead };
 }
 
+function isCodexArtifact(item, kind) {
+  const user = kind === "review" ? item?.author : item?.user;
+  return user?.login === BOT_LOGIN && [user.databaseId, user.id].includes(BOT_ID);
+}
+
 function normalize(item, kind, head, commits) {
-  if (item?.user?.login !== BOT_LOGIN || item.user.id !== BOT_ID) {return undefined;}
+  if (!isCodexArtifact(item, kind)) {return undefined;}
   const body = String(item.body).replaceAll("\r\n", "\n").replaceAll(/^[\t ]+$/gmv, "");
   const prefixes = body.matchAll(REVIEWED_COMMIT).map((match) => match.groups.prefix.toLowerCase()).toArray();
   const matches = prefixes.length === 1 ? commits.filter((commit) => commit.startsWith(prefixes[0])) : [];
@@ -73,7 +66,8 @@ function normalize(item, kind, head, commits) {
   const state = kind === "review" && typeof item.state === "string" ? item.state : undefined;
   const time = timestamp(item, kind);
   const isClean = isCleanReview(body, isPrefixHead, prefixes[0]) && (kind === "issue-comment" || state === "COMMENTED");
-  return { id: Number.isSafeInteger(Number(item.id)) ? Number(item.id) : 0, isClean, isCurrent: association === "current", isMalformed: commit.malformed || time === undefined, isUncertain: association === "uncertain", kind, state, time };
+  const id = kind === "review" ? item.databaseId : item.id;
+  return { id: Number.isSafeInteger(Number(id)) ? Number(id) : 0, isClean, isCurrent: association === "current", isMalformed: commit.malformed || time === undefined, isUncertain: association === "uncertain", kind, state, time };
 }
 
 function isTrustedReviewRequest(item) {
@@ -81,37 +75,19 @@ function isTrustedReviewRequest(item) {
   return !isCodexBot && TRUSTED_ASSOCIATIONS.has(item?.author_association) && typeof item.body === "string" && REVIEW_REQUEST.test(item.body);
 }
 
-function requestBarrier(issueComments) {
-  let latest = -Infinity;
-  for (const item of issueComments) {
-    if (!isTrustedReviewRequest(item)) {continue;}
-    const time = timestamp(item, "issue-comment");
-    if (time === undefined) {return { isMalformed: true, time: latest };}
-    latest = Math.max(latest, time);
-  }
-
-  return { isMalformed: false, time: latest };
-}
-
-function eventBarrier(issueEvents) {
-  let latest = -Infinity;
-  for (const item of issueEvents) {
-    if (!["base_ref_changed", "head_ref_force_pushed"].includes(item?.event)) {continue;}
-    const time = timestamp(item, "issue-event");
-    if (time === undefined) {return { isMalformed: true, time: latest };}
-    latest = Math.max(latest, time);
-  }
-
-  return { isMalformed: false, time: latest };
-}
-
 function evidenceBarrier(issueComments, issueEvents) {
-  const request = requestBarrier(issueComments);
-  const event = eventBarrier(issueEvents);
-  return {
-    isMalformed: request.isMalformed || event.isMalformed,
-    time: Math.max(request.time, event.time)
-  };
+  let latest = -Infinity;
+  const barriers = [
+    ...issueComments.filter((item) => isTrustedReviewRequest(item)).map((item) => [item, "issue-comment"]),
+    ...issueEvents.filter((item) => ["base_ref_changed", "head_ref_force_pushed"].includes(item?.event)).map((item) => [item, "issue-event"])
+  ];
+  for (const [item, kind] of barriers) {
+    const time = timestamp(item, kind);
+    if (time === undefined) {return { isMalformed: true, time: latest };}
+    latest = Math.max(latest, time);
+  }
+
+  return { isMalformed: false, time: latest };
 }
 
 function evaluateCodexReview(input) {
@@ -142,9 +118,7 @@ function readInput() {
   const raw = readFileSync(0, "utf8").trim();
   if (!raw) {throw new TypeError("Expected JSON input");}
   const value = JSON.parse(raw);
-  if (!value || Array.isArray(value) || typeof value !== "object") {
-    throw new TypeError("Expected a JSON object");
-  }
+  if (!value || Array.isArray(value) || typeof value !== "object") {throw new TypeError("Expected a JSON object");}
 
   return value;
 }
@@ -154,6 +128,46 @@ async function paginate(request, path, page = 1) {
   if (!Array.isArray(values)) {throw new TypeError("Expected a GitHub API list");}
   if (values.length < 100) {return values;}
   return [...values, ...await paginate(request, path, page + 1)];
+}
+
+function hasGraphQlErrors(response) {
+  if (!Object.hasOwn(response ?? {}, "errors")) {return false;}
+  return !Array.isArray(response.errors) || response.errors.length > 0;
+}
+
+function reviewConnection(response) {
+  if (hasGraphQlErrors(response)) {
+    throw new TypeError("GitHub GraphQL review query failed");
+  }
+
+  const connection = response?.data?.repository?.pullRequest?.reviews;
+  if (!Array.isArray(connection?.nodes)) {
+    throw new TypeError("Expected a GitHub GraphQL review connection");
+  }
+
+  const { endCursor, hasNextPage } = connection.pageInfo ?? {};
+  if (typeof hasNextPage !== "boolean") {
+    throw new TypeError("Expected GitHub GraphQL review pagination metadata");
+  }
+
+  if (hasNextPage && (typeof endCursor !== "string" || endCursor.length === 0)) {
+    throw new TypeError("Expected a GitHub GraphQL review cursor");
+  }
+
+  return connection;
+}
+
+async function paginateReviews(request, settings, cursor = null) {
+  const [owner, name] = settings.repository.split("/");
+  const response = await request("", {
+    body: JSON.stringify({ query: REVIEW_QUERY, variables: { cursor, name, number: settings.prNumber, owner } }),
+    method: "POST"
+  });
+  const connection = reviewConnection(response);
+  const { endCursor, hasNextPage } = connection.pageInfo;
+
+  if (!hasNextPage) {return connection.nodes;}
+  return [...connection.nodes, ...await paginateReviews(request, settings, endCursor)];
 }
 
 async function run() {
@@ -166,20 +180,19 @@ async function run() {
   if (process.argv.length > 2) {throw new Error("Unexpected command arguments");}
   const settings = settingsFromEnvironment();
   const request = githubClient(settings);
+  const graphqlUrl = process.env.GITHUB_GRAPHQL_URL;
+  if (!graphqlUrl) {throw new Error("Missing required environment");}
+  const reviewRequest = githubClient(settings, graphqlUrl.replace(/\/$/v, ""));
   const pullPath = `${settings.base}/pulls/${settings.prNumber}`;
   const initial = await readPullIdentity(request, settings);
   const { head } = initial;
-  await publishTestMergeStatus(request, {
-    context: CONTEXT,
-    identity: initial,
-    outcome: "pending",
-    settings
-  });
+  const publish = (outcome) => publishTestMergeStatus(request, { context: CONTEXT, identity: initial, outcome, settings });
+  await publish("pending");
   let evaluation;
   let evaluationError;
   try {
     const issuePath = `${settings.base}/issues/${settings.prNumber}`;
-    const [reviews, issueComments, issueEvents, commits] = await Promise.all([paginate(request, `${pullPath}/reviews`), paginate(request, `${issuePath}/comments`), paginate(request, `${issuePath}/events`), paginate(request, `${pullPath}/commits`)]);
+    const [reviews, issueComments, issueEvents, commits] = await Promise.all([paginateReviews(reviewRequest, settings), paginate(request, `${issuePath}/comments`), paginate(request, `${issuePath}/events`), paginate(request, `${pullPath}/commits`)]);
     evaluation = evaluateCodexReview({ commits: commits.map((commit) => commit.sha), head, issueComments, issueEvents, reviews });
   } catch (error) {
     evaluation = RESULTS.error;
@@ -187,16 +200,9 @@ async function run() {
   }
 
   const latest = await readPullIdentity(request, settings);
-  if (!isSameIdentity(initial, latest)) {
-    throw new Error("Pull request identity changed during evaluation");
-  }
+  if (!isSameIdentity(initial, latest)) {throw new Error("Pull request identity changed during evaluation");}
 
-  await publishTestMergeStatus(request, {
-    context: CONTEXT,
-    identity: initial,
-    outcome: evaluation.state,
-    settings
-  });
+  await publish(evaluation.state);
   if (evaluationError) {throw evaluationError;}
 }
 

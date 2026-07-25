@@ -121,14 +121,15 @@ export function settingsFromEnvironment(environment = process.env) {
   });
 }
 
-export function githubClient(settings) {
+export function githubClient(settings, apiUrl = settings.apiUrl) {
   return async (requestPath, options = {}) => {
     const headers = {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${settings.token}`,
+      "Content-Type": "application/json",
       "X-GitHub-Api-Version": "2022-11-28"
     };
-    const response = await fetch(`${settings.apiUrl}${requestPath}`, { ...options, headers });
+    const response = await fetch(`${apiUrl}${requestPath}`, { ...options, headers });
     if (!response.ok) {
       throw new Error(`GitHub API ${response.status} for ${requestPath.split("?", 1)[0]}`);
     }

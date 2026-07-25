@@ -41,7 +41,8 @@ const workflows = [
     file: "ci.yml",
     gateJob: "verify",
     label: "CI",
-    pushMain: true
+    pushMain: true,
+    runSteps: 7
   },
   {
     commands: ["npm install -g npm@11.17.0", "npm ci", "npm run lint:xo:changed"],
@@ -49,7 +50,8 @@ const workflows = [
     file: "metronome-xo-gate.yml",
     gateJob: "xo_changed",
     label: "XO",
-    pushMain: false
+    pushMain: false,
+    runSteps: 3
   },
   {
     commands: [
@@ -65,7 +67,8 @@ const workflows = [
     file: "metronome-debt-gates.yml",
     gateJob: "semgrep_debt_gates",
     label: "Debt",
-    pushMain: false
+    pushMain: false,
+    runSteps: 7
   },
   {
     commands: [
@@ -76,7 +79,8 @@ const workflows = [
     file: "windows-observability.yml",
     gateJob: "observability",
     label: "Observability",
-    pushMain: true
+    pushMain: true,
+    runSteps: 3
   }
 ] as const;
 
@@ -150,6 +154,22 @@ function jobBlock(source: string, name: string) {
   let end = start + 1;
   while (end < lines.length && !isJobHeader(lines[end])) {end += 1;}
   return lines.slice(start + 1, end).join("\n").trimEnd();
+}
+
+function nestedEntries(source: string, key: string, indentation: number) {
+  const lines = normalized(source).split("\n");
+  const prefix = " ".repeat(indentation);
+  const start = lines.indexOf(`${prefix}${key}:`);
+  if (start === -1) {throw new Error(`Missing ${key} block`);}
+  let end = start + 1;
+  while (end < lines.length && (lines[end] === "" || lines[end].length - lines[end].trimStart().length > indentation)) {end += 1;}
+  return lines.slice(start + 1, end)
+    .filter((line) => line.length - line.trimStart().length === indentation + 2)
+    .map((line) => line.trim());
+}
+
+function occurrences(source: string, value: string) {
+  return source.split(value).length - 1;
 }
 
 function expression(value: string) {
@@ -393,14 +413,55 @@ describe("independent test-merge workflows", () => {
     expect(trigger).toBe(expectedTrigger);
     expect(source).not.toContain("merge_group");
     expect(normalized(source)).toContain("\npermissions: {}\n");
-    expect(gate).toContain("    permissions:\n      contents: read");
-    expect(gate).toContain(`ref: ${expression(gateRef)}`);
-    expect(gate).toContain("persist-credentials: false");
+    expect(topLevelBlock(source, "jobs").split("\n").filter((line) => isJobHeader(line))).toEqual([
+      "  initialize_test_merge:",
+      `  ${contract.gateJob}:`,
+      "  report_test_merge:"
+    ]);
+    expect(nestedEntries(initialize, "permissions", 4)).toEqual([
+      "contents: read",
+      "pull-requests: read",
+      "statuses: write"
+    ]);
+    expect(nestedEntries(gate, "permissions", 4)).toEqual(["contents: read"]);
+    expect(nestedEntries(terminal, "permissions", 4)).toEqual([
+      "contents: read",
+      "pull-requests: read",
+      "statuses: write"
+    ]);
+    for (const block of [initialize, gate, terminal]) {
+      expect(occurrences(block, "    permissions:")).toBe(1);
+    }
+
+    expect(gate.split("\n").filter((line) => line.trimStart().startsWith("needs:"))).toEqual([
+      "    needs: initialize_test_merge"
+    ]);
+    expect(terminal.split("\n").filter((line) => line.trimStart().startsWith("needs:"))).toEqual([
+      `    needs: [initialize_test_merge, ${contract.gateJob}]`
+    ]);
+    expect(occurrences(gate, "uses: actions/checkout@")).toBe(1);
+    expect(gate.split("\n").filter((line) => ["uses: ", "- uses: "].some((prefix) => line.trim().startsWith(prefix)))).toHaveLength(2);
+    expect(gate.split("\n").filter((line) => line.startsWith("        run:"))).toHaveLength(contract.runSteps);
+    expect(gate.split("\n").filter((line) => line.trimStart().startsWith("ref: "))).toEqual([
+      `          ref: ${expression(gateRef)}`
+    ]);
+    expect(occurrences(gate, "persist-credentials: false")).toBe(1);
+    expect(gate).not.toContain("strategy:");
+    expect(gate).not.toContain("uses: ./");
     for (const forbidden of ["statuses: write", "secrets.", "environment:", "test-merge-status-reporter"]) {
       expect(gate).not.toContain(forbidden);
     }
 
-    for (const command of contract.commands) {expect(gate).toContain(command);}
+    let commandIndex = -1;
+    for (const command of contract.commands) {
+      expect(occurrences(gate, command), command).toBe(1);
+      const nextIndex = gate.indexOf(command);
+      expect(nextIndex, command).toBeGreaterThan(commandIndex);
+      commandIndex = nextIndex;
+    }
+
+    expect(gate).not.toContain("continue-on-error:");
+    expect(gate.split("\n").filter((line) => line.startsWith("        if:"))).toEqual([]);
 
     for (const block of [initialize, terminal]) {
       expect(block).toContain("pull-requests: read");
@@ -419,6 +480,7 @@ describe("independent test-merge workflows", () => {
     expect(initialize).toContain("test-merge-status-reporter.mjs initialize");
     expect(terminal).toContain("test-merge-status-reporter.mjs terminal");
     expect(terminal).toContain(`GATE_RESULT: ${expression(`needs.${contract.gateJob}.result`)}`);
+    expect(occurrences(terminal, `needs.${contract.gateJob}.result`)).toBe(1);
     expect(terminal).toContain("always()");
     for (const forbidden of ["!cancelled()", "continue-on-error", "/statuses", "/check-runs", "aggregate", "summary"]) {
       expect(terminal.toLowerCase()).not.toContain(forbidden);

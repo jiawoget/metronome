@@ -68,6 +68,7 @@ const otherBaseSha = "9199d17e9d".padEnd(40, "5");
 const mergeSha = "ec6cfbfc4d".padEnd(40, "6");
 const otherMergeSha = "fa81bb3dc4".padEnd(40, "7");
 const pullPath = "/repos/jiawoget/metronome/pulls/128";
+const graphQlPath = "/graphql";
 const commentsPath = "/repos/jiawoget/metronome/issues/128/comments";
 const eventsPath = "/repos/jiawoget/metronome/issues/128/events";
 const context = "Metronome Codex test-merge review";
@@ -147,30 +148,46 @@ function issueEvent(options: {
   ]);
 }
 
-function review(options: {
+type ReviewOptions = {
   body?: string;
   commitId?: string;
   id?: number;
+  lastEditedAt?: string | null;
   state?: string;
   submittedAt?: string;
+  updatedAt?: string;
   user?: User;
-} = {}) {
+};
+
+function review(options: ReviewOptions = {}) {
   const {
     body = "### 💡 Codex Review\n\nHere are some automated review suggestions.",
     commitId = head,
     id = 4_753_387_658,
+    lastEditedAt = null,
     state = "COMMENTED",
     submittedAt = "2026-07-20T10:00:00Z",
+    updatedAt = submittedAt,
     user = bot
   } = options;
   return record([
+    ["author", record([["databaseId", user.id], ["login", user.login]])],
     ["body", body],
-    ["commit_id", commitId],
-    ["id", id],
+    ["commit", record([["oid", commitId]])],
+    ["databaseId", id],
+    ["lastEditedAt", lastEditedAt],
     ["state", state],
-    ["submitted_at", submittedAt],
-    ["user", user]
+    ["submittedAt", submittedAt],
+    ["updatedAt", updatedAt]
   ]);
+}
+
+function graphQlReviews(nodes: readonly unknown[] = [], hasNextPage = false, endCursor: string | null = null) {
+  const pageInfo = record([["endCursor", endCursor], ["hasNextPage", hasNextPage]]);
+  const reviews = record([["nodes", nodes], ["pageInfo", pageInfo]]);
+  const pullRequest = record([["reviews", reviews]]);
+  const repositoryData = record([["pullRequest", pullRequest]]);
+  return record([["data", record([["repository", repositoryData]])]]);
 }
 
 function evaluate(overrides: Record<string, unknown> = {}) {
@@ -326,13 +343,24 @@ function statusRequest(sha: string, state: string, description: string): HttpReq
   return { body: statusBody(state, description), method: "POST", path: statusPath(sha) };
 }
 
+function statusWrites(requests: readonly HttpRequest[]) {
+  return requests.filter((request) => request.method === "POST" && request.path.startsWith(statusPath("")));
+}
+
 function responses(
   metadata: Readonly<Record<string, FakeResponse>> = {},
   pulls: readonly unknown[] = [pullResponse()],
   status = 200
 ): ResponsePlan {
   let pullRead = 0;
+  let reviewRead = 0;
   return (request) => {
+    if (request.path === graphQlPath) {
+      const response = metadata[`${graphQlPath}:${reviewRead}`] ?? metadata[graphQlPath];
+      reviewRead += 1;
+      return response ?? { body: graphQlReviews() };
+    }
+
     if (request.method === "POST") {return { body: {}, status };}
     if (request.path === pullPath) {
       const body = pulls[Math.min(pullRead, pulls.length - 1)];
@@ -400,6 +428,7 @@ async function runRuntime(
     ...process.env,
     ...stringRecord([
       ["GITHUB_API_URL", `http://127.0.0.1:${address.port}`],
+      ["GITHUB_GRAPHQL_URL", `http://127.0.0.1:${address.port}${graphQlPath}`],
       ["GITHUB_REPOSITORY", repository],
       ["GITHUB_TOKEN", "test-token"],
       ["PR_NUMBER", "128"],
@@ -459,6 +488,21 @@ describe("Codex exact-head review evaluator", () => {
 
     expect(evaluate({ issueComments: [newerClean], reviews: [olderFinding] }).state).toBe("success");
   });
+
+  it.each(["edited", "dismissed"])(
+    "lets a still-later review %s mutation supersede a clean comment",
+    (mutation) => {
+      const olderFinding = review({
+        lastEditedAt: mutation === "edited" ? "2026-07-20T11:00:00Z" : null,
+        state: mutation === "dismissed" ? "DISMISSED" : "COMMENTED",
+        submittedAt: "2026-07-20T09:00:00Z",
+        updatedAt: "2026-07-20T11:00:00Z"
+      });
+      const newerClean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
+
+      expect(evaluate({ issueComments: [newerClean], reviews: [olderFinding] }).state).toBe("failure");
+    }
+  );
 
   it("lets a newer current-head finding supersede an older clean review", () => {
     const olderClean = issueComment({ updatedAt: "2026-07-20T09:00:00Z" });
@@ -598,7 +642,7 @@ describe("Codex exact-head review evaluator", () => {
   it("does not let a clean artifact outrank a missing-date PENDING review", () => {
     const clean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
     const pendingReview = review({ state: "PENDING" });
-    Reflect.deleteProperty(pendingReview, "submitted_at");
+    Reflect.deleteProperty(pendingReview, "submittedAt");
 
     expect(evaluate({ issueComments: [clean], reviews: [pendingReview] }).state).toBe("failure");
   });
@@ -606,10 +650,38 @@ describe("Codex exact-head review evaluator", () => {
   it("does not let a review borrow updated_at when submitted_at is missing", () => {
     const clean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
     const pendingReview = review({ state: "PENDING" });
-    Reflect.deleteProperty(pendingReview, "submitted_at");
-    pendingReview.updated_at = "2026-07-20T09:00:00Z";
+    Reflect.deleteProperty(pendingReview, "submittedAt");
+    pendingReview.updatedAt = "2026-07-20T09:00:00Z";
 
     expect(evaluate({ issueComments: [clean], reviews: [pendingReview] }).state).toBe("failure");
+  });
+
+  it.each([
+    ["missing updated_at", undefined, null],
+    ["malformed updated_at", "not-a-date", null],
+    ["updated_at before submission", "2026-07-20T08:00:00Z", null],
+    ["last edit after updated_at", "2026-07-20T10:00:00Z", "2026-07-20T11:00:00Z"]
+  ] as const)("fails closed for review mutation metadata with %s", (_name, updatedAt, lastEditedAt) => {
+    const clean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
+    const malformed = review({
+      lastEditedAt,
+      submittedAt: "2026-07-20T09:00:00Z",
+      updatedAt: updatedAt ?? "2026-07-20T09:00:00Z"
+    });
+    if (updatedAt === undefined) {Reflect.deleteProperty(malformed, "updatedAt");}
+
+    expect(evaluate({ issueComments: [clean], reviews: [malformed] }).state).toBe("failure");
+  });
+
+  it("fails closed when a dismissed review has no distinct dismissal mutation time", () => {
+    const clean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
+    const ambiguousDismissal = review({
+      state: "DISMISSED",
+      submittedAt: "2026-07-20T09:00:00Z",
+      updatedAt: "2026-07-20T09:00:00Z"
+    });
+
+    expect(evaluate({ issueComments: [clean], reviews: [ambiguousDismissal] }).state).toBe("failure");
   });
 
   it("does not classify a malformed nonempty review commit_id as elsewhere", () => {
@@ -646,7 +718,7 @@ describe("Codex exact-head review evaluator", () => {
         submittedAt: "not-a-date"
       });
       if (timestampKind === "missing") {
-        Reflect.deleteProperty(malformedOldHeadReview, "submitted_at");
+        Reflect.deleteProperty(malformedOldHeadReview, "submittedAt");
       }
 
       expect(evaluate({ issueComments: [currentClean], reviews: [malformedOldHeadReview] }).state).toBe("failure");
@@ -798,7 +870,7 @@ describe("Codex test-merge review runtime", () => {
     }, [pullResponse(), latestPull]));
 
     expect(execution.status).toBe(1);
-    expect(execution.requests.filter((request) => request.method === "POST")).toEqual([
+    expect(statusWrites(execution.requests)).toEqual([
       statusRequest(mergeSha, "pending", "No verified Codex review for current head")
     ]);
   });
@@ -831,11 +903,44 @@ describe("Codex test-merge review runtime", () => {
     }));
 
     expect(execution.status, execution.stderr).toBe(0);
-    expect(execution.requests.filter((request) => request.method === "POST")).toEqual([
+    expect(statusWrites(execution.requests)).toEqual([
       statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
       statusRequest(mergeSha, "pending", "No verified Codex review for current head")
     ]);
   });
+
+  it.each(["edited", "dismissed"])(
+    "uses the GraphQL review %s mutation time instead of original submission time",
+    async (mutation) => {
+      const mutationReview = review({
+        lastEditedAt: mutation === "edited" ? "2026-07-20T11:00:00Z" : null,
+        state: mutation === "dismissed" ? "DISMISSED" : "COMMENTED",
+        submittedAt: "2026-07-20T09:00:00Z",
+        updatedAt: "2026-07-20T11:00:00Z"
+      });
+      const execution = await runRuntime(responses({
+        [page(commentsPath)]: {
+          body: [issueComment({ updatedAt: "2026-07-20T10:00:00Z" })]
+        },
+        [graphQlPath]: {
+          body: graphQlReviews([mutationReview])
+        },
+        [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+      }));
+
+      expect(execution.status, execution.stderr).toBe(0);
+      expect(statusWrites(execution.requests)).toEqual([
+        statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
+        statusRequest(mergeSha, "failure", "Latest Codex result is not verified clean")
+      ]);
+      const query = execution.requests.find((request) => request.path === graphQlPath);
+      const queryBody = query?.body as { query?: unknown; variables?: unknown } | undefined;
+      expect(queryBody?.variables).toEqual({ cursor: null, name: "metronome", number: 128, owner: "jiawoget" });
+      expect(String(queryBody?.query)).toContain("lastEditedAt");
+      expect(String(queryBody?.query)).toContain("updatedAt");
+      expect(execution.requests.some((request) => request.path.includes("/reviews?"))).toBe(false);
+    }
+  );
 
   it("aggregates metadata pages and publishes pending before reads then success to an unchanged test merge", async () => {
     const wrongUser = { id: 1, login: "someone-else" };
@@ -843,8 +948,8 @@ describe("Codex test-merge review runtime", () => {
     const fillerReviews = Array.from({ length: 100 }, (_, index) => review({ id: index + 1, user: wrongUser }));
     const fillerCommits = Array.from({ length: 100 }, (_, index) => record([["sha", index.toString(16).padStart(40, "0")]]));
     const execution = await runRuntime(responses({
-      [page(`${pullPath}/reviews`)]: { body: fillerReviews },
-      [page(`${pullPath}/reviews`, 2)]: { body: [] },
+      [`${graphQlPath}:0`]: { body: graphQlReviews(fillerReviews, true, "next-reviews") },
+      [`${graphQlPath}:1`]: { body: graphQlReviews() },
       [page(commentsPath)]: { body: fillerComments },
       [page(commentsPath, 2)]: { body: [issueComment()] },
       [page(`${pullPath}/commits`)]: { body: fillerCommits },
@@ -852,7 +957,7 @@ describe("Codex test-merge review runtime", () => {
     }));
 
     expect(execution.status, execution.stderr).toBe(0);
-    const writes = execution.requests.filter((request) => request.method === "POST");
+    const writes = statusWrites(execution.requests);
     expect(writes).toEqual([
       statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
       statusRequest(mergeSha, "success", "Verified clean Codex review for current head")
@@ -861,7 +966,7 @@ describe("Codex test-merge review runtime", () => {
     const pendingIndex = execution.requests.indexOf(writes[0]);
     const successIndex = execution.requests.indexOf(writes[1]);
     const metadataIndexes = execution.requests
-      .map((request, index) => request.path.includes("per_page=100") ? index : -1)
+      .map((request, index) => request.path === graphQlPath || request.path.includes("per_page=100") ? index : -1)
       .filter((index) => index >= 0);
     const pullIndexes = execution.requests
       .map((request, index) => request.method === "GET" && request.path === pullPath ? index : -1)
@@ -882,7 +987,7 @@ describe("Codex test-merge review runtime", () => {
     }));
 
     expect(execution.status, execution.stderr).toBe(0);
-    expect(execution.requests.filter((httpRequest) => httpRequest.method === "POST")).toEqual([
+    expect(statusWrites(execution.requests)).toEqual([
       statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
       statusRequest(mergeSha, "pending", "No verified Codex review for current head")
     ]);
@@ -891,12 +996,12 @@ describe("Codex test-merge review runtime", () => {
 
   it("rereads identity before publishing an error to the captured test merge", async () => {
     const execution = await runRuntime(responses({
-      [page(`${pullPath}/reviews`)]: { body: {}, status: 500 }
+      [graphQlPath]: { body: {}, status: 500 }
     }));
 
     expect(execution.status).toBe(1);
     expect(execution.stderr).toContain("GitHub API 500");
-    expect(execution.requests.filter((request) => request.method === "POST")).toEqual([
+    expect(statusWrites(execution.requests)).toEqual([
       statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
       statusRequest(mergeSha, "error", "Codex review metadata could not be evaluated")
     ]);
@@ -921,7 +1026,7 @@ describe("Codex test-merge review runtime", () => {
     }, [pullResponse(), pullResponse({ mergeCommitSha: otherMergeSha })]));
 
     expect(execution.status).toBe(1);
-    expect(execution.requests.filter((request) => request.method === "POST")).toEqual([
+    expect(statusWrites(execution.requests)).toEqual([
       statusRequest(mergeSha, "pending", "No verified Codex review for current head")
     ]);
     expect(execution.requests.some((request) => hasState(request, "success"))).toBe(false);
@@ -976,6 +1081,7 @@ const expectedPrivilegedWorkflow = [
   "        run: node scripts/evaluate-codex-exact-head-review.mjs",
   "        env:",
   `          GITHUB_API_URL: ${githubExpression("github.api_url")}`,
+  `          GITHUB_GRAPHQL_URL: ${githubExpression("github.graphql_url")}`,
   `          GITHUB_REPOSITORY: ${githubExpression("github.repository")}`,
   `          GITHUB_TOKEN: ${githubExpression("secrets.GITHUB_TOKEN")}`,
   `          PR_NUMBER: ${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
