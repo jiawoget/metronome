@@ -60,7 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 
 - [Phase 1]: Milestone-local numbering resets to Phase 1; v1.0 remains immutable archive history.
-- [Phase 1]: R01 has no active plan and remains unimplemented; no product target or implementation conclusion is selected.
+- [Phase 1]: R01 selects canonical practice presentation formatting as its product target, but has no active plan and remains unimplemented; no implementation conclusion is selected.
 - [Forensics]: Pre-redesign R01 attempts, research, receipts, recovery files, and controller artifacts are frozen under `.planning/forensics/` and are not executable lifecycle inputs.
 - [Workflow]: Native OpenGSD exclusively owns lifecycle state, research, planning, checking, execution, verification, recovery, and shipping.
 - [Reuse]: When triggered, one compact contract at `skills/metronome-policy/SKILL.md` governs native research, planning, execution, verification, and review.
