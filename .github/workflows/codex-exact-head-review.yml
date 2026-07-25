@@ -1,11 +1,13 @@
-name: Codex exact-head review
+name: Codex test-merge review
 
 on:
   pull_request_target:
     branches: [main]
-    types: [opened, reopened, synchronize, edited, ready_for_review]
+    types: [opened, reopened, synchronize, edited, converted_to_draft, ready_for_review]
   issue_comment:
     types: [created, edited, deleted]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
   repository_dispatch:
     types: [codex_exact_head_review_recovery]
 
@@ -24,7 +26,7 @@ jobs:
           github.event.comment.user.id == 199175422) ||
          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)))
     concurrency:
-      group: codex-exact-head-${{ github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number }}
+      group: codex-test-merge-${{ github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
@@ -39,7 +41,7 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      - name: Evaluate current pull-request head
+      - name: Evaluate current pull-request test merge
         run: node scripts/evaluate-codex-exact-head-review.mjs
         env:
           GITHUB_API_URL: ${{ github.api_url }}

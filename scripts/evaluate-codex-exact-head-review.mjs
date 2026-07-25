@@ -1,17 +1,24 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import process from "node:process";
+import {
+  githubClient,
+  isSameIdentity,
+  publishTestMergeStatus,
+  readPullIdentity,
+  settingsFromEnvironment,
+  statusResult,
+  TEST_MERGE_CONTEXTS
+} from "./test-merge-status-reporter.mjs";
 
 const BOT_LOGIN = "chatgpt-codex-connector[bot]";
 const BOT_ID = 199_175_422;
-const BASE_REF = "main";
-const CONTEXT = "Metronome Codex exact-head review";
+const CONTEXT = TEST_MERGE_CONTEXTS[4];
 const CLEAN_RESULT = "Codex Review: Didn't find any major issues. :tada:";
 const REVIEWED_COMMIT = /^\*\*Reviewed commit:\*\* `(?<prefix>[\da-f]{7,40})`$/gmv;
 const REVIEW_REQUEST = /@codex\s+review\b/iv;
 const SHA = /^[\da-f]{40}$/v;
 const GITHUB_TIMESTAMP = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\dZ$/v;
-const POSITIVE_DECIMAL = /^[1-9]\d*$/v;
 const TRUSTED_ASSOCIATIONS = new Set(["COLLABORATOR", "MEMBER", "OWNER"]);
 const ABOUT_CODEX = [
   "<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n",
@@ -20,12 +27,10 @@ const ABOUT_CODEX = [
   "</details>"
 ].join("\n");
 const RESULTS = {
-  base: { description: "Pull request base is unsupported", state: "failure" },
-  error: { description: "Codex review metadata could not be evaluated", state: "error" },
-  failure: { description: "Latest Codex result is not verified clean", state: "failure" },
-  fork: { description: "Fork-origin pull requests are unsupported", state: "failure" },
-  pending: { description: "No verified Codex review for current head", state: "pending" },
-  success: { description: "Verified clean Codex review for current head", state: "success" }
+  error: statusResult(CONTEXT, "error"),
+  failure: statusResult(CONTEXT, "failure"),
+  pending: statusResult(CONTEXT, "pending"),
+  success: statusResult(CONTEXT, "success")
 };
 function timestamp(item, kind) {
   const value = kind === "review"
@@ -88,10 +93,10 @@ function requestBarrier(issueComments) {
   return { isMalformed: false, time: latest };
 }
 
-function baseBarrier(issueEvents) {
+function eventBarrier(issueEvents) {
   let latest = -Infinity;
   for (const item of issueEvents) {
-    if (item?.event !== "base_ref_changed") {continue;}
+    if (!["base_ref_changed", "head_ref_force_pushed"].includes(item?.event)) {continue;}
     const time = timestamp(item, "issue-event");
     if (time === undefined) {return { isMalformed: true, time: latest };}
     latest = Math.max(latest, time);
@@ -102,10 +107,10 @@ function baseBarrier(issueEvents) {
 
 function evidenceBarrier(issueComments, issueEvents) {
   const request = requestBarrier(issueComments);
-  const base = baseBarrier(issueEvents);
+  const event = eventBarrier(issueEvents);
   return {
-    isMalformed: request.isMalformed || base.isMalformed,
-    time: Math.max(request.time, base.time)
+    isMalformed: request.isMalformed || event.isMalformed,
+    time: Math.max(request.time, event.time)
   };
 }
 
@@ -144,64 +149,11 @@ function readInput() {
   return value;
 }
 
-function settingsFromEnvironment() {
-  const { GITHUB_API_URL: apiUrl, GITHUB_REPOSITORY: repository, GITHUB_TOKEN: token, PR_NUMBER: prNumberText, RUN_URL: runUrl } = process.env;
-  if (!apiUrl || !repository || !token || !prNumberText || !runUrl) {
-    throw new Error("Missing required environment");
-  }
-
-  const [owner, name, extra] = repository.split("/", 3);
-  const prNumber = POSITIVE_DECIMAL.test(prNumberText) ? Number(prNumberText) : NaN;
-  if (!owner || !name || extra || !Number.isSafeInteger(prNumber)) {
-    throw new Error("Invalid repository or pull-request number");
-  }
-
-  return { apiUrl: apiUrl.replace(/\/$/v, ""), base: `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`, prNumber, repository, runUrl, token };
-}
-
-function githubClient(settings) {
-  return async (path, options = {}) => {
-    const headers = { Accept: "application/vnd.github+json", Authorization: `Bearer ${settings.token}`, "X-GitHub-Api-Version": "2022-11-28" };
-    const response = await fetch(`${settings.apiUrl}${path}`, { ...options, headers });
-    if (!response.ok) {throw new Error(`GitHub API ${response.status} for ${path.split("?", 1)[0]}`);}
-    return response.json();
-  };
-}
-
 async function paginate(request, path, page = 1) {
   const values = await request(`${path}?per_page=100&page=${page}`);
   if (!Array.isArray(values)) {throw new TypeError("Expected a GitHub API list");}
   if (values.length < 100) {return values;}
   return [...values, ...await paginate(request, path, page + 1)];
-}
-
-function pullHead(pull) {
-  const head = pull?.head?.sha?.toLowerCase();
-  if (!SHA.test(head ?? "")) {throw new Error("Pull request head is unavailable");}
-  return head;
-}
-
-function pullIdentity(pull, repository) {
-  const head = pullHead(pull);
-  const headRepository = pull?.head?.repo?.full_name;
-  if (typeof headRepository !== "string" || headRepository !== repository) {
-    return { head, result: RESULTS.fork };
-  }
-
-  const baseRepository = pull?.base?.repo?.full_name;
-  const baseRef = pull?.base?.ref;
-  const result = baseRepository === repository && baseRef === BASE_REF
-    ? undefined
-    : RESULTS.base;
-  return { head, result };
-}
-
-async function publish(request, settings, head, result) {
-  const payload = Object.fromEntries([["context", CONTEXT], ["description", result.description], ["state", result.state], ["target_url", settings.runUrl]]);
-  await request(`${settings.base}/statuses/${head}`, {
-    body: JSON.stringify(payload),
-    method: "POST"
-  });
 }
 
 async function run() {
@@ -215,38 +167,37 @@ async function run() {
   const settings = settingsFromEnvironment();
   const request = githubClient(settings);
   const pullPath = `${settings.base}/pulls/${settings.prNumber}`;
-  const pull = await request(pullPath);
-  const initial = pullIdentity(pull, settings.repository);
+  const initial = await readPullIdentity(request, settings);
   const { head } = initial;
-  if (initial.result) {
-    await publish(request, settings, head, initial.result);
-    return;
-  }
-
-  await publish(request, settings, head, RESULTS.pending);
+  await publishTestMergeStatus(request, {
+    context: CONTEXT,
+    identity: initial,
+    outcome: "pending",
+    settings
+  });
   let evaluation;
-  let latest;
+  let evaluationError;
   try {
     const issuePath = `${settings.base}/issues/${settings.prNumber}`;
     const [reviews, issueComments, issueEvents, commits] = await Promise.all([paginate(request, `${pullPath}/reviews`), paginate(request, `${issuePath}/comments`), paginate(request, `${issuePath}/events`), paginate(request, `${pullPath}/commits`)]);
     evaluation = evaluateCodexReview({ commits: commits.map((commit) => commit.sha), head, issueComments, issueEvents, reviews });
-    latest = pullIdentity(await request(pullPath), settings.repository);
   } catch (error) {
-    await publish(request, settings, head, RESULTS.error);
-    throw error;
+    evaluation = RESULTS.error;
+    evaluationError = error;
   }
 
-  if (latest.result) {
-    await publish(request, settings, latest.head, latest.result);
-    return;
+  const latest = await readPullIdentity(request, settings);
+  if (!isSameIdentity(initial, latest)) {
+    throw new Error("Pull request identity changed during evaluation");
   }
 
-  if (latest.head !== head) {
-    await publish(request, settings, latest.head, RESULTS.pending);
-    return;
-  }
-
-  await publish(request, settings, head, evaluation);
+  await publishTestMergeStatus(request, {
+    context: CONTEXT,
+    identity: initial,
+    outcome: evaluation.state,
+    settings
+  });
+  if (evaluationError) {throw evaluationError;}
 }
 
 try {

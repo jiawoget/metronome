@@ -1,22 +1,75 @@
 name: CI
 
 on:
-  pull_request:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, edited, converted_to_draft, ready_for_review]
   push:
     branches:
       - main
 
+permissions: {}
+
+concurrency:
+  group: ci-test-merge-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
+  initialize_test_merge:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    outputs:
+      head_sha: ${{ steps.initialize.outputs.head_sha }}
+      base_ref: ${{ steps.initialize.outputs.base_ref }}
+      base_sha: ${{ steps.initialize.outputs.base_sha }}
+      merge_sha: ${{ steps.initialize.outputs.merge_sha }}
+    steps:
+      - name: Check out default branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+
+      - name: Initialize CI test-merge status
+        id: initialize
+        run: node scripts/test-merge-status-reporter.mjs initialize
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STATUS_CONTEXT: Metronome CI test-merge
+
   verify:
     name: Lint, typecheck, unit tests, build
+    needs: initialize_test_merge
+    if: >-
+      always() &&
+      (github.event_name == 'push' ||
+       needs.initialize_test_merge.result == 'success')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || needs.initialize_test_merge.outputs.merge_sha }}
+          persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -43,3 +96,41 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  report_test_merge:
+    needs: [initialize_test_merge, verify]
+    if: >-
+      always() &&
+      github.event_name == 'pull_request_target' &&
+      needs.initialize_test_merge.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    steps:
+      - name: Check out default branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+
+      - name: Report CI test-merge status
+        run: node scripts/test-merge-status-reporter.mjs terminal
+        env:
+          BASE_REF: ${{ needs.initialize_test_merge.outputs.base_ref }}
+          BASE_SHA: ${{ needs.initialize_test_merge.outputs.base_sha }}
+          GATE_RESULT: ${{ needs.verify.result }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ needs.initialize_test_merge.outputs.head_sha }}
+          MERGE_SHA: ${{ needs.initialize_test_merge.outputs.merge_sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STATUS_CONTEXT: Metronome CI test-merge

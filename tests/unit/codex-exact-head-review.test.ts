@@ -27,6 +27,28 @@ const workflowFiles = workflowNames
     source: readFileSync(path.join(workflowDirectory, name), "utf8")
   }));
 
+function sourceFilesUnder(directory: string): string[] {
+  const files: string[] = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...sourceFilesUnder(entryPath));
+    } else if ([".cjs", ".js", ".json", ".mjs", ".ps1", ".sh", ".ts", ".yaml", ".yml"].includes(path.extname(entry.name).toLowerCase())) {
+      files.push(entryPath);
+    }
+  }
+
+  return files;
+}
+
+const publisherFiles = [
+  ...sourceFilesUnder(path.join(process.cwd(), "scripts")).map((file) => ({
+    name: path.relative(process.cwd(), file).replaceAll("\\", "/"),
+    source: readFileSync(file, "utf8")
+  })),
+  ...workflowFiles.map((entry) => ({ ...entry, name: `.github/workflows/${entry.name}` }))
+];
+
 function workflowSource(name: string) {
   const entry = workflowFiles.find((candidate) => candidate.name === name);
   if (!entry) {throw new Error(`Missing workflow: ${name}`);}
@@ -41,10 +63,14 @@ const repository = "jiawoget/metronome";
 const head = "379bc414a9".padEnd(40, "1");
 const other = "50a083f2".padEnd(40, "2");
 const ambiguous = "379bc414a9".padEnd(40, "3");
+const baseSha = "a766e9e40e".padEnd(40, "4");
+const otherBaseSha = "9199d17e9d".padEnd(40, "5");
+const mergeSha = "ec6cfbfc4d".padEnd(40, "6");
+const otherMergeSha = "fa81bb3dc4".padEnd(40, "7");
 const pullPath = "/repos/jiawoget/metronome/pulls/128";
 const commentsPath = "/repos/jiawoget/metronome/issues/128/comments";
 const eventsPath = "/repos/jiawoget/metronome/issues/128/events";
-const context = "Metronome Codex exact-head review";
+const context = "Metronome Codex test-merge review";
 const runUrl = "https://github.test/jiawoget/metronome/actions/runs/1";
 const aboutCodex = [
   "<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n",
@@ -211,31 +237,54 @@ function usesProtectedStatusPublisher(source: string) {
   ].some((token) => normalized.includes(token));
 }
 
-function pullResponse(
-  headSha = head,
-  headRepository: string | null = repository,
-  baseRepository: string | null = repository,
-  baseRef: unknown = "main"
-) {
+type PullResponseOptions = {
+  baseRef?: unknown;
+  baseRepository?: string | null;
+  baseSha?: unknown;
+  draft?: unknown;
+  headRepository?: string | null;
+  headSha?: unknown;
+  mergeCommitSha?: unknown;
+  mergeable?: unknown;
+  state?: unknown;
+};
+
+function pullResponse(options: PullResponseOptions = {}) {
+  const {
+    baseRef = "main",
+    baseRepository = repository,
+    baseSha: currentBaseSha = baseSha,
+    draft = false,
+    headRepository = repository,
+    headSha = head,
+    mergeCommitSha = mergeSha,
+    mergeable = true,
+    state = "open"
+  } = options;
   return record([
     [
       "base",
       record([
         ["ref", baseRef],
-        ["repo", baseRepository === null ? null : record([["full_name", baseRepository]])]
+        ["repo", baseRepository === null ? null : record([["full_name", baseRepository]])],
+        ["sha", currentBaseSha]
       ])
     ],
+    ["draft", draft],
     [
       "head",
       record([
         ["repo", headRepository === null ? null : record([["full_name", headRepository]])],
         ["sha", headSha]
       ])
-    ]
+    ],
+    ["merge_commit_sha", mergeCommitSha],
+    ["mergeable", mergeable],
+    ["state", state]
   ]);
 }
 
-function pullWithoutBaseField(field: "ref" | "repo") {
+function pullWithoutBaseField(field: "ref" | "repo" | "sha") {
   const pull = pullResponse();
   const { base } = pull;
   if (typeof base !== "object" || base === null || Array.isArray(base)) {
@@ -243,6 +292,12 @@ function pullWithoutBaseField(field: "ref" | "repo") {
   }
 
   Reflect.deleteProperty(base, field);
+  return pull;
+}
+
+function pullWithoutField(field: "draft" | "merge_commit_sha" | "mergeable" | "state") {
+  const pull = pullResponse();
+  Reflect.deleteProperty(pull, field);
   return pull;
 }
 
@@ -480,6 +535,16 @@ describe("Codex exact-head review evaluator", () => {
     expect(evaluate({ issueComments: [clean], issueEvents: baseChanges }).state).toBe("success");
   });
 
+  it("rejects prefix-matched clean evidence older than a force push", () => {
+    const clean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
+    const forcePush = issueEvent({
+      createdAt: "2026-07-20T11:00:00Z",
+      event: "head_ref_force_pushed"
+    });
+
+    expect(evaluate({ issueComments: [clean], issueEvents: [forcePush] }).state).toBe("pending");
+  });
+
   it("does not invalidate clean evidence for an ordinary non-base edit", () => {
     const clean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
     const titleEdit = issueEvent({
@@ -490,12 +555,15 @@ describe("Codex exact-head review evaluator", () => {
     expect(evaluate({ issueComments: [clean], issueEvents: [titleEdit] }).state).toBe("success");
   });
 
-  it("fails closed when a base change has an invalid timestamp", () => {
-    const clean = issueComment({ updatedAt: "2026-07-20T12:00:00Z" });
-    const malformed = issueEvent({ createdAt: "not-a-date" });
+  it.each(["base_ref_changed", "head_ref_force_pushed"])(
+    "fails closed when a %s event has an invalid timestamp",
+    (event) => {
+      const clean = issueComment({ updatedAt: "2026-07-20T12:00:00Z" });
+      const malformed = issueEvent({ createdAt: "not-a-date", event });
 
-    expect(evaluate({ issueComments: [clean], issueEvents: [malformed] }).state).toBe("failure");
-  });
+      expect(evaluate({ issueComments: [clean], issueEvents: [malformed] }).state).toBe("failure");
+    }
+  );
 
   it("fails closed on a dateless clean connector artifact", () => {
     const datelessClean = issueComment();
@@ -657,7 +725,7 @@ describe("Codex exact-head review evaluator", () => {
   });
 });
 
-describe("Codex exact-head review runtime", () => {
+describe("Codex test-merge review runtime", () => {
   it.each(["00128", "+128", "128.0", "1e2", " 128 "])(
     "rejects the non-canonical pull-request number %j before API access",
     async (prNumber) => {
@@ -673,44 +741,66 @@ describe("Codex exact-head review runtime", () => {
     ["missing", null],
     ["different", "contributor/metronome"]
   ])("fails closed for a %s live head repository without metadata reads", async (_name, headRepository) => {
-    const execution = await runRuntime(responses({}, [pullResponse(head, headRepository)]));
+    const execution = await runRuntime(responses({}, [pullResponse({ headRepository })]));
 
-    expect(execution.status, execution.stderr).toBe(0);
-    expect(execution.requests).toEqual([
-      getRequest(pullPath),
-      statusRequest(head, "failure", "Fork-origin pull requests are unsupported")
-    ]);
-    expect(execution.requests.some((request) => hasState(request, "success"))).toBe(false);
+    expect(execution.status).toBe(1);
+    expect(execution.requests).toEqual([getRequest(pullPath)]);
   });
 
   it.each([
-    ["a non-main ref", pullResponse(head, repository, repository, "release")],
+    ["a non-main ref", pullResponse({ baseRef: "release" })],
     ["a missing base repository", pullWithoutBaseField("repo")],
-    ["a malformed base repository", pullResponse(head, repository, null)],
-    ["an unexpected base repository", pullResponse(head, repository, "other/metronome")],
+    ["a malformed base repository", pullResponse({ baseRepository: null })],
+    ["an unexpected base repository", pullResponse({ baseRepository: "other/metronome" })],
     ["a missing base ref", pullWithoutBaseField("ref")],
-    ["a malformed base ref", pullResponse(head, repository, repository, 42)]
+    ["a malformed base ref", pullResponse({ baseRef: 42 })]
   ])("keeps %s non-successful", async (_name, pull) => {
-    const execution = await runRuntime(responses({
-      [page(commentsPath)]: { body: [issueComment()] },
-      [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
-    }, [pull]));
+    const execution = await runRuntime(responses({}, [pull]));
 
-    expect(execution.status, execution.stderr).toBe(0);
-    expect(execution.requests.some((request) => hasState(request, "success"))).toBe(false);
+    expect(execution.status).toBe(1);
+    expect(execution.requests).toEqual([getRequest(pullPath)]);
   });
 
-  it("does not publish stale success when the final pull read changes away from main", async () => {
+  it.each([
+    ["a closed pull request", pullResponse({ state: "closed" })],
+    ["a missing state", pullWithoutField("state")],
+    ["a draft pull request", pullResponse({ draft: true })],
+    ["a missing draft flag", pullWithoutField("draft")],
+    ["a conflicting pull request", pullResponse({ mergeable: false })],
+    ["unknown mergeability", pullResponse({ mergeable: null })],
+    ["a missing mergeability flag", pullWithoutField("mergeable")],
+    ["a missing base SHA", pullWithoutBaseField("sha")],
+    ["a malformed base SHA", pullResponse({ baseSha: "not-a-sha" })],
+    ["a malformed head SHA", pullResponse({ headSha: null })],
+    ["a missing test-merge SHA", pullWithoutField("merge_commit_sha")],
+    ["a malformed test-merge SHA", pullResponse({ mergeCommitSha: "not-a-sha" })],
+    ["a head SHA reused as the test-merge SHA", pullResponse({ mergeCommitSha: head })],
+    ["a base SHA reused as the test-merge SHA", pullResponse({ mergeCommitSha: baseSha })]
+  ])("fails closed before publication for %s", async (_name, pull) => {
+    const execution = await runRuntime(responses({}, [pull]));
+
+    expect(execution.status).toBe(1);
+    expect(execution.requests).toEqual([getRequest(pullPath)]);
+  });
+
+  it.each([
+    ["head SHA", pullResponse({ headSha: other })],
+    ["base ref", pullResponse({ baseRef: "release" })],
+    ["base SHA", pullResponse({ baseSha: otherBaseSha })],
+    ["test-merge SHA", pullResponse({ mergeCommitSha: otherMergeSha })],
+    ["mergeability", pullResponse({ mergeable: false })],
+    ["draft state", pullResponse({ draft: true })],
+    ["open state", pullResponse({ state: "closed" })]
+  ])("never publishes a stale terminal result when the final %s changes", async (_name, latestPull) => {
     const execution = await runRuntime(responses({
       [page(commentsPath)]: { body: [issueComment()] },
       [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
-    }, [
-      pullResponse(),
-      pullResponse(head, repository, repository, "release")
-    ]));
+    }, [pullResponse(), latestPull]));
 
-    expect(execution.status, execution.stderr).toBe(0);
-    expect(execution.requests.some((request) => hasState(request, "success"))).toBe(false);
+    expect(execution.status).toBe(1);
+    expect(execution.requests.filter((request) => request.method === "POST")).toEqual([
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head")
+    ]);
   });
 
   it("fetches issue events and rejects clean evidence before the latest base change", async () => {
@@ -729,7 +819,25 @@ describe("Codex exact-head review runtime", () => {
     expect(execution.requests.some((request) => hasState(request, "success"))).toBe(false);
   });
 
-  it("aggregates metadata pages and publishes pending before reads then success after an unchanged-head read", async () => {
+  it("fetches issue events and rejects clean evidence before the latest force push", async () => {
+    const execution = await runRuntime(responses({
+      [page(commentsPath)]: {
+        body: [issueComment({ updatedAt: "2026-07-20T10:00:00Z" })]
+      },
+      [page(eventsPath)]: {
+        body: [issueEvent({ createdAt: "2026-07-20T11:00:00Z", event: "head_ref_force_pushed" })]
+      },
+      [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+    }));
+
+    expect(execution.status, execution.stderr).toBe(0);
+    expect(execution.requests.filter((request) => request.method === "POST")).toEqual([
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head")
+    ]);
+  });
+
+  it("aggregates metadata pages and publishes pending before reads then success to an unchanged test merge", async () => {
     const wrongUser = { id: 1, login: "someone-else" };
     const fillerComments = Array.from({ length: 100 }, (_, index) => issueComment({ id: index + 1, user: wrongUser }));
     const fillerReviews = Array.from({ length: 100 }, (_, index) => review({ id: index + 1, user: wrongUser }));
@@ -746,9 +854,10 @@ describe("Codex exact-head review runtime", () => {
     expect(execution.status, execution.stderr).toBe(0);
     const writes = execution.requests.filter((request) => request.method === "POST");
     expect(writes).toEqual([
-      statusRequest(head, "pending", "No verified Codex review for current head"),
-      statusRequest(head, "success", "Verified clean Codex review for current head")
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
+      statusRequest(mergeSha, "success", "Verified clean Codex review for current head")
     ]);
+    expect(writes.some((request) => request.path === statusPath(head))).toBe(false);
     const pendingIndex = execution.requests.indexOf(writes[0]);
     const successIndex = execution.requests.indexOf(writes[1]);
     const metadataIndexes = execution.requests
@@ -774,13 +883,13 @@ describe("Codex exact-head review runtime", () => {
 
     expect(execution.status, execution.stderr).toBe(0);
     expect(execution.requests.filter((httpRequest) => httpRequest.method === "POST")).toEqual([
-      statusRequest(head, "pending", "No verified Codex review for current head"),
-      statusRequest(head, "pending", "No verified Codex review for current head")
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head")
     ]);
     expect(execution.requests.some((httpRequest) => hasState(httpRequest, "success"))).toBe(false);
   });
 
-  it("publishes error to the captured head when metadata retrieval fails", async () => {
+  it("rereads identity before publishing an error to the captured test merge", async () => {
     const execution = await runRuntime(responses({
       [page(`${pullPath}/reviews`)]: { body: {}, status: 500 }
     }));
@@ -788,47 +897,48 @@ describe("Codex exact-head review runtime", () => {
     expect(execution.status).toBe(1);
     expect(execution.stderr).toContain("GitHub API 500");
     expect(execution.requests.filter((request) => request.method === "POST")).toEqual([
-      statusRequest(head, "pending", "No verified Codex review for current head"),
-      statusRequest(head, "error", "Codex review metadata could not be evaluated")
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
+      statusRequest(mergeSha, "error", "Codex review metadata could not be evaluated")
     ]);
-    expect(execution.requests.filter((request) => request.path === pullPath)).toHaveLength(1);
+    expect(execution.requests.filter((request) => request.path === pullPath)).toHaveLength(2);
   });
 
   it("exits nonzero and stops before metadata when pending publication fails", async () => {
     const execution = await runRuntime(responses({}, [pullResponse()], 500));
 
     expect(execution.status).toBe(1);
-    expect(execution.stderr).toContain(`GitHub API 500 for ${statusPath(head)}`);
+    expect(execution.stderr).toContain(`GitHub API 500 for ${statusPath(mergeSha)}`);
     expect(execution.requests).toEqual([
       getRequest(pullPath),
-      statusRequest(head, "pending", "No verified Codex review for current head")
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head")
     ]);
   });
 
-  it("publishes pending to a changed live head and never publishes stale success", async () => {
+  it("leaves a regenerated test merge without a terminal result", async () => {
     const execution = await runRuntime(responses({
       [page(commentsPath)]: { body: [issueComment()] },
       [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
-    }, [pullResponse(), pullResponse(other)]));
+    }, [pullResponse(), pullResponse({ mergeCommitSha: otherMergeSha })]));
 
-    expect(execution.status, execution.stderr).toBe(0);
+    expect(execution.status).toBe(1);
     expect(execution.requests.filter((request) => request.method === "POST")).toEqual([
-      statusRequest(head, "pending", "No verified Codex review for current head"),
-      statusRequest(other, "pending", "No verified Codex review for current head")
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head")
     ]);
     expect(execution.requests.some((request) => hasState(request, "success"))).toBe(false);
   });
 });
 
 const expectedPrivilegedWorkflow = [
-  "name: Codex exact-head review",
+  "name: Codex test-merge review",
   "",
   "on:",
   "  pull_request_target:",
   "    branches: [main]",
-  "    types: [opened, reopened, synchronize, edited, ready_for_review]",
+  "    types: [opened, reopened, synchronize, edited, converted_to_draft, ready_for_review]",
   "  issue_comment:",
   "    types: [created, edited, deleted]",
+  "  pull_request_review:",
+  "    types: [submitted, edited, dismissed]",
   "  repository_dispatch:",
   "    types: [codex_exact_head_review_recovery]",
   "",
@@ -847,7 +957,7 @@ const expectedPrivilegedWorkflow = [
   "          github.event.comment.user.id == 199175422) ||",
   "         contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.comment.author_association)))",
   "    concurrency:",
-  `      group: codex-exact-head-${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
+  `      group: codex-test-merge-${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
   "      cancel-in-progress: true",
   "    runs-on: ubuntu-latest",
   "    steps:",
@@ -862,7 +972,7 @@ const expectedPrivilegedWorkflow = [
   "        with:",
   "          node-version-file: .nvmrc",
   "",
-  "      - name: Evaluate current pull-request head",
+  "      - name: Evaluate current pull-request test merge",
   "        run: node scripts/evaluate-codex-exact-head-review.mjs",
   "        env:",
   `          GITHUB_API_URL: ${githubExpression("github.api_url")}`,
@@ -873,7 +983,7 @@ const expectedPrivilegedWorkflow = [
 ].join("\n");
 
 describe("Repository workflow privilege boundary", () => {
-  it("enumerates workflows in sorted order and permits only one protected status publisher", () => {
+  it("enumerates workflows in sorted order and permits only the five independent status publishers", () => {
     const names = workflowFiles.map((entry) => entry.name);
     const privileged = workflowFiles.filter((entry) => usesProtectedStatusPublisher(entry.source))
       .map((entry) => entry.name);
@@ -882,7 +992,13 @@ describe("Repository workflow privilege boundary", () => {
       expect(names[index - 1].localeCompare(names[index])).toBeLessThanOrEqual(0);
     }
 
-    expect(privileged).toEqual(["codex-exact-head-review.yml"]);
+    expect(privileged).toEqual([
+      "ci.yml",
+      "codex-exact-head-review.yml",
+      "metronome-debt-gates.yml",
+      "metronome-xo-gate.yml",
+      "windows-observability.yml"
+    ]);
   });
 
   it("rejects duplicate top-level workflow control blocks", () => {
@@ -897,28 +1013,43 @@ describe("Repository workflow privilege boundary", () => {
   it("locks the complete normalized privileged workflow definition", () => {
     expect(normalizeWorkflow(workflow)).toBe(expectedPrivilegedWorkflow);
   });
+
+  it("reserves the required Codex context to the shared allowlisted mapper alone", () => {
+    const owners = publisherFiles.filter((entry) => entry.source.includes(context))
+      .map((entry) => entry.name);
+    const obsoleteContext = ["Metronome Codex", "exact-head review"].join(" ");
+    const obsoleteOwners = publisherFiles.filter((entry) => entry.source.includes(obsoleteContext))
+      .map((entry) => entry.name);
+
+    expect(owners).toEqual(["scripts/test-merge-status-reporter.mjs"]);
+    expect(obsoleteOwners).toEqual([]);
+  });
 });
 
-describe("Codex exact-head review workflow", () => {
+describe("Codex test-merge review workflow", () => {
   it("uses only the owner-approved default-definition trigger allowlist", () => {
     const triggerBlock = topLevelYamlBlock(workflow, "on");
 
     expect(yamlKeys(triggerBlock)).toEqual([
       "pull_request_target",
       "issue_comment",
+      "pull_request_review",
       "repository_dispatch"
     ]);
     expect(triggerBlock).toBe([
       "  pull_request_target:",
       "    branches: [main]",
-      "    types: [opened, reopened, synchronize, edited, ready_for_review]",
+      "    types: [opened, reopened, synchronize, edited, converted_to_draft, ready_for_review]",
       "  issue_comment:",
       "    types: [created, edited, deleted]",
+      "  pull_request_review:",
+      "    types: [submitted, edited, dismissed]",
       "  repository_dispatch:",
       "    types: [codex_exact_head_review_recovery]"
     ].join("\n"));
     for (const unsafeTrigger of [
-      "pull_request_review",
+      "pull_request",
+      "merge_group",
       "workflow_dispatch",
       "schedule",
       "workflow_run"
@@ -948,7 +1079,7 @@ describe("Codex exact-head review workflow", () => {
       "          github.event.comment.user.id == 199175422) ||",
       "         contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.comment.author_association)))",
       "    concurrency:",
-      `      group: codex-exact-head-${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
+      `      group: codex-test-merge-${githubExpression("github.event.pull_request.number || github.event.issue.number || github.event.client_payload.pr_number")}`,
       "      cancel-in-progress: true"
     ].join("\n"));
   });
@@ -959,12 +1090,14 @@ describe("Codex exact-head review workflow", () => {
 });
 
 describe("Windows observability workflow", () => {
-  it("always runs for pull requests and main pushes without path filters", () => {
+  it("always runs from the trusted PR definition and on main pushes without path filters", () => {
     const triggerBlock = topLevelYamlBlock(windowsWorkflow, "on");
 
-    expect(yamlKeys(triggerBlock)).toEqual(["pull_request", "push"]);
+    expect(yamlKeys(triggerBlock)).toEqual(["pull_request_target", "push"]);
     expect(triggerBlock).toBe([
-      "  pull_request:",
+      "  pull_request_target:",
+      "    branches: [main]",
+      "    types: [opened, reopened, synchronize, edited, converted_to_draft, ready_for_review]",
       "  push:",
       "    branches:",
       "      - main"
