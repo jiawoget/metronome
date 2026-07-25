@@ -12,6 +12,7 @@ const REVIEW_REQUEST = /@codex\s+review\b/iv;
 const SHA = /^[\da-f]{40}$/v;
 const GITHUB_TIMESTAMP = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\dZ$/v;
 const COMMIT_QUERY = "query CodexCommits($owner:String!,$name:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$name){pullRequest(number:$number){commits(first:100,after:$cursor){nodes{commit{oid}} pageInfo{endCursor hasNextPage}}}}}";
+const DELETION_QUERY = "query CodexDeletions($owner:String!,$name:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$name){pullRequest(number:$number){timelineItems(first:100,after:$cursor,itemTypes:[COMMENT_DELETED_EVENT]){nodes{... on CommentDeletedEvent{createdAt deletedCommentAuthor{login ... on Bot{databaseId} ... on User{databaseId}}}} pageInfo{endCursor hasNextPage}}}}}";
 const REVIEW_QUERY = "query CodexReviews($owner:String!,$name:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$name){pullRequest(number:$number){reviews(first:100,after:$cursor){nodes{author{login ... on Bot{databaseId} ... on User{databaseId}} body commit{oid} id lastEditedAt state submittedAt updatedAt} pageInfo{endCursor hasNextPage}}}}}";
 const TRUSTED_ASSOCIATIONS = new Set(["COLLABORATOR", "MEMBER", "OWNER"]);
 const ABOUT_CODEX = ["<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n", "[Your team has set up Codex to review pull requests in this repo](https://chatgpt.com/codex/cloud/settings/general). Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\".\n", "If Codex has suggestions, it will comment; otherwise it will react with 👍.\n\n\n\n\nCodex can also answer questions or update the PR. Try commenting \"@codex address that feedback\".\n", "</details>"].join("\n");
@@ -35,7 +36,7 @@ function reviewTimestamp(item) {
   return updated;
 }
 
-function timestamp(item, kind) {return kind === "review" ? reviewTimestamp(item) : parsedTimestamp(kind === "issue-event" ? item.created_at : item.updated_at);}
+function timestamp(item, kind) {return kind === "review" ? reviewTimestamp(item) : parsedTimestamp(kind === "deletion" ? item.createdAt : kind === "issue-event" ? item.created_at : item.updated_at);}
 
 function isCleanReview(body, isPrefixHead, prefix) {const core = `${CLEAN_RESULT}\n\n**Reviewed commit:** \`${prefix}\``; return isPrefixHead && (body === core || body === `${core}\n\n${ABOUT_CODEX}`);}
 
@@ -59,6 +60,8 @@ function isCodexArtifact(item, kind) {
   return user?.login === BOT_LOGIN && [user.databaseId, user.id].includes(BOT_ID);
 }
 
+function isCodexDeletion(item) {const author = item?.deletedCommentAuthor; return author?.login === BOT_LOGIN && author.databaseId === BOT_ID;}
+
 function normalize(item, kind, head, commits) {
   if (!isCodexArtifact(item, kind)) {return undefined;}
   const body = String(item.body).replaceAll("\r\n", "\n").replaceAll(/^[\t ]+$/gmv, "");
@@ -77,11 +80,12 @@ function isTrustedReviewRequest(item) {
   return !isCodexBot && TRUSTED_ASSOCIATIONS.has(item?.author_association) && typeof item.body === "string" && REVIEW_REQUEST.test(item.body);
 }
 
-function evidenceBarrier(issueComments, issueEvents) {
+function evidenceBarrier(issueComments, issueEvents, deletions) {
   let latest = -Infinity;
   const barriers = [
     ...issueComments.filter((item) => isTrustedReviewRequest(item)).map((item) => [item, "issue-comment"]),
-    ...issueEvents.filter((item) => ["base_ref_changed", "head_ref_force_pushed"].includes(item?.event)).map((item) => [item, "issue-event"])
+    ...issueEvents.filter((item) => ["base_ref_changed", "head_ref_force_pushed"].includes(item?.event)).map((item) => [item, "issue-event"]),
+    ...deletions.filter((item) => isCodexDeletion(item)).map((item) => [item, "deletion"])
   ];
   for (const [item, kind] of barriers) {
     const time = timestamp(item, kind);
@@ -99,7 +103,8 @@ function evaluateCodexReview(input) {
   const issueComments = Array.isArray(input.issueComments) ? input.issueComments : [];
   const issueEvents = Array.isArray(input.issueEvents) ? input.issueEvents : [];
   const reviews = Array.isArray(input.reviews) ? input.reviews : [];
-  const barrier = evidenceBarrier(issueComments, issueEvents);
+  const deletions = Array.isArray(input.deletions) ? input.deletions : [];
+  const barrier = evidenceBarrier(issueComments, issueEvents, deletions);
   if (barrier.isMalformed) {return RESULTS.failure;}
   const artifacts = [
     ...issueComments.map((item) => normalize(item, "issue-comment", head, commits)),
@@ -141,11 +146,11 @@ function graphQlConnection(response, kind) {
 
   const { endCursor, hasNextPage } = connection.pageInfo ?? {};
   if (typeof hasNextPage !== "boolean") {
-    throw new TypeError("Expected GitHub GraphQL review pagination metadata");
+    throw new TypeError("Expected GitHub GraphQL pagination metadata");
   }
 
   if (hasNextPage && (typeof endCursor !== "string" || endCursor.length === 0)) {
-    throw new TypeError("Expected a GitHub GraphQL review cursor");
+    throw new TypeError(`Expected a GitHub GraphQL ${kind} cursor`);
   }
 
   return connection;
@@ -155,7 +160,7 @@ async function paginateGraphQl(request, settings, kind, cursors = []) {
   const [owner, name] = settings.repository.split("/");
   const cursor = cursors.at(-1) ?? null;
   const response = await request("", {
-    body: JSON.stringify({ query: kind === "commits" ? COMMIT_QUERY : REVIEW_QUERY, variables: { cursor, name, number: settings.prNumber, owner } }),
+    body: JSON.stringify({ query: kind === "commits" ? COMMIT_QUERY : kind === "reviews" ? REVIEW_QUERY : DELETION_QUERY, variables: { cursor, name, number: settings.prNumber, owner } }),
     method: "POST"
   });
   const connection = graphQlConnection(response, kind);
@@ -187,8 +192,10 @@ async function run() {
   let evaluationError;
   try {
     const issuePath = `${settings.base}/issues/${settings.prNumber}`;
-    const [reviews, commitNodes, issueComments, issueEvents] = await Promise.all([paginateGraphQl(graphQlRequest, settings, "reviews"), paginateGraphQl(graphQlRequest, settings, "commits"), paginate(request, `${issuePath}/comments`), paginate(request, `${issuePath}/events`)]);
-    evaluation = evaluateCodexReview({ commits: commitNodes.map((node) => node?.commit?.oid), head, issueComments, issueEvents, reviews });
+    const [reviews, commitNodes, deletions, issueComments, issueEvents] = await Promise.all([paginateGraphQl(graphQlRequest, settings, "reviews"), paginateGraphQl(graphQlRequest, settings, "commits"), paginateGraphQl(graphQlRequest, settings, "timelineItems"), paginate(request, `${issuePath}/comments`), paginate(request, `${issuePath}/events`)]);
+    const input = { commits: commitNodes.map((node) => node?.commit?.oid), deletions, head, issueComments, issueEvents, reviews };
+    evaluation = evaluateCodexReview(input);
+    if (evaluation.state === "success") {input.deletions = await paginateGraphQl(graphQlRequest, settings, "timelineItems"); evaluation = evaluateCodexReview(input);}
   } catch (error) {
     evaluation = RESULTS.error;
     evaluationError = error;

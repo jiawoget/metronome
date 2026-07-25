@@ -199,9 +199,37 @@ function graphQlCommits(oids: readonly unknown[] = [], hasNextPage = false, endC
   return record([["data", record([["repository", repositoryData]])]]);
 }
 
+function deletedComment(options: { createdAt?: unknown; user?: User } = {}) {
+  const user = options.user ?? bot;
+  return record([
+    ["createdAt", options.createdAt ?? "2026-07-20T11:00:00Z"],
+    ["deletedCommentAuthor", record([["databaseId", user.id], ["login", user.login]])]
+  ]);
+}
+
+function graphQlDeletions(nodes: readonly unknown[] = [], hasNextPage = false, endCursor: string | null = null) {
+  const pageInfo = record([["endCursor", endCursor], ["hasNextPage", hasNextPage]]);
+  const timelineItems = record([["nodes", nodes], ["pageInfo", pageInfo]]);
+  const pullRequest = record([["timelineItems", timelineItems]]);
+  const repositoryData = record([["pullRequest", pullRequest]]);
+  return record([["data", record([["repository", repositoryData]])]]);
+}
+
+function graphQlQueryKind(query: string): "commits" | "deletions" | "reviews" {
+  if (query.includes("query CodexCommits")) {return "commits";}
+  if (query.includes("query CodexDeletions")) {return "deletions";}
+  return "reviews";
+}
+
+function isDeletionQuery(request: HttpRequest) {
+  const query = (request.body as { query?: unknown } | undefined)?.query;
+  return request.path === graphQlPath && String(query).includes("query CodexDeletions");
+}
+
 function evaluate(overrides: Record<string, unknown> = {}) {
   const input = {
     commits: [head, other],
+    deletions: [],
     head,
     issueComments: [],
     issueEvents: [],
@@ -362,18 +390,18 @@ function responses(
   status = 200
 ): ResponsePlan {
   let pullRead = 0;
-  const graphQlReads = { commits: 0, reviews: 0 };
+  const graphQlReads = { commits: 0, deletions: 0, reviews: 0 };
   return (request) => {
     if (request.path === graphQlPath) {
       const query = String((request.body as { query?: unknown } | undefined)?.query);
-      const kind = query.includes("query CodexCommits") ? "commits" : "reviews";
+      const kind = graphQlQueryKind(query);
       const read = graphQlReads[kind];
       graphQlReads[kind] += 1;
       const legacyReviewResponse = kind === "reviews"
         ? metadata[`${graphQlPath}:${read}`] ?? metadata[graphQlPath]
         : undefined;
       const response = metadata[`${graphQlPath}:${kind}:${read}`] ?? metadata[`${graphQlPath}:${kind}`] ?? legacyReviewResponse;
-      return response ?? { body: kind === "commits" ? graphQlCommits([head, other]) : graphQlReviews() };
+      return response ?? { body: kind === "commits" ? graphQlCommits([head, other]) : kind === "deletions" ? graphQlDeletions() : graphQlReviews() };
     }
 
     if (request.method === "POST") {return { body: {}, status };}
@@ -572,6 +600,32 @@ describe("Codex exact-head review evaluator", () => {
 
     expect(evaluate({ issueComments: [request, newerClean] }).state).toBe("success");
     expect(evaluate({ issueComments: [request], reviews: [newerFinding] }).state).toBe("failure");
+  });
+
+  it("requires exact Codex evidence strictly after an authenticated comment deletion", () => {
+    const olderClean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
+    const deletion = deletedComment({ createdAt: "2026-07-20T11:00:00Z" });
+    const tiedClean = issueComment({ id: 5_009_800_401, updatedAt: "2026-07-20T11:00:00Z" });
+    const newerClean = issueComment({ id: 5_009_800_402, updatedAt: "2026-07-20T12:00:00Z" });
+
+    expect(evaluate({ deletions: [deletion], issueComments: [olderClean] }).state).toBe("pending");
+    expect(evaluate({ deletions: [deletion], issueComments: [tiedClean] }).state).toBe("pending");
+    expect(evaluate({ deletions: [deletion], issueComments: [newerClean] }).state).toBe("success");
+  });
+
+  it.each([
+    ["wrong login", { id: bot.id, login: "github-actions[bot]" }],
+    ["wrong GraphQL database id", { id: 1, login: bot.login }]
+  ])("does not authenticate a deletion with the %s", (_name, user) => {
+    const olderClean = issueComment({ updatedAt: "2026-07-20T10:00:00Z" });
+
+    expect(evaluate({ deletions: [deletedComment({ user })], issueComments: [olderClean] }).state).toBe("success");
+  });
+
+  it("fails closed on a malformed authenticated Codex deletion time", () => {
+    const newerClean = issueComment({ updatedAt: "2026-07-20T12:00:00Z" });
+
+    expect(evaluate({ deletions: [deletedComment({ createdAt: "not-a-date" })], issueComments: [newerClean] }).state).toBe("failure");
   });
 
   it.each([
@@ -957,6 +1011,48 @@ describe("Codex test-merge review runtime", () => {
     }
   );
 
+  it("fully paginates deleted-comment timeline barriers", async () => {
+    const wrongUser = { id: 1, login: "someone-else" };
+    const fillerDeletions = Array.from({ length: 100 }, () => deletedComment({ user: wrongUser }));
+    const deletion = deletedComment();
+    const execution = await runRuntime(responses({
+      [page(commentsPath)]: { body: [issueComment({ updatedAt: "2026-07-20T10:00:00Z" })] },
+      [`${graphQlPath}:deletions:0`]: { body: graphQlDeletions(fillerDeletions, true, "deletion-page-2") },
+      [`${graphQlPath}:deletions:1`]: { body: graphQlDeletions([deletion]) }
+    }));
+
+    expect(execution.status, execution.stderr).toBe(0);
+    expect(statusWrites(execution.requests)).toEqual([
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head")
+    ]);
+    expect(execution.requests.filter((request) => isDeletionQuery(request))).toHaveLength(2);
+  });
+
+  it("prevents success when an exact Codex deletion appears after the initial metadata snapshot", async () => {
+    const deletion = deletedComment();
+    const execution = await runRuntime(responses({
+      [page(commentsPath)]: { body: [issueComment({ updatedAt: "2026-07-20T10:00:00Z" })] },
+      [`${graphQlPath}:deletions:0`]: { body: graphQlDeletions() },
+      [`${graphQlPath}:deletions:1`]: { body: graphQlDeletions([deletion]) }
+    }));
+
+    expect(execution.status, execution.stderr).toBe(0);
+    expect(statusWrites(execution.requests)).toEqual([
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head")
+    ]);
+    const deletionReads = execution.requests.filter((request) => isDeletionQuery(request));
+    const pullIndexes = execution.requests
+      .map((request, index) => request.path === pullPath ? index : -1)
+      .filter((index) => index >= 0);
+    const finalPullIndex = pullIndexes.at(-1) ?? -1;
+    expect(deletionReads).toHaveLength(2);
+    expect(pullIndexes).toHaveLength(2);
+    expect(execution.requests.indexOf(deletionReads[1])).toBeLessThan(finalPullIndex);
+    expect(execution.requests.some((request) => hasState(request, "success"))).toBe(false);
+  });
+
   it("uses the complete GraphQL commit connection for a pull request with more than 250 commits", async () => {
     const commitShas = Array.from({ length: 250 }, (_, index) => index.toString(16).padStart(40, "0"));
     const firstPage = commitShas.slice(0, 100);
@@ -1036,7 +1132,7 @@ describe("Codex test-merge review runtime", () => {
     const pullIndexes = execution.requests
       .map((request, index) => request.method === "GET" && request.path === pullPath ? index : -1)
       .filter((index) => index >= 0);
-    expect(metadataIndexes).toHaveLength(7);
+    expect(metadataIndexes).toHaveLength(9);
     expect(Math.min(...metadataIndexes)).toBeGreaterThan(pendingIndex);
     expect(pullIndexes).toHaveLength(2);
     expect(pullIndexes[1]).toBeGreaterThan(Math.max(...metadataIndexes));
