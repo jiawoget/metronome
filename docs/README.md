@@ -2,7 +2,7 @@
 
 ## Current authority
 
-Repository work is routed by [`AGENTS.md`](../AGENTS.md) and native OpenGSD state under [`.planning/`](../.planning/). Current static architecture notes live in [`architecture/`](architecture/).
+Repository work is routed by [`AGENTS.md`](../AGENTS.md) and native OpenGSD state under [`.planning/`](../.planning/).
 
 ## Historical material
 

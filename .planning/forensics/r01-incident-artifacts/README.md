@@ -8,4 +8,6 @@ Original phase directory: `.planning/phases/01-canonical-practice-presentation-f
 
 The complete formerly active attempt is under `01-01-native-attempt/`. The original phase directory intentionally contains no lifecycle artifacts; any future Phase 1 work requires an explicit owner decision and a newly generated native plan.
 
+The former project-level research snapshot is under `pre-redesign-project-research/`. It predates the workflow redesign and is frozen comparison evidence, not current native phase research.
+
 See `../report-20260722-124111.md` for the evidence chain and workflow repair.

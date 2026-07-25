@@ -17,7 +17,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 - Inspect installed dependencies and authoritative online OSS APIs before approving new implementation logic.
 - Select exactly one evidence-backed refactor boundary; do not inherit the superseded R01 pilot's target or conclusions.
 - Retire more production code than is added, preserve observable behavior, avoid new parallel abstractions, and produce a complete, immutable, reversible, clean reviewed product revision ready to enter native verification, validation, and security.
-- Close the separate Milestone Release Exit only after native shipping, exact-head CI and `@codex` review, GitHub merge, and a clean local `main` synchronized to `origin/main`.
+- Close the separate Milestone Release Exit only after native shipping, exact-head standard CI and applicable platform quality checks, finding-free `@codex` review, GitHub merge, and a clean local `main` synchronized to `origin/main`.
 
 ## Requirements
 
@@ -29,18 +29,18 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 - Discover one bounded reuse-first refactor candidate from current `main` through local semantic, installed-dependency, and authoritative OSS API evidence.
 - Replace the selected duplicate or custom implementation with an existing reusable implementation and achieve a net reduction in production LOC without observable behavior change.
-- Verify the bounded product result through behavior tests, repository gates, Code Health evidence, rollback, and clean source/configuration state; then pass the separate native verification, validation, and security preconditions before shipping and the separate Release Exit after shipping.
+- Verify the bounded product result through behavior tests, the standard lint/typecheck/unit/build suite, reuse-sensitive maintainability review, rollback, and clean source/configuration state; then pass the separate native verification, validation, and security preconditions before shipping and the separate Release Exit after shipping.
 
 ### Deferred
 
-- 32 unimplemented capability contracts are preserved as [native OpenGSD seeds](seeds/). Native `$gsd-new-milestone` questioning may surface or select relevant seeds, but selection alone does not consume them. A selected seed remains until an approved current `REQUIREMENTS.md` contains the same legacy capability ID, feature key, and required behavior; that approval commit deletes the seed while unselected seeds remain dormant and unchanged.
+- 32 unimplemented capability contracts are preserved as [native OpenGSD seeds](seeds/). They remain dormant historical inputs until a future owner-approved milestone explicitly promotes matching product requirements.
 
 ### Out of Scope
 
 - The five unfinished legacy pack boundaries and their 49 not-started slice decomposition are historical proposals under `docs/legacy/v1/`, not the future roadmap.
 - Cloud accounts, sync, sharing, and remote storage — current v1 contracts are local-first and defer cross-device behavior.
 - Automatic score following, correctness scoring, or claims of musical-performance accuracy — these require separately approved product and analysis contracts.
-- A custom lifecycle wrapper, shadow status ledger, capability database, committed migration validator, or project knowledge graph — native OpenGSD artifacts own lifecycle state.
+- A custom lifecycle wrapper, shadow status ledger, committed migration validator, status publisher, telemetry system, scanner, capability database, cache, or project knowledge graph — native OpenGSD artifacts own lifecycle state.
 - Treating maintenance/refactor slices as user-facing product requirements — the 24 support/maintenance slices remain completed roadmap history only.
 - Treating the superseded historical R01 pilot as current product work — v1.1 starts fresh from current `main` through native OpenGSD; the old [pilot plan](../docs/legacy/governance/plans/2026-07-20-lumen-r01-opengsd-pilot.md) is comparison evidence only.
 - Preselecting the real R01 target from any historical pilot or worktree — v1.1 discovery must re-establish the target from current `main` and current external evidence.
@@ -57,12 +57,12 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ## Constraints
 
-- **Lifecycle**: Continue an active milestone through native `$gsd-next` or the active phase only when `STATE.md` is not paused at a forensics decision. While `STATE.md` is forensics-paused, the fail-closed exception in `AGENTS.md` governs: do not invoke `$gsd-next` or continue the active phase, and treat generic `continue`, `go`, `next`, or `resume` wording only as a request to present the report's exact owner choices, never as authorization to dispatch product work.
-- **Deferred-capability carrier**: Before requirement approval, the dormant seed is the sole carrier. The same planning commit that approves the matching requirement deletes the seed; afterward native requirement, plan, verification, and archive artifacts carry the truth. OpenGSD does not perform this deletion automatically.
+- **Lifecycle**: Native OpenGSD owns milestones, research, planning, checking, execution, verification, state, recovery, and shipping. Phase 1 has no active plan, and workflow cleanup does not authorize product work; a future lifecycle action requires explicit owner direction.
+- **Deferred capabilities**: Dormant seeds are historical inputs, not current requirements or executable plans. Promotion requires an explicit future owner-approved milestone decision.
 - **Completion truth**: A product requirement is complete only when every mapped legacy slice is verified and reachable runtime plus automated or repeatable acceptance evidence is linked — prevents false promotion during import.
-- **Lifecycle boundary**: Phase requirement completion establishes only that the immutable reviewed product revision is ready to enter native verification, validation, and security. Passing VERIFICATION, current Nyquist VALIDATION, and SECURITY with `threats_open: 0` is mandatory before `$gsd-ship` but receives no Phase 1 requirement credit. The active goal and milestone remain incomplete until the separate Milestone Release Exit proves native shipping, exact-head CI and review, merge, and clean synchronized `main`.
+- **Lifecycle boundary**: Phase requirement completion establishes only that the immutable reviewed product revision is ready to enter native verification, validation, and security. Passing VERIFICATION, current Nyquist VALIDATION, and SECURITY with `threats_open: 0` is mandatory before `$gsd-ship` but receives no Phase 1 requirement credit. The active goal and milestone remain incomplete until the separate Milestone Release Exit proves native shipping, exact-head standard CI and platform quality checks, finding-free review, merge, and clean synchronized `main`.
 - **Local first**: Existing browser-local storage and audio boundaries remain authoritative unless a future requirement explicitly changes them.
-- **Reuse first**: Agents must inspect existing project code, installed dependencies, and relevant external APIs before adding parallel implementations.
+- **Reuse first**: When triggered, agents follow the single compact contract at `skills/metronome-policy/SKILL.md` before adding parallel implementations.
 - **Historical evidence**: Legacy product contracts, pack specifications, and slice plans remain evidence, but they no longer own current lifecycle state.
 
 ## Key Decisions
@@ -70,7 +70,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Archive completed legacy history only | Completion history must not convert unfinished proposals into current phases or plans | ✓ Good |
-| Preserve deferred capabilities through one authoritative carrier | Native `$gsd-new-milestone` discovers seeds; selection keeps the seed until the matching requirement is approved and deletes it in that same commit, leaving unselected seeds untouched | ✓ Good |
+| Preserve deferred capabilities as dormant native seeds | Future milestones may consider them only through an explicit owner-approved requirement decision; they do not drive current work | ✓ Good |
 | Keep the primary repository between milestones until governance acceptance | The superseded historical pilot did not advance lifecycle state; v1.1 began only after the governance migration merged into updated `main` | ✓ Good |
 | Import each completed legacy pack as one native PLAN/SUMMARY pair | Preserves eight completed phases without pretending 83 historical slices were executed natively | ✓ Good |
 | Use native OpenGSD as the sole project lifecycle and roadmap control plane | Cross-session planning, execution, verification, and progress already exist in OpenGSD | ✓ Good |
@@ -79,7 +79,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ## Evolution
 
-The shipped v1.0 archive retains the 32 validated capabilities. The remaining 32 capability identities currently live in native dormant seeds. Milestone v1.1 is now active from updated `main` through native OpenGSD. Its discovery uses current code, installed dependencies, and authoritative OSS evidence; frozen legacy R01 artifacts are comparison evidence only and cannot preselect the target or conclusions. R01 is maintenance/refactor work and does not consume a dormant product seed unless a separately approved product requirement exactly matches that seed. Normal seed selection still keeps a seed until matching requirement approval; the approval commit deletes it so the capability is represented by exactly one authoritative carrier before and after promotion.
+The shipped v1.0 archive retains the 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. Milestone v1.1 remains unfinished with no active plan. Pre-redesign R01 research and failed attempts are frozen comparison evidence only; future owner-directed native planning must confirm current code, installed APIs, and authoritative external evidence anew.
 
 ---
-*Last updated: 2026-07-21 after finalizing the v1.1 R01 Phase 1 plan*
+*Last updated: 2026-07-25 after the native OpenGSD workflow cleanup migration*

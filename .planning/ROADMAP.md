@@ -24,13 +24,13 @@ Milestone v1.1 delivers one reuse-first maintenance outcome: Home, the practice-
 
   1. Musicians continue to see the exact legacy UTC-minute timestamp rendering—numeric UTC year followed by zero-padded month, day, hour, and minute—plus the general `Unknown time` and analytics-specific `Unknown update time` fallbacks, `0 min` for non-finite, negative, or zero minute-scale durations, `<1 min` for positive sub-minute durations, and the current floor-to-minute `N min` or `N hr M min` wording across Home, the practice-session dashboard, and session comparison; excluded seconds-scale and sheet-library formatting remain unchanged.
   2. The selected Home, dashboard-hook, and session-comparison callers use the existing practice formatting boundary as their only runtime owner, with all seven superseded duplicate formatter bodies or no-op wrappers absent and no compatibility, facade, adapter, feature-flag, or parallel formatting path introduced.
-  3. Reviewable evidence ties the selected boundary to the implementation HEAD through current semantic search, installed-dependency inspection, and authoritative OSS/platform API inspection, adds no dependency, and is refreshed before production edits if the source HEAD or semantic-index configuration changes.
-  4. Pre-change characterization locks the selected valid, invalid, UTC, fallback, rounding, sub-minute, and hour/minute behavior; the final formatted `src/**` diff is strictly net-negative without credit for tests, planning, generated files, renames, formatting churn, or moved logic; and the exact reviewed revision passes focused behavior tests plus lint, typecheck, unit, build, architecture, and debt gates, while final-revision CodeScene shows no changed-source decline, no new severe finding, and every applicable touched hotspot at the repository policy threshold.
+  3. Before implementation, a current native `RESEARCH.md` records the compact reuse decision required by `skills/metronome-policy/SKILL.md` across local owners, installed APIs, and authoritative OSS/platform APIs; the selected boundary adds no dependency and unavailable required evidence returns to the project owner.
+  4. Pre-change characterization locks the selected valid, invalid, UTC, fallback, rounding, sub-minute, and hour/minute behavior; the final formatted `src/**` diff is strictly net-negative without credit for tests, planning, generated files, renames, formatting churn, or moved logic; and the exact reviewed revision passes focused behavior tests plus the standard lint, typecheck, unit, and build checks with no parallel owner or actionable maintainability finding in touched production scope.
   5. The immutable reviewed product revision has complete product evidence, cleanly rolls back through version control without data migration or user repair, leaves relevant source and configuration state clean, and is ready to enter native verification, validation, and security.
 
 **Plans**: 0 active
 
-The failed `01-01` attempt is frozen intact under `.planning/forensics/r01-incident-artifacts/01-01-native-attempt/`. It is not resumable lifecycle state. Its non-planning implementation paths match the recorded `origin/main@9199d17` baseline, without rewriting history, and all known workflow code and authority remediations are implemented. Before presenting the project owner with the forensic report's explicit disposition, the controller must establish the finite workflow-repair release exit from live PR and Git evidence: final repository gate; committed PR head; exact-head CI including applicable Windows observability; finding-free, read-only exact-head `@codex` review; PR merge; and clean synchronized local `main`. This roadmap neither pre-asserts nor caches those external facts. Generic `continue`, `go`, `next`, or `resume` wording is not approval of that disposition.
+The failed `01-01` attempt and pre-redesign project research are frozen under `.planning/forensics/r01-incident-artifacts/` as non-executable evidence. Phase 1 has no active plan; any future work starts through an owner-directed native OpenGSD planning action and fresh phase research.
 
 **UI hint**: no
 
@@ -42,8 +42,8 @@ This is explicitly outside Phase 1 requirement completion. All gates below are c
 
 1. Run native `$gsd-ship` to create or prepare the PR.
 2. After any ship-note or update, resolve the actual final post-ship PR head.
-3. Ensure CI applies to that exact head; re-run or refresh CI if `[ci skip]` prevents it.
-4. Obtain a mandatory finding-free, read-only `@codex` review of that exact final PR head using `skills/reviewing-metronome-prs/SKILL.md`; no review waiver applies.
+3. Ensure standard CI and applicable GitHub CodeQL/code-quality checks apply to that exact head; re-run or refresh CI if `[ci skip]` prevents this.
+4. Obtain a mandatory finding-free, read-only `@codex` review of that exact final PR head; the reviewer applies `skills/metronome-policy/SKILL.md` when triggered, and no review waiver applies.
 5. Merge the GitHub PR.
 6. Update local `main` to the intended `origin` merge revision.
 7. Verify `main == origin/main`, no `MERGE_HEAD`, an empty index, and empty `git status --porcelain=v1 --untracked-files=all` output.
@@ -54,7 +54,7 @@ This is explicitly outside Phase 1 requirement completion. All gates below are c
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Canonical Practice Presentation Formatting | — | Paused — needs new plan |  |
+| 1. Canonical Practice Presentation Formatting | — | Ready for future owner-directed planning; no active plan |  |
 
 ---
-*Roadmap created: 2026-07-21 for milestone v1.1 R01 Evidence-First Code Slimming*
+*Roadmap created: 2026-07-21; workflow references migrated to native OpenGSD on 2026-07-25*
