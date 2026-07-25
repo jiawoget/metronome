@@ -7,11 +7,6 @@ function runGit(args) {
 	return execFileSync('git', args, {encoding: 'utf8'}).trim();
 }
 
-function hasCommand(command) {
-	const result = spawnSync(command, ['--version'], {stdio: 'ignore'});
-	return result.status === 0;
-}
-
 function isInIndex(file) {
 	return spawnSync("git", ["cat-file", "-e", `:${file}`], {stdio: "ignore"}).status === 0;
 }
@@ -95,11 +90,6 @@ if (!existsSync('.semgrep')) {
 	process.exit(1);
 }
 
-if (!hasCommand(semgrepBin)) {
-	console.error(`Missing ${semgrepBin}. Install with: python -m pip install semgrep`);
-	process.exit(1);
-}
-
 console.log(`Running Semgrep debt gates on ${changed.length} changed file(s):`);
 for (const file of changed) {
 	console.log(`- ${file}`);
@@ -110,5 +100,12 @@ const result = spawnSync(
 	["scan", "--config", ".semgrep", "--error", "--baseline-commit", mergeBase, ...changed],
 	{stdio: 'inherit'},
 );
+
+if (result.error) {
+	console.error(result.error.code === "ENOENT"
+		? `Could not resolve Semgrep executable: ${semgrepBin}`
+		: `Could not start Semgrep scan (${result.error.code ?? result.error.name}): ${result.error.message}`);
+	process.exit(1);
+}
 
 process.exit(result.status ?? 1);

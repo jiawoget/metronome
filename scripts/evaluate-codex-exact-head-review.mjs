@@ -11,10 +11,13 @@ const REVIEWED_COMMIT = /^\*\*Reviewed commit:\*\* `(?<prefix>[\da-f]{7,40})`$/g
 const REVIEW_REQUEST = /@codex\s+review\b/iv;
 const SHA = /^[\da-f]{40}$/v;
 const GITHUB_TIMESTAMP = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\dZ$/v;
-const REVIEW_QUERY = "query CodexReviews($owner:String!,$name:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$name){pullRequest(number:$number){reviews(first:100,after:$cursor){nodes{author{login ... on Bot{databaseId} ... on User{databaseId}} body commit{oid} databaseId lastEditedAt state submittedAt updatedAt} pageInfo{endCursor hasNextPage}}}}}";
+const COMMIT_QUERY = "query CodexCommits($owner:String!,$name:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$name){pullRequest(number:$number){commits(first:100,after:$cursor){nodes{commit{oid}} pageInfo{endCursor hasNextPage}}}}}";
+const REVIEW_QUERY = "query CodexReviews($owner:String!,$name:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$name){pullRequest(number:$number){reviews(first:100,after:$cursor){nodes{author{login ... on Bot{databaseId} ... on User{databaseId}} body commit{oid} id lastEditedAt state submittedAt updatedAt} pageInfo{endCursor hasNextPage}}}}}";
 const TRUSTED_ASSOCIATIONS = new Set(["COLLABORATOR", "MEMBER", "OWNER"]);
 const ABOUT_CODEX = ["<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n", "[Your team has set up Codex to review pull requests in this repo](https://chatgpt.com/codex/cloud/settings/general). Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\".\n", "If Codex has suggestions, it will comment; otherwise it will react with 👍.\n\n\n\n\nCodex can also answer questions or update the PR. Try commenting \"@codex address that feedback\".\n", "</details>"].join("\n");
 const RESULTS = Object.fromEntries(["error", "failure", "pending", "success"].map((outcome) => [outcome, statusResult(CONTEXT, outcome)]));
+function isSha(value) {return typeof value === "string" && SHA.test(value.toLowerCase());}
+function validatedCommits(head, values) {if (!isSha(head) || values.some((sha) => !isSha(sha))) {throw new TypeError("Expected a full head SHA and PR commit SHAs");} const commits = [...new Set(values.map((sha) => sha.toLowerCase()))]; if (!commits.includes(head)) {throw new TypeError("Expected PR commits to include the current head");} return commits;}
 function parsedTimestamp(value) {
   if (typeof value !== "string" || !GITHUB_TIMESTAMP.test(value)) {return undefined;}
   const parsed = Date.parse(value);
@@ -66,8 +69,7 @@ function normalize(item, kind, head, commits) {
   const state = kind === "review" && typeof item.state === "string" ? item.state : undefined;
   const time = timestamp(item, kind);
   const isClean = isCleanReview(body, isPrefixHead, prefixes[0]) && (kind === "issue-comment" || state === "COMMENTED");
-  const id = kind === "review" ? item.databaseId : item.id;
-  return { id: Number.isSafeInteger(Number(id)) ? Number(id) : 0, isClean, isCurrent: association === "current", isMalformed: commit.malformed || time === undefined, isUncertain: association === "uncertain", kind, state, time };
+  return { id: ["number", "string"].includes(typeof item.id) ? String(item.id) : "", isClean, isCurrent: association === "current", isMalformed: commit.malformed || time === undefined, isUncertain: association === "uncertain", kind, state, time };
 }
 
 function isTrustedReviewRequest(item) {
@@ -93,11 +95,7 @@ function evidenceBarrier(issueComments, issueEvents) {
 function evaluateCodexReview(input) {
   const head = typeof input?.head === "string" ? input.head.toLowerCase() : "";
   const suppliedCommits = Array.isArray(input?.commits) ? input.commits : [];
-  if (!SHA.test(head) || suppliedCommits.some((sha) => typeof sha !== "string")) {
-    throw new TypeError("Expected a full head SHA and PR commit SHAs");
-  }
-
-  const commits = [...new Set(suppliedCommits.map((sha) => sha.toLowerCase()))];
+  const commits = validatedCommits(head, suppliedCommits);
   const issueComments = Array.isArray(input.issueComments) ? input.issueComments : [];
   const issueEvents = Array.isArray(input.issueEvents) ? input.issueEvents : [];
   const reviews = Array.isArray(input.reviews) ? input.reviews : [];
@@ -110,7 +108,7 @@ function evaluateCodexReview(input) {
   if (artifacts.some((artifact) => artifact.isMalformed)) {return RESULTS.failure;}
   if (artifacts.every((artifact) => !artifact.isCurrent)) {return RESULTS.pending;}
   const [latest] = artifacts.filter((artifact) => artifact.isCurrent || artifact.isUncertain)
-    .toSorted((left, right) => right.time - left.time || Number(left.isClean) - Number(right.isClean) || right.id - left.id);
+    .toSorted((left, right) => right.time - left.time || Number(left.isClean) - Number(right.isClean) || right.id.localeCompare(left.id));
   return latest.isClean ? RESULTS.success : RESULTS.failure;
 }
 
@@ -130,19 +128,15 @@ async function paginate(request, path, page = 1) {
   return [...values, ...await paginate(request, path, page + 1)];
 }
 
-function hasGraphQlErrors(response) {
-  if (!Object.hasOwn(response ?? {}, "errors")) {return false;}
-  return !Array.isArray(response.errors) || response.errors.length > 0;
-}
-
-function reviewConnection(response) {
+function hasGraphQlErrors(response) {const errors = response?.errors; return Object.hasOwn(response ?? {}, "errors") && (!Array.isArray(errors) || errors.length > 0);}
+function graphQlConnection(response, kind) {
   if (hasGraphQlErrors(response)) {
-    throw new TypeError("GitHub GraphQL review query failed");
+    throw new TypeError("GitHub GraphQL metadata query failed");
   }
 
-  const connection = response?.data?.repository?.pullRequest?.reviews;
+  const connection = response?.data?.repository?.pullRequest?.[kind];
   if (!Array.isArray(connection?.nodes)) {
-    throw new TypeError("Expected a GitHub GraphQL review connection");
+    throw new TypeError(`Expected a GitHub GraphQL ${kind} connection`);
   }
 
   const { endCursor, hasNextPage } = connection.pageInfo ?? {};
@@ -157,17 +151,19 @@ function reviewConnection(response) {
   return connection;
 }
 
-async function paginateReviews(request, settings, cursor = null) {
+async function paginateGraphQl(request, settings, kind, cursors = []) {
   const [owner, name] = settings.repository.split("/");
+  const cursor = cursors.at(-1) ?? null;
   const response = await request("", {
-    body: JSON.stringify({ query: REVIEW_QUERY, variables: { cursor, name, number: settings.prNumber, owner } }),
+    body: JSON.stringify({ query: kind === "commits" ? COMMIT_QUERY : REVIEW_QUERY, variables: { cursor, name, number: settings.prNumber, owner } }),
     method: "POST"
   });
-  const connection = reviewConnection(response);
+  const connection = graphQlConnection(response, kind);
   const { endCursor, hasNextPage } = connection.pageInfo;
 
   if (!hasNextPage) {return connection.nodes;}
-  return [...connection.nodes, ...await paginateReviews(request, settings, endCursor)];
+  if (cursors.includes(endCursor)) {throw new TypeError(`GitHub GraphQL ${kind} cursor did not advance`);}
+  return [...connection.nodes, ...await paginateGraphQl(request, settings, kind, [...cursors, endCursor])];
 }
 
 async function run() {
@@ -182,8 +178,7 @@ async function run() {
   const request = githubClient(settings);
   const graphqlUrl = process.env.GITHUB_GRAPHQL_URL;
   if (!graphqlUrl) {throw new Error("Missing required environment");}
-  const reviewRequest = githubClient(settings, graphqlUrl.replace(/\/$/v, ""));
-  const pullPath = `${settings.base}/pulls/${settings.prNumber}`;
+  const graphQlRequest = githubClient(settings, graphqlUrl.replace(/\/$/v, ""));
   const initial = await readPullIdentity(request, settings);
   const { head } = initial;
   const publish = (outcome) => publishTestMergeStatus(request, { context: CONTEXT, identity: initial, outcome, settings });
@@ -192,8 +187,8 @@ async function run() {
   let evaluationError;
   try {
     const issuePath = `${settings.base}/issues/${settings.prNumber}`;
-    const [reviews, issueComments, issueEvents, commits] = await Promise.all([paginateReviews(reviewRequest, settings), paginate(request, `${issuePath}/comments`), paginate(request, `${issuePath}/events`), paginate(request, `${pullPath}/commits`)]);
-    evaluation = evaluateCodexReview({ commits: commits.map((commit) => commit.sha), head, issueComments, issueEvents, reviews });
+    const [reviews, commitNodes, issueComments, issueEvents] = await Promise.all([paginateGraphQl(graphQlRequest, settings, "reviews"), paginateGraphQl(graphQlRequest, settings, "commits"), paginate(request, `${issuePath}/comments`), paginate(request, `${issuePath}/events`)]);
+    evaluation = evaluateCodexReview({ commits: commitNodes.map((node) => node?.commit?.oid), head, issueComments, issueEvents, reviews });
   } catch (error) {
     evaluation = RESULTS.error;
     evaluationError = error;

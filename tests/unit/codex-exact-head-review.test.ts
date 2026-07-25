@@ -174,7 +174,7 @@ function review(options: ReviewOptions = {}) {
     ["author", record([["databaseId", user.id], ["login", user.login]])],
     ["body", body],
     ["commit", record([["oid", commitId]])],
-    ["databaseId", id],
+    ["id", `PRR_${id}`],
     ["lastEditedAt", lastEditedAt],
     ["state", state],
     ["submittedAt", submittedAt],
@@ -186,6 +186,15 @@ function graphQlReviews(nodes: readonly unknown[] = [], hasNextPage = false, end
   const pageInfo = record([["endCursor", endCursor], ["hasNextPage", hasNextPage]]);
   const reviews = record([["nodes", nodes], ["pageInfo", pageInfo]]);
   const pullRequest = record([["reviews", reviews]]);
+  const repositoryData = record([["pullRequest", pullRequest]]);
+  return record([["data", record([["repository", repositoryData]])]]);
+}
+
+function graphQlCommits(oids: readonly unknown[] = [], hasNextPage = false, endCursor: string | null = null) {
+  const nodes = oids.map((oid) => record([["commit", record([["oid", oid]])]]));
+  const pageInfo = record([["endCursor", endCursor], ["hasNextPage", hasNextPage]]);
+  const commits = record([["nodes", nodes], ["pageInfo", pageInfo]]);
+  const pullRequest = record([["commits", commits]]);
   const repositoryData = record([["pullRequest", pullRequest]]);
   return record([["data", record([["repository", repositoryData]])]]);
 }
@@ -353,12 +362,18 @@ function responses(
   status = 200
 ): ResponsePlan {
   let pullRead = 0;
-  let reviewRead = 0;
+  const graphQlReads = { commits: 0, reviews: 0 };
   return (request) => {
     if (request.path === graphQlPath) {
-      const response = metadata[`${graphQlPath}:${reviewRead}`] ?? metadata[graphQlPath];
-      reviewRead += 1;
-      return response ?? { body: graphQlReviews() };
+      const query = String((request.body as { query?: unknown } | undefined)?.query);
+      const kind = query.includes("query CodexCommits") ? "commits" : "reviews";
+      const read = graphQlReads[kind];
+      graphQlReads[kind] += 1;
+      const legacyReviewResponse = kind === "reviews"
+        ? metadata[`${graphQlPath}:${read}`] ?? metadata[graphQlPath]
+        : undefined;
+      const response = metadata[`${graphQlPath}:${kind}:${read}`] ?? metadata[`${graphQlPath}:${kind}`] ?? legacyReviewResponse;
+      return response ?? { body: kind === "commits" ? graphQlCommits([head, other]) : graphQlReviews() };
     }
 
     if (request.method === "POST") {return { body: {}, status };}
@@ -865,8 +880,7 @@ describe("Codex test-merge review runtime", () => {
     ["open state", pullResponse({ state: "closed" })]
   ])("never publishes a stale terminal result when the final %s changes", async (_name, latestPull) => {
     const execution = await runRuntime(responses({
-      [page(commentsPath)]: { body: [issueComment()] },
-      [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+      [page(commentsPath)]: { body: [issueComment()] }
     }, [pullResponse(), latestPull]));
 
     expect(execution.status).toBe(1);
@@ -882,8 +896,7 @@ describe("Codex test-merge review runtime", () => {
       },
       [page(eventsPath)]: {
         body: [issueEvent({ createdAt: "2026-07-20T11:00:00Z" })]
-      },
-      [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+      }
     }));
 
     expect(execution.status, execution.stderr).toBe(0);
@@ -898,8 +911,7 @@ describe("Codex test-merge review runtime", () => {
       },
       [page(eventsPath)]: {
         body: [issueEvent({ createdAt: "2026-07-20T11:00:00Z", event: "head_ref_force_pushed" })]
-      },
-      [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+      }
     }));
 
     expect(execution.status, execution.stderr).toBe(0);
@@ -924,8 +936,7 @@ describe("Codex test-merge review runtime", () => {
         },
         [graphQlPath]: {
           body: graphQlReviews([mutationReview])
-        },
-        [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+        }
       }));
 
       expect(execution.status, execution.stderr).toBe(0);
@@ -933,27 +944,81 @@ describe("Codex test-merge review runtime", () => {
         statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
         statusRequest(mergeSha, "failure", "Latest Codex result is not verified clean")
       ]);
-      const query = execution.requests.find((request) => request.path === graphQlPath);
+      const query = execution.requests.find((request) => request.path === graphQlPath && String((request.body as { query?: unknown }).query).includes("CodexReviews"));
       const queryBody = query?.body as { query?: unknown; variables?: unknown } | undefined;
       expect(queryBody?.variables).toEqual({ cursor: null, name: "metronome", number: 128, owner: "jiawoget" });
-      expect(String(queryBody?.query)).toContain("lastEditedAt");
-      expect(String(queryBody?.query)).toContain("updatedAt");
+      const querySource = String(queryBody?.query);
+      const authorIdentity = "author{login ... on Bot{databaseId} ... on User{databaseId}}";
+      expect(querySource).toContain("lastEditedAt");
+      expect(querySource).toContain("updatedAt");
+      expect(querySource).toContain(authorIdentity);
+      expect(querySource.replace(authorIdentity, "")).not.toContain("databaseId");
       expect(execution.requests.some((request) => request.path.includes("/reviews?"))).toBe(false);
     }
   );
+
+  it("uses the complete GraphQL commit connection for a pull request with more than 250 commits", async () => {
+    const commitShas = Array.from({ length: 250 }, (_, index) => index.toString(16).padStart(40, "0"));
+    const firstPage = commitShas.slice(0, 100);
+    const secondPage = commitShas.slice(100, 200);
+    const thirdPage = [...commitShas.slice(200), head];
+    const execution = await runRuntime(responses({
+      [page(commentsPath)]: { body: [issueComment()] },
+      [`${graphQlPath}:commits:0`]: { body: graphQlCommits(firstPage, true, "commit-page-2") },
+      [`${graphQlPath}:commits:1`]: { body: graphQlCommits(secondPage, true, "commit-page-3") },
+      [`${graphQlPath}:commits:2`]: { body: graphQlCommits(thirdPage) }
+    }));
+
+    expect(execution.status, execution.stderr).toBe(0);
+    expect(statusWrites(execution.requests)).toEqual([
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
+      statusRequest(mergeSha, "success", "Verified clean Codex review for current head")
+    ]);
+    expect(execution.requests.filter((request) => request.path === graphQlPath && String((request.body as { query?: unknown }).query).includes("CodexCommits"))).toHaveLength(3);
+    expect(execution.requests.some((request) => request.path.startsWith(`${pullPath}/commits`))).toBe(false);
+  });
+
+  it.each([
+    ["a missing continuation cursor", graphQlCommits([head], true)],
+    ["a malformed commit node", graphQlCommits([null])]
+  ])("fails closed for %s in the GraphQL commit connection", async (_name, body) => {
+    const execution = await runRuntime(responses({
+      [`${graphQlPath}:commits`]: { body }
+    }));
+
+    expect(execution.status).toBe(1);
+    expect(statusWrites(execution.requests)).toEqual([
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
+      statusRequest(mergeSha, "error", "Codex review metadata could not be evaluated")
+    ]);
+  });
+
+  it("fails closed when the GraphQL commit cursor does not advance", async () => {
+    const execution = await runRuntime(responses({
+      [`${graphQlPath}:commits:0`]: { body: graphQlCommits([other], true, "repeated-cursor") },
+      [`${graphQlPath}:commits:1`]: { body: graphQlCommits([head], true, "repeated-cursor") }
+    }));
+
+    expect(execution.status).toBe(1);
+    expect(execution.stderr).toContain("GitHub GraphQL commits cursor did not advance");
+    expect(statusWrites(execution.requests)).toEqual([
+      statusRequest(mergeSha, "pending", "No verified Codex review for current head"),
+      statusRequest(mergeSha, "error", "Codex review metadata could not be evaluated")
+    ]);
+  });
 
   it("aggregates metadata pages and publishes pending before reads then success to an unchanged test merge", async () => {
     const wrongUser = { id: 1, login: "someone-else" };
     const fillerComments = Array.from({ length: 100 }, (_, index) => issueComment({ id: index + 1, user: wrongUser }));
     const fillerReviews = Array.from({ length: 100 }, (_, index) => review({ id: index + 1, user: wrongUser }));
-    const fillerCommits = Array.from({ length: 100 }, (_, index) => record([["sha", index.toString(16).padStart(40, "0")]]));
+    const fillerCommits = Array.from({ length: 100 }, (_, index) => index.toString(16).padStart(40, "0"));
     const execution = await runRuntime(responses({
       [`${graphQlPath}:0`]: { body: graphQlReviews(fillerReviews, true, "next-reviews") },
       [`${graphQlPath}:1`]: { body: graphQlReviews() },
       [page(commentsPath)]: { body: fillerComments },
       [page(commentsPath, 2)]: { body: [issueComment()] },
-      [page(`${pullPath}/commits`)]: { body: fillerCommits },
-      [page(`${pullPath}/commits`, 2)]: { body: [record([["sha", head]])] }
+      [`${graphQlPath}:commits:0`]: { body: graphQlCommits(fillerCommits, true, "next-commits") },
+      [`${graphQlPath}:commits:1`]: { body: graphQlCommits([head]) }
     }));
 
     expect(execution.status, execution.stderr).toBe(0);
@@ -982,8 +1047,7 @@ describe("Codex test-merge review runtime", () => {
     const olderClean = issueComment({ updatedAt: "2026-07-20T09:00:00Z" });
     const request = reviewRequest({ authorAssociation: "COLLABORATOR" });
     const execution = await runRuntime(responses({
-      [page(commentsPath)]: { body: [olderClean, request] },
-      [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+      [page(commentsPath)]: { body: [olderClean, request] }
     }));
 
     expect(execution.status, execution.stderr).toBe(0);
@@ -1021,8 +1085,7 @@ describe("Codex test-merge review runtime", () => {
 
   it("leaves a regenerated test merge without a terminal result", async () => {
     const execution = await runRuntime(responses({
-      [page(commentsPath)]: { body: [issueComment()] },
-      [page(`${pullPath}/commits`)]: { body: [record([["sha", head]])] }
+      [page(commentsPath)]: { body: [issueComment()] }
     }, [pullResponse(), pullResponse({ mergeCommitSha: otherMergeSha })]));
 
     expect(execution.status).toBe(1);

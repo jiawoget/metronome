@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -48,17 +48,25 @@ function createRepo({
   return { cwd, baseline: git(cwd, ["rev-parse", "HEAD"]) };
 }
 
-function runRunner(cwd, baseline) {
+function runRunner(cwd, baseline, environment = {}) {
   return spawnSync(process.execPath, [runnerPath], {
     cwd,
     encoding: "utf8",
     env: {
       ...process.env,
       BASE_REF: baseline,
-      SEMGREP_ENABLE_VERSION_CHECK: "0"
+      SEMGREP_ENABLE_VERSION_CHECK: "0",
+      ...environment
     },
     timeout: 120_000
   });
+}
+
+function recordedInvocations(file) {
+  const content = readFileSync(file, "utf8").trim();
+  return content === ""
+    ? []
+    : content.split(/\r?\n/v).map(line => JSON.parse(line));
 }
 
 function combinedOutput(result) {
@@ -73,6 +81,82 @@ function withRepo(callback) {
     rmSync(repo.cwd, { recursive: true, force: true });
   }
 }
+
+withRepo(({ cwd, baseline }) => {
+  write(cwd, "src/example.ts", "dangerousCall();\nexport const value = 2;\n");
+  git(cwd, ["add", "src/example.ts"]);
+  const fakeBin = path.join(cwd, "fake semgrep executable");
+  const recorderDirectory = path.join(cwd, "fake semgrep recorder");
+  const invocationLog = path.join(recorderDirectory, "invocations.jsonl");
+  const preloadFile = path.join(recorderDirectory, "preload.cjs");
+  write(cwd, path.relative(cwd, preloadFile), String.raw`"use strict";
+const childProcess = require("node:child_process");
+const { appendFileSync } = require("node:fs");
+const { syncBuiltinESMExports } = require("node:module");
+const originalSpawnSync = childProcess.spawnSync;
+childProcess.spawnSync = function (...parameters) {
+  const [command, args = []] = parameters;
+  if (command !== process.env.FAKE_SEMGREP_BIN) {
+    return Reflect.apply(originalSpawnSync, childProcess, parameters);
+  }
+
+  appendFileSync(process.env.FAKE_SEMGREP_LOG, JSON.stringify({ args, command }) + "\n");
+  return { output: [null, null, null], pid: 0, signal: null, status: 0, stderr: null, stdout: null };
+};
+syncBuiltinESMExports();
+`);
+  const environment = {
+    FAKE_SEMGREP_BIN: fakeBin,
+    FAKE_SEMGREP_LOG: invocationLog,
+    NODE_OPTIONS: [
+      process.env.NODE_OPTIONS,
+      `--require=${JSON.stringify(preloadFile.split(path.win32.sep).join(path.posix.sep))}`
+    ].filter(Boolean).join(" "),
+    SEMGREP_BIN: fakeBin
+  };
+  const probe = spawnSync(process.execPath, [
+    "-e",
+    "const {spawnSync}=require('node:child_process');spawnSync(process.env.FAKE_SEMGREP_BIN,['--help']);spawnSync(process.env.FAKE_SEMGREP_BIN,['scan']);"
+  ], { cwd, encoding: "utf8", env: { ...process.env, ...environment } });
+  assert.equal(probe.status, 0, `fake recorder probe must pass:\n${combinedOutput(probe)}`);
+  assert.deepEqual(
+    recordedInvocations(invocationLog).map(invocation => invocation.args),
+    [["--help"], ["scan"]],
+    "fake recorder must retain every invocation, including unknown option-like arguments"
+  );
+  writeFileSync(invocationLog, "", "utf8");
+
+  const result = runRunner(cwd, baseline, environment);
+  const output = combinedOutput(result);
+  const semgrepInvocations = recordedInvocations(invocationLog);
+
+  assert.equal(result.status, 0, `fake Semgrep scan must pass:\n${output}`);
+  assert.equal(semgrepInvocations.length, 1, "selected Semgrep executable must be invoked exactly once");
+  assert.equal(semgrepInvocations[0].command, fakeBin, "recorder must identify the selected executable");
+  assert.equal(semgrepInvocations[0].args[0], "scan", "the first Semgrep argument must be scan");
+});
+
+withRepo(({ cwd, baseline }) => {
+  write(cwd, "src/example.ts", "dangerousCall();\nexport const value = 2;\n");
+  git(cwd, ["add", "src/example.ts"]);
+  const missingExecutable = path.join(cwd, "missing-semgrep-executable");
+  const startedAt = Date.now();
+  const result = runRunner(cwd, baseline, { SEMGREP_BIN: missingExecutable });
+  const elapsedMs = Date.now() - startedAt;
+
+  assert.notEqual(result.status, 0, "missing Semgrep executable must fail closed");
+  assert.ok(elapsedMs < 10_000, `missing executable must fail promptly; took ${elapsedMs} ms`);
+  assert.match(
+    result.stdout,
+    /Running Semgrep debt gates/v,
+    "missing executable failure must come from the actual scan spawn"
+  );
+  assert.match(
+    result.stderr,
+    /resolve Semgrep executable/v,
+    "missing executable must report an executable-resolution diagnostic"
+  );
+});
 
 withRepo(({ cwd, baseline }) => {
   write(cwd, "src/example.ts", "dangerousCall();\nexport const value = 2;\n");
