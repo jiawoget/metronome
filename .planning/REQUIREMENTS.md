@@ -71,30 +71,31 @@ This section is explicitly outside Phase 1 requirement completion. Every gate be
 
 ## Traceability
 
-Traceability is filled by the roadmapper. Every requirement must map to exactly one phase.
+Every v1.1 requirement maps exactly once to the milestone's single independent phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| POLICY-01 | TBD | Pending |
-| TOOL-01 | TBD | Pending |
-| TOOL-02 | TBD | Pending |
-| EVID-01 | TBD | Pending |
-| BASE-01 | TBD | Pending |
-| BASE-02 | TBD | Pending |
-| BASE-03 | TBD | Pending |
-| WIN-01 | TBD | Pending |
-| WIN-02 | TBD | Pending |
-| ENF-01 | TBD | Pending |
-| ENF-02 | TBD | Pending |
-| QUAL-01 | TBD | Pending |
-| HIST-01 | TBD | Pending |
-| DELIV-01 | TBD | Pending |
+| POLICY-01 | Phase 1 | Pending |
+| TOOL-01 | Phase 1 | Pending |
+| TOOL-02 | Phase 1 | Pending |
+| EVID-01 | Phase 1 | Pending |
+| BASE-01 | Phase 1 | Pending |
+| BASE-02 | Phase 1 | Pending |
+| BASE-03 | Phase 1 | Pending |
+| WIN-01 | Phase 1 | Pending |
+| WIN-02 | Phase 1 | Pending |
+| ENF-01 | Phase 1 | Pending |
+| ENF-02 | Phase 1 | Pending |
+| QUAL-01 | Phase 1 | Pending |
+| HIST-01 | Phase 1 | Pending |
+| DELIV-01 | Phase 1 | Pending |
 
 **Coverage:**
 
 - v1.1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14
+- Mapped to phases: 14
+- Unmapped: 0
+- Duplicate mappings: 0
 
 ---
 *Requirements defined: 2026-07-30*

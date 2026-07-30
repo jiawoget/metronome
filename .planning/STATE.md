@@ -1,12 +1,16 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: '1.0'
 milestone: v1.1
 milestone_name: Repository Formatting Baseline
+current_phase: 01
+current_phase_name: repository-formatting-baseline
 status: planning
-last_updated: "2026-07-30T14:19:29.859Z"
+stopped_at: Roadmap created; Phase 1 is ready for native planning.
+last_updated: "2026-07-30T22:29:57+08:00"
 last_activity: 2026-07-30
+last_activity_desc: Created the v1.1 roadmap and mapped all 14 requirements to Phase 1.
 progress:
-  total_phases: 0
+  total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,76 +21,68 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-25)
+See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
-**Current focus:** Phase 01 — canonical-practice-presentation-formatting
+**Current focus:** Phase 1 — Repository Formatting Baseline
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-30 — Milestone v1.1 started
+Phase: 1 of 1 (Repository Formatting Baseline)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-07-30 — Created the v1.1 roadmap and mapped all 14 requirements to Phase 1.
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-
 - Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Average duration: -
+- Total execution time: 0.0 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 0 | - | - |
+| 1. Repository Formatting Baseline | 0 | - | - |
 
 **Recent Trend:**
+- Last 5 plans: -
+- Trend: -
 
-- Last 5 plans: no active plan; the failed pre-redesign attempt is retained only as forensic evidence
-- Trend: Phase 1 is unimplemented and ready only for future owner-directed native planning
+*Updated after each plan completion*
 
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
 
-- [Phase 1]: Milestone-local numbering resets to Phase 1; v1.0 remains immutable archive history.
-- [Phase 1]: R01 selects canonical practice presentation formatting as its product target, but has no active plan and remains unimplemented; no implementation conclusion is selected.
-- [Forensics]: Pre-redesign R01 attempts, research, receipts, recovery files, and controller artifacts are frozen under `.planning/forensics/` and are not executable lifecycle inputs.
-- [Workflow]: Native OpenGSD exclusively owns lifecycle state, research, planning, checking, execution, verification, recovery, and shipping.
-- [Reuse]: When triggered, one compact contract at `skills/metronome-policy/SKILL.md` governs native research, planning, execution, verification, and review.
-- [Authorization]: Completing workflow cleanup does not authorize R01 product work; a future native lifecycle action requires explicit owner direction.
-- [Release exit]: Exact-final-head standard CI and applicable platform quality checks, a finding-free read-only `@codex` review of that head, merge, and clean synchronized `main` remain mandatory.
+- [Phase 1]: Milestone v1.1 has one independent repository-formatting phase and resets numbering to Phase 1.
+- [Phase 1]: `.planning/deprecated/**` is an absolute quarantine and is never consumed or transformed.
+- [Phase 1]: Implementation history has exactly three roles: policy/tooling, one mechanical formatting pass, and enforcement.
+- [Release Exit]: Shipping, exact-final-head proof, merge, synchronized clean `main`, and any fresh R01 remain outside Phase 1.
 
 ### Pending Todos
 
-None. Future R01 planning requires explicit owner direction.
+None yet.
 
 ### Blockers/Concerns
 
-None
+None yet.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Product | 32 native capability seeds in `.planning/seeds/` | Dormant and unchanged | v1.0 completion transition |
+| Product | 32 dormant product capability seeds | Dormant pending a separately approved milestone | v1.1 start |
+| Lifecycle | Fresh R01 derived from synchronized formatting baseline | Deferred until Milestone Release Exit completes | v1.1 start |
 
 ## Session Continuity
 
-Last session: 2026-07-25T10:37:29.839Z
-Stopped at: Native workflow cleanup implemented; R01 awaits explicit owner direction
+Last session: 2026-07-30
+Stopped at: Roadmap created; Phase 1 is ready for native planning.
 Resume file: None
-
-## Rebuild Log
-
-- timestamp: 2026-07-25T10:05:09.430Z
-  kind: by-phase-table-reconciled
-  section: ## Performance Metrics
-  before: | Phase | Plans | Total | Avg/Plan | \n |-------|-------|-------|----------| \n | 1. Canonical Practice Presentation Formatting | 0 | 0 | — |
-  after: | Phase | Plans | Total | Avg/Plan | \n |-------|-------|-------|----------| \n | 01 | 0 | - | - |
-  reason: phase dirs on disk are canonical; rows for missing phases dropped, missing phases added
