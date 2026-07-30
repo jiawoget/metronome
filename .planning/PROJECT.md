@@ -8,16 +8,19 @@ Metronome is a local-first web application for musicians to run metronome practi
 
 Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
 
-## Current Milestone: v1.1 R01 Evidence-First Code Slimming
+## Current Milestone: v1.1 Repository Formatting Baseline
 
-**Goal:** Prove the native OpenGSD workflow on one real, bounded refactor discovered fresh from current `main`: reuse existing project code, installed dependencies, or an authoritative OSS API to retire duplicate or custom production logic while preserving behavior.
+**Goal:** Establish one deterministic repository-wide Prettier and LF baseline across supported text files without changing product behavior, then enforce that baseline consistently in Windows development and Ubuntu CI.
 
 **Target outcomes:**
-- Search current code semantically for duplicated behavior before choosing a target.
-- Inspect installed dependencies and authoritative online OSS APIs before approving new implementation logic.
-- Select exactly one evidence-backed refactor boundary; do not inherit the superseded R01 pilot's target or conclusions.
-- Retire more production code than is added, preserve observable behavior, avoid new parallel abstractions, and produce a complete, immutable, reversible, clean reviewed product revision ready to enter native verification, validation, and security.
-- Close the separate Milestone Release Exit only after native shipping, exact-head standard CI and applicable platform quality checks, finding-free `@codex` review, GitHub merge, and a clean local `main` synchronized to `origin/main`.
+
+- Define the repository's canonical LF/text policy in root `.gitattributes`, with explicit binary and `.planning/deprecated/**` quarantine overrides.
+- Reuse one root `prettier.config.mjs`, one `.prettierignore`, exact stable Prettier and Tailwind-plugin dependencies, and only the public commands `npm run format` and `npm run format:check`.
+- Apply one repository-wide mechanical formatting pass to every allowed, non-generated, Prettier-supported text file, including source, tests, configuration, scripts, active planning, current documentation, and legacy documentation.
+- Prove a fresh Windows shell resolves the intended `node`, `npm`, and `npx` directly from user `PATH`; remove `scripts/npm-local.ps1` only after that proof succeeds.
+- Run `format:check` before the existing lint, typecheck, unit, and build gates in both the tracked pre-commit hook and Ubuntu CI.
+- Keep implementation history reviewable as exactly three implementation commits: policy/tooling, the single mechanical formatting pass, and enforcement. Native planning, SUMMARY, verification, and ship metadata commits do not count as implementation commits.
+- Complete native shipping and the separate exact-final-head release exit before starting a fresh R01 from the resulting synchronized `main`.
 
 ## Requirements
 
@@ -27,24 +30,26 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ### Active
 
-- Discover one bounded reuse-first refactor candidate from current `main` through local semantic, installed-dependency, and authoritative OSS API evidence.
-- Replace the selected duplicate or custom implementation with an existing reusable implementation and achieve a net reduction in production LOC without observable behavior change.
-- Verify the bounded product result through behavior tests, the standard lint/typecheck/unit/build suite, reuse-sensitive maintainability review, rollback, and clean source/configuration state; then pass the separate native verification, validation, and security preconditions before shipping and the separate Release Exit after shipping.
+- Establish one explicit LF and Prettier policy for all allowed tracked repository text while preserving binary, generated, and quarantined bytes.
+- Produce one idempotent repository-wide mechanical formatting baseline with no product-semantic edits.
+- Make formatting drift fail locally and in Ubuntu CI before the repository's existing quality gates.
+- Make the intended Node.js toolchain directly available in a fresh Windows shell without retaining a repository-specific npm wrapper after successful proof.
+- Preserve auditable three-commit implementation roles and complete the separate native release exit on the actual final pull-request head.
 
 ### Deferred
 
-- 32 unimplemented capability contracts are preserved as [native OpenGSD seeds](seeds/). They remain dormant historical inputs until a future owner-approved milestone explicitly promotes matching product requirements.
+- 32 unimplemented product capability contracts remain preserved as [native OpenGSD seeds](seeds/). None match this tooling-only milestone and all remain dormant and unchanged.
+- A fresh R01 product/refactor milestone begins only after this formatting milestone has shipped, merged, and synchronized to clean `main`.
 
 ### Out of Scope
 
-- The five unfinished legacy pack boundaries and their 49 not-started slice decomposition are historical proposals under `docs/legacy/v1/`, not the future roadmap.
-- Cloud accounts, sync, sharing, and remote storage — current v1 contracts are local-first and defer cross-device behavior.
-- Automatic score following, correctness scoring, or claims of musical-performance accuracy — these require separately approved product and analysis contracts.
-- A custom lifecycle wrapper, shadow status ledger, committed migration validator, status publisher, telemetry system, scanner, capability database, cache, or project knowledge graph — native OpenGSD artifacts own lifecycle state.
-- Treating maintenance/refactor slices as user-facing product requirements — the 24 support/maintenance slices remain completed roadmap history only.
-- Treating the superseded historical R01 pilot as current product work — v1.1 starts fresh from current `main` through native OpenGSD; the old [pilot plan](../docs/legacy/governance/plans/2026-07-20-lumen-r01-opengsd-pilot.md) is comparison evidence only.
-- Preselecting the real R01 target from any historical pilot or worktree — v1.1 discovery must re-establish the target from current `main` and current external evidence.
-- Consuming a dormant product seed for maintenance-only refactoring — all 32 seeds remain unchanged unless a separately approved product requirement exactly matches one.
+- Any product behavior, UI, persistence, storage, audio, domain, or service-contract change.
+- Reading, searching, indexing, mapping, summarizing, citing, importing, hashing for evidence, or formatting `.planning/deprecated/**`.
+- Formatting binary assets, generated outputs, dependency directories, build artifacts, or other explicitly ignored paths.
+- A second formatter, custom validator, receipt, SHA ledger, lifecycle script, wrapper command, cache, controller, or parallel business path.
+- Playwright, browser, visual, or microphone testing; the milestone changes repository presentation and enforcement only.
+- Combining formatting with dependency modernization beyond the exact formatter/plugin versions required for this baseline.
+- Creating, planning, or integrating the next R01 before the formatting milestone's separate release exit is complete.
 
 ## Context
 
@@ -54,32 +59,36 @@ Musicians can move from a score and practice target to a repeatable local practi
 - Semantic capability truth: 32 archived Complete capabilities / 32 dormant unimplemented seeds.
 - The archived Complete set and dormant seed set form the exact disjoint 64-capability baseline preserved from frozen [`docs/legacy/v1/status.json`](../docs/legacy/v1/status.json).
 - The application is TypeScript/React/Next.js with browser-local persistence and explicit domain, service, and infrastructure boundaries.
+- The superseded, unimplemented R01 lifecycle is retained only on local branch `deprecated/r01-canonical-formatting-20260725`; its planning bytes are quarantined there and are not inputs to this milestone.
 
 ## Constraints
 
-- **Lifecycle**: Native OpenGSD owns milestones, research, planning, checking, execution, verification, state, recovery, and shipping. Phase 1 has no active plan, and workflow cleanup does not authorize product work; a future lifecycle action requires explicit owner direction.
-- **Deferred capabilities**: Dormant seeds are historical inputs, not current requirements or executable plans. Promotion requires an explicit future owner-approved milestone decision.
-- **Completion truth**: A product requirement is complete only when every mapped legacy slice is verified and reachable runtime plus automated or repeatable acceptance evidence is linked — prevents false promotion during import.
-- **Lifecycle boundary**: Phase requirement completion establishes only that the immutable reviewed product revision is ready to enter native verification, validation, and security. Passing VERIFICATION, current Nyquist VALIDATION, and SECURITY with `threats_open: 0` is mandatory before `$gsd-ship` but receives no Phase 1 requirement credit. The active goal and milestone remain incomplete until the separate Milestone Release Exit proves native shipping, exact-head standard CI and platform quality checks, finding-free review, merge, and clean synchronized `main`.
-- **Local first**: Existing browser-local storage and audio boundaries remain authoritative unless a future requirement explicitly changes them.
-- **Reuse first**: When triggered, agents follow the single compact contract at `skills/metronome-policy/SKILL.md` before adding parallel implementations.
-- **Historical evidence**: Legacy product contracts, pack specifications, and slice plans remain evidence, but they no longer own current lifecycle state.
+- **Lifecycle:** Native OpenGSD owns milestone switching, discussion, research, planning, checking, execution, verification, state, recovery, and shipping. The project adds no controller around it.
+- **Checkout:** `workflow.use_worktrees=false`; all work remains in the primary checkout. No Git worktree may be created or invoked.
+- **Quarantine:** `.planning/deprecated/**` is never consumed or transformed. Static ignore and attribute policy must protect it without scanning its contents.
+- **Formatting ownership:** Prettier is the sole general-purpose formatter. The repository exposes only `format` and `format:check`; no alternate entrypoint or wrapper is added.
+- **Mechanical baseline:** The baseline commit contains formatter output only. A second formatter run must produce no diff.
+- **Implementation history:** The three implementation commits have non-overlapping roles: policy/tooling, mechanical baseline, enforcement. Lifecycle metadata is separate and does not change this implementation contract.
+- **Windows runtime:** A fresh shell must resolve the intended `node`, `npm`, and `npx` directly. Any user-PATH edit is exact, single, reversible, and verified before `scripts/npm-local.ps1` is removed.
+- **Quality:** Formatting checks precede the existing lint, typecheck, unit, and build gates locally and in Ubuntu CI. No Playwright gate is required.
+- **Completion truth:** Phase completion does not prove release. The active goal remains incomplete until native shipping, exact-final-head CI, finding-free read-only `@codex` review, merge, and clean synchronized `main` all succeed.
+- **Local first:** Product storage and behavior remain unchanged throughout this tooling-only milestone.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Archive completed legacy history only | Completion history must not convert unfinished proposals into current phases or plans | ✓ Good |
-| Preserve deferred capabilities as dormant native seeds | Future milestones may consider them only through an explicit owner-approved requirement decision; they do not drive current work | ✓ Good |
-| Keep the primary repository between milestones until governance acceptance | The superseded historical pilot did not advance lifecycle state; v1.1 began only after the governance migration merged into updated `main` | ✓ Good |
-| Import each completed legacy pack as one native PLAN/SUMMARY pair | Preserves eight completed phases without pretending 83 historical slices were executed natively | ✓ Good |
-| Use native OpenGSD as the sole project lifecycle and roadmap control plane | Cross-session planning, execution, verification, and progress already exist in OpenGSD | ✓ Good |
-| Discover the real R01 target fresh from current `main` | The historical pilot was not resumed, and its temporary worktrees were not used as current authority and have now been removed; the selected target was re-established from current `main` using reuse and OSS evidence | ✓ Good |
-| Reset v1.1 roadmap phase numbering to Phase 1 | The user explicitly chose milestone-local numbering while preserving the immutable v1.0 phase archive | — Pending |
+| Replace the unimplemented R01 with a standalone formatting milestone | The previous design crossed lifecycle and branch boundaries that native OpenGSD cannot safely own | ✓ Approved |
+| Reuse v1.1 for the replacement milestone | v1.0 is the latest shipped milestone; the previous v1.1 never shipped and is quarantined as deprecated history | ✓ Approved |
+| Reset roadmap numbering to Phase 1 | This is a fresh milestone-local lifecycle with one independent formatting phase | ✓ Approved |
+| Keep `.planning/deprecated/**` as an absolute quarantine | Legacy planning must remain auditable without influencing current routing, research, formatting, or evidence | ✓ Approved |
+| Use one root Prettier configuration and two public npm commands | A single canonical entrypoint prevents formatter and workflow drift | ✓ Approved |
+| Separate phase requirements from release-exit facts | Native verification can prove the implementation before shipping; PR merge and synchronized `main` remain post-ship truth | ✓ Approved |
+| Start a fresh R01 only after formatting release exit | The next lifecycle must inherit the merged canonical baseline from updated `main`, never deprecated planning | ✓ Approved |
 
 ## Evolution
 
-The shipped v1.0 archive retains the 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. Milestone v1.1 remains unfinished with no active plan. Pre-redesign R01 research and failed attempts are frozen comparison evidence only; future owner-directed native planning must confirm current code, installed APIs, and authoritative external evidence anew.
+The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is no longer an active lifecycle input. Milestone v1.1 now establishes the repository formatting baseline; after it ships and `main` is synchronized, a separately approved fresh R01 may begin from that new baseline.
 
 ---
-*Last updated: 2026-07-25 after the native OpenGSD workflow cleanup migration*
+*Last updated: 2026-07-30 for the Repository Formatting Baseline milestone*

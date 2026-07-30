@@ -1,19 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: R01 Evidence-First Code Slimming
-current_phase: 01
-current_phase_name: canonical-practice-presentation-formatting
+milestone_name: Repository Formatting Baseline
 status: planning
-stopped_at: Native workflow cleanup implemented; R01 awaits explicit owner direction
-last_updated: "2026-07-25T10:37:29.846Z"
-last_activity: 2026-07-25
-last_activity_desc: native workflow cleanup implemented; R01 awaits explicit owner direction
+last_updated: "2026-07-30T14:19:29.859Z"
+last_activity: 2026-07-30
 progress:
-  total_phases: 1
+  total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -27,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-25)
 
 ## Current Position
 
-Phase: 01 (canonical-practice-presentation-formatting) — READY FOR OWNER-DIRECTED PLANNING
-Plan: No active plan; R01 remains unimplemented
-Status: Ready for future owner-directed native planning; workflow cleanup does not authorize product work
-Last activity: 2026-07-25 — native workflow cleanup implemented; R01 awaits explicit owner direction
-
-Progress: [░░░░░░░░░░] 0%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-30 — Milestone v1.1 started
 
 ## Performance Metrics
 
