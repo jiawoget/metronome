@@ -6,11 +6,26 @@ import type {
 } from "@/lib/quick-metronome/types";
 
 function createId(prefix: string) {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `${prefix}_${crypto.randomUUID()}`;
+  const secureCrypto = typeof crypto === "undefined" ? undefined : crypto;
+
+  if (
+    secureCrypto &&
+    "randomUUID" in secureCrypto &&
+    typeof secureCrypto.randomUUID === "function"
+  ) {
+    return `${prefix}_${secureCrypto.randomUUID()}`;
   }
 
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  if (secureCrypto && typeof secureCrypto.getRandomValues === "function") {
+    const bytes = secureCrypto.getRandomValues(new Uint8Array(16));
+    const randomId = Array.from(bytes, (byte) =>
+      byte.toString(16).padStart(2, "0")
+    ).join("");
+
+    return `${prefix}_${randomId}`;
+  }
+
+  throw new Error("Secure random number generation is unavailable");
 }
 
 export function createQuickRecording({
