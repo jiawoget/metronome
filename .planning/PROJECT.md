@@ -88,6 +88,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 | Exclude `.planning/**` from formatter enforcement | Native lifecycle files continue changing during planning, execution, verification, and shipping; including them creates recursive drift and repeated reformatting | ✓ Approved 2026-07-31 |
 | Keep the repository-local Node/npm fallback | The bundled runtime satisfies the repository contract while global PATH mutation adds machine-wide risk and user confirmation overhead | ✓ Approved 2026-07-31 |
 | Use bounded owner authorization and fast commit gates | Native research/check/verify remain, while routine confirmations and repeated full-suite runs no longer block each lifecycle commit | ✓ Approved 2026-07-31 |
+| Disable product-domain capabilities for this tooling milestone | AI, UI, API, schema, security, post-plan gap, and pre-ship review layers add no evidence here; the next milestone must opt back in only where its scope needs them | ✓ Approved 2026-07-31 |
 
 ## Evolution
 

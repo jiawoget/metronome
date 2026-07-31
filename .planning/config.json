@@ -14,6 +14,17 @@
     "auto_advance": false,
     "pattern_mapper": false,
     "specless_probe_fallback": false,
+    "ai_integration_phase": false,
+    "ui_phase": false,
+    "ui_safety_gate": false,
+    "ui_review": false,
+    "api_coverage_gate": false,
+    "assumption_delta": false,
+    "schema_push_detection": false,
+    "security_enforcement": false,
+    "plan_drift_precheck": false,
+    "post_planning_gaps": false,
+    "code_review": false,
     "use_worktrees": false
   },
   "ship": {

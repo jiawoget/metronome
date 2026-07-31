@@ -10,6 +10,7 @@
 - With `workflow.use_worktrees=false`, all work stays in the primary checkout at `C:\Users\wsuto\metronome`. Do not create or invoke a Git worktree.
 - When the active Codex schema supports typed dispatch fields, pass the native-resolved `agent_type`, `model`, `reasoning_effort`, and `fork_turns: "none"`. Missing exact binding is a fail-closed incompatibility.
 - Once the owner authorizes a bounded phase through completion, do not ask for routine stage confirmations and do not defer an in-scope problem merely because it is difficult. Continue with one bounded plan-local diagnosis/repair loop. Stop only for a material scope or architecture change, a global/irreversible action, missing external authority, or a newly discovered high-impact blocker that cannot be safely resolved inside the approved boundary.
+- Capability toggles in `.planning/config.json` are milestone-scoped. For the current tooling-only milestone, keep AI, UI, API coverage, schema, security, post-plan gap analysis, pre-ship code review, and similar product-domain capabilities disabled; re-evaluate them explicitly when a later milestone actually needs them.
 - The native codebase map and Lumen are navigation caches only. Confirm material facts against live files and rebuild a cache only when a freshness check proves it stale.
 
 ## Reuse contract

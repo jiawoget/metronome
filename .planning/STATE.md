@@ -69,6 +69,7 @@ Recent decisions affecting current work:
 - [Phase 1]: Preserve the repository-local Node/npm fallback and do not mutate user or system PATH for a repository formatting phase.
 - [Phase 1]: Keep mechanical formatter output isolated, but do not use exact plan/task/commit counts as correctness gates.
 - [Workflow]: The owner's 2026-07-31 authorization covers this bounded phase through native research, planning, execution, verification, and in-scope repair without routine stage confirmations.
+- [Workflow]: Current milestone routing keeps only research, plan-checker, executor, and verifier; unrelated product-domain capability hooks are disabled and must be reconsidered for a future milestone rather than inherited blindly.
 - [Release Exit]: Shipping, exact-final-head proof, merge, synchronized clean `main`, and any fresh R01 remain outside Phase 1.
 
 ### Pending Todos
