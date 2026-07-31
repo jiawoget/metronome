@@ -19,7 +19,6 @@ test-results/** -text
 .tmp/** -text
 .code-review-graph/** -text
 .logs/** -text
-next-env.d.ts -text
 *.tsbuildinfo -text
 
 # Binary assets
