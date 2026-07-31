@@ -34,5 +34,6 @@
 
 - The tracked pre-commit hook is a fast commit gate: it runs `git diff --cached --check` and, after the formatting policy exists in `HEAD`, `npm run format:check`. It does not repeat lint, typecheck, the full unit suite, or build on every commit.
 - Final local verification and Ubuntu CI run `format:check`, lint, typecheck, the full unit suite, and build once per frozen candidate revision.
+- Reuse committed exact-revision gate evidence when the implementation head and inputs are unchanged. For one sequential plan with no worktree/merge boundary, do not immediately repeat the same build and full test suite as a synthetic post-merge gate; run that gate only after an actual merge, multiple independently executed plans, stale/missing evidence, or a relevant head/input change. Native verification should independently inspect artifacts and provenance, rerunning expensive gates only when evidence is stale, absent, or contradictory.
 - If npm is not on `PATH`, repository commands and the hook may fall back through `npm`, `npm.cmd`, then `powershell` or `pwsh` with `scripts/npm-local.ps1`. Do not mutate global or user `PATH`, and do not remove a working repository-local runtime fallback merely to satisfy process wording.
 - Do not bypass hooks with `--no-verify` unless the project owner explicitly requests it.

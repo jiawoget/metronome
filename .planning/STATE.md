@@ -75,6 +75,7 @@ Recent decisions affecting current work:
 - [Phase 1]: Keep mechanical formatter output isolated, but do not use exact plan/task/commit counts as correctness gates.
 - [Workflow]: The owner's 2026-07-31 authorization covers this bounded phase through native research, planning, execution, verification, and in-scope repair without routine stage confirmations.
 - [Workflow]: Current milestone routing keeps only research, plan-checker, executor, and verifier; unrelated product-domain capability hooks are disabled and must be reconsidered for a future milestone rather than inherited blindly.
+- [Workflow]: Exact-revision gate evidence may be reused when head and inputs are unchanged; post-merge full-suite reruns are reserved for a real merge/multi-plan boundary or stale, missing, or contradictory evidence.
 - [Release Exit]: Shipping, exact-final-head proof, merge, synchronized clean `main`, and any fresh R01 remain outside Phase 1.
 - [Phase 01]: Retain exact Prettier 3.9.5 and Tailwind plugin 0.8.0 artifacts with no package acquisition or PATH mutation.
 - [Phase 01]: Normalize next-env.d.ts through the root LF policy so production builds preserve a clean frozen candidate.

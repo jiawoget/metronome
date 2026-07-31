@@ -89,6 +89,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 | Keep the repository-local Node/npm fallback | The bundled runtime satisfies the repository contract while global PATH mutation adds machine-wide risk and user confirmation overhead | ✓ Approved 2026-07-31 |
 | Use bounded owner authorization and fast commit gates | Native research/check/verify remain, while routine confirmations and repeated full-suite runs no longer block each lifecycle commit | ✓ Approved 2026-07-31 |
 | Disable product-domain capabilities for this tooling milestone | AI, UI, API, schema, security, post-plan gap, and pre-ship review layers add no evidence here; the next milestone must opt back in only where its scope needs them | ✓ Approved 2026-07-31 |
+| Reuse exact-revision gate evidence | A single sequential plan has no merge-integration risk; repeating the same full suite immediately adds latency without new evidence unless the head, inputs, or execution topology changed | ✓ Approved 2026-07-31 |
 
 ## Evolution
 
