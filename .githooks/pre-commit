@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+
+set -eu
+
+repo_root="$(git rev-parse --show-toplevel)"
+npm_local_script="$repo_root/scripts/npm-local.ps1"
+npm_cmd=""
+power_shell=""
+
+cd "$repo_root"
+
+echo "Running: git diff --cached --check"
+git diff --cached --check
+
+if ! git cat-file -e HEAD:.prettierignore 2>/dev/null; then
+  echo "Formatting baseline is not yet present in HEAD; skipping format:check for the bootstrap commit."
+  exit 0
+fi
+
+if command -v npm >/dev/null 2>&1; then
+  npm_cmd="npm"
+elif command -v npm.cmd >/dev/null 2>&1; then
+  npm_cmd="npm.cmd"
+elif [ -f "$npm_local_script" ] && command -v powershell >/dev/null 2>&1; then
+  power_shell="powershell"
+elif [ -f "$npm_local_script" ] && command -v pwsh >/dev/null 2>&1; then
+  power_shell="pwsh"
+else
+  echo "Could not find a supported npm route for the pre-commit hook."
+  echo "Install npm on PATH or restore scripts/npm-local.ps1 with powershell/pwsh available."
+  exit 1
+fi
+
+run_npm() {
+  if [ -n "$npm_cmd" ]; then
+    "$npm_cmd" "$@"
+  else
+    "$power_shell" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$npm_local_script" "$@"
+  fi
+}
+
+echo "Running: npm run format:check"
+run_npm run format:check

@@ -4,11 +4,12 @@
 
 - Native OpenGSD is the sole project lifecycle and agent-coordination entrypoint. Read `.planning/STATE.md` and `.planning/ROADMAP.md` before routing repository work.
 - Use `$gsd-new-milestone` only when state is `Awaiting next milestone` and the roadmap has no current phases. Otherwise use `$gsd-next` or the already-active native phase.
-- The current R01 phase has no plan and remains unimplemented. Workflow cleanup does not authorize product work; begin a native discuss, research, planning, or execution step only after an explicit owner direction.
+- The active phase is the v1.1 repository-formatting baseline. The owner's 2026-07-31 direction authorizes this bounded phase to continue through native research, planning, execution, verification, and repair without another stage-by-stage confirmation; it does not authorize product work or a fresh R01.
 - Do not imitate native research, planning, checker revision, retry, recovery, execution, verification, or state transitions with project scripts or hand-created controller steps.
 - Use native state and roadmap commands for lifecycle mutations, then compare the result with read-only `smart-entry --json`. On contradiction, stop instead of retrying or adding a validator.
 - With `workflow.use_worktrees=false`, all work stays in the primary checkout at `C:\Users\wsuto\metronome`. Do not create or invoke a Git worktree.
 - When the active Codex schema supports typed dispatch fields, pass the native-resolved `agent_type`, `model`, `reasoning_effort`, and `fork_turns: "none"`. Missing exact binding is a fail-closed incompatibility.
+- Once the owner authorizes a bounded phase through completion, do not ask for routine stage confirmations and do not defer an in-scope problem merely because it is difficult. Continue with one bounded plan-local diagnosis/repair loop. Stop only for a material scope or architecture change, a global/irreversible action, missing external authority, or a newly discovered high-impact blocker that cannot be safely resolved inside the approved boundary.
 - The native codebase map and Lumen are navigation caches only. Confirm material facts against live files and rebuild a cache only when a freshness check proves it stale.
 
 ## Reuse contract
@@ -18,17 +19,19 @@
 
 ## Final pull-request review
 
-- Final review is a finding-free, read-only `@codex` review of the actual final pull-request head. It does not edit files, merge the pull request, publish a custom status, or replace native OpenGSD.
+- Final review is a read-only `@codex` review of the frozen final pull-request head with no unresolved actionable findings. It does not edit files, merge the pull request, publish a custom status, or replace native OpenGSD.
 - The reviewer reads `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/REQUIREMENTS.md`, and `.planning/STATE.md`, inspects the real diff, and applies `skills/metronome-policy/SKILL.md` when its trigger is met.
 
 ## Release exit
 
 - `$gsd-ship` creates or prepares a pull request; it does not prove that the pull request merged.
-- Do not report a goal or milestone complete until CI applies to the actual final PR head, the finding-free read-only `@codex` review covers that same head, the PR is merged, local `main` is updated to the intended `origin/main`, `main == origin/main`, no `MERGE_HEAD` exists, the index is empty, and `git status --porcelain=v1 --untracked-files=all` is empty.
+- Freeze the candidate head before final CI and review. Any later head change invalidates both and requires one fresh CI/review pass on the replacement head.
+- Do not report a goal or milestone complete until CI applies to the actual final PR head, the read-only `@codex` review covers that same head with no unresolved actionable findings, the PR is merged, local `main` is updated to the intended `origin/main`, `main == origin/main`, no `MERGE_HEAD` exists, the index is empty, and `git status --porcelain=v1 --untracked-files=all` is empty.
 - Never claim a post-merge fact from a pre-ship verifier result.
 
 ## Git hook
 
-- The local pre-commit hook runs `npm run lint`, `npm run typecheck`, `npm run test:unit`, and `npm run build`.
-- If npm is not on `PATH`, the hook falls back through `npm`, `npm.cmd`, then `powershell` or `pwsh` with `scripts/npm-local.ps1`.
+- The tracked pre-commit hook is a fast commit gate: it runs `git diff --cached --check` and, after the formatting policy exists in `HEAD`, `npm run format:check`. It does not repeat lint, typecheck, the full unit suite, or build on every commit.
+- Final local verification and Ubuntu CI run `format:check`, lint, typecheck, the full unit suite, and build once per frozen candidate revision.
+- If npm is not on `PATH`, repository commands and the hook may fall back through `npm`, `npm.cmd`, then `powershell` or `pwsh` with `scripts/npm-local.ps1`. Do not mutate global or user `PATH`, and do not remove a working repository-local runtime fallback merely to satisfy process wording.
 - Do not bypass hooks with `--no-verify` unless the project owner explicitly requests it.

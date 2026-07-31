@@ -6,7 +6,7 @@
 
 ## Overview
 
-Milestone v1.1 establishes one deterministic repository-wide Prettier and LF baseline without changing product behavior. One independent phase defines the policy and toolchain, applies the single allowed-surface mechanical pass, proves direct Windows runtime use, and enforces the same formatting gate in local pre-commit and Ubuntu CI. Pull-request creation, merge, synchronized `main`, and any later fresh R01 remain a separate milestone release exit.
+Milestone v1.1 establishes one deterministic repository-wide Prettier and LF baseline without changing product behavior. One independent phase defines the policy and toolchain, commits one idempotent allowed-surface mechanical baseline, preserves the supported repository-local Windows runtime fallback, and enforces formatting through a fast local commit gate plus the full Ubuntu CI sequence. Pull-request creation, merge, synchronized `main`, and any later fresh R01 remain a separate milestone release exit.
 
 ## Phases
 
@@ -17,20 +17,20 @@ Milestone v1.1 establishes one deterministic repository-wide Prettier and LF bas
 ## Phase Details
 
 ### Phase 1: Repository Formatting Baseline
-**Goal**: Maintainers have one deterministic repository-wide formatting baseline that is safe to apply, reproducible on Windows and Ubuntu, and enforced before existing quality gates without changing product behavior.
+**Goal**: Maintainers have one deterministic repository-wide formatting baseline that is safe to apply, reproducible on Windows and Ubuntu, and enforced without repeating the full quality suite on every lifecycle commit or changing product behavior.
 **Depends on**: Nothing (first phase)
 **Requirements**: POLICY-01, TOOL-01, TOOL-02, EVID-01, BASE-01, BASE-02, BASE-03, WIN-01, WIN-02, ENF-01, ENF-02, QUAL-01, HIST-01, DELIV-01
 **Success Criteria** (what must be TRUE):
-  1. Maintainers can inspect one native research decision and one root formatting policy comprising `.gitattributes`, `prettier.config.mjs`, `.prettierignore`, exact formatter/plugin packages, and only `npm run format` plus `npm run format:check`; binary/generated paths and `.planning/deprecated/**` remain protected without quarantined contents being consumed or transformed.
-  2. One mechanical formatting pass covers every allowed tracked Prettier-supported text file, contains formatter output only, leaves excluded and quarantined bytes untouched, and is idempotent: a second `npm run format` creates no tracked diff while `npm run format:check` passes.
-  3. A newly launched Windows shell resolves the intended `node`, `npm`, and `npx` directly from user `PATH`, and—only after that proof—the repository scripts and pre-commit hook work without `scripts/npm-local.ps1` or another repository-specific wrapper.
-  4. Both the tracked pre-commit hook and Ubuntu CI fail closed on formatting drift by running `npm run format:check` before the existing lint, typecheck, full unit, and build gates.
-  5. Maintainers can inspect an immutable implementation revision with exactly three non-overlapping implementation commit roles—policy/tooling, the single mechanical pass, and enforcement—and evidence that format checking, second-format no-diff, lint, typecheck, the full unit suite, and build pass with clean rollback and no product behavior change; Playwright is not required.
+  1. Maintainers can inspect one native research decision and one root formatting policy comprising `.gitattributes`, `prettier.config.mjs`, `.prettierignore`, exact formatter/plugin packages, and only `npm run format` plus `npm run format:check`; binary/generated paths and all `.planning/**` lifecycle bytes remain outside the formatting surface, with `.planning/deprecated/**` never consumed.
+  2. One isolated committed mechanical baseline covers every other allowed tracked Prettier-supported file and contains formatter output only; diagnosis continues until a second `npm run format` creates no tracked diff and `npm run format:check` passes.
+  3. Repository commands and the tracked hook work with direct supported Node/npm when available and with `scripts/npm-local.ps1` otherwise, without changing user or system `PATH`.
+  4. The tracked pre-commit hook fails fast on staged whitespace and formatting drift; the frozen local candidate and Ubuntu CI run formatting, lint, typecheck, full unit, and build gates once per candidate head.
+  5. Maintainers can inspect an immutable implementation revision whose mechanical formatter output is isolated from policy, enforcement, semantic, and lifecycle edits, with complete gate evidence and no product behavior change; an exact plan/task/commit count and Playwright are not required.
 **Plans**: TBD
 
 ## Milestone Release Exit
 
-Phase 1 completion does not prove release. After native verification, the separate conjunctive exit in `REQUIREMENTS.md` governs native shipping, exact-final-head local and Ubuntu CI evidence, finding-free read-only `@codex` review, pull-request merge, clean synchronization of local `main` with `origin/main`, and only then any separately approved fresh R01. These facts receive no Phase 1 requirement credit.
+Phase 1 completion does not prove release. After native verification, the separate conjunctive exit in `REQUIREMENTS.md` governs native shipping, one frozen exact-final-head local and Ubuntu CI evidence pass, read-only `@codex` review with no unresolved actionable findings, pull-request merge, clean synchronization of local `main` with `origin/main`, and only then any separately approved fresh R01. These facts receive no Phase 1 requirement credit.
 
 ## Progress
 

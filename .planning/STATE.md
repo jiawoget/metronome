@@ -65,7 +65,10 @@ Recent decisions affecting current work:
 
 - [Phase 1]: Milestone v1.1 has one independent repository-formatting phase and resets numbering to Phase 1.
 - [Phase 1]: `.planning/deprecated/**` is an absolute quarantine and is never consumed or transformed.
-- [Phase 1]: Implementation history has exactly three roles: policy/tooling, one mechanical formatting pass, and enforcement.
+- [Phase 1]: `.planning/**` is outside formatter enforcement so lifecycle writes cannot recursively invalidate the baseline; `.planning/deprecated/**` remains an absolute content quarantine.
+- [Phase 1]: Preserve the repository-local Node/npm fallback and do not mutate user or system PATH for a repository formatting phase.
+- [Phase 1]: Keep mechanical formatter output isolated, but do not use exact plan/task/commit counts as correctness gates.
+- [Workflow]: The owner's 2026-07-31 authorization covers this bounded phase through native research, planning, execution, verification, and in-scope repair without routine stage confirmations.
 - [Release Exit]: Shipping, exact-final-head proof, merge, synchronized clean `main`, and any fresh R01 remain outside Phase 1.
 
 ### Pending Todos

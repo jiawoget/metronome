@@ -114,5 +114,20 @@
 
 ---
 
+## 2026-07-31 owner supersession
+
+The owner directed the current round to repair the inefficient process and finish all in-scope work without deferring difficult items to a later round. This supersedes the earlier implementation details that caused repeated confirmation or recursive work, while preserving the milestone boundary and native OpenGSD authority:
+
+- Exclude all `.planning/**` lifecycle files from formatter enforcement; `.planning/deprecated/**` remains an absolute content quarantine.
+- Retain `scripts/npm-local.ps1` as the supported repository-local fallback and do not mutate user or system `PATH`.
+- Replace the heavy per-commit lint/typecheck/unit/build hook with a fast staged-whitespace and formatting gate; run the full non-browser suite once per frozen final candidate and in CI.
+- Keep the mechanical formatter output isolated, but remove the exact plan/task/total-commit count as a pass condition.
+- Treat the owner's bounded authorization as covering native research, planning, execution, verification, and one in-scope repair loop; routine stage confirmations are not required.
+- Final review requires no unresolved actionable findings on the frozen final head, not a literal or unqualified “finding-free” phrase.
+
+These corrections do not authorize product work, a fresh R01, a worktree, a parallel controller, or destructive/global changes.
+
+---
+
 *Phase: 01-repository-formatting-baseline*
 *Discussion log generated: 2026-07-30*

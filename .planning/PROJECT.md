@@ -14,12 +14,12 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 **Target outcomes:**
 
-- Define the repository's canonical LF/text policy in root `.gitattributes`, with explicit binary and `.planning/deprecated/**` quarantine overrides.
-- Reuse one root `prettier.config.mjs`, one `.prettierignore`, exact stable Prettier and Tailwind-plugin dependencies, and only the public commands `npm run format` and `npm run format:check`.
-- Apply one repository-wide mechanical formatting pass to every allowed, non-generated, Prettier-supported text file, including source, tests, configuration, scripts, active planning, current documentation, and legacy documentation.
-- Prove a fresh Windows shell resolves the intended `node`, `npm`, and `npx` directly from user `PATH`; remove `scripts/npm-local.ps1` only after that proof succeeds.
-- Run `format:check` before the existing lint, typecheck, unit, and build gates in both the tracked pre-commit hook and Ubuntu CI.
-- Keep implementation history reviewable as exactly three implementation commits: policy/tooling, the single mechanical formatting pass, and enforcement. Native planning, SUMMARY, verification, and ship metadata commits do not count as implementation commits.
+- Define the repository's canonical LF/text policy in root `.gitattributes`, with explicit binary, generated-output, and planning-lifecycle protection.
+- Reuse one root `prettier.config.mjs`, one `.prettierignore`, exact stable Prettier and Tailwind-plugin dependencies, and only the public commands `npm run format` and `npm run format:check`; exclude `.planning/**` so native lifecycle writes cannot recursively invalidate the formatting baseline.
+- Commit one idempotent mechanical formatting baseline for every other allowed, non-generated, Prettier-supported text file, including source, tests, configuration, scripts, current documentation, and legacy documentation.
+- Keep the supported repository-local Node/npm runtime wrapper as a portable fallback; direct `node`, `npm`, and `npx` may be used when already available, but the phase does not mutate user or system `PATH`.
+- Use a fast tracked pre-commit gate for staged whitespace and formatting drift; run format checking plus lint, typecheck, unit tests, and build once for the frozen final local candidate and in Ubuntu CI.
+- Keep the mechanical formatter output isolated and reviewable without imposing an exact task or commit count on native planning and execution.
 - Complete native shipping and the separate exact-final-head release exit before starting a fresh R01 from the resulting synchronized `main`.
 
 ## Requirements
@@ -30,11 +30,11 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ### Active
 
-- Establish one explicit LF and Prettier policy for all allowed tracked repository text while preserving binary, generated, and quarantined bytes.
+- Establish one explicit LF and Prettier policy for allowed tracked repository text while preserving binary, generated, and all `.planning/**` lifecycle bytes.
 - Produce one idempotent repository-wide mechanical formatting baseline with no product-semantic edits.
 - Make formatting drift fail locally and in Ubuntu CI before the repository's existing quality gates.
-- Make the intended Node.js toolchain directly available in a fresh Windows shell without retaining a repository-specific npm wrapper after successful proof.
-- Preserve auditable three-commit implementation roles and complete the separate native release exit on the actual final pull-request head.
+- Make repository commands and hooks use either an already available supported Node/npm toolchain or the existing repository-local wrapper, without global environment mutation.
+- Preserve an isolated mechanical baseline and complete the separate native release exit on the actual final pull-request head.
 
 ### Deferred
 
@@ -46,7 +46,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 - Any product behavior, UI, persistence, storage, audio, domain, or service-contract change.
 - Reading, searching, indexing, mapping, summarizing, citing, importing, hashing for evidence, or formatting `.planning/deprecated/**`.
 - Formatting binary assets, generated outputs, dependency directories, build artifacts, or other explicitly ignored paths.
-- A second formatter, custom validator, receipt, SHA ledger, lifecycle script, wrapper command, cache, controller, or parallel business path.
+- A second formatter, custom validator, receipt, SHA ledger, lifecycle script, new formatter wrapper command, cache, controller, or parallel business path.
 - Playwright, browser, visual, or microphone testing; the milestone changes repository presentation and enforcement only.
 - Combining formatting with dependency modernization beyond the exact formatter/plugin versions required for this baseline.
 - Creating, planning, or integrating the next R01 before the formatting milestone's separate release exit is complete.
@@ -65,13 +65,13 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 - **Lifecycle:** Native OpenGSD owns milestone switching, discussion, research, planning, checking, execution, verification, state, recovery, and shipping. The project adds no controller around it.
 - **Checkout:** `workflow.use_worktrees=false`; all work remains in the primary checkout. No Git worktree may be created or invoked.
-- **Quarantine:** `.planning/deprecated/**` is never consumed or transformed. Static ignore and attribute policy must protect it without scanning its contents.
-- **Formatting ownership:** Prettier is the sole general-purpose formatter. The repository exposes only `format` and `format:check`; no alternate entrypoint or wrapper is added.
-- **Mechanical baseline:** The baseline commit contains formatter output only. A second formatter run must produce no diff.
-- **Implementation history:** The three implementation commits have non-overlapping roles: policy/tooling, mechanical baseline, enforcement. Lifecycle metadata is separate and does not change this implementation contract.
-- **Windows runtime:** A fresh shell must resolve the intended `node`, `npm`, and `npx` directly. Any user-PATH edit is exact, single, reversible, and verified before `scripts/npm-local.ps1` is removed.
-- **Quality:** Formatting checks precede the existing lint, typecheck, unit, and build gates locally and in Ubuntu CI. No Playwright gate is required.
-- **Completion truth:** Phase completion does not prove release. The active goal remains incomplete until native shipping, exact-final-head CI, finding-free read-only `@codex` review, merge, and clean synchronized `main` all succeed.
+- **Planning lifecycle:** `.planning/**` is outside the formatter surface. `.planning/deprecated/**` remains an absolute content quarantine and is never consumed or transformed.
+- **Formatting ownership:** Prettier is the sole general-purpose formatter. The repository exposes only `format` and `format:check`; no alternate formatter entrypoint or new formatter wrapper is added.
+- **Mechanical baseline:** The committed baseline contains formatter output only. Diagnostic formatter runs may repeat until the configuration reaches a fixed point; the committed result must be idempotent.
+- **Implementation history:** Mechanical formatter output is isolated from semantic, policy, and enforcement edits; native task or commit count is not a gate.
+- **Windows runtime:** Prefer direct supported `node`/`npm` when available and retain `scripts/npm-local.ps1` as the repository-local fallback. Do not alter user or system `PATH` for this phase.
+- **Quality:** The fast pre-commit gate checks staged whitespace and formatting. The frozen final local candidate and Ubuntu CI run format checking, lint, typecheck, unit tests, and build. No Playwright gate is required.
+- **Completion truth:** Phase completion does not prove release. The active goal remains incomplete until native shipping, exact-final-head CI, read-only `@codex` review with no unresolved actionable findings, merge, and clean synchronized `main` all succeed.
 - **Local first:** Product storage and behavior remain unchanged throughout this tooling-only milestone.
 
 ## Key Decisions
@@ -85,10 +85,13 @@ Musicians can move from a score and practice target to a repeatable local practi
 | Use one root Prettier configuration and two public npm commands | A single canonical entrypoint prevents formatter and workflow drift | ✓ Approved |
 | Separate phase requirements from release-exit facts | Native verification can prove the implementation before shipping; PR merge and synchronized `main` remain post-ship truth | ✓ Approved |
 | Start a fresh R01 only after formatting release exit | The next lifecycle must inherit the merged canonical baseline from updated `main`, never deprecated planning | ✓ Approved |
+| Exclude `.planning/**` from formatter enforcement | Native lifecycle files continue changing during planning, execution, verification, and shipping; including them creates recursive drift and repeated reformatting | ✓ Approved 2026-07-31 |
+| Keep the repository-local Node/npm fallback | The bundled runtime satisfies the repository contract while global PATH mutation adds machine-wide risk and user confirmation overhead | ✓ Approved 2026-07-31 |
+| Use bounded owner authorization and fast commit gates | Native research/check/verify remain, while routine confirmations and repeated full-suite runs no longer block each lifecycle commit | ✓ Approved 2026-07-31 |
 
 ## Evolution
 
 The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is no longer an active lifecycle input. Milestone v1.1 now establishes the repository formatting baseline; after it ships and `main` is synchronized, a separately approved fresh R01 may begin from that new baseline.
 
 ---
-*Last updated: 2026-07-30 for the Repository Formatting Baseline milestone*
+*Last updated: 2026-07-31 for the Repository Formatting Baseline workflow correction*
