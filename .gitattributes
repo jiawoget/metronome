@@ -1,0 +1,45 @@
+# Canonical repository text baseline
+* text=auto eol=lf
+
+# Native OpenGSD lifecycle bytes are outside the formatting baseline
+.planning/** -text
+
+# Absolute legacy content quarantine; never read or transformed
+.planning/deprecated/** -text
+
+# Dependency, generated, cache, report, and output trees
+node_modules/** -text
+.tools/** -text
+.next/** -text
+out/** -text
+coverage/** -text
+playwright-report/** -text
+test-results/** -text
+.audit/** -text
+.tmp/** -text
+.code-review-graph/** -text
+.logs/** -text
+next-env.d.ts -text
+*.tsbuildinfo -text
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.mp3 binary
+*.wav binary
+*.ogg binary
+*.mp4 binary
+*.mov binary
+*.zip binary
+*.gz binary
+*.wasm binary
