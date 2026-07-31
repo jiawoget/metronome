@@ -34,4 +34,3 @@ empty dashboard states, diagnostics/devtools visibility, and responsive nav.
 - The Home "Import Sheet" path now routes to the implemented Sheet Library.
 - Diagnostics hide/restore is covered; do not regress the restore affordance.
 - No known unimplemented v0 shell/home item remains.
-

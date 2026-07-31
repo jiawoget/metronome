@@ -92,7 +92,7 @@ export function MetronomeSettingsPanel({
   return (
     <div
       className={cn(
-        "border-border bg-background grid gap-3 rounded-md border p-3",
+        "grid gap-3 rounded-md border border-border bg-background p-3",
         layout === "sheet" && "md:grid-cols-[minmax(13rem,0.85fr)_1fr]",
         className
       )}
@@ -127,7 +127,7 @@ export function MetronomeSettingsPanel({
                 event.currentTarget.blur();
               }
             }}
-            className="border-border bg-background focus-visible:ring-ring h-10 min-w-0 rounded-md border px-2 text-center text-lg font-semibold focus-visible:ring-2 focus-visible:outline-none"
+            className="h-10 min-w-0 rounded-md border border-border bg-background px-2 text-center text-lg font-semibold focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
           <Button
             type="button"
@@ -146,7 +146,7 @@ export function MetronomeSettingsPanel({
               Tap Tempo
             </Button>
           ) : null}
-          <p className="text-muted-foreground text-sm leading-6">
+          <p className="text-sm leading-6 text-muted-foreground">
             Tick interval {Math.round(getTickIntervalMs(settings))} ms.
           </p>
         </div>
@@ -191,9 +191,7 @@ export function MetronomeSettingsPanel({
         <LabeledSelect
           label="Countdown"
           value={String(settings.countdownBeats)}
-          disabled={
-            arePreRunSettingsLocked || isCountdownReplacedByBarCountIn
-          }
+          disabled={arePreRunSettingsLocked || isCountdownReplacedByBarCountIn}
           onChange={handleCountdownChange}
           options={getCountdownOptions().map((option) => ({
             value: String(option.beats),
@@ -203,7 +201,7 @@ export function MetronomeSettingsPanel({
         {isCountdownReplacedByBarCountIn ? (
           <p
             role="status"
-            className="text-muted-foreground -mt-1 text-xs leading-5 sm:col-start-3"
+            className="-mt-1 text-xs leading-5 text-muted-foreground sm:col-start-3"
           >
             {countdownReplacementText}
           </p>
@@ -220,7 +218,7 @@ export function MetronomeSettingsPanel({
         <p
           role="status"
           className={cn(
-            "text-muted-foreground text-sm leading-6",
+            "text-sm leading-6 text-muted-foreground",
             layout === "sheet" && "md:col-span-2"
           )}
         >

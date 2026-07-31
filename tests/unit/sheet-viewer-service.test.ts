@@ -257,12 +257,11 @@ describe("sheet viewer service", () => {
         }
       ]
     });
-    await expect(service.loadPageThumbnails("sheet-pdf")).resolves.toMatchObject({
+    await expect(
+      service.loadPageThumbnails("sheet-pdf")
+    ).resolves.toMatchObject({
       status: "ready",
-      thumbnails: [
-        { url: "blob:thumbnail-3" },
-        { url: "blob:thumbnail-4" }
-      ]
+      thumbnails: [{ url: "blob:thumbnail-3" }, { url: "blob:thumbnail-4" }]
     });
     expect(generateCalls).toBe(1);
     expect(createdBlobText).toEqual(["11", "11", "11", "11"]);
@@ -370,7 +369,10 @@ describe("sheet viewer service", () => {
 
     await expect(
       createSheetViewerService({
-        sheetLibrary: createReader({ sheet: imageSheet, artifact: imageArtifact }),
+        sheetLibrary: createReader({
+          sheet: imageSheet,
+          artifact: imageArtifact
+        }),
         viewerAdapter: createAdapter({
           ok: false,
           code: "bad-image",
@@ -448,14 +450,18 @@ describe("sheet viewer service", () => {
 
     await expect(
       createSheetViewerService({
-        sheetLibrary: createReader({ sheet: imageSheet, artifact: partialArtifact }),
+        sheetLibrary: createReader({
+          sheet: imageSheet,
+          artifact: partialArtifact
+        }),
         viewerAdapter: {
           ...createAdapter({
             ok: true,
             pageCount: 2,
             imageDimensions: imageSheet.imageDimensions
           }),
-          generatePageThumbnails: browserSheetViewerAdapter.generatePageThumbnails
+          generatePageThumbnails:
+            browserSheetViewerAdapter.generatePageThumbnails
         }
       }).loadPageThumbnails(imageSheet.id)
     ).resolves.toMatchObject({
@@ -496,14 +502,18 @@ describe("sheet viewer service", () => {
 
     await expect(
       createSheetViewerService({
-        sheetLibrary: createReader({ sheet: imageSheet, artifact: missingPageArtifact }),
+        sheetLibrary: createReader({
+          sheet: imageSheet,
+          artifact: missingPageArtifact
+        }),
         viewerAdapter: {
           ...createAdapter({
             ok: true,
             pageCount: 1,
             imageDimensions: [imageSheet.imageDimensions[0]]
           }),
-          generatePageThumbnails: browserSheetViewerAdapter.generatePageThumbnails
+          generatePageThumbnails:
+            browserSheetViewerAdapter.generatePageThumbnails
         }
       }).loadPageThumbnails(imageSheet.id)
     ).resolves.toMatchObject({
@@ -606,7 +616,10 @@ describe("sheet viewer service", () => {
     expect(
       clampSheetViewerTransform(
         { scale: 2, translateX: 40, translateY: 40 },
-        { viewport: { width: 300, height: 100 }, content: { width: 100, height: 100 } }
+        {
+          viewport: { width: 300, height: 100 },
+          content: { width: 100, height: 100 }
+        }
       )
     ).toEqual({
       scale: 2,
@@ -627,7 +640,12 @@ describe("sheet viewer service", () => {
       translateX: 0,
       translateY: 0
     });
-    expect(panSheetViewerTransform({ scale: 1.234, translateX: 10, translateY: 10 }, { x: 10, y: 10 })).toEqual({
+    expect(
+      panSheetViewerTransform(
+        { scale: 1.234, translateX: 10, translateY: 10 },
+        { x: 10, y: 10 }
+      )
+    ).toEqual({
       scale: 1.234,
       translateX: 0,
       translateY: 0
@@ -635,7 +653,10 @@ describe("sheet viewer service", () => {
     expect(
       clampSheetViewerTransform(
         { scale: 1.5, translateX: 10, translateY: 10 },
-        { viewport: { width: 0, height: 100 }, content: { width: 100, height: 100 } }
+        {
+          viewport: { width: 0, height: 100 },
+          content: { width: 100, height: 100 }
+        }
       )
     ).toEqual({
       scale: 1.5,
@@ -645,7 +666,10 @@ describe("sheet viewer service", () => {
     expect(
       clampSheetViewerTransform(
         { scale: 1.5, translateX: 10, translateY: 10 },
-        { viewport: { width: 100, height: 100 }, content: { width: Number.NaN, height: 100 } }
+        {
+          viewport: { width: 100, height: 100 },
+          content: { width: Number.NaN, height: 100 }
+        }
       )
     ).toEqual({
       scale: 1.5,
@@ -675,7 +699,12 @@ describe("sheet viewer service", () => {
       content: { width: 100, height: 100 }
     };
 
-    expect(clampSheetViewerTransform({ scale: 2, translateX: Infinity, translateY: Number.NaN }, bounds)).toEqual({
+    expect(
+      clampSheetViewerTransform(
+        { scale: 2, translateX: Infinity, translateY: Number.NaN },
+        bounds
+      )
+    ).toEqual({
       scale: 2,
       translateX: 0,
       translateY: 0

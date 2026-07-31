@@ -37,12 +37,17 @@ export async function clearDatabases(page: Page, databaseNames: string[]) {
   }
 }
 
-export async function clearSheetLibraryTestState(page: Page, databaseNames: string[]) {
+export async function clearSheetLibraryTestState(
+  page: Page,
+  databaseNames: string[]
+) {
   await page.goto("/sheet-library");
   await clearRecordingHistory(page);
   await clearDatabases(page, databaseNames);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet Library" })
+  ).toBeVisible();
 }
 
 export async function clearRecordingHistory(page: Page) {
@@ -84,7 +89,9 @@ async function readPracticeSessionRows(page: Page) {
             }
 
             const transaction = database.transaction(["sessions"], "readonly");
-            const sessionsRequest = transaction.objectStore("sessions").getAll();
+            const sessionsRequest = transaction
+              .objectStore("sessions")
+              .getAll();
 
             transaction.oncomplete = () => {
               database.close();
@@ -114,10 +121,7 @@ async function readPracticeSessionRows(page: Page) {
 
 export async function readPracticeSnapshot<
   TSnapshot extends { sessions: unknown[]; recordings: unknown[] }
->(
-  page: Page,
-  options: PracticeSnapshotOptions = {}
-): Promise<TSnapshot> {
+>(page: Page, options: PracticeSnapshotOptions = {}): Promise<TSnapshot> {
   const sessions = await readPracticeSessionRows(page);
   const recordingHistory = await readRecordingHistory(page);
   const snapshot = {

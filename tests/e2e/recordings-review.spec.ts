@@ -42,7 +42,9 @@ async function saveMeasureGridThroughUi(page: Page) {
   await page.getByRole("spinbutton", { name: "Pickup beats" }).fill("0");
   await page.getByRole("spinbutton", { name: "Measure 1 offset" }).fill("1000");
   await page.getByRole("button", { name: "Save grid" }).click();
-  await expect(page.getByTestId("measure-grid-status")).toContainText("Calibrated");
+  await expect(page.getByTestId("measure-grid-status")).toContainText(
+    "Calibrated"
+  );
 }
 
 async function createPracticeSegmentThroughUi(page: Page, name: string) {
@@ -53,7 +55,9 @@ async function createPracticeSegmentThroughUi(page: Page, name: string) {
   await page.getByRole("spinbutton", { name: "Target BPM" }).fill("96");
   await page.getByLabel("Segment notes").fill("Return target.");
   await page.getByRole("button", { name: "Save segment" }).click();
-  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");
+  await expect(
+    page.getByTestId("practice-segment-selector-status")
+  ).toContainText("1 saved");
 }
 
 async function readPracticeSegments(page: Page, sheetId: string) {
@@ -87,10 +91,10 @@ async function readPracticeSegments(page: Page, sheetId: string) {
                   ): segment is { id: string; sheetId: string; name: string } =>
                     Boolean(
                       segment &&
-                        typeof segment === "object" &&
-                        "id" in segment &&
-                        "sheetId" in segment &&
-                        "name" in segment
+                      typeof segment === "object" &&
+                      "id" in segment &&
+                      "sheetId" in segment &&
+                      "name" in segment
                     )
                 )
             );
@@ -249,24 +253,29 @@ async function expectReadableSummaryChips(summary: Locator, label: string) {
     expect(chip.text, `${label}: chip has text`).not.toBe("");
     expect(chip.width, `${label}: ${chip.text} has width`).toBeGreaterThan(0);
     expect(chip.height, `${label}: ${chip.text} has height`).toBeGreaterThan(0);
-    expect(chip.left, `${label}: ${chip.text} stays inside left edge`).toBeGreaterThanOrEqual(
-      -1
-    );
-    expect(chip.right, `${label}: ${chip.text} stays inside right edge`).toBeLessThanOrEqual(
-      chip.viewportWidth + 1
-    );
-    expect(chip.scrollWidth, `${label}: ${chip.text} is not clipped horizontally`).toBeLessThanOrEqual(
-      chip.clientWidth + 1
-    );
-    expect(chip.textOverflow, `${label}: ${chip.text} does not use ellipsis`).not.toBe(
-      "ellipsis"
-    );
+    expect(
+      chip.left,
+      `${label}: ${chip.text} stays inside left edge`
+    ).toBeGreaterThanOrEqual(-1);
+    expect(
+      chip.right,
+      `${label}: ${chip.text} stays inside right edge`
+    ).toBeLessThanOrEqual(chip.viewportWidth + 1);
+    expect(
+      chip.scrollWidth,
+      `${label}: ${chip.text} is not clipped horizontally`
+    ).toBeLessThanOrEqual(chip.clientWidth + 1);
+    expect(
+      chip.textOverflow,
+      `${label}: ${chip.text} does not use ellipsis`
+    ).not.toBe("ellipsis");
     expect(chip.whiteSpace, `${label}: ${chip.text} can wrap`).not.toBe(
       "nowrap"
     );
-    expect(chip.overflowX, `${label}: ${chip.text} is not hidden on x`).not.toBe(
-      "hidden"
-    );
+    expect(
+      chip.overflowX,
+      `${label}: ${chip.text} is not hidden on x`
+    ).not.toBe("hidden");
   }
 }
 
@@ -406,7 +415,9 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await seedE2ERecordingArtifacts(page, groupedSnapshot.recordings);
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Take History" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Take History" })
+  ).toBeVisible();
 
   const alphaBridgeGroup = page.getByTestId(
     "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
@@ -415,24 +426,24 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await expect(alphaBridgeGroup).toContainText("Alpha Etude");
   await expect(alphaBridgeGroup).toContainText("Bridge");
   await expect(alphaBridgeGroup).toContainText("2 takes");
-  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
-    "Takes: 2 takes"
-  );
-  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
-    /Latest: .*Bridge take 2/
-  );
-  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
-    /Latest duration: 0:0[1-9]/
-  );
-  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
-    "BPM: 96 BPM"
-  );
-  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
-    "Time signature: 4/4"
-  );
-  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
-    "Markers: 2 markers"
-  );
+  await expect(
+    alphaBridgeGroup.getByTestId("take-history-summary")
+  ).toContainText("Takes: 2 takes");
+  await expect(
+    alphaBridgeGroup.getByTestId("take-history-summary")
+  ).toContainText(/Latest: .*Bridge take 2/);
+  await expect(
+    alphaBridgeGroup.getByTestId("take-history-summary")
+  ).toContainText(/Latest duration: 0:0[1-9]/);
+  await expect(
+    alphaBridgeGroup.getByTestId("take-history-summary")
+  ).toContainText("BPM: 96 BPM");
+  await expect(
+    alphaBridgeGroup.getByTestId("take-history-summary")
+  ).toContainText("Time signature: 4/4");
+  await expect(
+    alphaBridgeGroup.getByTestId("take-history-summary")
+  ).toContainText("Markers: 2 markers");
   await expect(
     alphaBridgeGroup.getByTestId("recording-row-sheet-alpha-bridge-new")
   ).toBeVisible();
@@ -458,9 +469,9 @@ test("recordings review renders grouped take history, filters it, deletes a take
   );
   await expect(alphaWholeGroup).toContainText("Whole sheet / no segment");
   await expect(alphaWholeGroup).toContainText("2 takes");
-  await expect(alphaWholeGroup.getByTestId("take-history-summary")).toContainText(
-    "Markers: No markers"
-  );
+  await expect(
+    alphaWholeGroup.getByTestId("take-history-summary")
+  ).toContainText("Markers: No markers");
   await expect(
     alphaWholeGroup.getByRole("link", {
       name: "Return to sheet practice for Alpha Etude"
@@ -476,7 +487,9 @@ test("recordings review renders grouped take history, filters it, deletes a take
     "Grouped quick take"
   );
   await expect(
-    page.getByTestId("quick-recordings-section").getByTestId("take-history-summary")
+    page
+      .getByTestId("quick-recordings-section")
+      .getByTestId("take-history-summary")
   ).toHaveCount(0);
   await expect(page.getByTestId("best-take-control-quick-grouped")).toHaveCount(
     0
@@ -527,9 +540,9 @@ test("recordings review renders grouped take history, filters it, deletes a take
     alphaBridgeGroup.getByTestId("best-take-control-sheet-alpha-bridge-old")
   ).toHaveAttribute("aria-pressed", "true");
   await expect(alphaBridgeGroup).toContainText("Best: Bridge take 1");
-  await expect(alphaBridgeGroup.getByTestId("take-history-summary")).toContainText(
-    /Latest: .*Bridge take 2/
-  );
+  await expect(
+    alphaBridgeGroup.getByTestId("take-history-summary")
+  ).toContainText(/Latest: .*Bridge take 2/);
   await expect(alphaBridgeGroup).toContainText("Active: none");
   await expect(page.getByTestId("recording-details")).toHaveAttribute(
     "data-recording-id",
@@ -601,7 +614,9 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
   await expect(page.getByTestId("quick-recordings-section")).toBeHidden();
 
-  await page.getByRole("textbox", { name: "Search recordings" }).fill("nomatch");
+  await page
+    .getByRole("textbox", { name: "Search recordings" })
+    .fill("nomatch");
   await expect(page.getByTestId("recordings-filter-empty-state")).toContainText(
     "No recordings match"
   );
@@ -611,19 +626,25 @@ test("recordings review renders grouped take history, filters it, deletes a take
   await page.getByTestId("recording-row-sheet-alpha-bridge-old").click();
   await page.getByRole("button", { name: "Delete Recording" }).click();
   await page.getByRole("button", { name: "Confirm Delete" }).click();
-  await expect(page.getByTestId("recording-row-sheet-alpha-bridge-old")).toBeHidden();
+  await expect(
+    page.getByTestId("recording-row-sheet-alpha-bridge-old")
+  ).toBeHidden();
   await expect(alphaBridgeGroup).toContainText("1 take");
   await expect(alphaBridgeGroup).toContainText("Best: none");
   await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
   await expect(alphaBridgeGroup).toContainText("Markers: 1 marker");
 
   await page.reload();
-  await expect(page.getByTestId("recording-row-sheet-alpha-bridge-old")).toBeHidden();
+  await expect(
+    page.getByTestId("recording-row-sheet-alpha-bridge-old")
+  ).toBeHidden();
   await expect(alphaBridgeGroup).toContainText("1 take");
   await expect(alphaBridgeGroup).toContainText("Best: none");
   await expect(alphaBridgeGroup).toContainText("Active: Bridge take 2");
   await expect(alphaBridgeGroup).toContainText("Markers: 1 marker");
-  const groupedPageText = (await page.locator("body").innerText()).toLowerCase();
+  const groupedPageText = (
+    await page.locator("body").innerText()
+  ).toLowerCase();
 
   expect(groupedPageText).not.toMatch(
     /score|accuracy|correct|best performance|cleanest|most accurate|recommended|improved|mistakes|timing quality/
@@ -766,9 +787,9 @@ test("recordings review organizes recordings with tags favorites and archive rec
   );
 
   let persisted = await readRecordingHistory(page);
-  expect(persisted.recordings.map((recording: { id: string }) => recording.id)).toContain(
-    "org-sheet-new"
-  );
+  expect(
+    persisted.recordings.map((recording: { id: string }) => recording.id)
+  ).toContain("org-sheet-new");
   expect(persisted.recordingOrganization).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -809,9 +830,9 @@ test("recordings review organizes recordings with tags favorites and archive rec
   await expect(page.getByTestId("recording-row-org-sheet-old")).toBeHidden();
 
   persisted = await readRecordingHistory(page);
-  expect(persisted.recordings.map((recording: { id: string }) => recording.id)).not.toContain(
-    "org-sheet-old"
-  );
+  expect(
+    persisted.recordings.map((recording: { id: string }) => recording.id)
+  ).not.toContain("org-sheet-old");
   expect(
     persisted.recordingOrganization?.some(
       (organization: { recordingId: string }) =>
@@ -820,7 +841,9 @@ test("recordings review organizes recordings with tags favorites and archive rec
   ).not.toBe(true);
 
   const pageText = (await page.locator("body").innerText()).toLowerCase();
-  expect(pageText).not.toMatch(/archive .*delete|delete .*archive|archive .*remove/);
+  expect(pageText).not.toMatch(
+    /archive .*delete|delete .*archive|archive .*remove/
+  );
 
   for (const viewport of [
     { width: 1024, height: 768, label: "tablet organization" },
@@ -917,8 +940,12 @@ test("recordings review exports one visible audio artifact and respects archived
 
   await page.reload();
   await expect(page.getByTestId("recordings-list")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Export all/i })).toHaveCount(0);
-  await expect(page.getByTestId("recording-row-archived-export")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Export all/i })).toHaveCount(
+    0
+  );
+  await expect(page.getByTestId("recording-row-archived-export")).toHaveCount(
+    0
+  );
   await expect(
     page.getByRole("button", { name: "Export audio for Archived export" })
   ).toHaveCount(0);
@@ -935,7 +962,9 @@ test("recordings review exports one visible audio artifact and respects archived
   );
   const quickDownloadPath = testInfo.outputPath("quick-export.wav");
   await quickDownload.saveAs(quickDownloadPath);
-  await expect.poll(async () => (await fs.stat(quickDownloadPath)).size).toBeGreaterThan(0);
+  await expect
+    .poll(async () => (await fs.stat(quickDownloadPath)).size)
+    .toBeGreaterThan(0);
   await expect(page.getByTestId("recording-audio-export-status")).toContainText(
     "Audio export started."
   );
@@ -950,9 +979,9 @@ test("recordings review exports one visible audio artifact and respects archived
       name: "Export audio for Missing export artifact"
     })
   ).toBeDisabled();
-  await expect(page.getByTestId("recording-audio-export-unavailable")).toContainText(
-    "This recording has no local audio artifact to export."
-  );
+  await expect(
+    page.getByTestId("recording-audio-export-unavailable")
+  ).toContainText("This recording has no local audio artifact to export.");
 
   await page.getByLabel("Archive filter").selectOption("archived");
   await expect(page.getByTestId("recording-row-archived-export")).toBeVisible();
@@ -968,7 +997,9 @@ test("recordings review exports one visible audio artifact and respects archived
   );
   const archivedDownloadPath = testInfo.outputPath("archived-export.wav");
   await archivedDownload.saveAs(archivedDownloadPath);
-  await expect.poll(async () => (await fs.stat(archivedDownloadPath)).size).toBeGreaterThan(0);
+  await expect
+    .poll(async () => (await fs.stat(archivedDownloadPath)).size)
+    .toBeGreaterThan(0);
   await expect(page.getByTestId("recording-details")).toHaveAttribute(
     "data-recording-id",
     "archived-export"
@@ -1138,7 +1169,9 @@ test("recordings review compares selected sheet takes with waveform evidence", a
   ).toHaveCount(0);
 
   const recordingComparison = page.getByTestId("recording-comparison");
-  await expect(recordingComparison).toContainText("Select recordings to compare");
+  await expect(recordingComparison).toContainText(
+    "Select recordings to compare"
+  );
 
   await page
     .getByRole("checkbox", {
@@ -1153,7 +1186,9 @@ test("recordings review compares selected sheet takes with waveform evidence", a
 
   await expect(recordingComparison).toContainText("2 selected recordings");
   await expect(
-    recordingComparison.getByTestId("recording-comparison-metadata-wave-decoded")
+    recordingComparison.getByTestId(
+      "recording-comparison-metadata-wave-decoded"
+    )
   ).toContainText("Sheet recording");
   await expect(
     recordingComparison.getByTestId("recording-comparison-metadata-wave-quick")
@@ -1163,7 +1198,9 @@ test("recordings review compares selected sheet takes with waveform evidence", a
   ).toContainText("1 manual marker");
   await expect(
     recordingComparison.getByTestId("waveform-comparison-row-wave-quick")
-  ).toContainText("Only saved sheet takes can be used for waveform comparison.");
+  ).toContainText(
+    "Only saved sheet takes can be used for waveform comparison."
+  );
   await expect(
     recordingComparison.getByTestId("comparison-waveform-wave-quick")
   ).toHaveCount(0);
@@ -1190,7 +1227,9 @@ test("recordings review compares selected sheet takes with waveform evidence", a
     })
     .check();
   await expect(
-    recordingComparison.getByTestId("recording-comparison-metadata-wave-archived")
+    recordingComparison.getByTestId(
+      "recording-comparison-metadata-wave-archived"
+    )
   ).toContainText("Archived");
   await expect(recordingComparison).toContainText(
     "Select another recording to compare"
@@ -1202,7 +1241,9 @@ test("recordings review compares selected sheet takes with waveform evidence", a
     recordingComparison.getByTestId("recording-comparison-waveform-results")
   ).toHaveCount(0);
   await page.getByLabel("Archive filter").selectOption("active");
-  await expect(recordingComparison).toContainText("Select recordings to compare");
+  await expect(recordingComparison).toContainText(
+    "Select recordings to compare"
+  );
 
   await group
     .getByRole("checkbox", {
@@ -1293,9 +1334,9 @@ test("recordings review compares selected sheet takes with waveform evidence", a
   await expect(group).toContainText(
     "This recording has no accessible local audio artifact."
   );
-  await expect(group.getByTestId("comparison-waveform-wave-missing")).toHaveCount(
-    0
-  );
+  await expect(
+    group.getByTestId("comparison-waveform-wave-missing")
+  ).toHaveCount(0);
   await group
     .getByRole("checkbox", {
       name: "Select Comparison missing artifact for waveform comparison"
@@ -1511,24 +1552,26 @@ test("recordings review returns to sheet practice with segment validation and st
     })
     .click();
   await expect.poll(() => new URL(page.url()).pathname).toBe("/sheet-practice");
-  await expect.poll(() => new URL(page.url()).searchParams.get("sheetId")).toBe(sheetId);
-  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBe(segmentId);
-  await expect(page.getByTestId(`practice-segment-row-${segmentId}`)).toHaveAttribute(
-    "aria-pressed",
-    "true"
-  );
-  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
-    "Active segment"
-  );
-  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
-    "Bridge"
-  );
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("sheetId"))
+    .toBe(sheetId);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("segmentId"))
+    .toBe(segmentId);
+  await expect(
+    page.getByTestId(`practice-segment-row-${segmentId}`)
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByTestId("practice-segment-active-summary")
+  ).toContainText("Active segment");
+  await expect(
+    page.getByTestId("practice-segment-active-summary")
+  ).toContainText("Bridge");
 
   await page.reload();
-  await expect(page.getByTestId(`practice-segment-row-${segmentId}`)).toHaveAttribute(
-    "aria-pressed",
-    "true"
-  );
+  await expect(
+    page.getByTestId(`practice-segment-row-${segmentId}`)
+  ).toHaveAttribute("aria-pressed", "true");
 
   await page.goto("/recordings");
   await page.getByTestId("recording-row-return-segment-old").click();
@@ -1542,17 +1585,23 @@ test("recordings review returns to sheet practice with segment validation and st
   );
 
   await page.goto("/recordings");
-  const wholeGroup = page.getByTestId(`take-group-sheet:${sheetId}:segment:none`);
+  const wholeGroup = page.getByTestId(
+    `take-group-sheet:${sheetId}:segment:none`
+  );
   await wholeGroup
     .getByRole("link", {
       name: "Return to sheet practice for Return Segment Sheet"
     })
     .click();
-  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBeNull();
-  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
-    "Choose a segment"
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("segmentId"))
+    .toBeNull();
+  await expect(
+    page.getByTestId("practice-segment-active-summary")
+  ).toContainText("Choose a segment");
+  await expect(page.getByTestId("practice-segment-return-status")).toHaveCount(
+    0
   );
-  await expect(page.getByTestId("practice-segment-return-status")).toHaveCount(0);
 
   await page.goto("/recordings");
   await page.getByTestId("recording-row-return-stale").click();
@@ -1561,15 +1610,17 @@ test("recordings review returns to sheet practice with segment validation and st
       name: "Practice again for Deleted bridge on Return Segment Sheet"
     })
     .click();
-  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBe(
-    "segment-deleted"
-  );
-  await expect(page.getByTestId("practice-segment-return-status")).toContainText(
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("segmentId"))
+    .toBe("segment-deleted");
+  await expect(
+    page.getByTestId("practice-segment-return-status")
+  ).toContainText(
     "Saved segment is no longer available. Sheet practice is ready without a selected segment."
   );
-  await expect(page.getByTestId("practice-segment-active-summary")).toContainText(
-    "Choose a segment"
-  );
+  await expect(
+    page.getByTestId("practice-segment-active-summary")
+  ).toContainText("Choose a segment");
 
   await page.goto("/recordings");
   await page.getByTestId("recording-row-return-missing-sheet").click();
@@ -1579,9 +1630,9 @@ test("recordings review returns to sheet practice with segment validation and st
     })
     .click();
   await expect.poll(() => new URL(page.url()).pathname).toBe("/sheet-practice");
-  await expect.poll(() => new URL(page.url()).searchParams.get("sheetId")).toBe(
-    "sheet-deleted"
-  );
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("sheetId"))
+    .toBe("sheet-deleted");
   await expect(
     page.getByRole("heading", { name: "Sheet not found" })
   ).toBeVisible();

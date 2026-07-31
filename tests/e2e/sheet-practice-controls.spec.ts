@@ -12,7 +12,8 @@ import {
   SHEET_LIBRARY_DB_NAME
 } from "./fixtures/storage";
 
-const recordingHarnessEvent = "sheet-practice-controls:set-recording-harness-active";
+const recordingHarnessEvent =
+  "sheet-practice-controls:set-recording-harness-active";
 
 type MetronomeTrace = {
   tickIndex: number;
@@ -69,7 +70,9 @@ function average(values: number[]) {
 }
 
 function intervalsFromAudioTime(traces: MetronomeTrace[]) {
-  return traces.slice(1).map((trace, index) => (trace.audioTime - traces[index].audioTime) * 1_000);
+  return traces
+    .slice(1)
+    .map((trace, index) => (trace.audioTime - traces[index].audioTime) * 1_000);
 }
 
 async function getPracticeSnapshot(page: Page) {
@@ -92,10 +95,16 @@ async function saveMeasureGridThroughUi(
 ) {
   await page.getByRole("spinbutton", { name: "Grid BPM" }).fill(String(bpm));
   await page.getByLabel("Grid time signature").selectOption(timeSignature);
-  await page.getByRole("spinbutton", { name: "Pickup beats" }).fill(String(pickupBeats));
-  await page.getByRole("spinbutton", { name: "Measure 1 offset" }).fill(String(measureOneOffsetMs));
+  await page
+    .getByRole("spinbutton", { name: "Pickup beats" })
+    .fill(String(pickupBeats));
+  await page
+    .getByRole("spinbutton", { name: "Measure 1 offset" })
+    .fill(String(measureOneOffsetMs));
   await page.getByRole("button", { name: "Save grid" }).click();
-  await expect(page.getByTestId("measure-grid-status")).toContainText("Calibrated");
+  await expect(page.getByTestId("measure-grid-status")).toContainText(
+    "Calibrated"
+  );
 }
 
 async function createPracticeSegmentThroughUi(
@@ -115,18 +124,26 @@ async function createPracticeSegmentThroughUi(
   await page.getByLabel("Start measure").fill(String(startMeasure));
   await page.getByLabel("End measure").fill(String(endMeasure));
   await page.getByRole("button", { name: "Save segment" }).click();
-  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");
+  await expect(
+    page.getByTestId("practice-segment-selector-status")
+  ).toContainText("1 saved");
 }
 
 async function expectNoViewerOverlap(page: Page) {
   await expect(page.getByTestId("sheet-practice-controls")).toBeVisible();
   await expect(page.getByTestId("sheet-viewer-scroll")).toBeVisible();
   await page.getByTestId("sheet-practice-controls").scrollIntoViewIfNeeded();
-  await expect(page.getByRole("button", { name: "Start metronome" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Start metronome" })
+  ).toBeVisible();
 
   const boxes = await page.evaluate(() => {
-    const viewer = document.querySelector("[data-testid='sheet-viewer-scroll']")?.getBoundingClientRect();
-    const controls = document.querySelector("[data-testid='sheet-practice-controls']")?.getBoundingClientRect();
+    const viewer = document
+      .querySelector("[data-testid='sheet-viewer-scroll']")
+      ?.getBoundingClientRect();
+    const controls = document
+      .querySelector("[data-testid='sheet-practice-controls']")
+      ?.getBoundingClientRect();
 
     if (!viewer || !controls) {
       return null;
@@ -140,7 +157,9 @@ async function expectNoViewerOverlap(page: Page) {
   });
 
   expect(boxes).not.toBeNull();
-  expect(boxes?.controlsTop).toBeGreaterThanOrEqual((boxes?.viewerBottom ?? 0) - 1);
+  expect(boxes?.controlsTop).toBeGreaterThanOrEqual(
+    (boxes?.viewerBottom ?? 0) - 1
+  );
   expect(boxes?.controlsTop).toBeLessThan((boxes?.viewportHeight ?? 0) - 48);
 }
 
@@ -151,7 +170,10 @@ async function expectBarCountInToggle(page: Page, checked: boolean) {
   await expect
     .poll(async () =>
       toggle.evaluate((element) => {
-        if (element instanceof HTMLInputElement && element.type === "checkbox") {
+        if (
+          element instanceof HTMLInputElement &&
+          element.type === "checkbox"
+        ) {
           return element.checked;
         }
 
@@ -181,7 +203,9 @@ async function selectBarCountInBars(page: Page, value: "1" | "2") {
   const bars = page.getByLabel("Bar count-in bars");
 
   await expect(bars).toBeVisible();
-  const tagName = await bars.evaluate((element) => element.tagName.toLowerCase());
+  const tagName = await bars.evaluate((element) =>
+    element.tagName.toLowerCase()
+  );
 
   if (tagName === "select") {
     await bars.selectOption(value);
@@ -199,7 +223,9 @@ async function selectBarCountInBars(page: Page, value: "1" | "2") {
 
 async function expectBarCountInBarsValue(page: Page, value: "1" | "2") {
   const bars = page.getByLabel("Bar count-in bars");
-  const tagName = await bars.evaluate((element) => element.tagName.toLowerCase());
+  const tagName = await bars.evaluate((element) =>
+    element.tagName.toLowerCase()
+  );
 
   if (tagName === "select" || tagName === "input") {
     await expect(bars).toHaveValue(value);
@@ -209,7 +235,12 @@ async function expectBarCountInBarsValue(page: Page, value: "1" | "2") {
   await expect(
     page
       .getByRole("radio", { name: new RegExp(`^${value}\\b`), checked: true })
-      .or(page.getByRole("button", { name: new RegExp(`^${value}\\b`), pressed: true }))
+      .or(
+        page.getByRole("button", {
+          name: new RegExp(`^${value}\\b`),
+          pressed: true
+        })
+      )
       .first()
   ).toBeVisible();
 }
@@ -226,18 +257,30 @@ async function expectLocatorWithinViewport(page: Page, selectorText: RegExp) {
   expect(box).not.toBeNull();
   expect(viewport).not.toBeNull();
   expect(box?.x).toBeGreaterThanOrEqual(0);
-  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual((viewport?.width ?? 0) + 1);
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(
+    (viewport?.width ?? 0) + 1
+  );
   expect(box?.y).toBeGreaterThanOrEqual(0);
-  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual((viewport?.height ?? 0) + 1);
+  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(
+    (viewport?.height ?? 0) + 1
+  );
 }
 
 async function expectVisibleBarCountInResponsiveSurface(page: Page) {
   await expect(page.getByLabel("Enable bar count-in")).toBeVisible();
   await expect(page.getByLabel("Bar count-in bars")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start metronome" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Stop metronome" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start recording" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Stop recording" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Start metronome" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Stop metronome" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Start recording" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Stop recording" })
+  ).toBeVisible();
   await expectNoViewerOverlap(page);
 }
 
@@ -268,15 +311,21 @@ async function savePresetThroughUi(
   }
 
   await page.getByRole("button", { name: "Save preset" }).click();
-  await expect(page.getByRole("button", { name: `Load preset ${name}` })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `Load preset ${name}` })
+  ).toBeVisible();
 }
 
 async function expectPresetResponsiveSurface(page: Page) {
   await page.getByTestId("sheet-practice-controls").scrollIntoViewIfNeeded();
-  await expect(page.getByRole("heading", { name: "Metronome presets" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Metronome presets" })
+  ).toBeVisible();
   await expect(page.getByLabel("Preset name")).toBeVisible();
   await expect(page.getByRole("button", { name: "Save preset" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start metronome" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Start metronome" })
+  ).toBeVisible();
   await expectNoViewerOverlap(page);
 }
 
@@ -320,7 +369,9 @@ test("sheet practice presets persist, load explicitly, and drive timing after st
     SHEET_METRONOME_PRESET_DB_NAME
   ]);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet Library" })
+  ).toBeVisible();
   const { link } = await importTestSheet(page, {
     name: "Preset Controls Sheet",
     bpm: "100",
@@ -328,7 +379,9 @@ test("sheet practice presets persist, load explicitly, and drive timing after st
   });
 
   await link.click();
-  await expect(page.getByRole("heading", { name: "Preset Controls Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Preset Controls Sheet" })
+  ).toBeVisible();
   await setPracticeBpm(page, 88);
   await page.getByLabel("Time signature", { exact: true }).selectOption("2/4");
   await page.getByLabel("Subdivision", { exact: true }).selectOption("quarter");
@@ -366,31 +419,48 @@ test("sheet practice presets persist, load explicitly, and drive timing after st
   });
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Preset Controls Sheet" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Load preset Sheet cruise" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Load preset Bridge drive" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Preset Controls Sheet" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Load preset Sheet cruise" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Load preset Bridge drive" })
+  ).toBeVisible();
   await expect(page.getByText("Sheet-wide presets")).toBeVisible();
   await expect(page.getByText("Other segment presets")).toBeVisible();
   await expect(page.getByText("Unknown segment")).toBeVisible();
   await expect(page.getByText("Choose a segment")).toBeVisible();
 
   await page.getByRole("button", { name: "Load preset Sheet cruise" }).click();
-  await expect(page.getByRole("spinbutton", { name: "BPM", exact: true })).toHaveValue("88");
-  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue("2/4");
-  await expect(page.getByLabel("Subdivision", { exact: true })).toHaveValue("quarter");
+  await expect(
+    page.getByRole("spinbutton", { name: "BPM", exact: true })
+  ).toHaveValue("88");
+  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue(
+    "2/4"
+  );
+  await expect(page.getByLabel("Subdivision", { exact: true })).toHaveValue(
+    "quarter"
+  );
   await expect(page.getByLabel("Countdown", { exact: true })).toHaveValue("0");
   await expectBarCountInToggle(page, false);
   await expect(page.getByText("Choose a segment")).toBeVisible();
 
   await page.getByRole("button", { name: "Load preset Bridge drive" }).click();
-  await expect(page.getByRole("spinbutton", { name: "BPM", exact: true })).toHaveValue("132");
-  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue("3/4");
-  await expect(page.getByLabel("Subdivision", { exact: true })).toHaveValue("eighth");
-  await expect(page.getByLabel("Countdown", { exact: true })).toHaveValue("4");
-  await expect(page.getByRole("button", { name: "Every beat" })).toHaveAttribute(
-    "aria-pressed",
-    "true"
+  await expect(
+    page.getByRole("spinbutton", { name: "BPM", exact: true })
+  ).toHaveValue("132");
+  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue(
+    "3/4"
   );
+  await expect(page.getByLabel("Subdivision", { exact: true })).toHaveValue(
+    "eighth"
+  );
+  await expect(page.getByLabel("Countdown", { exact: true })).toHaveValue("4");
+  await expect(
+    page.getByRole("button", { name: "Every beat" })
+  ).toHaveAttribute("aria-pressed", "true");
   await expectBarCountInToggle(page, true);
   await expectBarCountInBarsValue(page, "2");
   await expect(page.getByText("Choose a segment")).toBeVisible();
@@ -421,12 +491,14 @@ test("sheet practice presets persist, load explicitly, and drive timing after st
       __sheetPresetMetronomeTraces?: MetronomeTrace[];
     };
 
-    return (e2eWindow.__sheetPresetMetronomeTraces ?? []).filter(
-      (trace) =>
-        trace.bpm === 132 &&
-        trace.timeSignature === "3/4" &&
-        trace.subdivision === "eighth"
-    ).length >= 7;
+    return (
+      (e2eWindow.__sheetPresetMetronomeTraces ?? []).filter(
+        (trace) =>
+          trace.bpm === 132 &&
+          trace.timeSignature === "3/4" &&
+          trace.subdivision === "eighth"
+      ).length >= 7
+    );
   });
 
   const traces = await page.evaluate(() => {
@@ -457,21 +529,41 @@ test("sheet practice presets persist, load explicitly, and drive timing after st
   expect(traces.every((trace) => trace.expectedIntervalMs < 235)).toBe(true);
 
   await page.getByRole("button", { name: "Stop metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Stopped"
+  );
 
-  await page.getByRole("button", { name: "Rename preset Sheet cruise" }).click();
-  await page.getByLabel("Rename preset Sheet cruise name").fill("Sheet cruise renamed");
+  await page
+    .getByRole("button", { name: "Rename preset Sheet cruise" })
+    .click();
+  await page
+    .getByLabel("Rename preset Sheet cruise name")
+    .fill("Sheet cruise renamed");
   await page.getByRole("button", { name: "Save rename" }).click();
-  await expect(page.getByRole("button", { name: "Load preset Sheet cruise renamed" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Load preset Sheet cruise renamed" })
+  ).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("button", { name: "Load preset Sheet cruise renamed" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Load preset Sheet cruise renamed" })
+  ).toBeVisible();
 
-  await page.getByRole("button", { name: "Delete preset Bridge drive" }).click();
-  await expect(page.getByRole("button", { name: "Confirm delete preset Bridge drive" })).toBeVisible();
-  await page.getByRole("button", { name: "Confirm delete preset Bridge drive" }).click();
-  await expect(page.getByRole("button", { name: "Load preset Bridge drive" })).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Delete preset Bridge drive" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Confirm delete preset Bridge drive" })
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Confirm delete preset Bridge drive" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Load preset Bridge drive" })
+  ).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole("button", { name: "Load preset Bridge drive" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Load preset Bridge drive" })
+  ).toHaveCount(0);
   expect(consoleErrors).toEqual([]);
 });
 
@@ -501,26 +593,34 @@ test("sheet practice can run visible bar-aware count-in before shared metronome 
       ticks: [],
       playback: []
     };
-    window.addEventListener("sheet-practice-controls:bar-count-in-plan", (event) => {
-      const plan = (event as CustomEvent<BarCountInEvidence["plans"][number]>).detail;
+    window.addEventListener(
+      "sheet-practice-controls:bar-count-in-plan",
+      (event) => {
+        const plan = (event as CustomEvent<BarCountInEvidence["plans"][number]>)
+          .detail;
 
-      e2eWindow.__sheetBarCountInEvidence?.plans.push({
-        beatCount: plan.beatCount,
-        totalDurationMs: plan.totalDurationMs,
-        scope: plan.scope,
-        startMeasure: plan.startMeasure,
-        segmentId: plan.segmentId
-      });
-    });
-    window.addEventListener("sheet-practice-controls:bar-count-in-tick", (event) => {
-      const tick = (event as CustomEvent<BarCountInEvidence["ticks"][number]>).detail;
+        e2eWindow.__sheetBarCountInEvidence?.plans.push({
+          beatCount: plan.beatCount,
+          totalDurationMs: plan.totalDurationMs,
+          scope: plan.scope,
+          startMeasure: plan.startMeasure,
+          segmentId: plan.segmentId
+        });
+      }
+    );
+    window.addEventListener(
+      "sheet-practice-controls:bar-count-in-tick",
+      (event) => {
+        const tick = (event as CustomEvent<BarCountInEvidence["ticks"][number]>)
+          .detail;
 
-      e2eWindow.__sheetBarCountInEvidence?.ticks.push({
-        count: tick.count,
-        remainingBeats: tick.remainingBeats,
-        observedAt: performance.now()
-      });
-    });
+        e2eWindow.__sheetBarCountInEvidence?.ticks.push({
+          count: tick.count,
+          remainingBeats: tick.remainingBeats,
+          observedAt: performance.now()
+        });
+      }
+    );
     window.addEventListener("quick-metronome:scheduled-tick", (event) => {
       const trace = (event as CustomEvent<MetronomeTrace>).detail;
 
@@ -541,7 +641,9 @@ test("sheet practice can run visible bar-aware count-in before shared metronome 
     PRACTICE_SEGMENT_DB_NAME
   ]);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet Library" })
+  ).toBeVisible();
   const { link } = await importTestSheet(page, {
     name: "Bar Count-In Controls Sheet",
     bpm: "120",
@@ -549,7 +651,9 @@ test("sheet practice can run visible bar-aware count-in before shared metronome 
   });
 
   await link.click();
-  await expect(page.getByRole("heading", { name: "Bar Count-In Controls Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Bar Count-In Controls Sheet" })
+  ).toBeVisible();
   await saveMeasureGridThroughUi(page, {
     bpm: 120,
     timeSignature: "4/4",
@@ -588,21 +692,30 @@ test("sheet practice can run visible bar-aware count-in before shared metronome 
   await expectLocatorWithinViewport(page, barCountInDetailPattern);
 
   await page.waitForFunction(() => {
-    const e2eWindow = window as Window & { __sheetBarCountInEvidence?: BarCountInEvidence };
+    const e2eWindow = window as Window & {
+      __sheetBarCountInEvidence?: BarCountInEvidence;
+    };
 
     return (e2eWindow.__sheetBarCountInEvidence?.ticks.length ?? 0) >= 4;
   });
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing", {
-    timeout: 5_000
-  });
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Playing",
+    {
+      timeout: 5_000
+    }
+  );
   await page.waitForFunction(() => {
-    const e2eWindow = window as Window & { __sheetBarCountInEvidence?: BarCountInEvidence };
+    const e2eWindow = window as Window & {
+      __sheetBarCountInEvidence?: BarCountInEvidence;
+    };
 
     return (e2eWindow.__sheetBarCountInEvidence?.playback.length ?? 0) >= 1;
   });
 
   const evidence = await page.evaluate(() => {
-    const e2eWindow = window as Window & { __sheetBarCountInEvidence?: BarCountInEvidence };
+    const e2eWindow = window as Window & {
+      __sheetBarCountInEvidence?: BarCountInEvidence;
+    };
 
     return e2eWindow.__sheetBarCountInEvidence;
   });
@@ -622,14 +735,18 @@ test("sheet practice can run visible bar-aware count-in before shared metronome 
     evidence?.playback[0]?.observedAt ?? Number.POSITIVE_INFINITY;
   const plannedDurationMs = evidence?.plans[0]?.totalDurationMs ?? 0;
 
-  expect(evidence?.ticks.every((tick) => tick.observedAt <= playbackObservedAt)).toBe(true);
+  expect(
+    evidence?.ticks.every((tick) => tick.observedAt <= playbackObservedAt)
+  ).toBe(true);
   expect(playbackObservedAt - startedAt).toBeGreaterThanOrEqual(
     Math.max(0, plannedDurationMs - 250)
   );
   expect(playingObservedAt).toBeGreaterThanOrEqual(playbackObservedAt);
 
   await page.getByRole("button", { name: "Stop metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Stopped"
+  );
   expect(consoleErrors).toEqual([]);
 });
 
@@ -659,20 +776,27 @@ test("sheet practice bar count-in is not persisted and blocks visibly without a 
       ticks: [],
       playback: []
     };
-    window.addEventListener("sheet-practice-controls:bar-count-in-plan", (event) => {
-      e2eWindow.__sheetBarCountInEvidence?.plans.push(
-        (event as CustomEvent<BarCountInEvidence["plans"][number]>).detail
-      );
-    });
-    window.addEventListener("sheet-practice-controls:bar-count-in-tick", (event) => {
-      const tick = (event as CustomEvent<BarCountInEvidence["ticks"][number]>).detail;
+    window.addEventListener(
+      "sheet-practice-controls:bar-count-in-plan",
+      (event) => {
+        e2eWindow.__sheetBarCountInEvidence?.plans.push(
+          (event as CustomEvent<BarCountInEvidence["plans"][number]>).detail
+        );
+      }
+    );
+    window.addEventListener(
+      "sheet-practice-controls:bar-count-in-tick",
+      (event) => {
+        const tick = (event as CustomEvent<BarCountInEvidence["ticks"][number]>)
+          .detail;
 
-      e2eWindow.__sheetBarCountInEvidence?.ticks.push({
-        count: tick.count,
-        remainingBeats: tick.remainingBeats,
-        observedAt: performance.now()
-      });
-    });
+        e2eWindow.__sheetBarCountInEvidence?.ticks.push({
+          count: tick.count,
+          remainingBeats: tick.remainingBeats,
+          observedAt: performance.now()
+        });
+      }
+    );
     window.addEventListener("quick-metronome:scheduled-tick", (event) => {
       const trace = (event as CustomEvent<MetronomeTrace>).detail;
 
@@ -693,7 +817,9 @@ test("sheet practice bar count-in is not persisted and blocks visibly without a 
     PRACTICE_SEGMENT_DB_NAME
   ]);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet Library" })
+  ).toBeVisible();
   const { link } = await importTestSheet(page, {
     name: "Bar Count-In Missing Grid Sheet",
     bpm: "120",
@@ -701,22 +827,32 @@ test("sheet practice bar count-in is not persisted and blocks visibly without a 
   });
 
   await link.click();
-  await expect(page.getByRole("heading", { name: "Bar Count-In Missing Grid Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Bar Count-In Missing Grid Sheet" })
+  ).toBeVisible();
   await enableBarCountInThroughUi(page);
   await selectBarCountInBars(page, "2");
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Bar Count-In Missing Grid Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Bar Count-In Missing Grid Sheet" })
+  ).toBeVisible();
   await expectBarCountInToggle(page, false);
   await enableBarCountInThroughUi(page);
   await expectBarCountInBarsValue(page, "1");
 
   await page.getByRole("button", { name: "Start metronome" }).click();
 
-  await expect(page.getByText("Save a measure grid before starting bar count-in.")).toBeVisible();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  await expect(
+    page.getByText("Save a measure grid before starting bar count-in.")
+  ).toBeVisible();
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Stopped"
+  );
 
   const evidence = await page.evaluate(() => {
-    const e2eWindow = window as Window & { __sheetBarCountInEvidence?: BarCountInEvidence };
+    const e2eWindow = window as Window & {
+      __sheetBarCountInEvidence?: BarCountInEvidence;
+    };
 
     return e2eWindow.__sheetBarCountInEvidence;
   });
@@ -750,7 +886,9 @@ test("sheet practice controls drive shared metronome timing, session activity, a
     e2eWindow.__sheetPracticeControlsTestHarness = true;
     e2eWindow.__sheetMetronomeTraces = [];
     window.addEventListener("quick-metronome:scheduled-tick", (event) => {
-      e2eWindow.__sheetMetronomeTraces?.push((event as CustomEvent<MetronomeTrace>).detail);
+      e2eWindow.__sheetMetronomeTraces?.push(
+        (event as CustomEvent<MetronomeTrace>).detail
+      );
     });
   });
 
@@ -759,7 +897,9 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await clearRecordingHistory(page);
   await clearDatabases(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME]);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet Library" })
+  ).toBeVisible();
   const { link, sheetId } = await importTestSheet(page, {
     name: "Controls Contract Sheet",
     bpm: "72",
@@ -767,34 +907,59 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   });
 
   await link.click();
-  await expect(page.getByRole("heading", { name: "Controls Contract Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Controls Contract Sheet" })
+  ).toBeVisible();
   await expect(page.getByTestId("sheet-practice-controls")).toBeVisible();
-  await expect(page.getByRole("spinbutton", { name: "BPM", exact: true })).toHaveValue("72");
-  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue("4/4");
+  await expect(
+    page.getByRole("spinbutton", { name: "BPM", exact: true })
+  ).toHaveValue("72");
+  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue(
+    "4/4"
+  );
   await expect(page.getByText("Defaults: 72 BPM, 4/4")).toBeVisible();
   await expect(page.getByTestId("sheet-session-id")).toContainText("none");
   await expect(page.getByTestId("sheet-recording-count")).toContainText("0");
-  await expect(page.getByRole("button", { name: "Start recording harness" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Stop recording harness" })).toHaveCount(0);
-  expect(await getPracticeSnapshot(page)).toEqual({ sessions: [], recordings: [] });
+  await expect(
+    page.getByRole("button", { name: "Start recording harness" })
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Stop recording harness" })
+  ).toHaveCount(0);
+  expect(await getPracticeSnapshot(page)).toEqual({
+    sessions: [],
+    recordings: []
+  });
   await expectNoViewerOverlap(page);
 
   await page.getByRole("button", { name: "Start metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Playing"
+  );
   await expect(page.getByText("Metronome playing.")).toBeVisible();
-  await expect(page.getByText(/locked while the metronome is running/i)).toBeVisible();
-  await expect(page.getByLabel("Time signature", { exact: true })).toBeDisabled();
+  await expect(
+    page.getByText(/locked while the metronome is running/i)
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Time signature", { exact: true })
+  ).toBeDisabled();
   await expect(page.getByLabel("Subdivision", { exact: true })).toBeDisabled();
   await expect(page.getByLabel("Countdown", { exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Every beat" })).toBeDisabled();
-  await expect(page.getByRole("spinbutton", { name: "BPM", exact: true })).toBeEnabled();
+  await expect(
+    page.getByRole("spinbutton", { name: "BPM", exact: true })
+  ).toBeEnabled();
   await expect(page.getByTestId("sheet-session-source")).toContainText("sheet");
   await page.waitForFunction(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
-    return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
-      (trace) => trace.bpm === 72 && trace.subdivision === "quarter"
-    ).length >= 4;
+    return (
+      (e2eWindow.__sheetMetronomeTraces ?? []).filter(
+        (trace) => trace.bpm === 72 && trace.subdivision === "quarter"
+      ).length >= 4
+    );
   });
 
   let snapshot = await getPracticeSnapshot(page);
@@ -811,7 +976,9 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   expect(snapshot.recordings).toEqual([]);
 
   const bpm72Traces = await page.evaluate(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
     return (e2eWindow.__sheetMetronomeTraces ?? [])
       .filter((trace) => trace.bpm === 72 && trace.subdivision === "quarter")
@@ -821,7 +988,9 @@ test("sheet practice controls drive shared metronome timing, session activity, a
 
   expect(average(bpm72Intervals)).toBeGreaterThan(805);
   expect(average(bpm72Intervals)).toBeLessThan(860);
-  expect(Math.max(...bpm72Intervals) - Math.min(...bpm72Intervals)).toBeLessThan(8);
+  expect(
+    Math.max(...bpm72Intervals) - Math.min(...bpm72Intervals)
+  ).toBeLessThan(8);
 
   const bpmInput = page.getByRole("spinbutton", { name: "BPM", exact: true });
 
@@ -829,15 +998,21 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await bpmInput.press("Enter");
   await expect(page.getByText(/Tick interval 667 ms/i)).toBeVisible();
   await page.waitForFunction(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
-    return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
-      (trace) => trace.bpm === 90 && trace.subdivision === "quarter"
-    ).length >= 4;
+    return (
+      (e2eWindow.__sheetMetronomeTraces ?? []).filter(
+        (trace) => trace.bpm === 90 && trace.subdivision === "quarter"
+      ).length >= 4
+    );
   });
 
   const bpm90Traces = await page.evaluate(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
     return (e2eWindow.__sheetMetronomeTraces ?? [])
       .filter((trace) => trace.bpm === 90 && trace.subdivision === "quarter")
@@ -850,9 +1025,13 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   expect(average(bpm90Intervals)).toBeLessThan(average(bpm72Intervals) - 120);
 
   await page.getByRole("button", { name: "Stop metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Stopped"
+  );
   const traceCountAfterStop = await page.evaluate(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
     return e2eWindow.__sheetMetronomeTraces?.length ?? 0;
   });
@@ -860,7 +1039,9 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await expect
     .poll(async () =>
       page.evaluate(() => {
-        const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+        const e2eWindow = window as Window & {
+          __sheetMetronomeTraces?: MetronomeTrace[];
+        };
 
         return e2eWindow.__sheetMetronomeTraces?.length ?? 0;
       })
@@ -869,9 +1050,15 @@ test("sheet practice controls drive shared metronome timing, session activity, a
 
   await page.getByLabel("Countdown", { exact: true }).selectOption("4");
   await page.getByRole("button", { name: "Start metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Counting");
-  await expect(page.getByText(/locked while the metronome is running/i)).toBeVisible();
-  await expect(page.getByLabel("Time signature", { exact: true })).toBeDisabled();
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Counting"
+  );
+  await expect(
+    page.getByText(/locked while the metronome is running/i)
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Time signature", { exact: true })
+  ).toBeDisabled();
   await expect(page.getByLabel("Subdivision", { exact: true })).toBeDisabled();
   await expect(page.getByLabel("Countdown", { exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Every beat" })).toBeDisabled();
@@ -880,13 +1067,17 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await bpmInput.press("Enter");
   await expect(bpmInput).toHaveValue("91");
   await page.waitForFunction(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
     return (e2eWindow.__sheetMetronomeTraces ?? []).some(
       (trace) => trace.bpm === 91 && trace.subdivision === "quarter"
     );
   });
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Playing"
+  );
   snapshot = await getPracticeSnapshot(page);
   expect(snapshot.sessions[0]).toMatchObject({
     bpm: 91
@@ -902,108 +1093,212 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await page.getByRole("button", { name: "Downbeat" }).click();
   await page.getByRole("button", { name: "Start metronome" }).click();
   await page.waitForFunction(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
-    return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
-      (trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth"
-    ).length >= 7;
+    return (
+      (e2eWindow.__sheetMetronomeTraces ?? []).filter(
+        (trace) =>
+          trace.bpm === 120 &&
+          trace.timeSignature === "3/4" &&
+          trace.subdivision === "eighth"
+      ).length >= 7
+    );
   });
 
   const eighthTraces = await page.evaluate(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
     return (e2eWindow.__sheetMetronomeTraces ?? [])
-      .filter((trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth")
+      .filter(
+        (trace) =>
+          trace.bpm === 120 &&
+          trace.timeSignature === "3/4" &&
+          trace.subdivision === "eighth"
+      )
       .slice(-7);
   });
   const eighthIntervals = intervalsFromAudioTime(eighthTraces);
 
-  expect(eighthTraces.map((trace) => trace.accented)).toEqual([true, false, false, false, false, false, true]);
-  expect(eighthTraces.every((trace) => trace.expectedIntervalMs === 250)).toBe(true);
+  expect(eighthTraces.map((trace) => trace.accented)).toEqual([
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true
+  ]);
+  expect(eighthTraces.every((trace) => trace.expectedIntervalMs === 250)).toBe(
+    true
+  );
   expect(average(eighthIntervals)).toBeGreaterThan(235);
   expect(average(eighthIntervals)).toBeLessThan(265);
 
   await page.getByRole("button", { name: "Stop metronome" }).click();
   await page.getByRole("button", { name: "Every beat" }).click();
-  await expect(page.getByRole("button", { name: "Every beat" })).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("button", { name: "Every beat" })
+  ).toHaveAttribute("aria-pressed", "true");
   const countBeforeEveryBeat = await page.evaluate(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
     return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
-      (trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth"
+      (trace) =>
+        trace.bpm === 120 &&
+        trace.timeSignature === "3/4" &&
+        trace.subdivision === "eighth"
     ).length;
   });
   await page.getByRole("button", { name: "Start metronome" }).click();
   await page.waitForFunction((previousCount) => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
-    return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
-      (trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth"
-    ).length >= previousCount + 7;
+    return (
+      (e2eWindow.__sheetMetronomeTraces ?? []).filter(
+        (trace) =>
+          trace.bpm === 120 &&
+          trace.timeSignature === "3/4" &&
+          trace.subdivision === "eighth"
+      ).length >=
+      previousCount + 7
+    );
   }, countBeforeEveryBeat);
 
   const everyBeatTraces = await page.evaluate(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
     return (e2eWindow.__sheetMetronomeTraces ?? [])
-      .filter((trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth")
+      .filter(
+        (trace) =>
+          trace.bpm === 120 &&
+          trace.timeSignature === "3/4" &&
+          trace.subdivision === "eighth"
+      )
       .slice(-7);
   });
 
-  expect(everyBeatTraces.map((trace) => trace.accented)).toEqual([true, false, true, false, true, false, true]);
+  expect(everyBeatTraces.map((trace) => trace.accented)).toEqual([
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    true
+  ]);
 
   await page.getByRole("button", { name: "Stop metronome" }).click();
   await page.getByRole("button", { name: "Off" }).click();
-  await expect(page.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Off" })).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  );
   const countBeforeOff = await page.evaluate(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
     return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
-      (trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth"
+      (trace) =>
+        trace.bpm === 120 &&
+        trace.timeSignature === "3/4" &&
+        trace.subdivision === "eighth"
     ).length;
   });
   await page.getByRole("button", { name: "Start metronome" }).click();
   await page.waitForFunction((previousCount) => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
-    return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
-      (trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth"
-    ).length >= previousCount + 4;
+    return (
+      (e2eWindow.__sheetMetronomeTraces ?? []).filter(
+        (trace) =>
+          trace.bpm === 120 &&
+          trace.timeSignature === "3/4" &&
+          trace.subdivision === "eighth"
+      ).length >=
+      previousCount + 4
+    );
   }, countBeforeOff);
 
   const offTraces = await page.evaluate(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
     return (e2eWindow.__sheetMetronomeTraces ?? [])
-      .filter((trace) => trace.bpm === 120 && trace.timeSignature === "3/4" && trace.subdivision === "eighth")
+      .filter(
+        (trace) =>
+          trace.bpm === 120 &&
+          trace.timeSignature === "3/4" &&
+          trace.subdivision === "eighth"
+      )
       .slice(-4);
   });
 
-  expect(offTraces.map((trace) => trace.accented)).toEqual([false, false, false, false]);
+  expect(offTraces.map((trace) => trace.accented)).toEqual([
+    false,
+    false,
+    false,
+    false
+  ]);
 
   await page.getByRole("button", { name: "Stop metronome" }).click();
   await expect(page.getByTestId("sheet-recording-count")).toContainText("0");
 
   await page.evaluate((eventName) => {
-    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: true } }));
+    window.dispatchEvent(
+      new CustomEvent(eventName, { detail: { active: true } })
+    );
   }, recordingHarnessEvent);
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "active"
+  );
   await page.getByRole("button", { name: "Start metronome" }).click();
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "active"
+  );
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Playing"
+  );
   await page.getByRole("button", { name: "Stop metronome" }).click();
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "active"
+  );
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Stopped"
+  );
   await page.evaluate((eventName) => {
-    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: false } }));
+    window.dispatchEvent(
+      new CustomEvent(eventName, { detail: { active: false } })
+    );
   }, recordingHarnessEvent);
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "stopped"
+  );
   await page.getByRole("button", { name: "Start metronome" }).click();
   await page.evaluate((eventName) => {
-    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: true } }));
-    window.dispatchEvent(new CustomEvent(eventName, { detail: { active: false } }));
+    window.dispatchEvent(
+      new CustomEvent(eventName, { detail: { active: true } })
+    );
+    window.dispatchEvent(
+      new CustomEvent(eventName, { detail: { active: false } })
+    );
   }, recordingHarnessEvent);
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Playing"
+  );
   await page.getByRole("button", { name: "Stop metronome" }).click();
 
   snapshot = await getPracticeSnapshot(page);
@@ -1016,7 +1311,9 @@ test("sheet practice controls drive shared metronome timing, session activity, a
   await page.setViewportSize({ width: 390, height: 844 });
   await expectNoViewerOverlap(page);
   await page.getByRole("button", { name: "Start metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Playing"
+  );
   await expectNoViewerOverlap(page);
   await page.setViewportSize({ width: 1024, height: 768 });
   await expectNoViewerOverlap(page);

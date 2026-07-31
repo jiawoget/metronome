@@ -21,7 +21,7 @@ selected recording by running two artifact body paths in parallel:
 Promise.all([
   loadRecordingArtifactDetails(recording),
   resolveRecordingArtifactBody(recording)
-])
+]);
 ```
 
 After C2-04, both paths are artifactRef-only. `loadRecordingArtifactDetails(...)`

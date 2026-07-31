@@ -69,7 +69,9 @@ describe("sheet metronome preset browser repository", () => {
 
     setSheetMetronomePresetMalformedRowListenerForTests(malformedRowListener);
 
-    await expect(browserSheetMetronomePresetRepository.listPresets("sheet-alpha")).resolves.toEqual([]);
+    await expect(
+      browserSheetMetronomePresetRepository.listPresets("sheet-alpha")
+    ).resolves.toEqual([]);
     await expect(
       browserSheetMetronomePresetRepository.getPreset("sheet-alpha", "preset-1")
     ).resolves.toBeNull();
@@ -88,9 +90,9 @@ describe("sheet metronome preset browser repository", () => {
     await expect(
       browserSheetMetronomePresetRepository.getPreset("sheet-alpha", "preset-1")
     ).resolves.toEqual(buildSheetMetronomePreset({ name: "Warmup" }));
-    await expect(browserSheetMetronomePresetRepository.listPresets("sheet-alpha")).resolves.toEqual([
-      buildSheetMetronomePreset({ name: "Warmup" })
-    ]);
+    await expect(
+      browserSheetMetronomePresetRepository.listPresets("sheet-alpha")
+    ).resolves.toEqual([buildSheetMetronomePreset({ name: "Warmup" })]);
   });
 
   it("isolates two sheets with overlapping preset ids", async () => {
@@ -99,7 +101,9 @@ describe("sheet metronome preset browser repository", () => {
       name: "Other Sheet"
     });
 
-    await browserSheetMetronomePresetRepository.savePreset(buildSheetMetronomePreset());
+    await browserSheetMetronomePresetRepository.savePreset(
+      buildSheetMetronomePreset()
+    );
     await browserSheetMetronomePresetRepository.savePreset(otherSheetPreset);
 
     await expect(
@@ -155,7 +159,9 @@ describe("sheet metronome preset browser repository", () => {
       }
     });
 
-    await browserSheetMetronomePresetRepository.savePreset(buildSheetMetronomePreset());
+    await browserSheetMetronomePresetRepository.savePreset(
+      buildSheetMetronomePreset()
+    );
     await browserSheetMetronomePresetRepository.savePreset(
       buildSheetMetronomePreset({
         sheetId: "sheet-bravo",
@@ -182,7 +188,9 @@ describe("sheet metronome preset browser repository", () => {
       id: "preset-2"
     });
 
-    await browserSheetMetronomePresetRepository.savePreset(buildSheetMetronomePreset());
+    await browserSheetMetronomePresetRepository.savePreset(
+      buildSheetMetronomePreset()
+    );
     await browserSheetMetronomePresetRepository.savePreset(keptPreset);
     await browserSheetMetronomePresetRepository.savePreset(
       buildSheetMetronomePreset({
@@ -191,10 +199,16 @@ describe("sheet metronome preset browser repository", () => {
     );
 
     await expect(
-      browserSheetMetronomePresetRepository.deletePreset("sheet-alpha", "preset-1")
+      browserSheetMetronomePresetRepository.deletePreset(
+        "sheet-alpha",
+        "preset-1"
+      )
     ).resolves.toBeUndefined();
     await expect(
-      browserSheetMetronomePresetRepository.deletePreset("sheet-alpha", "preset-missing")
+      browserSheetMetronomePresetRepository.deletePreset(
+        "sheet-alpha",
+        "preset-missing"
+      )
     ).resolves.toBeUndefined();
 
     const remainingAlphaPresets =
@@ -219,33 +233,46 @@ describe("sheet metronome preset browser repository", () => {
     setSheetMetronomePresetMalformedRowListenerForTests(malformedRowListener);
 
     await browserSheetMetronomePresetRepository.savePreset(validPreset);
-    await seedSheetMetronomePresetRecordForTests("sheet-alpha", "preset-bad-sheet", {
-      preset: buildSheetMetronomePreset({
-        id: "preset-bad-sheet",
-        sheetId: "sheet-bravo"
-      }),
-      updatedAt: TEST_PRESET_UPDATED_AT
-    });
-    await seedSheetMetronomePresetRecordForTests("sheet-alpha", "preset-bad-segment", {
-      segmentId: "segment-1",
-      preset: buildSheetMetronomePreset({
-        id: "preset-bad-segment",
-        sheetId: "sheet-alpha",
-        segmentId: null
-      }),
-      updatedAt: TEST_PRESET_UPDATED_AT
-    });
-
-    await expect(
-      browserSheetMetronomePresetRepository.getPreset("sheet-alpha", "preset-bad-sheet")
-    ).resolves.toBeNull();
-    await expect(
-      browserSheetMetronomePresetRepository.getPreset("sheet-alpha", "preset-bad-segment")
-    ).resolves.toBeNull();
-
-    const sheetPresets = await browserSheetMetronomePresetRepository.listPresets(
-      "sheet-alpha"
+    await seedSheetMetronomePresetRecordForTests(
+      "sheet-alpha",
+      "preset-bad-sheet",
+      {
+        preset: buildSheetMetronomePreset({
+          id: "preset-bad-sheet",
+          sheetId: "sheet-bravo"
+        }),
+        updatedAt: TEST_PRESET_UPDATED_AT
+      }
     );
+    await seedSheetMetronomePresetRecordForTests(
+      "sheet-alpha",
+      "preset-bad-segment",
+      {
+        segmentId: "segment-1",
+        preset: buildSheetMetronomePreset({
+          id: "preset-bad-segment",
+          sheetId: "sheet-alpha",
+          segmentId: null
+        }),
+        updatedAt: TEST_PRESET_UPDATED_AT
+      }
+    );
+
+    await expect(
+      browserSheetMetronomePresetRepository.getPreset(
+        "sheet-alpha",
+        "preset-bad-sheet"
+      )
+    ).resolves.toBeNull();
+    await expect(
+      browserSheetMetronomePresetRepository.getPreset(
+        "sheet-alpha",
+        "preset-bad-segment"
+      )
+    ).resolves.toBeNull();
+
+    const sheetPresets =
+      await browserSheetMetronomePresetRepository.listPresets("sheet-alpha");
 
     expect(sortPresetsForComparison(sheetPresets)).toEqual(
       sortPresetsForComparison([validPreset])
@@ -308,7 +335,9 @@ describe("sheet metronome preset browser repository", () => {
       name: "Segment"
     });
 
-    await browserSheetMetronomePresetRepository.savePreset(buildSheetMetronomePreset());
+    await browserSheetMetronomePresetRepository.savePreset(
+      buildSheetMetronomePreset()
+    );
     await browserSheetMetronomePresetRepository.savePreset(secondPreset);
     await browserSheetMetronomePresetRepository.savePreset(segmentPreset);
 
@@ -352,7 +381,9 @@ describe("sheet metronome preset browser repository", () => {
   });
 
   it("preserves the prior valid row when a later write fails validation", async () => {
-    await browserSheetMetronomePresetRepository.savePreset(buildSheetMetronomePreset());
+    await browserSheetMetronomePresetRepository.savePreset(
+      buildSheetMetronomePreset()
+    );
 
     await expect(
       browserSheetMetronomePresetRepository.savePreset(

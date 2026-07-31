@@ -36,14 +36,18 @@ export function createRecordingHistoryOperations({
 
     return mutateSnapshot((snapshot) => {
       if (snapshot.recordings.some((item) => item.id === recordingToSave.id)) {
-        throw new Error("Recording id collision prevented artifact metadata save.");
+        throw new Error(
+          "Recording id collision prevented artifact metadata save."
+        );
       }
 
       return buildRecordingReviewSnapshot({
         ...snapshot,
         recordings: [
           recordingToSave,
-          ...snapshot.recordings.filter((item) => item.id !== recordingToSave.id)
+          ...snapshot.recordings.filter(
+            (item) => item.id !== recordingToSave.id
+          )
         ]
       });
     });
@@ -69,7 +73,8 @@ export function createRecordingHistoryOperations({
         sessions: [
           session,
           ...snapshot.sessions.filter(
-            (item) => !sessionId || !isSessionWithId(item) || item.id !== sessionId
+            (item) =>
+              !sessionId || !isSessionWithId(item) || item.id !== sessionId
           )
         ],
         recordings: [
@@ -100,7 +105,8 @@ export function createRecordingHistoryOperations({
         sessions: [
           session,
           ...snapshot.sessions.filter(
-            (item) => !sessionId || !isSessionWithId(item) || item.id !== sessionId
+            (item) =>
+              !sessionId || !isSessionWithId(item) || item.id !== sessionId
           )
         ],
         sheetRecordingMetadata: [
@@ -139,7 +145,10 @@ export function createRecordingHistoryOperations({
 
       removedRecordingIds = [target.id];
 
-      return deleteRecordingsFromSnapshot(currentSnapshot, new Set(removedRecordingIds));
+      return deleteRecordingsFromSnapshot(
+        currentSnapshot,
+        new Set(removedRecordingIds)
+      );
     });
 
     return {
@@ -204,7 +213,10 @@ export function createRecordingHistoryOperations({
           });
 
       return buildRecordingReviewSnapshot({
-        ...deleteRecordingsFromSnapshot(currentSnapshot, new Set(removedRecordingIds)),
+        ...deleteRecordingsFromSnapshot(
+          currentSnapshot,
+          new Set(removedRecordingIds)
+        ),
         sessions
       });
     });
@@ -218,7 +230,9 @@ export function createRecordingHistoryOperations({
     };
   }
 
-  function deleteRecordingMetadata(recordingId: string): RecordingHistoryArtifactCleanupResult {
+  function deleteRecordingMetadata(
+    recordingId: string
+  ): RecordingHistoryArtifactCleanupResult {
     let removedRecordingIds: string[] = [];
     const snapshot = mutateSnapshot((currentSnapshot) => {
       const target = currentSnapshot.recordings.find(

@@ -74,7 +74,8 @@ function ThumbnailButtons({
   listClassName: string;
 }) {
   const thumbnails = state.thumbnails.filter(
-    (thumbnail) => thumbnail.pageNumber >= 1 && thumbnail.pageNumber <= totalPages
+    (thumbnail) =>
+      thumbnail.pageNumber >= 1 && thumbnail.pageNumber <= totalPages
   );
 
   if (thumbnails.length === 0) {
@@ -96,10 +97,16 @@ function ThumbnailButtons({
             type="button"
             aria-label={`Go to page ${thumbnail.pageNumber}`}
             aria-current={isCurrent ? "page" : undefined}
-            onClick={() => onSelectPage(Math.min(totalPages, Math.max(1, thumbnail.pageNumber)))}
+            onClick={() =>
+              onSelectPage(
+                Math.min(totalPages, Math.max(1, thumbnail.pageNumber))
+              )
+            }
             className={cn(
-              "flex w-28 shrink-0 flex-col items-stretch gap-1 rounded-md border bg-white p-1.5 text-left text-xs font-medium text-foreground shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring",
-              isCurrent ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/60"
+              "flex w-28 shrink-0 flex-col items-stretch gap-1 rounded-md border bg-white p-1.5 text-left text-xs font-medium text-foreground shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              isCurrent
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border hover:border-primary/60"
             )}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -110,7 +117,9 @@ function ThumbnailButtons({
               height={thumbnail.height}
               className="h-32 w-full rounded-sm border border-border bg-white object-contain"
             />
-            <span className="truncate text-center">Page {thumbnail.pageNumber}</span>
+            <span className="truncate text-center">
+              Page {thumbnail.pageNumber}
+            </span>
           </button>
         );
       })}

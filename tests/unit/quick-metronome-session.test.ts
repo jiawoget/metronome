@@ -1,4 +1,11 @@
-import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  waitFor
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,7 +20,11 @@ import { recordingArtifactRepository } from "@/infrastructure/db/recording-artif
 import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
 import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
 import { createQuickRecording } from "@/lib/quick-metronome/session";
-import { DEFAULT_METRONOME_SETTINGS, type QuickRecording, type RecordingArtifact } from "@/lib/quick-metronome/types";
+import {
+  DEFAULT_METRONOME_SETTINGS,
+  type QuickRecording,
+  type RecordingArtifact
+} from "@/lib/quick-metronome/types";
 import { useMetronomeTransport } from "@/lib/quick-metronome/use-metronome-transport";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import {
@@ -55,7 +66,8 @@ vi.mock("@/services/metronome/browser", () => ({
 }));
 
 vi.mock("@/services/recording/browser", () => ({
-  createBrowserRecordingCaptureService: () => quickExperienceMocks.recordingService
+  createBrowserRecordingCaptureService: () =>
+    quickExperienceMocks.recordingService
 }));
 
 vi.mock("@/services/practice-session/browser", () => ({
@@ -152,7 +164,11 @@ describe("quick metronome recording metadata", () => {
         isSilent: false
       }
     };
-    const recording = createQuickRecording({ artifact, session, settings: DEFAULT_METRONOME_SETTINGS });
+    const recording = createQuickRecording({
+      artifact,
+      session,
+      settings: DEFAULT_METRONOME_SETTINGS
+    });
     const firstSave = saveQuickRecordingForTest(recording);
 
     expect(() =>
@@ -171,9 +187,9 @@ describe("quick metronome recording metadata", () => {
     expect(firstSave.id).toBe(recording.id);
     expect(snapshot.recordings).toHaveLength(1);
     expect(snapshot.sessions).toEqual([]);
-    expect(snapshot.recordings.find((item) => item.id === recording.id)?.artifactRef).toEqual(
-      recording.artifactRef
-    );
+    expect(
+      snapshot.recordings.find((item) => item.id === recording.id)?.artifactRef
+    ).toEqual(recording.artifactRef);
   });
 
   it("preserves review organization and take selection metadata when saving a new quick recording", async () => {
@@ -238,15 +254,16 @@ describe("quick metronome recording metadata", () => {
 
     saveQuickRecordingForTest(newRecording);
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}"
+    );
 
     expect(persisted.recordingOrganization).toEqual(recordingOrganization);
     expect(persisted.takeSelections).toEqual(takeSelections);
     expect(persisted.futureSnapshotField).toEqual({ preserve: true });
-    expect(persisted.recordings.map((recording: { id: string }) => recording.id)).toEqual([
-      newRecording.id,
-      existingRecording.id
-    ]);
+    expect(
+      persisted.recordings.map((recording: { id: string }) => recording.id)
+    ).toEqual([newRecording.id, existingRecording.id]);
   });
 
   it("rolls back quick metadata written before a session link failure without restoring stale snapshots", async () => {
@@ -274,9 +291,9 @@ describe("quick metronome recording metadata", () => {
           ...recordingHistoryRepository
             .getSnapshot()
             .recordings.filter((item) => item.id !== recording.id),
-          recordingHistoryRepository.getSnapshot().recordings.find(
-            (item) => item.id === recording.id
-          ),
+          recordingHistoryRepository
+            .getSnapshot()
+            .recordings.find((item) => item.id === recording.id),
           createStoredQuickRecording({
             id: "concurrent-quick",
             sessionId: "session-concurrent"
@@ -293,11 +310,13 @@ describe("quick metronome recording metadata", () => {
       createdAt: recording.createdAt
     });
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}"
+    );
 
-    expect(persisted.recordings.map((item: { id: string }) => item.id)).toEqual([
-      "concurrent-quick"
-    ]);
+    expect(persisted.recordings.map((item: { id: string }) => item.id)).toEqual(
+      ["concurrent-quick"]
+    );
     expect(persisted.futureSnapshotField).toEqual({ preserve: true });
   });
 
@@ -470,7 +489,9 @@ describe("quick metronome recording metadata", () => {
 
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(quickExperienceMocks.recordingService.start).toHaveBeenCalledOnce();
+      expect(
+        quickExperienceMocks.recordingService.start
+      ).toHaveBeenCalledOnce();
     });
 
     const stopRecordingButton = screen.getByRole("button", {
@@ -487,13 +508,15 @@ describe("quick metronome recording metadata", () => {
     });
 
     expect(linkedRecordingId).toMatch(/^recording_/);
-    expect(quickExperienceMocks.practiceSessionService.linkRecordingToSession).toHaveBeenCalledWith({
+    expect(
+      quickExperienceMocks.practiceSessionService.linkRecordingToSession
+    ).toHaveBeenCalledWith({
       sessionId: previousSession.id,
       recordingId: linkedRecordingId
     });
-    expect(quickExperienceMocks.practiceSessionService.endPracticeSession).toHaveBeenCalledWith(
-      previousSession.id
-    );
+    expect(
+      quickExperienceMocks.practiceSessionService.endPracticeSession
+    ).toHaveBeenCalledWith(previousSession.id);
     expect(
       quickExperienceMocks.practiceSessionService.restorePracticeSessionSnapshot
     ).toHaveBeenCalledWith(previousSession);
@@ -525,12 +548,16 @@ describe("quick metronome recording metadata", () => {
       segmentContext: null
     };
 
-    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
-    quickExperienceMocks.practiceSessionService.endPracticeSession.mockResolvedValue({
-      ...session,
-      endedAt: "2026-06-21T08:00:05.000Z",
-      durationMs: 5_000
-    });
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(
+      session
+    );
+    quickExperienceMocks.practiceSessionService.endPracticeSession.mockResolvedValue(
+      {
+        ...session,
+        endedAt: "2026-06-21T08:00:05.000Z",
+        durationMs: 5_000
+      }
+    );
 
     render(createElement(QuickMetronomeExperience));
 
@@ -538,7 +565,9 @@ describe("quick metronome recording metadata", () => {
     await waitFor(() => {
       expect(screen.getByText("Metronome playing.")).toBeVisible();
     });
-    expect(quickExperienceMocks.practiceSessionService.captureSessionEvent).toHaveBeenCalledWith({
+    expect(
+      quickExperienceMocks.practiceSessionService.captureSessionEvent
+    ).toHaveBeenCalledWith({
       sessionId: "session-quick",
       kind: "metronome_started"
     });
@@ -546,11 +575,13 @@ describe("quick metronome recording metadata", () => {
     await user.click(screen.getByRole("button", { name: "Stop metronome" }));
 
     await waitFor(() => {
-      expect(quickExperienceMocks.practiceSessionService.endPracticeSession).toHaveBeenCalledWith(
-        "session-quick"
-      );
+      expect(
+        quickExperienceMocks.practiceSessionService.endPracticeSession
+      ).toHaveBeenCalledWith("session-quick");
     });
-    expect(quickExperienceMocks.practiceSessionService.captureSessionEvent).toHaveBeenCalledWith({
+    expect(
+      quickExperienceMocks.practiceSessionService.captureSessionEvent
+    ).toHaveBeenCalledWith({
       sessionId: "session-quick",
       kind: "metronome_stopped"
     });
@@ -573,7 +604,9 @@ describe("quick metronome recording metadata", () => {
       segmentContext: null
     };
 
-    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(
+      session
+    );
     quickExperienceMocks.practiceSessionService.endPracticeSession.mockRejectedValueOnce(
       new Error("end unavailable")
     );
@@ -591,10 +624,12 @@ describe("quick metronome recording metadata", () => {
       expect(screen.getByText("Metronome stopped.")).toBeVisible();
     });
     expect(screen.getByRole("alert")).toHaveTextContent("end unavailable");
-    expect(quickExperienceMocks.practiceSessionService.endPracticeSession).toHaveBeenCalledWith(
-      "session-quick-end-fail"
-    );
-    expect(quickExperienceMocks.practiceSessionService.captureSessionEvent).toHaveBeenCalledWith({
+    expect(
+      quickExperienceMocks.practiceSessionService.endPracticeSession
+    ).toHaveBeenCalledWith("session-quick-end-fail");
+    expect(
+      quickExperienceMocks.practiceSessionService.captureSessionEvent
+    ).toHaveBeenCalledWith({
       sessionId: "session-quick-end-fail",
       kind: "metronome_stopped"
     });
@@ -617,7 +652,9 @@ describe("quick metronome recording metadata", () => {
       segmentContext: null
     };
 
-    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(
+      session
+    );
     quickExperienceMocks.practiceSessionService.captureSessionEvent.mockImplementation(
       async ({ kind }: { kind: string }) => {
         if (kind === "metronome_stopped") {
@@ -627,11 +664,13 @@ describe("quick metronome recording metadata", () => {
         return null;
       }
     );
-    quickExperienceMocks.practiceSessionService.endPracticeSession.mockResolvedValue({
-      ...session,
-      endedAt: "2026-06-21T08:00:05.000Z",
-      durationMs: 5_000
-    });
+    quickExperienceMocks.practiceSessionService.endPracticeSession.mockResolvedValue(
+      {
+        ...session,
+        endedAt: "2026-06-21T08:00:05.000Z",
+        durationMs: 5_000
+      }
+    );
 
     render(createElement(QuickMetronomeExperience));
 
@@ -645,9 +684,9 @@ describe("quick metronome recording metadata", () => {
     await waitFor(() => {
       expect(screen.getByText("Metronome stopped.")).toBeVisible();
     });
-    expect(quickExperienceMocks.practiceSessionService.endPracticeSession).toHaveBeenCalledWith(
-      "session-quick-capture-fail"
-    );
+    expect(
+      quickExperienceMocks.practiceSessionService.endPracticeSession
+    ).toHaveBeenCalledWith("session-quick-capture-fail");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -669,7 +708,9 @@ describe("quick metronome recording metadata", () => {
     };
 
     quickExperienceMocks.recordingService.start.mockResolvedValue(undefined);
-    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(
+      session
+    );
     quickExperienceMocks.practiceSessionService.updatePracticeSessionDuration.mockRejectedValueOnce(
       new Error("duration unavailable")
     );
@@ -693,13 +734,13 @@ describe("quick metronome recording metadata", () => {
         screen.getByText("Metronome stopped; recording is still active.")
       ).toBeVisible();
     });
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "duration unavailable"
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent("duration unavailable");
     expect(
       quickExperienceMocks.practiceSessionService.updatePracticeSessionDuration
     ).toHaveBeenCalledWith("session-quick-duration-fail");
-    expect(quickExperienceMocks.practiceSessionService.endPracticeSession).not.toHaveBeenCalled();
+    expect(
+      quickExperienceMocks.practiceSessionService.endPracticeSession
+    ).not.toHaveBeenCalled();
   });
 
   it("does not capture quick metronome start when playback start fails", async () => {
@@ -719,7 +760,9 @@ describe("quick metronome recording metadata", () => {
       segmentContext: null
     };
 
-    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(
+      session
+    );
     quickExperienceMocks.metronomeService.start.mockRejectedValueOnce(
       new Error("Tone unavailable")
     );
@@ -795,7 +838,9 @@ describe("quick metronome recording metadata", () => {
     };
 
     quickExperienceMocks.recordingService.start.mockResolvedValue(undefined);
-    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(session);
+    quickExperienceMocks.practiceSessionService.ensureQuickSession.mockResolvedValue(
+      session
+    );
 
     render(createElement(QuickMetronomeExperience));
 
@@ -804,7 +849,9 @@ describe("quick metronome recording metadata", () => {
     await waitFor(() => {
       expect(screen.getByText("Recording without metronome.")).toBeVisible();
     });
-    expect(quickExperienceMocks.practiceSessionService.captureSessionEvent).toHaveBeenCalledWith({
+    expect(
+      quickExperienceMocks.practiceSessionService.captureSessionEvent
+    ).toHaveBeenCalledWith({
       sessionId: "session-recording",
       kind: "recording_started"
     });
@@ -854,16 +901,18 @@ describe("quick metronome recording metadata", () => {
       segmentContext: null
     };
     let savedRecordingId: string | null = null;
-    const linkRecordingToSession = vi.fn(async ({ recordingId }: { recordingId?: string | null }) => {
-      savedRecordingId = recordingId ?? null;
+    const linkRecordingToSession = vi.fn(
+      async ({ recordingId }: { recordingId?: string | null }) => {
+        savedRecordingId = recordingId ?? null;
 
-      return {
-        ...session,
-        recordingCount: 1,
-        latestRecordingId: savedRecordingId,
-        updatedAt: "2026-06-21T08:00:02.000Z"
-      };
-    });
+        return {
+          ...session,
+          recordingCount: 1,
+          latestRecordingId: savedRecordingId,
+          updatedAt: "2026-06-21T08:00:02.000Z"
+        };
+      }
+    );
     const endPracticeSession = vi.fn(async () => ({
       ...session,
       endedAt: "2026-06-21T08:00:03.000Z",
@@ -882,7 +931,9 @@ describe("quick metronome recording metadata", () => {
       sessionService: {
         linkRecordingToSession,
         endPracticeSession,
-        restorePracticeSessionSnapshot: vi.fn(async (value: PracticeSession) => value),
+        restorePracticeSessionSnapshot: vi.fn(
+          async (value: PracticeSession) => value
+        ),
         deletePracticeSessionSnapshot: vi.fn(async () => undefined),
         captureSessionEvent
       }
@@ -951,8 +1002,18 @@ describe("quick metronome recording metadata", () => {
         ],
         recordings: [quickRecording, sheetRecording, ambiguousQuickRecording],
         errorMarkers: [
-          { id: "quick-marker", recordingId: "quick-recording", timestampMs: 10, note: null },
-          { id: "sheet-marker", recordingId: "sheet-recording", timestampMs: 10, note: null }
+          {
+            id: "quick-marker",
+            recordingId: "quick-recording",
+            timestampMs: 10,
+            note: null
+          },
+          {
+            id: "sheet-marker",
+            recordingId: "sheet-recording",
+            timestampMs: 10,
+            note: null
+          }
         ],
         takeSelections,
         recordingOrganization,
@@ -962,7 +1023,9 @@ describe("quick metronome recording metadata", () => {
 
     await quickRecordingController.clear();
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDING_HISTORY_STORAGE_KEY) ?? "{}"
+    );
 
     expect(persisted.recordings).toEqual([sheetRecording]);
     expect(persisted.sessions).toEqual([
@@ -970,7 +1033,12 @@ describe("quick metronome recording metadata", () => {
       { id: "ambiguous-session" }
     ]);
     expect(persisted.errorMarkers).toEqual([
-      { id: "sheet-marker", recordingId: "sheet-recording", timestampMs: 10, note: null }
+      {
+        id: "sheet-marker",
+        recordingId: "sheet-recording",
+        timestampMs: 10,
+        note: null
+      }
     ]);
     expect(persisted.takeSelections).toEqual(takeSelections);
     expect(persisted.recordingOrganization).toEqual(recordingOrganization);
@@ -979,7 +1047,10 @@ describe("quick metronome recording metadata", () => {
 
   it("provides a clearly marked playable demo recording without claiming it is a user take", () => {
     const demoRecording = getDemoQuickRecording();
-    const base64Payload = demoRecording.audioDataUrl!.replace(/^data:audio\/wav;base64,/, "");
+    const base64Payload = demoRecording.audioDataUrl!.replace(
+      /^data:audio\/wav;base64,/,
+      ""
+    );
     const wavBytes = Buffer.from(base64Payload, "base64");
 
     expect(demoRecording.type).toBe("quick");

@@ -287,5 +287,3 @@ For every subagent prompt:
 - Include explicit out-of-scope bullets.
 - For review and verification agents, pass the implementation commit hash and changed files.
 - Do not ask verification agents to re-review unrelated source unless boundary inspection is part of the slice.
-
-

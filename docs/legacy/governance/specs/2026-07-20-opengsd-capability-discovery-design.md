@@ -255,14 +255,14 @@ Allowed decisions:
 
 ## 8. Role boundaries
 
-| Role | Responsibility | Prohibited |
-|---|---|---|
-| Assumptions analyzer | Atomize behavior; find local semantic candidates, owners, and unknowns | Choose OSS, admit an implementation, or design a file structure |
-| Phase researcher | Be the only `RESEARCH.md` writer; verify local, dependency, platform, and OSS evidence; decide or block each CAP | Prewrite implementation or disguise a preferred code shape as research |
-| Planner | Compile approved CAP decisions into executable tasks, tests, and outcomes | Re-search, select a different library, invent a capability, or add an unapproved surface |
-| Plan checker | Reconcile every production task and surface to a CAP | Repair the plan or silently fill missing admission evidence |
-| Executor | Implement only the approved CAP and plan boundary | Change API/library/owner or add a generic surface through normal deviation rules |
-| Verifier | Check real behavior, diff, tests, and CAP/PLAN traceability | Trust summary claims, edit code, or ignore an unapproved surface |
+| Role                 | Responsibility                                                                                                   | Prohibited                                                                               |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Assumptions analyzer | Atomize behavior; find local semantic candidates, owners, and unknowns                                           | Choose OSS, admit an implementation, or design a file structure                          |
+| Phase researcher     | Be the only `RESEARCH.md` writer; verify local, dependency, platform, and OSS evidence; decide or block each CAP | Prewrite implementation or disguise a preferred code shape as research                   |
+| Planner              | Compile approved CAP decisions into executable tasks, tests, and outcomes                                        | Re-search, select a different library, invent a capability, or add an unapproved surface |
+| Plan checker         | Reconcile every production task and surface to a CAP                                                             | Repair the plan or silently fill missing admission evidence                              |
+| Executor             | Implement only the approved CAP and plan boundary                                                                | Change API/library/owner or add a generic surface through normal deviation rules         |
+| Verifier             | Check real behavior, diff, tests, and CAP/PLAN traceability                                                      | Trust summary claims, edit code, or ignore an unapproved surface                         |
 
 OpenGSD executor deviation rules may correct implementation mistakes only inside the approved CAP boundary. A new dependency, shared surface, business algorithm, owner move, or API replacement stops execution and returns only the affected CAP to research.
 

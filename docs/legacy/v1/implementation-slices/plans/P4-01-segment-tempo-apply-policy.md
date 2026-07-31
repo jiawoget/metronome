@@ -83,10 +83,7 @@ The coding agent may adjust exact names to match local style, but should preserv
 
 ```ts
 type SegmentTempoApplyStatus =
-  | "applied"
-  | "already-applied"
-  | "no-segment"
-  | "no-target-bpm";
+  "applied" | "already-applied" | "no-segment" | "no-target-bpm";
 
 type SegmentTempoApplyResult = {
   status: SegmentTempoApplyStatus;
@@ -104,7 +101,7 @@ Preferred helper shape:
 function getSegmentTempoApplyPolicy(input: {
   currentBpm: number;
   segment: PracticeSegment | null;
-}): SegmentTempoApplyResult
+}): SegmentTempoApplyResult;
 ```
 
 Policy details:
@@ -179,15 +176,15 @@ Negative cases:
 
 ## Deferred Work
 
-| Deferred work | Owning slice |
-|---|---|
-| Applying the policy result to Sheet Practice controls, `useMetronomeSettingsState`, or a user-triggered apply action | P4-02 |
-| Bar-aware count-in domain calculations | P4-03 |
-| Bar-aware count-in scheduler wiring and timing evidence | P4-04 |
-| Count-in controls and visible countdown state in UI | P4-05 |
-| Per-sheet preset storage, Dexie schema/migration work, and preset persistence rules | P4-06 |
-| Preset save/load/rename/delete UI | P4-07 |
-| Shared advanced countdown infrastructure | P4-08 |
+| Deferred work                                                                                                        | Owning slice |
+| -------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Applying the policy result to Sheet Practice controls, `useMetronomeSettingsState`, or a user-triggered apply action | P4-02        |
+| Bar-aware count-in domain calculations                                                                               | P4-03        |
+| Bar-aware count-in scheduler wiring and timing evidence                                                              | P4-04        |
+| Count-in controls and visible countdown state in UI                                                                  | P4-05        |
+| Per-sheet preset storage, Dexie schema/migration work, and preset persistence rules                                  | P4-06        |
+| Preset save/load/rename/delete UI                                                                                    | P4-07        |
+| Shared advanced countdown infrastructure                                                                             | P4-08        |
 
 ## Status And Review Gates
 

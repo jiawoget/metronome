@@ -23,16 +23,16 @@ Do not implement product code from this planning pass. Do not update `docs/v1/st
 
 ## Architecture Classification
 
-| Area | Classification | Required direction |
-|---|---|---|
-| wavesurfer playback | should reuse existing library/helper | Keep `wavesurfer.js` behind `RecordingWaveformPlaybackAdapter` or an equivalent playback port. UI receives a controller/factory, not the concrete adapter. |
-| custom peak derivation | should move to lower-level service | Keep decoded/trusted peak validation in artifact/waveform services. UI may render already-provided peaks only. |
-| custom peak rendering | necessary UI when rendering deterministic derived evidence | Keep lightweight rendering in UI only for display of validated peaks. Do not decode, analyze, or invent peaks in React. |
-| MIME parsing | should move to lower-level service/helper | Split export-known MIME mapping from potentially decodable MIME checks with unambiguous helper names. |
-| data URL to Blob conversion | should move to lower-level service/adapter | Stage A may keep existing localStorage artifact storage but export conversion stays in export service. Stage B moves body resolution/migration into artifact services. |
-| filename sanitizer | should reuse existing helper or become shared helper | Keep one deterministic sanitizer with Windows-safe cases covered by tests. |
-| take/comparison selection controller | necessary UI/controller boundary | Keep state orchestration in a controller/hook or repository-backed service. Avoid spreading selection mutation logic across render components. |
-| E2E process manager | workaround to remove or test-only helper | Keep only under tests/scripts if still needed. Product code must not depend on it. Stage A coding must not modify it unless verification truly requires a test-only documented fix. |
+| Area                                 | Classification                                             | Required direction                                                                                                                                                                  |
+| ------------------------------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| wavesurfer playback                  | should reuse existing library/helper                       | Keep `wavesurfer.js` behind `RecordingWaveformPlaybackAdapter` or an equivalent playback port. UI receives a controller/factory, not the concrete adapter.                          |
+| custom peak derivation               | should move to lower-level service                         | Keep decoded/trusted peak validation in artifact/waveform services. UI may render already-provided peaks only.                                                                      |
+| custom peak rendering                | necessary UI when rendering deterministic derived evidence | Keep lightweight rendering in UI only for display of validated peaks. Do not decode, analyze, or invent peaks in React.                                                             |
+| MIME parsing                         | should move to lower-level service/helper                  | Split export-known MIME mapping from potentially decodable MIME checks with unambiguous helper names.                                                                               |
+| data URL to Blob conversion          | should move to lower-level service/adapter                 | Stage A may keep existing localStorage artifact storage but export conversion stays in export service. Stage B moves body resolution/migration into artifact services.              |
+| filename sanitizer                   | should reuse existing helper or become shared helper       | Keep one deterministic sanitizer with Windows-safe cases covered by tests.                                                                                                          |
+| take/comparison selection controller | necessary UI/controller boundary                           | Keep state orchestration in a controller/hook or repository-backed service. Avoid spreading selection mutation logic across render components.                                      |
+| E2E process manager                  | workaround to remove or test-only helper                   | Keep only under tests/scripts if still needed. Product code must not depend on it. Stage A coding must not modify it unless verification truly requires a test-only documented fix. |
 
 ## Stage A: Merge-Blocker Fixes
 
@@ -202,11 +202,11 @@ type RecordingArtifactReviewController = {
 };
 ```
 
-   - The default production hook/factory may compose artifact details loading and `RecordingWaveformPlaybackAdapter`.
-   - UI renders `state` and calls `controls`.
-   - The controller must not own tags/export/delete/markers/take selection/organization behavior.
-   - Remove direct `new RecordingWaveformPlaybackAdapter()` from `RecordingArtifactReview`.
-   - Remove direct `loadRecordingArtifactDetails(...)` calls from `RecordingArtifactReview`.
+- The default production hook/factory may compose artifact details loading and `RecordingWaveformPlaybackAdapter`.
+- UI renders `state` and calls `controls`.
+- The controller must not own tags/export/delete/markers/take selection/organization behavior.
+- Remove direct `new RecordingWaveformPlaybackAdapter()` from `RecordingArtifactReview`.
+- Remove direct `loadRecordingArtifactDetails(...)` calls from `RecordingArtifactReview`.
 
 7. Collapse seek handling.
    - Choose one seek event path.

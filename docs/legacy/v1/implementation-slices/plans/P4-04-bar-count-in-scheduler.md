@@ -183,21 +183,21 @@ The scheduler must not decide, force, or own session creation timing. Session ow
 
 ## Behavior Matrix
 
-| Scenario | Expected behavior |
-|---|---|
-| Bar-aware count-in disabled | Existing Sheet Practice metronome behavior unchanged. Existing simple `settings.countdownBeats` behavior unchanged. |
-| Enabled, live grid, no selected segment | Use `getBarCountInPlan` whole-sheet plan into measure 1; schedule all returned beats; start metronome after `totalDurationMs`. |
-| Enabled, live grid, selected segment for current sheet | Use selected segment start measure; schedule returned beats; start metronome after `totalDurationMs`. |
-| Enabled, selected segment from another sheet | Treat as no selected segment or clear selection before planning; must not schedule another sheet's segment. |
-| Enabled, no measure grid | Do not start bar-aware count-in or playback; report blocked start through existing blocked/failure path. Fallback to legacy/simple countdown is allowed only when bar-aware count-in is disabled before scheduler invocation. |
-| Enabled, stale segment/grid association | Do not start count-in or playback; do not capture playback `metronome_started`; leave transport stopped. |
-| Enabled, invalid grid/segment/count value | Treat as start failure/block; stop/clear transport; no playback start; no duplicate math fallback. |
-| Stop during count-in | UI asks transport to stop; transport cancels scheduler, sets transport stopped, does not call `MetronomeService.start`, and does not capture playback `metronome_started`. |
-| Settings change during count-in | Countdown timing remains based on the already-computed P4-03 plan; actual playback starts with latest metronome settings, matching current hook latest-options policy. |
+| Scenario                                                         | Expected behavior                                                                                                                                                                                                                                    |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bar-aware count-in disabled                                      | Existing Sheet Practice metronome behavior unchanged. Existing simple `settings.countdownBeats` behavior unchanged.                                                                                                                                  |
+| Enabled, live grid, no selected segment                          | Use `getBarCountInPlan` whole-sheet plan into measure 1; schedule all returned beats; start metronome after `totalDurationMs`.                                                                                                                       |
+| Enabled, live grid, selected segment for current sheet           | Use selected segment start measure; schedule returned beats; start metronome after `totalDurationMs`.                                                                                                                                                |
+| Enabled, selected segment from another sheet                     | Treat as no selected segment or clear selection before planning; must not schedule another sheet's segment.                                                                                                                                          |
+| Enabled, no measure grid                                         | Do not start bar-aware count-in or playback; report blocked start through existing blocked/failure path. Fallback to legacy/simple countdown is allowed only when bar-aware count-in is disabled before scheduler invocation.                        |
+| Enabled, stale segment/grid association                          | Do not start count-in or playback; do not capture playback `metronome_started`; leave transport stopped.                                                                                                                                             |
+| Enabled, invalid grid/segment/count value                        | Treat as start failure/block; stop/clear transport; no playback start; no duplicate math fallback.                                                                                                                                                   |
+| Stop during count-in                                             | UI asks transport to stop; transport cancels scheduler, sets transport stopped, does not call `MetronomeService.start`, and does not capture playback `metronome_started`.                                                                           |
+| Settings change during count-in                                  | Countdown timing remains based on the already-computed P4-03 plan; actual playback starts with latest metronome settings, matching current hook latest-options policy.                                                                               |
 | Existing simple countdown and bar-aware count-in both configured | Resolve one mode before invoking the scheduler. Sheet Practice bar-aware count-in, when explicitly enabled, takes precedence over legacy `settings.countdownBeats`; Quick Metronome simple countdown remains unchanged. No parallel countdown modes. |
-| Recording active during count-in | Preserve independence: recording stays active; stopping count-in does not stop recording. |
-| Playback start fails after count-in | Existing `onStartFailed` rollback behavior runs; no `metronome_started` event is captured. |
-| Rapid repeated start while counting | Do not create duplicate scheduler instances, duplicate timer chains, or duplicate playback start calls. |
+| Recording active during count-in                                 | Preserve independence: recording stays active; stopping count-in does not stop recording.                                                                                                                                                            |
+| Playback start fails after count-in                              | Existing `onStartFailed` rollback behavior runs; no `metronome_started` event is captured.                                                                                                                                                           |
+| Rapid repeated start while counting                              | Do not create duplicate scheduler instances, duplicate timer chains, or duplicate playback start calls.                                                                                                                                              |
 
 ## Edge Cases
 

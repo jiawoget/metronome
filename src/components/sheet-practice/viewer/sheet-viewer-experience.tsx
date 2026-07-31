@@ -47,10 +47,17 @@ import {
 import { Button } from "@/components/ui/button";
 
 const PdfSheetRenderer = dynamic(
-  () => import("@/components/sheet-practice/viewer/pdf-sheet-renderer").then((module) => module.PdfSheetRenderer),
+  () =>
+    import("@/components/sheet-practice/viewer/pdf-sheet-renderer").then(
+      (module) => module.PdfSheetRenderer
+    ),
   {
     ssr: false,
-    loading: () => <p className="p-5 text-sm text-muted-foreground">Preparing PDF renderer...</p>
+    loading: () => (
+      <p className="p-5 text-sm text-muted-foreground">
+        Preparing PDF renderer...
+      </p>
+    )
   }
 );
 
@@ -63,10 +70,18 @@ type SheetViewerExperienceProps = {
 const PDF_BASE_WIDTH = 760;
 
 function getPageFile(files: SheetArtifactFile[], pageNumber: number) {
-  return files.find((file) => file.pageNumber === pageNumber) ?? files[pageNumber - 1] ?? files[0] ?? null;
+  return (
+    files.find((file) => file.pageNumber === pageNumber) ??
+    files[pageNumber - 1] ??
+    files[0] ??
+    null
+  );
 }
 
-function isSameTransform(first: SheetViewerTransform, second: SheetViewerTransform) {
+function isSameTransform(
+  first: SheetViewerTransform,
+  second: SheetViewerTransform
+) {
   return (
     first.scale === second.scale &&
     first.translateX === second.translateX &&
@@ -74,7 +89,10 @@ function isSameTransform(first: SheetViewerTransform, second: SheetViewerTransfo
   );
 }
 
-function hasMeasuredPanOverflow(bounds: SheetViewerTransformBounds | undefined, scale: number) {
+function hasMeasuredPanOverflow(
+  bounds: SheetViewerTransformBounds | undefined,
+  scale: number
+) {
   if (!bounds || scale <= 1) {
     return false;
   }
@@ -85,7 +103,13 @@ function hasMeasuredPanOverflow(bounds: SheetViewerTransformBounds | undefined, 
   );
 }
 
-function SheetViewerError({ title, message }: { title: string; message: string }) {
+function SheetViewerError({
+  title,
+  message
+}: {
+  title: string;
+  message: string;
+}) {
   return (
     <section
       aria-labelledby="sheet-viewer-error-title"
@@ -94,7 +118,10 @@ function SheetViewerError({ title, message }: { title: string; message: string }
       <div className="flex items-start gap-3">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <div>
-          <h1 id="sheet-viewer-error-title" className="text-xl font-semibold tracking-normal">
+          <h1
+            id="sheet-viewer-error-title"
+            className="text-xl font-semibold tracking-normal"
+          >
             {title}
           </h1>
           <p className="mt-2 text-sm leading-6">{message}</p>
@@ -145,8 +172,12 @@ function SheetViewerToolbar({
           <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold tracking-normal">{sheetName}</h1>
-          <p className="text-sm text-muted-foreground">{formatSheetViewerPageLabel(currentPage, totalPages)}</p>
+          <h1 className="truncate text-lg font-semibold tracking-normal">
+            {sheetName}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {formatSheetViewerPageLabel(currentPage, totalPages)}
+          </p>
         </div>
       </div>
 
@@ -182,17 +213,42 @@ function SheetViewerToolbar({
         >
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Button>
-        <SheetPageJump currentPage={currentPage} totalPages={totalPages} onJumpToPage={onJumpToPage} />
-        <span className="min-w-20 text-center text-sm font-medium" aria-label="Zoom level">
+        <SheetPageJump
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onJumpToPage={onJumpToPage}
+        />
+        <span
+          className="min-w-20 text-center text-sm font-medium"
+          aria-label="Zoom level"
+        >
           {Math.round(zoom * 100)}%
         </span>
-        <Button type="button" variant="secondary" size="icon" aria-label="Zoom out" onClick={onZoomOut}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          aria-label="Zoom out"
+          onClick={onZoomOut}
+        >
           <Minus className="h-4 w-4" aria-hidden="true" />
         </Button>
-        <Button type="button" variant="secondary" size="icon" aria-label="Zoom in" onClick={onZoomIn}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          aria-label="Zoom in"
+          onClick={onZoomIn}
+        >
           <Plus className="h-4 w-4" aria-hidden="true" />
         </Button>
-        <Button type="button" variant="secondary" size="icon" aria-label="Reset zoom" onClick={onResetZoom}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          aria-label="Reset zoom"
+          onClick={onResetZoom}
+        >
           <RotateCcw className="h-4 w-4" aria-hidden="true" />
         </Button>
         <Button asChild variant="ghost">
@@ -224,7 +280,8 @@ function SheetManualSegmentPageTurnControl({
   const statusMessage = armed
     ? "Manual page turn armed."
     : enabled
-      ? unavailableMessage ?? (delayLabel ? `Ready: ${delayLabel}.` : "Ready.")
+      ? (unavailableMessage ??
+        (delayLabel ? `Ready: ${delayLabel}.` : "Ready."))
       : "manual segment timer";
 
   return (
@@ -253,7 +310,7 @@ function SheetManualSegmentPageTurnControl({
           )}
           {armed ? "Cancel manual page turn" : "Arm manual page turn"}
         </Button>
-        <span role="status" className="text-muted-foreground text-xs">
+        <span role="status" className="text-xs text-muted-foreground">
           {statusMessage}
         </span>
       </div>
@@ -274,8 +331,11 @@ function SheetViewerReady({
   const thumbnailState = useBrowserSheetViewerPageThumbnails(state.sheet.id);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const transformContentRef = useRef<HTMLDivElement | null>(null);
-  const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
-  const manualPageTurnTimerRef = useRef<ReturnType<typeof armManualSegmentPageTurnTimer>>(null);
+  const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(
+    null
+  );
+  const manualPageTurnTimerRef =
+    useRef<ReturnType<typeof armManualSegmentPageTurnTimer>>(null);
   const assistedPageTurnArmTokenRef = useRef(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [transform, setTransform] = useState(() => resetSheetViewerTransform());
@@ -288,15 +348,20 @@ function SheetViewerReady({
     useState<PracticeSegment | null>(null);
   const [armedAssistedPageTurnSegmentId, setArmedAssistedPageTurnSegmentId] =
     useState<string | null>(null);
-  const [measureGridTimestampMs, setMeasureGridTimestampMs] =
-    useState<number | null>(null);
+  const [measureGridTimestampMs, setMeasureGridTimestampMs] = useState<
+    number | null
+  >(null);
   const totalPages = state.pageCount;
   const activeImageFile = getPageFile(state.artifact.files, currentPage);
   const imageBaseWidth = Math.max(activeImageFile?.width ?? 0, 360);
-  const contentBaseWidth = state.sheet.kind === "pdf" ? PDF_BASE_WIDTH : imageBaseWidth;
+  const contentBaseWidth =
+    state.sheet.kind === "pdf" ? PDF_BASE_WIDTH : imageBaseWidth;
   const selectedAssistedPageTurnSegment =
-    assistedPageTurnSegment?.sheetId === state.sheet.id ? assistedPageTurnSegment : null;
-  const selectedAssistedPageTurnSegmentId = selectedAssistedPageTurnSegment?.id ?? null;
+    assistedPageTurnSegment?.sheetId === state.sheet.id
+      ? assistedPageTurnSegment
+      : null;
+  const selectedAssistedPageTurnSegmentId =
+    selectedAssistedPageTurnSegment?.id ?? null;
   const assistedPageTurnDelayMs = useMemo(
     () => getManualSegmentPageTurnDelayMs(selectedAssistedPageTurnSegment),
     [selectedAssistedPageTurnSegment]
@@ -322,28 +387,31 @@ function SheetViewerReady({
     return objectUrls.urls[currentPage - 1] ?? objectUrls.urls[0] ?? null;
   }, [currentPage, objectUrls, state]);
 
-  const getTransformBounds = useCallback((scale = transform.scale): SheetViewerTransformBounds | undefined => {
-    const viewportElement = viewportRef.current;
-    const contentElement = transformContentRef.current;
+  const getTransformBounds = useCallback(
+    (scale = transform.scale): SheetViewerTransformBounds | undefined => {
+      const viewportElement = viewportRef.current;
+      const contentElement = transformContentRef.current;
 
-    if (!viewportElement || !contentElement) {
-      return undefined;
-    }
-
-    const contentRect = contentElement.getBoundingClientRect();
-    const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
-
-    return {
-      viewport: {
-        width: viewportElement.clientWidth,
-        height: viewportElement.clientHeight
-      },
-      content: {
-        width: contentBaseWidth,
-        height: contentRect.height / safeScale
+      if (!viewportElement || !contentElement) {
+        return undefined;
       }
-    };
-  }, [contentBaseWidth, transform.scale]);
+
+      const contentRect = contentElement.getBoundingClientRect();
+      const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+
+      return {
+        viewport: {
+          width: viewportElement.clientWidth,
+          height: viewportElement.clientHeight
+        },
+        content: {
+          width: contentBaseWidth,
+          height: contentRect.height / safeScale
+        }
+      };
+    },
+    [contentBaseWidth, transform.scale]
+  );
 
   const clampToMeasuredBounds = useCallback(() => {
     const bounds = getTransformBounds();
@@ -362,7 +430,11 @@ function SheetViewerReady({
 
     const frameId = requestAnimationFrame(() => clampToMeasuredBounds());
 
-    if (!viewportElement || !contentElement || typeof ResizeObserver === "undefined") {
+    if (
+      !viewportElement ||
+      !contentElement ||
+      typeof ResizeObserver === "undefined"
+    ) {
       return () => cancelAnimationFrame(frameId);
     }
 
@@ -377,9 +449,12 @@ function SheetViewerReady({
     };
   }, [clampToMeasuredBounds]);
 
-  useEffect(() => () => {
-    dragRef.current = null;
-  }, []);
+  useEffect(
+    () => () => {
+      dragRef.current = null;
+    },
+    []
+  );
 
   useEffect(() => {
     assistedPageTurnStateRef.current = {
@@ -397,10 +472,13 @@ function SheetViewerReady({
     totalPages
   ]);
 
-  useEffect(() => () => {
-    manualPageTurnTimerRef.current?.cancel();
-    manualPageTurnTimerRef.current = null;
-  }, []);
+  useEffect(
+    () => () => {
+      manualPageTurnTimerRef.current?.cancel();
+      manualPageTurnTimerRef.current = null;
+    },
+    []
+  );
 
   const clearAssistedPageTurn = useCallback(() => {
     assistedPageTurnArmTokenRef.current += 1;
@@ -410,13 +488,16 @@ function SheetViewerReady({
     setArmedAssistedPageTurnSegmentId(null);
   }, []);
 
-  const goToPage = useCallback((pageNumber: number) => {
-    clearAssistedPageTurn();
-    setCurrentPage(pageNumber);
-    setTransform(resetSheetViewerTransformForPageChange());
-    setIsDragging(false);
-    dragRef.current = null;
-  }, [clearAssistedPageTurn]);
+  const goToPage = useCallback(
+    (pageNumber: number) => {
+      clearAssistedPageTurn();
+      setCurrentPage(pageNumber);
+      setTransform(resetSheetViewerTransformForPageChange());
+      setIsDragging(false);
+      dragRef.current = null;
+    },
+    [clearAssistedPageTurn]
+  );
 
   const assistedPageTurnUnavailableMessage = useMemo(() => {
     if (!assistedPageTurnEnabled) {
@@ -448,18 +529,24 @@ function SheetViewerReady({
     totalPages
   ]);
 
-  const handleAssistedPageTurnEnabledChange = useCallback((enabled: boolean) => {
-    setAssistedPageTurnEnabled(enabled);
+  const handleAssistedPageTurnEnabledChange = useCallback(
+    (enabled: boolean) => {
+      setAssistedPageTurnEnabled(enabled);
 
-    if (!enabled) {
+      if (!enabled) {
+        clearAssistedPageTurn();
+      }
+    },
+    [clearAssistedPageTurn]
+  );
+
+  const handleAssistedSegmentChange = useCallback(
+    (segment: PracticeSegment | null) => {
       clearAssistedPageTurn();
-    }
-  }, [clearAssistedPageTurn]);
-
-  const handleAssistedSegmentChange = useCallback((segment: PracticeSegment | null) => {
-    clearAssistedPageTurn();
-    setAssistedPageTurnSegment(segment);
-  }, [clearAssistedPageTurn]);
+      setAssistedPageTurnSegment(segment);
+    },
+    [clearAssistedPageTurn]
+  );
 
   function armAssistedPageTurn() {
     if (
@@ -517,11 +604,13 @@ function SheetViewerReady({
   }
 
   function updateScale(direction: "in" | "out") {
-    setTransform((current) => setSheetViewerTransformScale(
-      current,
-      stepSheetViewerZoom(current.scale, direction),
-      getTransformBounds(current.scale)
-    ));
+    setTransform((current) =>
+      setSheetViewerTransformScale(
+        current,
+        stepSheetViewerZoom(current.scale, direction),
+        getTransformBounds(current.scale)
+      )
+    );
   }
 
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
@@ -563,7 +652,9 @@ function SheetViewerReady({
       y: event.clientY
     };
     event.preventDefault();
-    setTransform((current) => panSheetViewerTransform(current, delta, getTransformBounds(current.scale)));
+    setTransform((current) =>
+      panSheetViewerTransform(current, delta, getTransformBounds(current.scale))
+    );
   }
 
   function endPointerDrag(event: PointerEvent<HTMLDivElement>) {
@@ -664,7 +755,11 @@ function SheetViewerReady({
                   onPointerCancel={endPointerDrag}
                   onLostPointerCapture={endPointerDrag}
                   style={{
-                    cursor: canPan ? (isDragging ? "grabbing" : "grab") : undefined,
+                    cursor: canPan
+                      ? isDragging
+                        ? "grabbing"
+                        : "grab"
+                      : undefined,
                     transform: `translate3d(${transform.translateX}px, ${transform.translateY}px, 0)`
                   }}
                 >
@@ -681,7 +776,11 @@ function SheetViewerReady({
                           goToPage(numPages);
                         }
                       }}
-                      onRenderError={(error) => setRenderError(`PDF cannot be rendered: ${error.message}`)}
+                      onRenderError={(error) =>
+                        setRenderError(
+                          `PDF cannot be rendered: ${error.message}`
+                        )
+                      }
                     />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -700,7 +799,10 @@ function SheetViewerReady({
                 </div>
               </div>
               {renderError ? (
-                <p role="alert" className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                <p
+                  role="alert"
+                  className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+                >
                   {renderError}. Reimport the sheet from Sheet Library.
                 </p>
               ) : null}
@@ -735,8 +837,13 @@ export function SheetViewerExperience({
 
   if (state.status === "loading") {
     return (
-      <section aria-label="Sheet viewer loading" className="mx-auto w-full max-w-6xl rounded-lg border border-border bg-card p-5">
-        <p className="text-sm text-muted-foreground">Loading selected sheet...</p>
+      <section
+        aria-label="Sheet viewer loading"
+        className="mx-auto w-full max-w-6xl rounded-lg border border-border bg-card p-5"
+      >
+        <p className="text-sm text-muted-foreground">
+          Loading selected sheet...
+        </p>
       </section>
     );
   }

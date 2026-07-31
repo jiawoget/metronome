@@ -179,7 +179,9 @@ export function RecordingsReviewExperience({
     () =>
       recordingComparisonSelection.visibleSelectedIds
         .map((recordingId) => visibleRecordingById.get(recordingId))
-        .filter((recording): recording is ReviewRecording => Boolean(recording)),
+        .filter((recording): recording is ReviewRecording =>
+          Boolean(recording)
+        ),
     [recordingComparisonSelection.visibleSelectedIds, visibleRecordingById]
   );
   const comparisonTakeContextByRecordingId = useMemo(() => {
@@ -261,14 +263,14 @@ export function RecordingsReviewExperience({
           <CardContent className="pt-5">
             <div
               data-testid="recordings-empty-state"
-              className="border-border bg-muted rounded-md border border-dashed px-5 py-8 text-center"
+              className="rounded-md border border-dashed border-border bg-muted px-5 py-8 text-center"
             >
               <ListMusic
-                className="text-accent mx-auto h-9 w-9"
+                className="mx-auto h-9 w-9 text-accent"
                 aria-hidden="true"
               />
               <h2 className="mt-4 text-lg font-semibold">No saved takes yet</h2>
-              <p className="text-muted-foreground mx-auto mt-2 max-w-xl text-sm leading-6">
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
                 Record a quick take or sheet practice session to review
                 playback, waveform, context, markers, and continuation here.
               </p>
@@ -296,7 +298,7 @@ export function RecordingsReviewExperience({
             <label className="relative">
               <span className="sr-only">Search recordings</span>
               <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                 aria-hidden="true"
               />
               <input
@@ -304,13 +306,13 @@ export function RecordingsReviewExperience({
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search recordings"
-                className="border-border bg-background focus-visible:ring-ring h-10 w-full rounded-md border pr-3 pl-10 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                className="h-10 w-full rounded-md border border-border bg-background pr-3 pl-10 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               />
             </label>
             <label className="relative">
               <span className="sr-only">Type filter</span>
               <Filter
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                 aria-hidden="true"
               />
               <select
@@ -319,7 +321,7 @@ export function RecordingsReviewExperience({
                 onChange={(event) =>
                   setTypeFilter(event.target.value as RecordingTypeFilter)
                 }
-                className="border-border bg-background focus-visible:ring-ring h-10 w-full rounded-md border pr-3 pl-10 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                className="h-10 w-full rounded-md border border-border bg-background pr-3 pl-10 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <option value="all">All recordings</option>
                 <option value="quick">Quick</option>
@@ -329,7 +331,7 @@ export function RecordingsReviewExperience({
             <label className="relative">
               <span className="sr-only">Archive filter</span>
               <Archive
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                 aria-hidden="true"
               />
               <select
@@ -338,7 +340,7 @@ export function RecordingsReviewExperience({
                 onChange={(event) =>
                   setArchiveFilter(event.target.value as RecordingArchiveFilter)
                 }
-                className="border-border bg-background focus-visible:ring-ring h-10 w-full rounded-md border pr-3 pl-10 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                className="h-10 w-full rounded-md border border-border bg-background pr-3 pl-10 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <option value="active">Active recordings</option>
                 <option value="archived">Archived recordings</option>
@@ -348,14 +350,14 @@ export function RecordingsReviewExperience({
             <label className="relative">
               <span className="sr-only">Tag filter</span>
               <Tag
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                 aria-hidden="true"
               />
               <select
                 aria-label="Tag filter"
                 value={tagFilter}
                 onChange={(event) => setTagFilter(event.target.value)}
-                className="border-border bg-background focus-visible:ring-ring h-10 w-full rounded-md border pr-3 pl-10 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                className="h-10 w-full rounded-md border border-border bg-background pr-3 pl-10 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <option value="all">All tags</option>
                 {tagOptions.map((tag) => (
@@ -370,7 +372,7 @@ export function RecordingsReviewExperience({
               aria-label="Show favorites only"
               aria-pressed={favoritesOnly}
               onClick={() => setFavoritesOnly((current) => !current)}
-              className="border-border bg-background hover:bg-muted focus-visible:ring-ring aria-pressed:border-accent aria-pressed:bg-accent/20 inline-flex h-10 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-background px-3 text-sm font-semibold transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:border-accent aria-pressed:bg-accent/20"
             >
               <Star className="h-4 w-4" aria-hidden="true" />
               Favorites
@@ -383,7 +385,9 @@ export function RecordingsReviewExperience({
         <CardContent className="pt-5">
           <RecordingComparisonPanel
             selectedRecordings={selectedComparisonRecordings}
-            selectedRecordingIds={recordingComparisonSelection.visibleSelectedIds}
+            selectedRecordingIds={
+              recordingComparisonSelection.visibleSelectedIds
+            }
             organizationByRecordingId={recordingOrganizationById}
             markers={snapshot.errorMarkers}
             takeContextByRecordingId={comparisonTakeContextByRecordingId}
@@ -404,7 +408,7 @@ export function RecordingsReviewExperience({
             {visibleRecordings.length === 0 ? (
               <div
                 data-testid="recordings-filter-empty-state"
-                className="border-border bg-muted text-muted-foreground rounded-md border border-dashed px-4 py-6 text-sm"
+                className="rounded-md border border-dashed border-border bg-muted px-4 py-6 text-sm text-muted-foreground"
               >
                 {sheetFilterId
                   ? hasLocalFilters
@@ -455,7 +459,7 @@ export function RecordingsReviewExperience({
                 }}
               />
             ) : (
-              <p className="text-muted-foreground text-sm leading-6">
+              <p className="text-sm leading-6 text-muted-foreground">
                 Select a recording to review its artifact, metadata, and
                 markers.
               </p>
@@ -469,9 +473,9 @@ export function RecordingsReviewExperience({
 
 function RecordingsHeader() {
   return (
-    <header className="border-border flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-end lg:justify-between">
+    <header className="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-[0.08em] uppercase">
+        <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
           Practice History
         </p>
         <h1
@@ -480,16 +484,16 @@ function RecordingsHeader() {
         >
           Recordings
         </h1>
-        <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
           Review quick recordings and sheet take histories in one focused
           workspace.
         </p>
       </div>
       <div
         aria-label="Recordings status"
-        className="border-border bg-card shadow-soft flex min-h-12 items-center gap-3 rounded-md border px-4 py-3 text-sm"
+        className="flex min-h-12 items-center gap-3 rounded-md border border-border bg-card px-4 py-3 text-sm shadow-soft"
       >
-        <AudioLines className="text-accent h-5 w-5" aria-hidden="true" />
+        <AudioLines className="h-5 w-5 text-accent" aria-hidden="true" />
         <span className="font-medium">Local recordings</span>
       </div>
     </header>
@@ -508,7 +512,7 @@ function ActiveSheetFilter({
   return (
     <div
       data-testid="active-sheet-filter"
-      className="border-border bg-muted flex flex-col gap-3 rounded-md border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+      className="flex flex-col gap-3 rounded-md border border-border bg-muted px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
     >
       <p className="min-w-0 font-medium break-words">
         Sheet filter: <span title={sheetFilterId}>{sheetFilterId}</span>
@@ -574,7 +578,7 @@ function GroupedRecordingList({
           title="Quick recordings"
           description="Quick metronome takes"
         >
-          <div className="divide-border divide-y overflow-hidden rounded-md border">
+          <div className="divide-y divide-border overflow-hidden rounded-md border">
             {grouping.quickRecordings.map((recording) => (
               <RecordingListItem
                 key={recording.id}
@@ -610,7 +614,7 @@ function GroupedRecordingList({
           title="Legacy recordings with missing sheet links"
           description="Sheet recordings kept visible without a usable sheet id"
         >
-          <div className="divide-border divide-y overflow-hidden rounded-md border">
+          <div className="divide-y divide-border overflow-hidden rounded-md border">
             {grouping.ungroupedRecordings.map((recording) => (
               <RecordingListItem
                 key={recording.id}
@@ -668,7 +672,7 @@ function TakeGroupSection({
   const sheetLabel = group.sheetName ?? group.sheetId;
   const contextLabel =
     group.kind === "sheet-segment"
-      ? group.segmentName ?? group.segmentId ?? "Saved segment"
+      ? (group.segmentName ?? group.segmentId ?? "Saved segment")
       : "Whole sheet / no segment";
   const ariaContextLabel =
     group.kind === "sheet-segment"
@@ -716,7 +720,8 @@ function TakeGroupSection({
 
   function updateBestTake(recording: ReviewRecording) {
     try {
-      const isCurrentBest = resolvedSelection.bestRecording?.id === recording.id;
+      const isCurrentBest =
+        resolvedSelection.bestRecording?.id === recording.id;
 
       reviewService.setBestTake(group, isCurrentBest ? null : recording.id);
       setSelectionErrorMessage(null);
@@ -745,23 +750,27 @@ function TakeGroupSection({
     <section
       aria-labelledby={titleId}
       data-testid={`take-group-${group.groupId}`}
-      className="border-border bg-background overflow-hidden rounded-md border"
+      className="overflow-hidden rounded-md border border-border bg-background"
     >
-      <div className="border-border bg-muted/60 border-b px-3 py-3">
+      <div className="border-b border-border bg-muted/60 px-3 py-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="text-muted-foreground text-xs font-semibold tracking-[0.08em] uppercase">
+            <p className="text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
               {eyebrow}
             </p>
             <h3 id={titleId} className="mt-1 text-sm font-semibold break-words">
               {sheetLabel}
             </h3>
-            <p className="text-muted-foreground mt-1 text-sm break-words">
+            <p className="mt-1 text-sm break-words text-muted-foreground">
               {contextLabel}
             </p>
           </div>
           <div className="flex max-w-full flex-col gap-2 sm:items-end">
-            <Button asChild variant="secondary" className="h-9 w-fit px-3 text-xs">
+            <Button
+              asChild
+              variant="secondary"
+              className="h-9 w-fit px-3 text-xs"
+            >
               <Link
                 href={groupPracticeHref}
                 aria-label={groupPracticeAriaLabel}
@@ -778,10 +787,7 @@ function TakeGroupSection({
           </div>
         </div>
         {selectionErrorMessage ? (
-          <p
-            role="alert"
-            className="text-destructive mt-3 text-sm font-medium"
-          >
+          <p role="alert" className="mt-3 text-sm font-medium text-destructive">
             {selectionErrorMessage}
           </p>
         ) : null}
@@ -795,7 +801,7 @@ function TakeGroupSection({
         result={comparisonSources.result}
         errorMessage={comparisonSources.errorMessage}
       />
-      <div className="divide-border divide-y">
+      <div className="divide-y divide-border">
         {group.recordings.map((recording) => (
           <RecordingListItem
             key={recording.id}
@@ -823,7 +829,9 @@ function TakeGroupSection({
             takeSelection={resolvedSelection}
             onToggleBest={() => updateBestTake(recording)}
             onToggleActive={() => updateActiveTake(recording)}
-            comparisonSelected={visibleComparisonRecordingIds.includes(recording.id)}
+            comparisonSelected={visibleComparisonRecordingIds.includes(
+              recording.id
+            )}
             comparisonDisabled={
               visibleComparisonRecordingIds.length >=
                 MAX_WAVEFORM_COMPARISON_TAKES &&
@@ -837,11 +845,7 @@ function TakeGroupSection({
   );
 }
 
-function TakeHistorySummaryChips({
-  summary
-}: {
-  summary: TakeHistorySummary;
-}) {
+function TakeHistorySummaryChips({ summary }: { summary: TakeHistorySummary }) {
   return (
     <div
       data-testid="take-history-summary"
@@ -873,12 +877,16 @@ function RecordingSection({
   const titleId = `${testId}-title`;
 
   return (
-    <section aria-labelledby={titleId} data-testid={testId} className="grid gap-2">
+    <section
+      aria-labelledby={titleId}
+      data-testid={testId}
+      className="grid gap-2"
+    >
       <div>
         <h3 id={titleId} className="text-sm font-semibold">
           {title}
         </h3>
-        <p className="text-muted-foreground mt-1 text-xs">{description}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       </div>
       {children}
     </section>
@@ -924,7 +932,8 @@ function RecordingListItem({
   const recordedDate = formatRecordingDate(recording.createdAt);
   const isBest = takeSelection?.bestRecording?.id === recording.id;
   const isActive = takeSelection?.activeRecording?.id === recording.id;
-  const showTakeControls = !!takeSelection && !!onToggleBest && !!onToggleActive;
+  const showTakeControls =
+    !!takeSelection && !!onToggleBest && !!onToggleActive;
   const showRecordingComparisonControl = !!onToggleRecordingComparison;
   const showComparisonControl = !!onToggleComparison;
   const favoriteLabel = organization.favorite
@@ -932,26 +941,26 @@ function RecordingListItem({
     : `Mark ${displayName} as favorite`;
 
   return (
-    <div className="bg-background grid gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+    <div className="grid gap-2 bg-background px-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
       <button
         type="button"
         data-testid={`recording-row-${recording.id}`}
         aria-pressed={selected}
         aria-label={`${displayName}, ${ariaContextLabel}, recorded ${recordedDate}`}
         onClick={onSelect}
-        className="hover:bg-muted focus-visible:ring-ring aria-pressed:bg-muted aria-pressed:ring-accent -m-2 rounded-md p-2 text-left text-sm transition-colors aria-pressed:ring-2 aria-pressed:ring-inset focus-visible:ring-2 focus-visible:outline-none"
+        className="-m-2 rounded-md p-2 text-left text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:bg-muted aria-pressed:ring-2 aria-pressed:ring-accent aria-pressed:ring-inset"
       >
         <span className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <span className="min-w-0">
             <span className="block truncate font-semibold">{displayName}</span>
-            <span className="text-muted-foreground mt-1 block break-words">
+            <span className="mt-1 block break-words text-muted-foreground">
               {contextLabel}
             </span>
-            <span className="text-muted-foreground mt-1 block">
+            <span className="mt-1 block text-muted-foreground">
               {recordedDate}
             </span>
             {recording.sheetName && recording.sheetName !== contextLabel ? (
-              <span className="text-foreground mt-1 block font-medium">
+              <span className="mt-1 block font-medium text-foreground">
                 {recording.sheetName}
               </span>
             ) : null}
@@ -984,7 +993,7 @@ function RecordingListItem({
           aria-label={favoriteLabel}
           aria-pressed={organization.favorite}
           onClick={onToggleFavorite}
-          className="border-border bg-background hover:bg-muted focus-visible:ring-ring aria-pressed:border-accent aria-pressed:bg-accent/20 inline-flex h-9 min-w-24 items-center justify-center gap-1 rounded-md border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          className="inline-flex h-9 min-w-24 items-center justify-center gap-1 rounded-md border border-border bg-background px-3 text-xs font-semibold transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:border-accent aria-pressed:bg-accent/20"
         >
           <Star className="h-4 w-4" aria-hidden="true" />
           <span>{organization.favorite ? "Favorited" : "Favorite"}</span>
@@ -1063,7 +1072,7 @@ function ComparisonCheckbox({
 }) {
   return (
     <label
-      className={`border-border bg-background focus-within:ring-ring inline-flex h-9 min-w-28 items-center justify-center gap-2 rounded-md border px-3 text-xs font-semibold transition-colors focus-within:ring-2 ${
+      className={`inline-flex h-9 min-w-28 items-center justify-center gap-2 rounded-md border border-border bg-background px-3 text-xs font-semibold transition-colors focus-within:ring-2 focus-within:ring-ring ${
         checked ? "border-accent bg-accent/20" : "hover:bg-muted"
       } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
     >
@@ -1074,7 +1083,7 @@ function ComparisonCheckbox({
         checked={checked}
         disabled={disabled}
         onChange={onChange}
-        className="accent-accent h-4 w-4"
+        className="h-4 w-4 accent-accent"
       />
       <span>{label}</span>
     </label>
@@ -1103,7 +1112,7 @@ function TakeSelectionButton({
       aria-label={ariaLabel}
       aria-pressed={pressed}
       onClick={onClick}
-      className="border-border bg-background hover:bg-muted focus-visible:ring-ring aria-pressed:border-accent aria-pressed:bg-accent/20 inline-flex h-9 min-w-24 items-center justify-center gap-1 rounded-md border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      className="inline-flex h-9 min-w-24 items-center justify-center gap-1 rounded-md border border-border bg-background px-3 text-xs font-semibold transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:border-accent aria-pressed:bg-accent/20"
     >
       {icon}
       <span>{label}</span>
@@ -1147,7 +1156,8 @@ function RecordingDetails({
     | { status: "error"; message: string }
   >({ status: "idle", message: null });
   const resolvedOrganization =
-    organization ?? resolveRecordingOrganization({ recording, organization: null });
+    organization ??
+    resolveRecordingOrganization({ recording, organization: null });
   const audioExportEligibility =
     reviewService.getRecordingAudioExportEligibility(recording);
   const handlePlaybackControlsChange = useCallback(
@@ -1156,8 +1166,7 @@ function RecordingDetails({
     },
     []
   );
-  const practiceAgainAccessibleName =
-    getPracticeAgainAccessibleName(recording);
+  const practiceAgainAccessibleName = getPracticeAgainAccessibleName(recording);
   const exportAudioAccessibleName = `Export audio for ${getRecordingDisplayName(
     recording
   )}`;
@@ -1165,7 +1174,8 @@ function RecordingDetails({
     ? null
     : audioExportEligibility.message;
   const exportButtonDisabled =
-    audioExportState.status === "exporting" || !audioExportEligibility.available;
+    audioExportState.status === "exporting" ||
+    !audioExportEligibility.available;
 
   async function exportRecordingAudio() {
     setAudioExportState({
@@ -1272,18 +1282,18 @@ function RecordingDetails({
       className="grid gap-5"
     >
       <div>
-        <p className="text-muted-foreground text-xs font-semibold tracking-[0.08em] uppercase">
+        <p className="text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
           {recording.type} recording
         </p>
         <h2 className="mt-2 text-xl font-semibold">
           {getRecordingDisplayName(recording)}
         </h2>
         {recording.sheetName ? (
-          <p className="text-foreground mt-1 text-sm font-medium">
+          <p className="mt-1 text-sm font-medium text-foreground">
             {recording.sheetName}
           </p>
         ) : (
-          <p className="text-muted-foreground mt-1 text-sm">No sheet linked.</p>
+          <p className="mt-1 text-sm text-muted-foreground">No sheet linked.</p>
         )}
       </div>
 
@@ -1340,7 +1350,7 @@ function RecordingDetails({
         <p
           id={`recording-audio-export-unavailable-${recording.id}`}
           data-testid="recording-audio-export-unavailable"
-          className="text-muted-foreground text-sm font-medium"
+          className="text-sm font-medium text-muted-foreground"
         >
           {exportUnavailableMessage}
         </p>
@@ -1350,7 +1360,7 @@ function RecordingDetails({
         <p
           role="status"
           data-testid="recording-audio-export-status"
-          className="text-muted-foreground text-sm font-medium"
+          className="text-sm font-medium text-muted-foreground"
         >
           {audioExportState.message}
         </p>
@@ -1359,7 +1369,7 @@ function RecordingDetails({
         <p
           role="alert"
           data-testid="recording-audio-export-error"
-          className="text-destructive text-sm font-medium"
+          className="text-sm font-medium text-destructive"
         >
           {audioExportState.message}
         </p>
@@ -1386,11 +1396,11 @@ function RecordingDetails({
         />
       </div>
 
-      <div className="border-border bg-background rounded-md border px-3 py-3">
+      <div className="rounded-md border border-border bg-background px-3 py-3">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold">
-              <Tag className="text-accent h-4 w-4" aria-hidden="true" />
+              <Tag className="h-4 w-4 text-accent" aria-hidden="true" />
               Organization
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -1404,7 +1414,7 @@ function RecordingDetails({
                 }
                 aria-pressed={resolvedOrganization.favorite}
                 onClick={toggleRecordingFavorite}
-                className="border-border bg-background hover:bg-muted focus-visible:ring-ring aria-pressed:border-accent aria-pressed:bg-accent/20 inline-flex h-9 items-center justify-center gap-1 rounded-md border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                className="inline-flex h-9 items-center justify-center gap-1 rounded-md border border-border bg-background px-3 text-xs font-semibold transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:border-accent aria-pressed:bg-accent/20"
               >
                 <Star className="h-4 w-4" aria-hidden="true" />
                 {resolvedOrganization.favorite ? "Favorited" : "Favorite"}
@@ -1419,7 +1429,7 @@ function RecordingDetails({
                 }
                 aria-pressed={resolvedOrganization.archived}
                 onClick={toggleRecordingArchive}
-                className="border-border bg-background hover:bg-muted focus-visible:ring-ring aria-pressed:border-accent aria-pressed:bg-accent/20 inline-flex h-9 items-center justify-center gap-1 rounded-md border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                className="inline-flex h-9 items-center justify-center gap-1 rounded-md border border-border bg-background px-3 text-xs font-semibold transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:border-accent aria-pressed:bg-accent/20"
               >
                 <Archive className="h-4 w-4" aria-hidden="true" />
                 {resolvedOrganization.archived ? "Unarchive" : "Archive"}
@@ -1431,7 +1441,7 @@ function RecordingDetails({
             <p
               role="alert"
               data-testid="recording-organization-error"
-              className="text-destructive text-sm font-medium"
+              className="text-sm font-medium text-destructive"
             >
               {organizationErrorMessage}
             </p>
@@ -1444,7 +1454,7 @@ function RecordingDetails({
             {resolvedOrganization.tags.map((tag) => (
               <span
                 key={tag}
-                className="border-border bg-muted inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium"
+                className="inline-flex max-w-full items-center gap-1 rounded-md border border-border bg-muted px-2 py-1 text-xs font-medium"
               >
                 <span className="break-words">{tag}</span>
                 <button
@@ -1452,7 +1462,7 @@ function RecordingDetails({
                   aria-label={`Remove tag ${tag}`}
                   data-testid={`remove-recording-tag-${tag}`}
                   onClick={() => removeRecordingTag(tag)}
-                  className="hover:bg-background focus-visible:ring-ring rounded-sm px-1 focus-visible:ring-2 focus-visible:outline-none"
+                  className="rounded-sm px-1 hover:bg-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   Remove
                 </button>
@@ -1460,7 +1470,7 @@ function RecordingDetails({
             ))}
             {resolvedOrganization.tags.length === 0 &&
             !resolvedOrganization.archived ? (
-              <span className="text-muted-foreground text-sm">
+              <span className="text-sm text-muted-foreground">
                 No tags saved for this recording.
               </span>
             ) : null}
@@ -1471,7 +1481,7 @@ function RecordingDetails({
             className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"
           >
             <label className="grid gap-1">
-              <span className="text-muted-foreground text-xs font-medium">
+              <span className="text-xs font-medium text-muted-foreground">
                 Add tag
               </span>
               <input
@@ -1479,7 +1489,7 @@ function RecordingDetails({
                 value={tagInput}
                 onChange={(event) => setTagInput(event.target.value)}
                 placeholder="Warmup"
-                className="border-border bg-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                className="h-10 rounded-md border border-border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               />
             </label>
             <Button type="submit" variant="secondary" className="self-end">
@@ -1492,14 +1502,14 @@ function RecordingDetails({
 
       <div>
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <Clock3 className="text-accent h-4 w-4" aria-hidden="true" />
+          <Clock3 className="h-4 w-4 text-accent" aria-hidden="true" />
           Error Markers
         </h3>
         {markerErrorMessage ? (
           <p
             role="alert"
             data-testid="recording-error-marker-error"
-            className="text-destructive mt-3 text-sm font-medium"
+            className="mt-3 text-sm font-medium text-destructive"
           >
             {markerErrorMessage}
           </p>
@@ -1508,7 +1518,7 @@ function RecordingDetails({
           <p
             role="status"
             data-testid="recording-error-marker-message"
-            className="text-muted-foreground mt-3 text-sm font-medium"
+            className="mt-3 text-sm font-medium text-muted-foreground"
           >
             {markerMessage}
           </p>
@@ -1521,20 +1531,20 @@ function RecordingDetails({
             {markers.map((marker) => (
               <li
                 key={marker.id}
-                className="border-border bg-muted rounded-md border px-3 py-2"
+                className="rounded-md border border-border bg-muted px-3 py-2"
               >
                 <button
                   type="button"
                   onClick={() => seekToMarker(marker)}
                   aria-label={`Seek to marker ${formatTimestamp(marker.timestampMs)}`}
-                  className="focus-visible:ring-ring min-w-0 text-left focus-visible:ring-2 focus-visible:outline-none"
+                  className="min-w-0 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   <span className="font-semibold">
                     {formatTimestamp(marker.timestampMs)}
                   </span>
                   <span
                     data-testid="error-marker-note"
-                    className="text-muted-foreground block min-w-0 break-all sm:ml-2 sm:inline"
+                    className="block min-w-0 break-all text-muted-foreground sm:ml-2 sm:inline"
                   >
                     {marker.note || "No note"}
                   </span>
@@ -1543,13 +1553,13 @@ function RecordingDetails({
             ))}
           </ul>
         ) : (
-          <p className="border-border bg-muted text-muted-foreground mt-3 rounded-md border px-3 py-2 text-sm">
+          <p className="mt-3 rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
             No manual error markers saved for this recording.
           </p>
         )}
       </div>
 
-      <div className="border-border bg-background rounded-md border px-3 py-3">
+      <div className="rounded-md border border-border bg-background px-3 py-3">
         {confirmingDelete ? (
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button type="button" variant="secondary" onClick={onCancelDelete}>
@@ -1596,8 +1606,8 @@ function getPracticeAgainAccessibleName(recording: ReviewRecording) {
 
 function DetailTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-border bg-muted rounded-md border px-3 py-3">
-      <p className="text-muted-foreground text-xs font-medium">{label}</p>
+    <div className="rounded-md border border-border bg-muted px-3 py-3">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 font-semibold break-words">{value}</p>
     </div>
   );

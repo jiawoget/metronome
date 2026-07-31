@@ -4,5 +4,7 @@ import { BrowserSheetRecordingService } from "@/lib/sheet-practice/recording-ser
 export { createBrowserRecordingCaptureService };
 
 export function createBrowserSheetRecordingService() {
-  return new BrowserSheetRecordingService(createBrowserRecordingCaptureService());
+  return new BrowserSheetRecordingService(
+    createBrowserRecordingCaptureService()
+  );
 }

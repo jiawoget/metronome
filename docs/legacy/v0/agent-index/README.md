@@ -38,4 +38,3 @@ as the map to code, tests, and known boundaries.
 - E2E specs under `tests/e2e` are the strongest proof for user-facing behavior.
 - Unit specs under `tests/unit` are the strongest proof for domain rules and
   adapter edge cases.
-

@@ -105,7 +105,12 @@ Avoid editing:
 The source should expose a compact local read model close to:
 
 ```ts
-type HomeRecentActivityKind = "quick-session" | "sheet-session" | "sheet-recording" | "segment-session" | "segment-recording";
+type HomeRecentActivityKind =
+  | "quick-session"
+  | "sheet-session"
+  | "sheet-recording"
+  | "segment-session"
+  | "segment-recording";
 
 type HomeRecentActivityTargetState =
   | "valid"
@@ -380,17 +385,17 @@ Escalate to Tier C only if a later reviewed split adds visible Home UI. Escalate
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Compact Home recent-activity timeline rendering, responsive layout, icons, and empty state | `P3-07 home-recent-activity-ui` |
-| Click/navigation behavior for recent activity rows | `P3-07` if simple Home row links, or `P3-08/P3-09` if it becomes Continue Practice target resolution |
-| Valid quick/sheet/segment Continue Practice target construction and stale target rejection | `P3-08 continue-practice-targets` |
-| Continue Practice navigation into sheet/segment context | `P3-09 continue-practice-ui-navigation` |
-| Goal completion, dashboard analytics, streaks, and goal UI | `P3-10` through `P3-15` |
-| Command palette over valid local practice targets | `P3-16` |
-| Event-derived activity timeline from durable events | Future explicit event-persistence/replay slice |
-| Media/artifact availability checks for recording rows | Future recording review or cleanup slice if product requires it |
-| Cross-device/cloud activity | v2 |
+| Deferred work                                                                              | Future owner                                                                                         |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Compact Home recent-activity timeline rendering, responsive layout, icons, and empty state | `P3-07 home-recent-activity-ui`                                                                      |
+| Click/navigation behavior for recent activity rows                                         | `P3-07` if simple Home row links, or `P3-08/P3-09` if it becomes Continue Practice target resolution |
+| Valid quick/sheet/segment Continue Practice target construction and stale target rejection | `P3-08 continue-practice-targets`                                                                    |
+| Continue Practice navigation into sheet/segment context                                    | `P3-09 continue-practice-ui-navigation`                                                              |
+| Goal completion, dashboard analytics, streaks, and goal UI                                 | `P3-10` through `P3-15`                                                                              |
+| Command palette over valid local practice targets                                          | `P3-16`                                                                                              |
+| Event-derived activity timeline from durable events                                        | Future explicit event-persistence/replay slice                                                       |
+| Media/artifact availability checks for recording rows                                      | Future recording review or cleanup slice if product requires it                                      |
+| Cross-device/cloud activity                                                                | v2                                                                                                   |
 
 ## Split Triggers
 

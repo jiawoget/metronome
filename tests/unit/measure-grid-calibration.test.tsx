@@ -71,7 +71,9 @@ async function renderPanel({
   );
 
   await waitFor(() => {
-    expect(screen.getByTestId("measure-grid-status")).not.toHaveTextContent("Loading");
+    expect(screen.getByTestId("measure-grid-status")).not.toHaveTextContent(
+      "Loading"
+    );
   });
 
   return service;
@@ -81,26 +83,44 @@ describe("MeasureGridCalibrationPanel", () => {
   it("loads no-grid defaults and keeps save disabled until an offset exists", async () => {
     await renderPanel();
 
-    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Needs calibration");
-    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(72);
+    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+      "Needs calibration"
+    );
+    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(
+      72
+    );
     expect(screen.getByLabelText("Grid time signature")).toHaveValue("4/4");
-    expect(screen.getByRole("spinbutton", { name: "Pickup beats" })).toHaveValue(0);
-    expect(screen.getByRole("spinbutton", { name: "Measure 1 offset" })).toHaveValue(null);
-    expect(screen.getByRole("button", { name: "Set measure 1 here" })).toBeDisabled();
+    expect(
+      screen.getByRole("spinbutton", { name: "Pickup beats" })
+    ).toHaveValue(0);
+    expect(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" })
+    ).toHaveValue(null);
+    expect(
+      screen.getByRole("button", { name: "Set measure 1 here" })
+    ).toBeDisabled();
     expect(screen.getByText("No playback timestamp available.")).toBeVisible();
     expect(screen.getByRole("button", { name: "Save grid" })).toBeDisabled();
   });
 
   it("shows a recoverable load error when getGrid rejects", async () => {
-    const service = createMeasureGridService({ getError: new Error("read failed") });
+    const service = createMeasureGridService({
+      getError: new Error("read failed")
+    });
 
     await renderPanel({ service });
 
     expect(service.getGrid).toHaveBeenCalledWith("sheet-alpha");
-    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Needs calibration");
+    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+      "Needs calibration"
+    );
     expect(screen.getByText("read failed")).toBeVisible();
-    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(72);
-    expect(screen.getByRole("spinbutton", { name: "Measure 1 offset" })).toHaveValue(null);
+    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(
+      72
+    );
+    expect(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" })
+    ).toHaveValue(null);
     expect(screen.getByRole("button", { name: "Save grid" })).toBeDisabled();
   });
 
@@ -115,13 +135,22 @@ describe("MeasureGridCalibrationPanel", () => {
     });
 
     expect(service.getGrid).toHaveBeenCalledWith("sheet-alpha");
-    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Needs calibration");
-    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(96);
+    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+      "Needs calibration"
+    );
+    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(
+      96
+    );
     expect(screen.getByLabelText("Grid time signature")).toHaveValue("4/4");
-    expect(screen.getByRole("spinbutton", { name: "Measure 1 offset" })).toHaveValue(null);
+    expect(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" })
+    ).toHaveValue(null);
     expect(screen.getByRole("button", { name: "Save grid" })).toBeDisabled();
 
-    await user.type(screen.getByRole("spinbutton", { name: "Measure 1 offset" }), "1250");
+    await user.type(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" }),
+      "1250"
+    );
     await user.click(screen.getByRole("button", { name: "Save grid" }));
 
     await waitFor(() => {
@@ -132,7 +161,9 @@ describe("MeasureGridCalibrationPanel", () => {
         measureOneOffsetMs: 1250
       });
     });
-    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Calibrated");
+    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+      "Calibrated"
+    );
   });
 
   it("loads a saved grid as calibrated and saves valid edits through the service", async () => {
@@ -148,16 +179,29 @@ describe("MeasureGridCalibrationPanel", () => {
 
     await renderPanel({ service });
 
-    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Calibrated");
-    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(110);
+    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+      "Calibrated"
+    );
+    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(
+      110
+    );
     expect(screen.getByLabelText("Grid time signature")).toHaveValue("3/4");
-    expect(screen.getByRole("spinbutton", { name: "Pickup beats" })).toHaveValue(1);
-    expect(screen.getByRole("spinbutton", { name: "Measure 1 offset" })).toHaveValue(1250);
+    expect(
+      screen.getByRole("spinbutton", { name: "Pickup beats" })
+    ).toHaveValue(1);
+    expect(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" })
+    ).toHaveValue(1250);
 
     await user.clear(screen.getByRole("spinbutton", { name: "Grid BPM" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Grid BPM" }), "112");
+    await user.type(
+      screen.getByRole("spinbutton", { name: "Grid BPM" }),
+      "112"
+    );
 
-    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Unsaved changes");
+    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+      "Unsaved changes"
+    );
     await user.click(screen.getByRole("button", { name: "Save grid" }));
 
     await waitFor(() => {
@@ -168,7 +212,9 @@ describe("MeasureGridCalibrationPanel", () => {
         measureOneOffsetMs: 1250
       });
     });
-    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Calibrated");
+    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+      "Calibrated"
+    );
   });
 
   it("uses an injected current timestamp when available", async () => {
@@ -176,22 +222,35 @@ describe("MeasureGridCalibrationPanel", () => {
 
     await renderPanel({ currentTimestampMs: 1500.4 });
 
-    await user.click(screen.getByRole("button", { name: "Set measure 1 here" }));
+    await user.click(
+      screen.getByRole("button", { name: "Set measure 1 here" })
+    );
 
-    expect(screen.getByRole("spinbutton", { name: "Measure 1 offset" })).toHaveValue(1500);
-    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Unsaved changes");
+    expect(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" })
+    ).toHaveValue(1500);
+    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+      "Unsaved changes"
+    );
   });
 
   it("blocks invalid drafts and does not call saveGrid", async () => {
     const user = userEvent.setup();
     const service = await renderPanel();
 
-    await user.clear(screen.getByRole("spinbutton", { name: "Measure 1 offset" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Measure 1 offset" }), "1250");
+    await user.clear(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" })
+    );
+    await user.type(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" }),
+      "1250"
+    );
     await user.clear(screen.getByRole("spinbutton", { name: "Grid BPM" }));
     await user.type(screen.getByRole("spinbutton", { name: "Grid BPM" }), "29");
 
-    expect(screen.getByText("Grid BPM must be an integer from 30 to 300.")).toBeVisible();
+    expect(
+      screen.getByText("Grid BPM must be an integer from 30 to 300.")
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "Save grid" })).toBeDisabled();
     expect(service.saveGrid).not.toHaveBeenCalled();
   });
@@ -202,12 +261,22 @@ describe("MeasureGridCalibrationPanel", () => {
     await renderPanel();
 
     await user.clear(screen.getByRole("spinbutton", { name: "Pickup beats" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Pickup beats" }), "3");
-    expect(screen.queryByText("Pickup beats must be an integer from 0 to 3.")).not.toBeInTheDocument();
+    await user.type(
+      screen.getByRole("spinbutton", { name: "Pickup beats" }),
+      "3"
+    );
+    expect(
+      screen.queryByText("Pickup beats must be an integer from 0 to 3.")
+    ).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText("Grid time signature"), "3/4");
+    await user.selectOptions(
+      screen.getByLabelText("Grid time signature"),
+      "3/4"
+    );
 
-    expect(screen.getByText("Pickup beats must be an integer from 0 to 2.")).toBeVisible();
+    expect(
+      screen.getByText("Pickup beats must be an integer from 0 to 2.")
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "Save grid" })).toBeDisabled();
   });
 
@@ -226,14 +295,21 @@ describe("MeasureGridCalibrationPanel", () => {
     await renderPanel({ service });
 
     await user.clear(screen.getByRole("spinbutton", { name: "Grid BPM" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Grid BPM" }), "101");
+    await user.type(
+      screen.getByRole("spinbutton", { name: "Grid BPM" }),
+      "101"
+    );
     await user.click(screen.getByRole("button", { name: "Save grid" }));
 
     await waitFor(() => {
       expect(screen.getByText("write failed")).toBeVisible();
     });
-    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(101);
-    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Unsaved changes");
+    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(
+      101
+    );
+    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+      "Unsaved changes"
+    );
   });
 
   it("reloads draft defaults when the sheet id changes", async () => {
@@ -244,7 +320,9 @@ describe("MeasureGridCalibrationPanel", () => {
       measureOneOffsetMs: 640
     };
     const service: MeasureGridService = {
-      getGrid: vi.fn(async (sheetId) => (sheetId === "sheet-bravo" ? bravoGrid : null)),
+      getGrid: vi.fn(async (sheetId) =>
+        sheetId === "sheet-bravo" ? bravoGrid : null
+      ),
       saveGrid: vi.fn(async (_sheetId, grid) => grid),
       clearGrid: vi.fn(async () => undefined)
     };
@@ -259,9 +337,13 @@ describe("MeasureGridCalibrationPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Needs calibration");
+      expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+        "Needs calibration"
+      );
     });
-    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(72);
+    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(
+      72
+    );
 
     rerender(
       <MeasureGridCalibrationPanel
@@ -274,10 +356,16 @@ describe("MeasureGridCalibrationPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Calibrated");
+      expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+        "Calibrated"
+      );
     });
-    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(84);
+    expect(screen.getByRole("spinbutton", { name: "Grid BPM" })).toHaveValue(
+      84
+    );
     expect(screen.getByLabelText("Grid time signature")).toHaveValue("6/8");
-    expect(screen.getByRole("spinbutton", { name: "Measure 1 offset" })).toHaveValue(640);
+    expect(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" })
+    ).toHaveValue(640);
   });
 });

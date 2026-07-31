@@ -7,8 +7,8 @@ export function MetadataPill({
 }) {
   return (
     <span
-      className={`border-border bg-muted inline-block max-w-full rounded-md border px-2 py-1 font-medium ${
-        wrap ? "whitespace-normal break-words" : "truncate"
+      className={`inline-block max-w-full rounded-md border border-border bg-muted px-2 py-1 font-medium ${
+        wrap ? "break-words whitespace-normal" : "truncate"
       }`}
     >
       {value}

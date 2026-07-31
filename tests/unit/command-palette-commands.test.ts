@@ -5,7 +5,10 @@ import {
   buildHomeCommandPaletteCommands,
   filterHomeCommandPaletteCommands
 } from "@/components/app-shell/command-palette-commands";
-import { selectContinuePracticeTargets, type ContinuePracticeTargetIdentity } from "@/domain/practice";
+import {
+  selectContinuePracticeTargets,
+  type ContinuePracticeTargetIdentity
+} from "@/domain/practice";
 import { topLevelNavItems, type TopLevelNavItem } from "@/lib/navigation";
 
 function createTarget(
@@ -54,7 +57,12 @@ describe("home command palette commands", () => {
         title: "Custom Home",
         subtitle: "Custom dashboard route",
         href: "/custom-home",
-        keywords: expect.arrayContaining(["Custom Home", "Custom", "Custom dashboard route", "route"])
+        keywords: expect.arrayContaining([
+          "Custom Home",
+          "Custom",
+          "Custom dashboard route",
+          "route"
+        ])
       })
     ]);
   });
@@ -65,8 +73,14 @@ describe("home command palette commands", () => {
       continueTargets: []
     });
 
-    expect(commands.map((command) => [command.id, command.title, command.href])).toEqual(
-      topLevelNavItems.map((item) => [`route:${item.id}`, item.label, item.href])
+    expect(
+      commands.map((command) => [command.id, command.title, command.href])
+    ).toEqual(
+      topLevelNavItems.map((item) => [
+        `route:${item.id}`,
+        item.label,
+        item.href
+      ])
     );
   });
 
@@ -116,7 +130,11 @@ describe("home command palette commands", () => {
         title: "Bridge Focus",
         subtitle: expect.stringContaining("Alpha Sheet"),
         href: "/sheet-practice?sheetId=alpha+sheet&segmentId=bridge+segment",
-        keywords: expect.arrayContaining(["Bridge Focus", "Alpha Sheet", "m5-8"])
+        keywords: expect.arrayContaining([
+          "Bridge Focus",
+          "Alpha Sheet",
+          "m5-8"
+        ])
       })
     ]);
   });
@@ -221,21 +239,31 @@ describe("home command palette commands", () => {
       ]
     });
 
-    expect(filterHomeCommandPaletteCommands(commands, "recording review").map((command) => command.id)).toEqual([
-      "route:recordings"
-    ]);
-    expect(filterHomeCommandPaletteCommands(commands, "sheets").map((command) => command.id)).toContain(
-      "route:sheet-library"
-    );
-    expect(filterHomeCommandPaletteCommands(commands, "continue-practice").map((command) => command.id)).toEqual([
-      "continue:segment:alpha:bridge"
-    ]);
-    expect(filterHomeCommandPaletteCommands(commands, "alpha sheet").map((command) => command.id)).toEqual([
-      "continue:segment:alpha:bridge"
-    ]);
-    expect(filterHomeCommandPaletteCommands(commands, "M5-8").map((command) => command.id)).toEqual([
-      "continue:segment:alpha:bridge"
-    ]);
+    expect(
+      filterHomeCommandPaletteCommands(commands, "recording review").map(
+        (command) => command.id
+      )
+    ).toEqual(["route:recordings"]);
+    expect(
+      filterHomeCommandPaletteCommands(commands, "sheets").map(
+        (command) => command.id
+      )
+    ).toContain("route:sheet-library");
+    expect(
+      filterHomeCommandPaletteCommands(commands, "continue-practice").map(
+        (command) => command.id
+      )
+    ).toEqual(["continue:segment:alpha:bridge"]);
+    expect(
+      filterHomeCommandPaletteCommands(commands, "alpha sheet").map(
+        (command) => command.id
+      )
+    ).toEqual(["continue:segment:alpha:bridge"]);
+    expect(
+      filterHomeCommandPaletteCommands(commands, "M5-8").map(
+        (command) => command.id
+      )
+    ).toEqual(["continue:segment:alpha:bridge"]);
   });
 
   it("returns route commands before Continue Practice commands for an empty query", () => {
@@ -244,10 +272,10 @@ describe("home command palette commands", () => {
       continueTargets: [createTarget()]
     });
 
-    expect(filterHomeCommandPaletteCommands(commands, "").map((command) => command.id)).toEqual([
-      "route:home",
-      "route:quick-metronome",
-      "continue:quick"
-    ]);
+    expect(
+      filterHomeCommandPaletteCommands(commands, "").map(
+        (command) => command.id
+      )
+    ).toEqual(["route:home", "route:quick-metronome", "continue:quick"]);
   });
 });

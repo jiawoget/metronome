@@ -79,12 +79,7 @@ function RecordingArtifactReviewWithDefaultController(
     onPlaybackTimeChange: props.onPlaybackTimeChange
   });
 
-  return (
-    <RecordingArtifactReviewContent
-      {...props}
-      controller={controller}
-    />
-  );
+  return <RecordingArtifactReviewContent {...props} controller={controller} />;
 }
 
 function RecordingArtifactReviewContent({
@@ -218,7 +213,7 @@ function RecordingArtifactReviewContent({
 
   return (
     <div className="grid gap-3">
-      <div className="border-border bg-muted rounded-md border px-3 py-3">
+      <div className="rounded-md border border-border bg-muted px-3 py-3">
         {reviewState.status === "loading" ? (
           <p role="status" className="text-sm font-medium">
             Loading recording artifact.
@@ -228,7 +223,7 @@ function RecordingArtifactReviewContent({
           <div
             role="alert"
             data-testid={errorTestId}
-            className="text-destructive flex items-start gap-2 text-sm font-medium"
+            className="flex items-start gap-2 text-sm font-medium text-destructive"
           >
             <AlertTriangle
               className="mt-0.5 h-4 w-4 shrink-0"
@@ -271,7 +266,7 @@ function RecordingArtifactReviewContent({
             <p
               data-testid={sourceTestId}
               data-recording-id={reviewState.details.recordingId}
-              className="text-muted-foreground text-xs font-medium"
+              className="text-xs font-medium text-muted-foreground"
             >
               Waveform source:{" "}
               {reviewState.details.source === "decoded-audio"
@@ -282,7 +277,7 @@ function RecordingArtifactReviewContent({
               <div
                 role="status"
                 data-testid={warningTestId}
-                className="border-border bg-background text-destructive flex items-start gap-2 rounded-md border px-3 py-2 text-sm font-medium"
+                className="flex items-start gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-destructive"
               >
                 <AlertTriangle
                   className="mt-0.5 h-4 w-4 shrink-0"
@@ -349,7 +344,7 @@ function DerivedPeaks({
       {details.peaks.map((peak, index) => (
         <span
           key={`${details.recordingId}-${index}`}
-          className="bg-accent w-full rounded-sm"
+          className="w-full rounded-sm bg-accent"
           style={{ height: `${Math.max(8, peak * maxHeightPx)}px` }}
         />
       ))}

@@ -89,9 +89,14 @@ export type SheetViewerContentSize = {
 Preferred helpers:
 
 ```ts
-export function createSheetViewerTransform(input?: Partial<SheetViewerTransform>): SheetViewerTransform;
+export function createSheetViewerTransform(
+  input?: Partial<SheetViewerTransform>
+): SheetViewerTransform;
 export function clampSheetViewerZoom(value: number): number;
-export function stepSheetViewerZoom(current: number, direction: "in" | "out"): number;
+export function stepSheetViewerZoom(
+  current: number,
+  direction: "in" | "out"
+): number;
 export function setSheetViewerTransformScale(
   transform: SheetViewerTransform,
   scale: number,
@@ -334,14 +339,14 @@ Stop and return to planning if implementation appears to require:
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Zoom controls wired to full transform state | P5-11 |
-| Drag/pan, wheel, pinch, keyboard shortcuts, and cursor behavior | P5-11 |
-| Responsive/mobile gesture proof and overlap checks | P5-11 |
-| Pointer-anchored zoom or zoom-to-cursor | Future viewer interaction hardening if P5-11 proves need |
-| Fit width / fit page modes | Future reviewed viewer ergonomics slice |
-| Persisted per-sheet transform or URL transform state | Future reviewed navigation/persistence slice |
-| Page-specific transform memory | Future reviewed viewer ergonomics slice |
-| Assisted/manual page turns at segment boundaries | P5-12 |
-| Cloud sync, score following, automatic recognition, mistake detection | v2 or future reviewed feature |
+| Deferred work                                                         | Future owner                                             |
+| --------------------------------------------------------------------- | -------------------------------------------------------- |
+| Zoom controls wired to full transform state                           | P5-11                                                    |
+| Drag/pan, wheel, pinch, keyboard shortcuts, and cursor behavior       | P5-11                                                    |
+| Responsive/mobile gesture proof and overlap checks                    | P5-11                                                    |
+| Pointer-anchored zoom or zoom-to-cursor                               | Future viewer interaction hardening if P5-11 proves need |
+| Fit width / fit page modes                                            | Future reviewed viewer ergonomics slice                  |
+| Persisted per-sheet transform or URL transform state                  | Future reviewed navigation/persistence slice             |
+| Page-specific transform memory                                        | Future reviewed viewer ergonomics slice                  |
+| Assisted/manual page turns at segment boundaries                      | P5-12                                                    |
+| Cloud sync, score following, automatic recognition, mistake detection | v2 or future reviewed feature                            |

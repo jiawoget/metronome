@@ -46,8 +46,7 @@ async function getSheetPersistence(page: Page, sheetId: string) {
 
           transaction.oncomplete = () => {
             const artifact = artifactRequest.result as
-              | { files?: Array<{ blob?: Blob }> }
-              | undefined;
+              { files?: Array<{ blob?: Blob }> } | undefined;
 
             database.close();
             resolve({
@@ -108,7 +107,12 @@ async function seedRecentPracticeSummary(page: Page, sheetId: string) {
               keyPath: "id"
             });
 
-            for (const indexName of ["sourceType", "sheetId", "startedAt", "updatedAt"]) {
+            for (const indexName of [
+              "sourceType",
+              "sheetId",
+              "startedAt",
+              "updatedAt"
+            ]) {
               store.createIndex(indexName, indexName);
             }
           }
@@ -309,24 +313,18 @@ test("sheet library imports real PDF and image fixtures, persists, filters, open
     .setInputFiles(path.join(sheetFixturesDir, "real-sheet.pdf"));
   await expect(page.getByText("Ready: PDF with 1 page.")).toBeVisible();
   await page.getByLabel("Name").fill("Plain Song");
-  await page
-    .getByLabel("Sheet category", { exact: true })
-    .selectOption("song");
+  await page.getByLabel("Sheet category", { exact: true }).selectOption("song");
   await page.getByLabel("BPM").fill("110");
   await page.getByLabel("Time signature").fill("4/4");
   await page.getByRole("button", { name: "Save Imported Sheet" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Plain Song" })
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Plain Song" })).toBeVisible();
 
   await seedRecentPracticeSummary(page, pdfSheetId);
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Autumn Etude" })
   ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Plain Song" })
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Plain Song" })).toBeVisible();
   const practicedAutumnSheet = getSheetCard(page, "Autumn Etude");
   const plainSongSheet = getSheetCard(page, "Plain Song");
   const autumnPracticeSummary = practicedAutumnSheet.getByLabel(
@@ -540,13 +538,23 @@ test("sheet library batch imports mixed files and preserves multi-image single i
   });
 
   await clearSheetDatabase(page);
-  await page.getByLabel("File").setInputFiles([
-    await sheetFixturePayload("real-sheet.pdf", "application/pdf", "batch-pdf.pdf"),
-    await sheetFixturePayload("real-sheet.png", "image/png", "batch-image.png"),
-    await sheetFixturePayload("unsupported-sheet.txt", "text/plain"),
-    await sheetFixturePayload("bad-sheet.pdf", "application/pdf"),
-    await sheetFixturePayload("bad-sheet.png", "image/png")
-  ]);
+  await page
+    .getByLabel("File")
+    .setInputFiles([
+      await sheetFixturePayload(
+        "real-sheet.pdf",
+        "application/pdf",
+        "batch-pdf.pdf"
+      ),
+      await sheetFixturePayload(
+        "real-sheet.png",
+        "image/png",
+        "batch-image.png"
+      ),
+      await sheetFixturePayload("unsupported-sheet.txt", "text/plain"),
+      await sheetFixturePayload("bad-sheet.pdf", "application/pdf"),
+      await sheetFixturePayload("bad-sheet.png", "image/png")
+    ]);
   await expect(page.getByText(/Unsupported file type/)).toBeVisible();
   await page.getByRole("button", { name: "Import files separately" }).click();
 
@@ -559,18 +567,30 @@ test("sheet library batch imports mixed files and preserves multi-image single i
   await expect(
     page.getByText("batch-image.png: Imported batch-image.")
   ).toBeVisible();
-  await expect(page.getByText(/unsupported-sheet\.txt: Unsupported file type/)).toBeVisible();
-  await expect(page.getByText(/bad-sheet\.pdf: The uploaded PDF could not be read/)).toBeVisible();
-  await expect(page.getByText(/bad-sheet\.png: The uploaded image could not be decoded/)).toBeVisible();
+  await expect(
+    page.getByText(/unsupported-sheet\.txt: Unsupported file type/)
+  ).toBeVisible();
+  await expect(
+    page.getByText(/bad-sheet\.pdf: The uploaded PDF could not be read/)
+  ).toBeVisible();
+  await expect(
+    page.getByText(/bad-sheet\.png: The uploaded image could not be decoded/)
+  ).toBeVisible();
 
   const batchPdfCard = getSheetCard(page, "batch-pdf");
   const batchImageCard = getSheetCard(page, "batch-image");
 
   await expect(batchPdfCard).toBeVisible();
   await expect(batchImageCard).toBeVisible();
-  await expect(batchPdfCard.getByText("PDF artifact parsed: 1 page")).toBeVisible();
-  await expect(batchImageCard.getByText("Image artifact decoded: 2 x 2")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "unsupported-sheet" })).toHaveCount(0);
+  await expect(
+    batchPdfCard.getByText("PDF artifact parsed: 1 page")
+  ).toBeVisible();
+  await expect(
+    batchImageCard.getByText("Image artifact decoded: 2 x 2")
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "unsupported-sheet" })
+  ).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "bad-sheet" })).toHaveCount(0);
 
   const batchPdfHref = await batchPdfCard
@@ -587,20 +607,24 @@ test("sheet library batch imports mixed files and preserves multi-image single i
       .split("/")
       .pop() ?? "";
 
-  await expect.poll(() => getSheetPersistence(page, batchPdfId)).toMatchObject({
-    sheetExists: true,
-    sheetName: "batch-pdf",
-    tags: [],
-    favorite: false,
-    artifactExists: true
-  });
-  await expect.poll(() => getSheetPersistence(page, batchImageId)).toMatchObject({
-    sheetExists: true,
-    sheetName: "batch-image",
-    tags: [],
-    favorite: false,
-    artifactExists: true
-  });
+  await expect
+    .poll(() => getSheetPersistence(page, batchPdfId))
+    .toMatchObject({
+      sheetExists: true,
+      sheetName: "batch-pdf",
+      tags: [],
+      favorite: false,
+      artifactExists: true
+    });
+  await expect
+    .poll(() => getSheetPersistence(page, batchImageId))
+    .toMatchObject({
+      sheetExists: true,
+      sheetName: "batch-image",
+      tags: [],
+      favorite: false,
+      artifactExists: true
+    });
   await expect
     .poll(async () =>
       (await getSheetPersistence(page, batchPdfId)).artifactBlobSizes.every(
@@ -618,17 +642,23 @@ test("sheet library batch imports mixed files and preserves multi-image single i
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "batch-pdf" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "batch-image" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "batch-image" })
+  ).toBeVisible();
   await expect(page.getByText("PDF artifact parsed: 1 page")).toBeVisible();
   await expect(page.getByText("Image artifact decoded: 2 x 2")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "unsupported-sheet" })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "unsupported-sheet" })
+  ).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "bad-sheet" })).toHaveCount(0);
 
   await clearSheetDatabase(page);
-  await page.getByLabel("File").setInputFiles([
-    await sheetFixturePayload("real-sheet.png", "image/png", "multi-a.png"),
-    await sheetFixturePayload("real-sheet.png", "image/png", "multi-b.png")
-  ]);
+  await page
+    .getByLabel("File")
+    .setInputFiles([
+      await sheetFixturePayload("real-sheet.png", "image/png", "multi-a.png"),
+      await sheetFixturePayload("real-sheet.png", "image/png", "multi-b.png")
+    ]);
   await expect(page.getByText("Ready: 2 images.")).toBeVisible();
   await page.getByLabel("Name").fill("Two Image Sheet");
   await page.getByRole("button", { name: "Save Imported Sheet" }).click();
@@ -662,9 +692,9 @@ test("sheet library batch imports mixed files and preserves multi-image single i
     artifactExists: true
   });
   expect(multiImagePersistence.artifactBlobSizes).toHaveLength(2);
-  expect(multiImagePersistence.artifactBlobSizes.every((size) => size > 0)).toBe(
-    true
-  );
+  expect(
+    multiImagePersistence.artifactBlobSizes.every((size) => size > 0)
+  ).toBe(true);
 
   await page.reload();
   await expect(

@@ -1,4 +1,7 @@
-import { createRecordingTakeGroupId, getCreatedAtSortValue } from "@/lib/recordings-review/take-groups";
+import {
+  createRecordingTakeGroupId,
+  getCreatedAtSortValue
+} from "@/lib/recordings-review/take-groups";
 import { normalizeRequiredString } from "@/lib/recordings-review/string-normalization";
 import type {
   RecordingTakeGroup,
@@ -155,7 +158,9 @@ function normalizeTakeSelectionMetadata(
   const sheetId = normalizeRequiredString(selection.sheetId);
   const segmentId = normalizeOptionalString(selection.segmentId);
   const bestRecordingId = normalizeOptionalString(selection.bestRecordingId);
-  const activeRecordingId = normalizeOptionalString(selection.activeRecordingId);
+  const activeRecordingId = normalizeOptionalString(
+    selection.activeRecordingId
+  );
   const updatedAt = normalizeRequiredString(selection.updatedAt);
 
   if (!groupId || !sheetId || !updatedAt) {

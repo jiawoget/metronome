@@ -126,26 +126,36 @@ async function renameSelectedSegmentBeforeRecording(page: Page) {
 
 async function recordSheetTake(page: Page) {
   await page.getByRole("button", { name: "Start recording" }).click();
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "active"
+  );
   await page.waitForTimeout(850);
   await page.getByRole("button", { name: "Stop recording" }).click();
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "stopped"
+  );
 }
 
 async function recordAgainTake(page: Page) {
   await page.getByRole("button", { name: "Record again" }).click();
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "active"
+  );
   await expect(page.getByRole("button", { name: "Record again" })).toHaveCount(
     0
   );
   await page.waitForTimeout(850);
   await page.getByRole("button", { name: "Stop recording" }).click();
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("stopped");
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "stopped"
+  );
 }
 
 async function getSheetRecordings(page: Page, sheetId: string) {
   const history = await readRecordingHistory(page);
-  const recordings = Array.isArray(history.recordings) ? history.recordings : [];
+  const recordings = Array.isArray(history.recordings)
+    ? history.recordings
+    : [];
 
   return recordings.filter(
     (recording: PersistedSheetRecording) =>
@@ -212,7 +222,9 @@ function expectReloadedRecordingToMatchSnapshot(
   });
 }
 
-test("sheet recording persists selected segment context and keeps it after source deletion", async ({ page }) => {
+test("sheet recording persists selected segment context and keeps it after source deletion", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -236,7 +248,9 @@ test("sheet recording persists selected segment context and keeps it after sourc
   await saveMeasureGrid(page);
   await createSelectedSegment(page);
   await recordSheetTake(page);
-  await expect(page.getByText("Recording saved for Opening focus.")).toBeVisible();
+  await expect(
+    page.getByText("Recording saved for Opening focus.")
+  ).toBeVisible();
 
   let sheetRecordings = await getSheetRecordings(page, sheetId);
 
@@ -259,7 +273,8 @@ test("sheet recording persists selected segment context and keeps it after sourc
       endMeasure: 12
     },
     targetBpm: 96,
-    measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
+    measureGridVersion:
+      "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
     measureGridSnapshot: {
       bpm: 96,
       timeSignature: "4/4",
@@ -284,9 +299,9 @@ test("sheet recording persists selected segment context and keeps it after sourc
   await page
     .getByRole("button", { name: "Confirm delete Opening focus" })
     .click();
-  await expect(page.getByTestId("practice-segment-selector-status")).toContainText(
-    "0 saved"
-  );
+  await expect(
+    page.getByTestId("practice-segment-selector-status")
+  ).toContainText("0 saved");
   await expect(page.getByRole("button", { name: "Record again" })).toHaveCount(
     0
   );
@@ -310,7 +325,9 @@ test("sheet recording persists selected segment context and keeps it after sourc
   expect(consoleErrors).toEqual([]);
 });
 
-test("Record again creates a second recording with the same selected segment context", async ({ page }) => {
+test("Record again creates a second recording with the same selected segment context", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -444,7 +461,9 @@ test("Record again creates a second recording with the same selected segment con
   expect(consoleErrors).toEqual([]);
 });
 
-test("selected segment state does not leak to another sheet recording", async ({ page }) => {
+test("selected segment state does not leak to another sheet recording", async ({
+  page
+}) => {
   await installSyntheticMicrophone(page, 330);
   await page.setViewportSize({ width: 1280, height: 820 });
   await clearState(page);
@@ -462,11 +481,17 @@ test("selected segment state does not leak to another sheet recording", async ({
   await page.goto(`/sheet-practice/${sheetA.sheetId}`);
   await saveMeasureGrid(page);
   await createSelectedSegment(page);
-  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Opening focus");
+  await expect(
+    page.getByTestId("practice-segment-active-summary")
+  ).toContainText("Opening focus");
 
   await page.goto(`/sheet-practice/${sheetB.sheetId}`);
-  await expect(page.getByRole("heading", { name: "No Segment Sheet" })).toBeVisible();
-  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("0 saved");
+  await expect(
+    page.getByRole("heading", { name: "No Segment Sheet" })
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("practice-segment-selector-status")
+  ).toContainText("0 saved");
   await recordSheetTake(page);
 
   const sheetBRecordings = await getSheetRecordings(page, sheetB.sheetId);
@@ -475,7 +500,9 @@ test("selected segment state does not leak to another sheet recording", async ({
   expect(sheetBRecordings[0].segmentContext ?? null).toBeNull();
 });
 
-test("sheet recording snapshots a renamed selected segment at save time", async ({ page }) => {
+test("sheet recording snapshots a renamed selected segment at save time", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -500,7 +527,9 @@ test("sheet recording snapshots a renamed selected segment at save time", async 
   await createSelectedSegment(page);
   await renameSelectedSegmentBeforeRecording(page);
   await recordSheetTake(page);
-  await expect(page.getByText("Recording saved for Renamed focus.")).toBeVisible();
+  await expect(
+    page.getByText("Recording saved for Renamed focus.")
+  ).toBeVisible();
 
   const sheetRecordings = await getSheetRecordings(page, sheetId);
 
@@ -512,7 +541,8 @@ test("sheet recording snapshots a renamed selected segment at save time", async 
       endMeasure: 10
     },
     targetBpm: 104,
-    measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
+    measureGridVersion:
+      "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
     measureGridSnapshot: {
       bpm: 96,
       timeSignature: "4/4",
@@ -524,7 +554,9 @@ test("sheet recording snapshots a renamed selected segment at save time", async 
       endMs: 26000
     }
   });
-  expect(sheetRecordings[0].segmentContext?.segmentName).not.toBe("Opening focus");
+  expect(sheetRecordings[0].segmentContext?.segmentName).not.toBe(
+    "Opening focus"
+  );
   expect(sheetRecordings[0].segmentContext?.segmentId).toBeTruthy();
   expect(consoleErrors).toEqual([]);
 });

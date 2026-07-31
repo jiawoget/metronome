@@ -4,11 +4,8 @@ import { clampBpm } from "@/lib/quick-metronome/control";
 import type { MetronomeSettings } from "@/lib/quick-metronome/types";
 import { useMetronomeBpmDraft } from "@/lib/quick-metronome/use-bpm-draft";
 
-export function useMetronomeSettingsState(
-  initialSettings: MetronomeSettings
-) {
-  const [settings, setSettings] =
-    useState<MetronomeSettings>(initialSettings);
+export function useMetronomeSettingsState(initialSettings: MetronomeSettings) {
+  const [settings, setSettings] = useState<MetronomeSettings>(initialSettings);
   const updateSettings = useCallback(
     (nextSettings: Partial<MetronomeSettings>) => {
       setSettings((currentSettings) => ({

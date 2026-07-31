@@ -230,16 +230,16 @@ Local reference audio:
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Durable event repository, IndexedDB table, Dexie schema version, and migration | Later session-event persistence slice |
-| Session lifecycle events: `session_started`, `session_resumed`, `session_paused`, `session_ended` | Future lifecycle capture slice |
-| Duration from event pairs and incomplete-pair handling | P3-05 or the named duration slice |
-| Date, sheet, segment, recording, and reference grouping | Later grouping/history slice |
-| Home recent activity, dashboard analytics, and Continue Practice ranking | Later Home/Continue slices |
-| Segment session metadata | P3-03 |
-| Reference payload details such as AB loop, offset, waveform, and playback source | Future reference-event enrichment slice |
-| Bilibili external playback tracking | Explicitly deferred/no-go unless a reliable in-app playback signal exists |
+| Deferred work                                                                                     | Future owner                                                              |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Durable event repository, IndexedDB table, Dexie schema version, and migration                    | Later session-event persistence slice                                     |
+| Session lifecycle events: `session_started`, `session_resumed`, `session_paused`, `session_ended` | Future lifecycle capture slice                                            |
+| Duration from event pairs and incomplete-pair handling                                            | P3-05 or the named duration slice                                         |
+| Date, sheet, segment, recording, and reference grouping                                           | Later grouping/history slice                                              |
+| Home recent activity, dashboard analytics, and Continue Practice ranking                          | Later Home/Continue slices                                                |
+| Segment session metadata                                                                          | P3-03                                                                     |
+| Reference payload details such as AB loop, offset, waveform, and playback source                  | Future reference-event enrichment slice                                   |
+| Bilibili external playback tracking                                                               | Explicitly deferred/no-go unless a reliable in-app playback signal exists |
 
 ## Size Guardrails And Split Triggers
 

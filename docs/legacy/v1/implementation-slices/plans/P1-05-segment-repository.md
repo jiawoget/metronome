@@ -46,14 +46,20 @@ Recommended interfaces:
 ```ts
 export type PracticeSegmentRepository = {
   listSegments: (sheetId: string) => Promise<PracticeSegment[]>;
-  getSegment: (sheetId: string, segmentId: string) => Promise<PracticeSegment | null>;
+  getSegment: (
+    sheetId: string,
+    segmentId: string
+  ) => Promise<PracticeSegment | null>;
   saveSegment: (segment: PracticeSegment) => Promise<void>;
   deleteSegment: (sheetId: string, segmentId: string) => Promise<void>;
 };
 
 export type PracticeSegmentService = {
   listSegments: (sheetId: string) => Promise<PracticeSegment[]>;
-  getSegment: (sheetId: string, segmentId: string) => Promise<PracticeSegment | null>;
+  getSegment: (
+    sheetId: string,
+    segmentId: string
+  ) => Promise<PracticeSegment | null>;
   saveSegment: (segment: PracticeSegment) => Promise<PracticeSegment>;
   deleteSegment: (sheetId: string, segmentId: string) => Promise<void>;
 };
@@ -196,25 +202,25 @@ P1-05 must not implement:
 
 ## 7. Boundary Matrix
 
-| Condition | Required behavior | Required evidence |
-| --- | --- | --- |
-| No segments for valid sheet | `listSegments` returns `[]`; `getSegment` returns `null` | Service unit and Dexie tests |
-| Per-sheet isolation | Sheet A list/get/update/delete never exposes or mutates sheet B segments | Service and Dexie tests |
-| Multiple segments in one sheet | `listSegments` returns all valid segments for that sheet | Service and Dexie tests |
-| Invalid segment save | `saveSegment` rejects before mutation | Service test with mocked repository and Dexie preservation test |
-| Invalid `sheetId` | list/get/delete reject; save rejects through segment validation | Negative service tests |
-| Invalid `segmentId` | get/delete reject and do not call repository | Negative service tests |
-| Delete missing segment | Resolves successfully and preserves other rows | Service or Dexie test |
-| Update missing segment | `saveSegment` creates/replaces the requested row; no separate update-only API in P1-05 | Service and Dexie test |
-| Update existing segment | Later save replaces full segment payload | Service and Dexie test |
-| Stale grid association | Valid segment with stale association remains readable; later status helper can report stale | Repository test using changed current grid outside repository, or source inspection plus domain regression |
-| Missing current grid | Repository reads saved valid segment; it does not require MeasureGrid lookup | Source inspection and test without measure-grid DB seed |
-| Invalid/malformed association | Malformed persisted row is omitted/`null`; invalid save rejects | Malformed fixture and save validation tests |
-| Malformed persisted rows | Reads return safe absence and never crash | Parser and Dexie malformed fixture tests |
-| Failed validation preserving prior data | Prior valid row remains after invalid save attempt | Service memory test and Dexie test |
-| Storage write failure | Error propagates to caller | Service test with throwing repository |
-| Reload/service recreation | Saved segments remain readable after Dexie connection reset | Dexie test |
-| No sheet lifecycle coupling | No sheet repository imports; missing sheet is not an error | Source inspection |
+| Condition                               | Required behavior                                                                           | Required evidence                                                                                          |
+| --------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| No segments for valid sheet             | `listSegments` returns `[]`; `getSegment` returns `null`                                    | Service unit and Dexie tests                                                                               |
+| Per-sheet isolation                     | Sheet A list/get/update/delete never exposes or mutates sheet B segments                    | Service and Dexie tests                                                                                    |
+| Multiple segments in one sheet          | `listSegments` returns all valid segments for that sheet                                    | Service and Dexie tests                                                                                    |
+| Invalid segment save                    | `saveSegment` rejects before mutation                                                       | Service test with mocked repository and Dexie preservation test                                            |
+| Invalid `sheetId`                       | list/get/delete reject; save rejects through segment validation                             | Negative service tests                                                                                     |
+| Invalid `segmentId`                     | get/delete reject and do not call repository                                                | Negative service tests                                                                                     |
+| Delete missing segment                  | Resolves successfully and preserves other rows                                              | Service or Dexie test                                                                                      |
+| Update missing segment                  | `saveSegment` creates/replaces the requested row; no separate update-only API in P1-05      | Service and Dexie test                                                                                     |
+| Update existing segment                 | Later save replaces full segment payload                                                    | Service and Dexie test                                                                                     |
+| Stale grid association                  | Valid segment with stale association remains readable; later status helper can report stale | Repository test using changed current grid outside repository, or source inspection plus domain regression |
+| Missing current grid                    | Repository reads saved valid segment; it does not require MeasureGrid lookup                | Source inspection and test without measure-grid DB seed                                                    |
+| Invalid/malformed association           | Malformed persisted row is omitted/`null`; invalid save rejects                             | Malformed fixture and save validation tests                                                                |
+| Malformed persisted rows                | Reads return safe absence and never crash                                                   | Parser and Dexie malformed fixture tests                                                                   |
+| Failed validation preserving prior data | Prior valid row remains after invalid save attempt                                          | Service memory test and Dexie test                                                                         |
+| Storage write failure                   | Error propagates to caller                                                                  | Service test with throwing repository                                                                      |
+| Reload/service recreation               | Saved segments remain readable after Dexie connection reset                                 | Dexie test                                                                                                 |
+| No sheet lifecycle coupling             | No sheet repository imports; missing sheet is not an error                                  | Source inspection                                                                                          |
 
 ## 8. Exact Test Plan
 

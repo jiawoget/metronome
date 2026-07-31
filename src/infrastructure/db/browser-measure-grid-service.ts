@@ -2,7 +2,11 @@
 
 import Dexie, { type Table } from "dexie";
 
-import { parseMeasureGrid, validateMeasureGrid, type MeasureGrid } from "@/domain/practice";
+import {
+  parseMeasureGrid,
+  validateMeasureGrid,
+  type MeasureGrid
+} from "@/domain/practice";
 import { MEASURE_GRID_DB_NAME } from "@/infrastructure/storage/storage-contracts";
 import {
   createMeasureGridService,
@@ -20,7 +24,10 @@ type MeasureGridDatabaseSchema = {
   grids: Table<PersistedMeasureGridRecord, string>;
 };
 
-class MeasureGridDexieDatabase extends Dexie implements MeasureGridDatabaseSchema {
+class MeasureGridDexieDatabase
+  extends Dexie
+  implements MeasureGridDatabaseSchema
+{
   grids!: Table<PersistedMeasureGridRecord, string>;
 
   constructor() {
@@ -40,7 +47,9 @@ function getDatabase() {
   return database;
 }
 
-export function parsePersistedMeasureGridRecord(value: unknown): MeasureGrid | null {
+export function parsePersistedMeasureGridRecord(
+  value: unknown
+): MeasureGrid | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
   }
@@ -50,7 +59,9 @@ export function parsePersistedMeasureGridRecord(value: unknown): MeasureGrid | n
 
 export const browserMeasureGridRepository: MeasureGridRepository = {
   async getGrid(sheetId) {
-    const record = await getDatabase().grids.get(normalizeMeasureGridSheetId(sheetId));
+    const record = await getDatabase().grids.get(
+      normalizeMeasureGridSheetId(sheetId)
+    );
 
     return parsePersistedMeasureGridRecord(record ?? null);
   },
@@ -71,12 +82,19 @@ export const browserMeasureGridRepository: MeasureGridRepository = {
   }
 };
 
-export const browserMeasureGridService = createMeasureGridService(browserMeasureGridRepository);
+export const browserMeasureGridService = createMeasureGridService(
+  browserMeasureGridRepository
+);
 
-export async function seedMeasureGridRecordForTests(sheetId: string, value: unknown) {
+export async function seedMeasureGridRecordForTests(
+  sheetId: string,
+  value: unknown
+) {
   await getDatabase().grids.put({
     sheetId: normalizeMeasureGridSheetId(sheetId),
-    ...(value && typeof value === "object" && !Array.isArray(value) ? value : {})
+    ...(value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {})
   } as PersistedMeasureGridRecord);
 }
 

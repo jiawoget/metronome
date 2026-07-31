@@ -9,14 +9,23 @@ import { getDemoQuickRecording } from "@/lib/quick-metronome/demo-recording";
 import { BrowserRecordingPlaybackService } from "@/lib/quick-metronome/playback-service";
 import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
 
-export function LatestQuickRecording({ compact = false }: { compact?: boolean }) {
-  const playbackService = useMemo(() => new BrowserRecordingPlaybackService(), []);
+export function LatestQuickRecording({
+  compact = false
+}: {
+  compact?: boolean;
+}) {
+  const playbackService = useMemo(
+    () => new BrowserRecordingPlaybackService(),
+    []
+  );
   const storedRecording = useSyncExternalStore(
     quickRecordingController.subscribe,
     quickRecordingController.getLatestQuickRecording,
     () => null
   );
-  const [playbackState, setPlaybackState] = useState<"idle" | "playing" | "error">("idle");
+  const [playbackState, setPlaybackState] = useState<
+    "idle" | "playing" | "error"
+  >("idle");
   const latestRecording = storedRecording ?? getDemoQuickRecording();
   const isDemoRecording = latestRecording.origin === "demo";
 
@@ -41,27 +50,38 @@ export function LatestQuickRecording({ compact = false }: { compact?: boolean })
           />
           <p className="font-semibold">Demo synthetic recording</p>
           <p className="mt-1 leading-6 text-muted-foreground">
-            This is a playable 440 Hz WAV sample for checking replay and the recordings outlet. It is not a saved user recording.
+            This is a playable 440 Hz WAV sample for checking replay and the
+            recordings outlet. It is not a saved user recording.
           </p>
         </div>
       ) : null}
       <div className="grid gap-3 text-sm sm:grid-cols-3">
         <div className="rounded-md border border-border bg-muted px-3 py-3">
           <p className="text-xs font-medium text-muted-foreground">Type</p>
-          <p className="mt-1 font-semibold">{isDemoRecording ? "demo synthetic" : latestRecording.type}</p>
+          <p className="mt-1 font-semibold">
+            {isDemoRecording ? "demo synthetic" : latestRecording.type}
+          </p>
         </div>
         <div className="rounded-md border border-border bg-muted px-3 py-3">
           <p className="text-xs font-medium text-muted-foreground">Duration</p>
-          <p className="mt-1 font-semibold">{Math.max(0.1, latestRecording.durationMs / 1_000).toFixed(1)}s</p>
+          <p className="mt-1 font-semibold">
+            {Math.max(0.1, latestRecording.durationMs / 1_000).toFixed(1)}s
+          </p>
         </div>
         <div className="rounded-md border border-border bg-muted px-3 py-3">
           <p className="text-xs font-medium text-muted-foreground">Size</p>
-          <p className="mt-1 font-semibold">{Math.max(1, Math.round(latestRecording.sizeBytes / 1_024))} KB</p>
+          <p className="mt-1 font-semibold">
+            {Math.max(1, Math.round(latestRecording.sizeBytes / 1_024))} KB
+          </p>
         </div>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm leading-6 text-muted-foreground">
-          <p>{isDemoRecording ? "Demo sample, not saved." : `Session ${latestRecording.sessionId.slice(0, 16)}`}</p>
+          <p>
+            {isDemoRecording
+              ? "Demo sample, not saved."
+              : `Session ${latestRecording.sessionId.slice(0, 16)}`}
+          </p>
           <p>No sheet linked.</p>
         </div>
         <Button
@@ -79,10 +99,11 @@ export function LatestQuickRecording({ compact = false }: { compact?: boolean })
               if (isDemoRecording && latestRecording.audioDataUrl) {
                 await playbackService.play(latestRecording.audioDataUrl);
               } else {
-                const artifactBody = await quickRecordingController.resolveRecordingArtifactBody(
-                  latestRecording,
-                  { createObjectUrl: true }
-                );
+                const artifactBody =
+                  await quickRecordingController.resolveRecordingArtifactBody(
+                    latestRecording,
+                    { createObjectUrl: true }
+                  );
 
                 try {
                   await playbackService.play(artifactBody.objectUrl ?? "");
@@ -95,7 +116,10 @@ export function LatestQuickRecording({ compact = false }: { compact?: boolean })
                   }
                 }
               }
-              window.setTimeout(() => setPlaybackState("idle"), latestRecording.durationMs + 150);
+              window.setTimeout(
+                () => setPlaybackState("idle"),
+                latestRecording.durationMs + 150
+              );
             } catch {
               setPlaybackState("error");
             }

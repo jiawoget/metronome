@@ -19,8 +19,10 @@ import {
   type TimeSignature
 } from "@/lib/quick-metronome/types";
 
-export const TIME_SIGNATURES = SUPPORTED_TIME_SIGNATURES satisfies readonly TimeSignature[];
-export const SUBDIVISIONS = SUPPORTED_SUBDIVISIONS satisfies readonly Subdivision[];
+export const TIME_SIGNATURES =
+  SUPPORTED_TIME_SIGNATURES satisfies readonly TimeSignature[];
+export const SUBDIVISIONS =
+  SUPPORTED_SUBDIVISIONS satisfies readonly Subdivision[];
 export const ACCENT_MODES: AccentMode[] = ["downbeat", "every-beat", "off"];
 export const COUNTDOWN_BEAT_OPTIONS = [0, 4, 8, 16] as const;
 

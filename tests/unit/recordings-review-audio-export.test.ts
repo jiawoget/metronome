@@ -52,15 +52,13 @@ describe("recordings review audio export", () => {
     expect(result).toMatchObject({
       ok: true,
       recordingId: "quick-alpha",
-      filename:
-        "metronome-quick-quick-alpha-20260621-090807-quick-alpha.webm",
+      filename: "metronome-quick-quick-alpha-20260621-090807-quick-alpha.webm",
       mimeType: "audio/webm;codecs=opus",
       sizeBytes: 3
     });
     expect(downloadBlob).toHaveBeenCalledTimes(1);
     expect(downloadBlob.mock.calls[0]?.[0]).toMatchObject({
-      filename:
-        "metronome-quick-quick-alpha-20260621-090807-quick-alpha.webm"
+      filename: "metronome-quick-quick-alpha-20260621-090807-quick-alpha.webm"
     });
     expect(downloadBlob.mock.calls[0]?.[0].blob).toBeInstanceOf(Blob);
     expect(downloadBlob.mock.calls[0]?.[0].blob.size).toBe(3);
@@ -163,7 +161,9 @@ describe("recordings review audio export", () => {
       extension: "webm"
     });
     expect(getAudioExportMimeInfo("audio/x-custom;codecs=opus")).toBeNull();
-    expect(isPotentiallyDecodableAudioMime("audio/x-custom;codecs=opus")).toBe(true);
+    expect(isPotentiallyDecodableAudioMime("audio/x-custom;codecs=opus")).toBe(
+      true
+    );
   });
 
   it("rejects unknown audio MIME artifacts without using a webm fallback", async () => {
@@ -276,7 +276,9 @@ describe("recordings review audio export", () => {
       message: "This recording has no local audio artifact to export."
     });
     await expect(
-      service.exportRecordingAudio({ recordingId: "invalid-audio-data-url-only" })
+      service.exportRecordingAudio({
+        recordingId: "invalid-audio-data-url-only"
+      })
     ).resolves.toMatchObject({
       ok: false,
       reason: "missing-artifact",
@@ -386,13 +388,17 @@ function createArtifactResolver() {
   };
 }
 
-function createQuickRecording(overrides: MakeQuickReviewRecordingOverrides = {}) {
+function createQuickRecording(
+  overrides: MakeQuickReviewRecordingOverrides = {}
+) {
   return makeQuickReviewRecording(overrides, {
     defaults: audioExportQuickDefaults
   });
 }
 
-function createSheetRecording(overrides: MakeSheetReviewRecordingOverrides = {}) {
+function createSheetRecording(
+  overrides: MakeSheetReviewRecordingOverrides = {}
+) {
   return makeSheetReviewRecording(overrides, {
     defaults: audioExportSheetDefaults
   });

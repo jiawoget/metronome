@@ -13,7 +13,11 @@ import {
 } from "@/services/practice-session";
 
 function toPracticeTimeSignature(value: string): PracticeTimeSignature | null {
-  return value === "2/4" || value === "3/4" || value === "4/4" || value === "6/8" || value === "12/8"
+  return value === "2/4" ||
+    value === "3/4" ||
+    value === "4/4" ||
+    value === "6/8" ||
+    value === "12/8"
     ? value
     : null;
 }
@@ -35,13 +39,19 @@ const sheetGateway: PracticeSessionSheetGateway = {
   },
 
   updateLastPracticedAt(sheetId, practicedAt) {
-    return browserSheetLibraryService.updateLastPracticedAt(sheetId, practicedAt);
+    return browserSheetLibraryService.updateLastPracticedAt(
+      sheetId,
+      practicedAt
+    );
   }
 };
 
 const segmentGateway: PracticeSessionSegmentGateway = {
   async getSegmentContext(sheetId, segmentId) {
-    const segment = await browserPracticeSegmentService.getSegment(sheetId, segmentId);
+    const segment = await browserPracticeSegmentService.getSegment(
+      sheetId,
+      segmentId
+    );
 
     if (!segment) {
       return null;

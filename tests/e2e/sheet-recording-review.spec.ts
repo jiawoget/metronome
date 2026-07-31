@@ -48,7 +48,10 @@ type SimpleWaveformState = {
 };
 
 async function clearState(page: Page) {
-  await clearSheetLibraryTestState(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME]);
+  await clearSheetLibraryTestState(page, [
+    SHEET_LIBRARY_DB_NAME,
+    PRACTICE_SESSION_DB_NAME
+  ]);
 }
 
 async function getSavedRecordings(page: Page) {

@@ -32,19 +32,19 @@ export const PRACTICE_SESSION_EVENT_KINDS = [
 ] as const;
 
 export type PracticeSessionLifecycleEventKind =
-  typeof PRACTICE_SESSION_LIFECYCLE_EVENT_KINDS[number];
+  (typeof PRACTICE_SESSION_LIFECYCLE_EVENT_KINDS)[number];
 
 export type PracticeSessionMetronomeEventKind =
-  typeof PRACTICE_SESSION_METRONOME_EVENT_KINDS[number];
+  (typeof PRACTICE_SESSION_METRONOME_EVENT_KINDS)[number];
 
 export type PracticeSessionRecordingEventKind =
-  typeof PRACTICE_SESSION_RECORDING_EVENT_KINDS[number];
+  (typeof PRACTICE_SESSION_RECORDING_EVENT_KINDS)[number];
 
 export type PracticeSessionReferenceEventKind =
-  typeof PRACTICE_SESSION_REFERENCE_EVENT_KINDS[number];
+  (typeof PRACTICE_SESSION_REFERENCE_EVENT_KINDS)[number];
 
 export type PracticeSessionEventKind =
-  typeof PRACTICE_SESSION_EVENT_KINDS[number];
+  (typeof PRACTICE_SESSION_EVENT_KINDS)[number];
 
 export type PracticeSessionEventPayload = Record<string, never>;
 
@@ -120,18 +120,14 @@ function createReferencePracticeSessionEventSchema(
     .strict();
 }
 
-const sessionStartedEventSchema = createLifecyclePracticeSessionEventSchema(
-  "session_started"
-);
-const sessionResumedEventSchema = createLifecyclePracticeSessionEventSchema(
-  "session_resumed"
-);
-const sessionPausedEventSchema = createLifecyclePracticeSessionEventSchema(
-  "session_paused"
-);
-const sessionEndedEventSchema = createLifecyclePracticeSessionEventSchema(
-  "session_ended"
-);
+const sessionStartedEventSchema =
+  createLifecyclePracticeSessionEventSchema("session_started");
+const sessionResumedEventSchema =
+  createLifecyclePracticeSessionEventSchema("session_resumed");
+const sessionPausedEventSchema =
+  createLifecyclePracticeSessionEventSchema("session_paused");
+const sessionEndedEventSchema =
+  createLifecyclePracticeSessionEventSchema("session_ended");
 const metronomeStartedEventSchema =
   createMetronomePracticeSessionEventSchema("metronome_started");
 const metronomeStoppedEventSchema =

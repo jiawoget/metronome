@@ -75,10 +75,14 @@ describe("ErrorMarkerPanel", () => {
       />
     );
 
-    const timestampInput = screen.getByRole("spinbutton", { name: "Marker time seconds" });
+    const timestampInput = screen.getByRole("spinbutton", {
+      name: "Marker time seconds"
+    });
     await user.clear(timestampInput);
     await user.click(screen.getByRole("button", { name: "Mark Error" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Choose a valid recording timestamp.");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Choose a valid recording timestamp."
+    );
   });
 
   it("shows a validation error for overlong notes", async () => {
@@ -97,7 +101,9 @@ describe("ErrorMarkerPanel", () => {
 
     await user.type(noteInput, "x".repeat(161));
     await user.click(screen.getByRole("button", { name: "Mark Error" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Marker note must be 160 characters or less.");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Marker note must be 160 characters or less."
+    );
   });
 
   it("trims marker notes before saving visible marker text", async () => {
@@ -116,13 +122,25 @@ describe("ErrorMarkerPanel", () => {
       />
     );
 
-    await user.clear(screen.getByRole("spinbutton", { name: "Marker time seconds" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Marker time seconds" }), "0.5");
-    await user.type(screen.getByRole("textbox", { name: "Marker note" }), "  rushed shift  ");
+    await user.clear(
+      screen.getByRole("spinbutton", { name: "Marker time seconds" })
+    );
+    await user.type(
+      screen.getByRole("spinbutton", { name: "Marker time seconds" }),
+      "0.5"
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Marker note" }),
+      "  rushed shift  "
+    );
     await user.click(screen.getByRole("button", { name: "Mark Error" }));
 
-    expect(screen.getByRole("status")).toHaveTextContent("Error marker saved at 0:01.");
-    expect(screen.getByTestId("sheet-error-marker-list")).toHaveTextContent("rushed shift");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Error marker saved at 0:01."
+    );
+    expect(screen.getByTestId("sheet-error-marker-list")).toHaveTextContent(
+      "rushed shift"
+    );
     expect(recordingHistoryRepository.getErrorMarkers(recording.id)).toEqual([
       expect.objectContaining({
         timestampMs: 500,
@@ -148,7 +166,9 @@ describe("ErrorMarkerPanel", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /Seek to marker 0:01/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Seek to marker 0:01/ })
+    );
 
     expect(screen.getByRole("alert")).toHaveTextContent("Adapter seek failed.");
     expect(screen.queryByText(/Playback moved/)).not.toBeInTheDocument();
@@ -172,9 +192,13 @@ describe("ErrorMarkerPanel", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /Seek to marker 0:01/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Seek to marker 0:01/ })
+    );
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Playback did not move to the selected marker.");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Playback did not move to the selected marker."
+    );
     expect(screen.queryByText(/Playback moved/)).not.toBeInTheDocument();
   });
 
@@ -191,10 +215,14 @@ describe("ErrorMarkerPanel", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /Seek to marker 0:01/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Seek to marker 0:01/ })
+    );
 
     expect(playbackControls.seekToMs).toHaveBeenCalledWith(1_200);
-    expect(screen.getByRole("status")).toHaveTextContent("Playback moved to 0:01.");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Playback moved to 0:01."
+    );
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

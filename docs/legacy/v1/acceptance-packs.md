@@ -378,4 +378,3 @@ Run controlled audio fixtures
 - [ ] Onset detection is internal and fixture-tested.
 - [ ] Reference-recording support does not claim automatic correctness.
 - [ ] No user-facing scoring is shipped.
-

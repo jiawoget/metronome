@@ -19,7 +19,8 @@ export function useMetronomeBpmDraft(
     sourceBpm: bpm,
     value: String(bpm)
   });
-  const bpmDraft = draftState.sourceBpm === bpm ? draftState.value : String(bpm);
+  const bpmDraft =
+    draftState.sourceBpm === bpm ? draftState.value : String(bpm);
   const setBpmDraft = useCallback(
     (value: string) => {
       setDraftState({ sourceBpm: bpm, value });

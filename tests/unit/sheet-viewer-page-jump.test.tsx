@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SheetPageJump } from "@/components/sheet-practice/viewer/sheet-page-jump";
 
-function renderPageJump(options?: { currentPage?: number; totalPages?: number }) {
+function renderPageJump(options?: {
+  currentPage?: number;
+  totalPages?: number;
+}) {
   const onJumpToPage = vi.fn();
   const result = render(
     <SheetPageJump
@@ -63,22 +66,25 @@ describe("SheetPageJump", () => {
     ["negative", "-1", "Enter a page number from 1 to 2."],
     ["zero", "0", "Page must be between 1 and 2."],
     ["out of range", "999", "Page must be between 1 and 2."]
-  ])("rejects %s input without changing page", async (_name, value, message) => {
-    const user = userEvent.setup();
-    const { input, button, onJumpToPage } = renderPageJump();
+  ])(
+    "rejects %s input without changing page",
+    async (_name, value, message) => {
+      const user = userEvent.setup();
+      const { input, button, onJumpToPage } = renderPageJump();
 
-    if (value) {
-      await user.type(input, value);
+      if (value) {
+        await user.type(input, value);
+      }
+      await user.click(button);
+
+      const alert = screen.getByRole("alert");
+
+      expect(alert).toHaveTextContent(message);
+      expect(input).toHaveAttribute("aria-invalid", "true");
+      expect(input).toHaveAttribute("aria-describedby", alert.id);
+      expect(onJumpToPage).not.toHaveBeenCalled();
     }
-    await user.click(button);
-
-    const alert = screen.getByRole("alert");
-
-    expect(alert).toHaveTextContent(message);
-    expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(input).toHaveAttribute("aria-describedby", alert.id);
-    expect(onJumpToPage).not.toHaveBeenCalled();
-  });
+  );
 
   it("recovers after invalid input with a later valid submit", async () => {
     const user = userEvent.setup();
@@ -99,9 +105,17 @@ describe("SheetPageJump", () => {
   });
 
   it("uses the current page as the placeholder after prop changes", () => {
-    const { input, rerender, onJumpToPage } = renderPageJump({ currentPage: 1 });
+    const { input, rerender, onJumpToPage } = renderPageJump({
+      currentPage: 1
+    });
 
-    rerender(<SheetPageJump currentPage={2} totalPages={2} onJumpToPage={onJumpToPage} />);
+    rerender(
+      <SheetPageJump
+        currentPage={2}
+        totalPages={2}
+        onJumpToPage={onJumpToPage}
+      />
+    );
 
     expect(input).toHaveAttribute("placeholder", "2");
     expect(input).toHaveValue("");

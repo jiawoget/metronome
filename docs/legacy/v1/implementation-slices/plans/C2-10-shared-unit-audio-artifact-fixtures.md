@@ -121,7 +121,7 @@ Out of scope:
    - Preserve current side effects:
      - `vi.stubGlobal("AudioContext", MockAudioContext)`
      - `Object.defineProperty(window, "AudioContext", { configurable: true,
-       value: MockAudioContext })`
+value: MockAudioContext })`
    - Keep cleanup owned by existing `afterEach(() => vi.unstubAllGlobals())`
      or equivalent test-local cleanup.
 

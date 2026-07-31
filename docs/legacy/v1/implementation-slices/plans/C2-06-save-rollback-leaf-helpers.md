@@ -50,9 +50,9 @@ export async function cleanupCommittedRecordingArtifactsOrThrow(
 }
 ```
 
-   - Use this helper only where save/rollback code currently performs the
-     immediate `cleanupCommittedRecordingArtifacts(...)` plus
-     `assertRecordingArtifactCleanup(...)` pair.
+- Use this helper only where save/rollback code currently performs the
+  immediate `cleanupCommittedRecordingArtifacts(...)` plus
+  `assertRecordingArtifactCleanup(...)` pair.
 
 2. Add one practice-session rollback leaf helper.
    - Preferred location:
@@ -64,7 +64,9 @@ export async function cleanupCommittedRecordingArtifactsOrThrow(
 
 ```ts
 type PracticeSessionSnapshotRollbackPort = {
-  restorePracticeSessionSnapshot(session: PracticeSession): Promise<PracticeSession>;
+  restorePracticeSessionSnapshot(
+    session: PracticeSession
+  ): Promise<PracticeSession>;
   deletePracticeSessionSnapshot(sessionId: string): Promise<void>;
 };
 
@@ -86,13 +88,13 @@ export async function restoreOrDeletePracticeSessionSnapshot({
 }
 ```
 
-   - This helper does not catch errors, retry, aggregate rollback failures, or
-     know about quick/sheet save ordering.
-   - It must not depend on the complete `PracticeSessionService` type or change
-     the practice-session service contract.
-   - If implementation needs a wider rollback module, extra helpers,
-     rollback result objects, or error aggregation/orchestration in the helper,
-     stop and ask for user approval before coding further.
+- This helper does not catch errors, retry, aggregate rollback failures, or
+  know about quick/sheet save ordering.
+- It must not depend on the complete `PracticeSessionService` type or change
+  the practice-session service contract.
+- If implementation needs a wider rollback module, extra helpers,
+  rollback result objects, or error aggregation/orchestration in the helper,
+  stop and ask for user approval before coding further.
 
 3. Refactor quick recording save rollback.
    - Remove the local `restoreLinkedQuickPracticeSession(...)` helper if the new

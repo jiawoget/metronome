@@ -351,16 +351,16 @@ Reason: this is focused UI work over a verified source, but it touches the main 
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Navigate from a sheet row to Recordings Review filtered by sheet | P5-06 `library-review-by-sheet-link` |
-| Recordings Review route/query/filter behavior for sheet ids | P5-06 |
-| Sort/filter Sheet Library by recent practice | Future reviewed library slice |
-| Dedicated sheet detail route or expanded history panel | Future reviewed library slice |
-| Live subscription/refresh after practice-session changes while staying on the library page | Future reviewed slice if needed |
-| Pagination/infinite loading for very large libraries | Future reviewed library scaling slice |
-| Viewer thumbnails, page jump, zoom/pan, assisted page turning | P5-07 through P5-12 |
-| Folder system, cloud sync, sharing, automatic score following, scoring, mistake detection | v2 or future reviewed feature |
+| Deferred work                                                                              | Future owner                          |
+| ------------------------------------------------------------------------------------------ | ------------------------------------- |
+| Navigate from a sheet row to Recordings Review filtered by sheet                           | P5-06 `library-review-by-sheet-link`  |
+| Recordings Review route/query/filter behavior for sheet ids                                | P5-06                                 |
+| Sort/filter Sheet Library by recent practice                                               | Future reviewed library slice         |
+| Dedicated sheet detail route or expanded history panel                                     | Future reviewed library slice         |
+| Live subscription/refresh after practice-session changes while staying on the library page | Future reviewed slice if needed       |
+| Pagination/infinite loading for very large libraries                                       | Future reviewed library scaling slice |
+| Viewer thumbnails, page jump, zoom/pan, assisted page turning                              | P5-07 through P5-12                   |
+| Folder system, cloud sync, sharing, automatic score following, scoring, mistake detection  | v2 or future reviewed feature         |
 
 ## Explicit No-Go Areas
 

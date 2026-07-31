@@ -1,6 +1,10 @@
 "use client";
 
-import type { ImportedSheet, SheetArtifact, SheetImageDimensions } from "@/domain/sheet";
+import type {
+  ImportedSheet,
+  SheetArtifact,
+  SheetImageDimensions
+} from "@/domain/sheet";
 import type {
   SheetPageThumbnailBlob,
   SheetViewerAdapter,
@@ -82,8 +86,14 @@ async function renderPdfThumbnail(
 ): Promise<SheetPageThumbnailBlob> {
   const page = await pdfDocument.getPage(pageNumber);
   const sourceViewport = page.getViewport({ scale: 1 });
-  const targetSize = getThumbnailSize(sourceViewport.width, sourceViewport.height, maxWidth);
-  const viewport = page.getViewport({ scale: targetSize.width / sourceViewport.width });
+  const targetSize = getThumbnailSize(
+    sourceViewport.width,
+    sourceViewport.height,
+    maxWidth
+  );
+  const viewport = page.getViewport({
+    scale: targetSize.width / sourceViewport.width
+  });
   const canvas = globalThis.document.createElement("canvas");
   const context = canvas.getContext("2d");
 
@@ -123,7 +133,8 @@ async function generatePdfThumbnails(
     };
   }
 
-  let loadingTask: Awaited<ReturnType<typeof loadPdfDocument>>["loadingTask"] | null = null;
+  let loadingTask:
+    Awaited<ReturnType<typeof loadPdfDocument>>["loadingTask"] | null = null;
 
   try {
     const loaded = await loadPdfDocument(file.blob);
@@ -139,8 +150,14 @@ async function generatePdfThumbnails(
 
     const thumbnails: SheetPageThumbnailBlob[] = [];
 
-    for (let pageNumber = 1; pageNumber <= loaded.document.numPages; pageNumber += 1) {
-      thumbnails.push(await renderPdfThumbnail(loaded.document, pageNumber, maxWidth));
+    for (
+      let pageNumber = 1;
+      pageNumber <= loaded.document.numPages;
+      pageNumber += 1
+    ) {
+      thumbnails.push(
+        await renderPdfThumbnail(loaded.document, pageNumber, maxWidth)
+      );
     }
 
     return {
@@ -151,7 +168,8 @@ async function generatePdfThumbnails(
     return {
       ok: false,
       code: "bad-pdf",
-      message: "The saved PDF artifact could not be rendered. Reimport a valid PDF sheet."
+      message:
+        "The saved PDF artifact could not be rendered. Reimport a valid PDF sheet."
     };
   } finally {
     await loadingTask?.destroy();
@@ -215,7 +233,13 @@ async function renderImageThumbnail(
   canvas.height = targetSize.height;
 
   try {
-    context.drawImage(decoded.source, 0, 0, targetSize.width, targetSize.height);
+    context.drawImage(
+      decoded.source,
+      0,
+      0,
+      targetSize.width,
+      targetSize.height
+    );
 
     return {
       pageNumber: file.pageNumber || fallbackPageNumber,
@@ -235,7 +259,8 @@ async function generateImageThumbnails(
   artifact: SheetArtifact,
   maxWidth: number
 ): Promise<SheetViewerThumbnailGeneration> {
-  const expectedImageCount = sheet.imageCount || sheet.pageCount || artifact.files.length;
+  const expectedImageCount =
+    sheet.imageCount || sheet.pageCount || artifact.files.length;
 
   if (
     artifact.files.length === 0 ||
@@ -251,7 +276,9 @@ async function generateImageThumbnails(
 
   try {
     const thumbnails = await Promise.all(
-      artifact.files.map((file, index) => renderImageThumbnail(file, index + 1, maxWidth))
+      artifact.files.map((file, index) =>
+        renderImageThumbnail(file, index + 1, maxWidth)
+      )
     );
 
     return {
@@ -262,7 +289,8 @@ async function generateImageThumbnails(
     return {
       ok: false,
       code: "bad-image",
-      message: "The saved image artifact could not be decoded. Reimport a valid PNG or JPG sheet."
+      message:
+        "The saved image artifact could not be decoded. Reimport a valid PNG or JPG sheet."
     };
   }
 }
@@ -275,7 +303,10 @@ function missingArtifact(message: string): SheetViewerInspection {
   };
 }
 
-async function inspectPdf(sheet: ImportedSheet, artifact: SheetArtifact): Promise<SheetViewerInspection> {
+async function inspectPdf(
+  sheet: ImportedSheet,
+  artifact: SheetArtifact
+): Promise<SheetViewerInspection> {
   const file = artifact.files[0];
 
   if (!file || file.blob.size === 0) {
@@ -302,12 +333,16 @@ async function inspectPdf(sheet: ImportedSheet, artifact: SheetArtifact): Promis
     return {
       ok: false,
       code: "bad-pdf",
-      message: "The saved PDF artifact could not be parsed. Reimport a valid PDF sheet."
+      message:
+        "The saved PDF artifact could not be parsed. Reimport a valid PDF sheet."
     };
   }
 }
 
-async function inspectImages(sheet: ImportedSheet, artifact: SheetArtifact): Promise<SheetViewerInspection> {
+async function inspectImages(
+  sheet: ImportedSheet,
+  artifact: SheetArtifact
+): Promise<SheetViewerInspection> {
   const files = artifact.files.filter((file) => file.blob.size > 0);
 
   if (files.length === 0) {
@@ -315,7 +350,9 @@ async function inspectImages(sheet: ImportedSheet, artifact: SheetArtifact): Pro
   }
 
   try {
-    const dimensions = await Promise.all(files.map((file) => decodeImage(file.blob)));
+    const dimensions = await Promise.all(
+      files.map((file) => decodeImage(file.blob))
+    );
 
     return {
       ok: true,
@@ -326,7 +363,8 @@ async function inspectImages(sheet: ImportedSheet, artifact: SheetArtifact): Pro
     return {
       ok: false,
       code: "bad-image",
-      message: "The saved image artifact could not be decoded. Reimport a valid PNG or JPG sheet."
+      message:
+        "The saved image artifact could not be decoded. Reimport a valid PNG or JPG sheet."
     };
   }
 }
@@ -337,7 +375,8 @@ export const browserSheetViewerAdapter: SheetViewerAdapter = {
       return Promise.resolve({
         ok: false,
         code: "artifact-mismatch",
-        message: "The saved artifact metadata does not match the selected sheet."
+        message:
+          "The saved artifact metadata does not match the selected sheet."
       });
     }
 
@@ -353,7 +392,8 @@ export const browserSheetViewerAdapter: SheetViewerAdapter = {
       return Promise.resolve({
         ok: false,
         code: "artifact-mismatch",
-        message: "The saved artifact metadata does not match the selected sheet."
+        message:
+          "The saved artifact metadata does not match the selected sheet."
       });
     }
 

@@ -124,7 +124,9 @@ async function seedDateBoundarySessions(page: Page) {
             sourceType: "quick",
             sheetId: null,
             startedAt: previousStartedAt,
-            endedAt: new Date(previousStarted.getTime() + 600_000).toISOString(),
+            endedAt: new Date(
+              previousStarted.getTime() + 600_000
+            ).toISOString(),
             durationMs: 600_000,
             bpm: 100,
             timeSignature: "4/4",
@@ -145,7 +147,9 @@ async function seedDateBoundarySessions(page: Page) {
   );
 }
 
-test("practice sessions drive quick, sheet, summary, recording links, reload, and clear data", async ({ page }) => {
+test("practice sessions drive quick, sheet, summary, recording links, reload, and clear data", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -164,7 +168,8 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
         getUserMedia: async () => {
           const audioWindow = window as Window &
             typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-          const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+          const AudioContextConstructor =
+            audioWindow.AudioContext || audioWindow.webkitAudioContext;
           const audioContext = new AudioContextConstructor();
           const destination = audioContext.createMediaStreamDestination();
           const oscillator = audioContext.createOscillator();
@@ -207,10 +212,9 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   expect(quickSession?.id).toBeTruthy();
 
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
-    "href",
-    "/quick-metronome"
-  );
+  await expect(
+    page.getByRole("link", { name: "Continue quick practice" })
+  ).toHaveAttribute("href", "/quick-metronome");
 
   await page.goto("/quick-metronome");
   await page.getByRole("button", { name: "Start recording" }).click();
@@ -234,7 +238,9 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
     recordingCount: 1
   });
   expect(quickWithRecording?.id).not.toBe(quickSession?.id);
-  expect(sessions.filter((session) => session.sourceType === "quick")).toHaveLength(2);
+  expect(
+    sessions.filter((session) => session.sourceType === "quick")
+  ).toHaveLength(2);
 
   const { sheetId } = await importTestSheet(page, {
     name: "Practice Session Sheet",
@@ -246,13 +252,16 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   await page.getByRole("button", { name: "Start metronome" }).click();
   await expect(page.getByTestId("sheet-session-source")).toHaveText("sheet");
   await page.getByRole("button", { name: "Stop metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Stopped"
+  );
 
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Continue sheet practice Practice Session Sheet" })).toHaveAttribute(
-    "href",
-    `/sheet-practice/${sheetId}`
-  );
+  await expect(
+    page.getByRole("link", {
+      name: "Continue sheet practice Practice Session Sheet"
+    })
+  ).toHaveAttribute("href", `/sheet-practice/${sheetId}`);
 
   await seedDateBoundarySessions(page);
   await page.reload();
@@ -260,23 +269,30 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   sessions = await getPracticeSessions(page);
 
   expect(sessions).toHaveLength(5);
-  expect(sessions.filter((session) => session.sourceType === "quick")).toHaveLength(4);
+  expect(
+    sessions.filter((session) => session.sourceType === "quick")
+  ).toHaveLength(4);
   await expect(page.getByTestId("today-summary-minutes")).toHaveText("2");
   await expect(page.getByTestId("today-summary-sessions")).toHaveText("4");
   await expect(page.getByTestId("today-summary-recordings")).toHaveText("3");
 
   await page.reload();
-  await expect(page.getByRole("link", { name: "Continue sheet practice Practice Session Sheet" })).toHaveAttribute(
-    "href",
-    `/sheet-practice/${sheetId}`
-  );
+  await expect(
+    page.getByRole("link", {
+      name: "Continue sheet practice Practice Session Sheet"
+    })
+  ).toHaveAttribute("href", `/sheet-practice/${sheetId}`);
   await expect(page.getByTestId("today-summary-sessions")).toHaveText("4");
 
   await page.goto("/settings");
   await expect(page.getByTestId("settings-count-sessions")).not.toHaveText("0");
   await page.getByRole("button", { name: "Clear All Local Data" }).click();
   await page.getByRole("button", { name: "Confirm clear local data" }).click();
-  await expect(page.getByText("All local data was cleared and settings returned to defaults.")).toBeVisible();
+  await expect(
+    page.getByText(
+      "All local data was cleared and settings returned to defaults."
+    )
+  ).toBeVisible();
   await expect(page.getByTestId("settings-count-sessions")).toHaveText("0");
 
   await page.goto("/");
@@ -286,7 +302,12 @@ test("practice sessions drive quick, sheet, summary, recording links, reload, an
   await page.reload();
   await expect(page.getByTestId("today-summary-sessions")).toHaveText("0");
   await expect(getPracticeSessions(page)).resolves.toEqual([]);
-  await expect(page.evaluate((storageKey) => window.localStorage.getItem(storageKey), recordingHistoryStorageKey)).resolves.toBe(
+  await expect(
+    page.evaluate(
+      (storageKey) => window.localStorage.getItem(storageKey),
+      recordingHistoryStorageKey
+    )
+  ).resolves.toBe(
     JSON.stringify({ sessions: [], recordings: [], errorMarkers: [] })
   );
   expect(consoleErrors).toEqual([]);

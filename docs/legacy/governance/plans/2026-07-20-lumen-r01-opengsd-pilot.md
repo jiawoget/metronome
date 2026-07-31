@@ -54,6 +54,7 @@
    ```
 
    Require `/api/tags` to report digest `080d707f4f4ab48ceafa7452ce70e7f44751c7c599fe4eaf4b3256d51008d667`; a changed mutable tag is a provider-version failure.
+
 5. Install Lumen into `C:\Users\wsuto\.codex\lumen` from the official repository at tag `v0.0.41`, detached at commit `d0dee0efcc8235bf514217ecb12cdac2ed5213fa`. If the directory already exists, verify its origin, tag, and cleanliness; never overwrite an unrelated or dirty checkout.
 6. Download `https://github.com/ory/lumen/releases/download/v0.0.41/lumen-0.0.41-windows-amd64.exe` to `C:\Users\wsuto\.codex\lumen\bin\lumen-windows-amd64.exe` and require SHA-256 `0012c4837b2cc22fbb6124a9ff133518d963c93510178e9060b6004e299ec44d` before execution. This prevents tagged `run.cmd` from falling back to a later release.
 7. Create the official Codex skill junction `C:\Users\wsuto\.agents\skills\lumen -> C:\Users\wsuto\.codex\lumen\skills`. If that path exists with a different target, stop rather than overwrite it.
@@ -200,7 +201,7 @@ The pilot fails if it merely moves complexity, adds more production code than it
 5. A repeated cause returns to architecture discussion; there is no “minimal fallback.”
 6. Commit pilot artifacts and implementation only to the local pilot branch for audit. Never push or merge that branch into `main`.
 7. Do not copy pilot `ROADMAP.md`, `STATE.md`, `REQUIREMENTS.md`, phase artifacts, implementation commits, or progress back to the primary repository; primary lifecycle authority remains between milestones throughout the proof.
-7. Preserve the local branch as a verified Git bundle outside the project, record its SHA-256, and put only the compact pass/fail evidence plus immutable pilot commit/bundle hash in the governance PR body. Do not add a new repository status ledger.
+8. Preserve the local branch as a verified Git bundle outside the project, record its SHA-256, and put only the compact pass/fail evidence plus immutable pilot commit/bundle hash in the governance PR body. Do not add a new repository status ledger.
 
 ## Acceptance criteria
 

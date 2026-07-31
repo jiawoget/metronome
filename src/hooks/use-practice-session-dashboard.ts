@@ -20,15 +20,22 @@ import {
 import { browserPracticeSessionService } from "@/services/practice-session/browser";
 import { practiceGoalService } from "@/services/practice-goals/browser-service";
 
-export type PracticeSessionDashboardReadStatus = "idle" | "loading" | "loaded" | "error";
-export type PracticeSessionDashboardContinueTargetsStatus = PracticeSessionDashboardReadStatus;
-export type PracticeSessionDashboardRecentActivityStatus = PracticeSessionDashboardReadStatus;
-export type PracticeSessionDashboardAnalyticsStatus = PracticeSessionDashboardReadStatus;
-export type PracticeSessionDashboardStreaksStatus = PracticeSessionDashboardReadStatus;
-export type PracticeSessionDashboardSessionComparisonStatus = PracticeSessionDashboardReadStatus;
+export type PracticeSessionDashboardReadStatus =
+  "idle" | "loading" | "loaded" | "error";
+export type PracticeSessionDashboardContinueTargetsStatus =
+  PracticeSessionDashboardReadStatus;
+export type PracticeSessionDashboardRecentActivityStatus =
+  PracticeSessionDashboardReadStatus;
+export type PracticeSessionDashboardAnalyticsStatus =
+  PracticeSessionDashboardReadStatus;
+export type PracticeSessionDashboardStreaksStatus =
+  PracticeSessionDashboardReadStatus;
+export type PracticeSessionDashboardSessionComparisonStatus =
+  PracticeSessionDashboardReadStatus;
 export type PracticeGoalReadStatus = PracticeSessionDashboardReadStatus;
 export type PracticeGoalEvaluationStatus = PracticeGoalReadStatus;
-export type PracticeGoalMutationStatus = "idle" | "saving" | "deleting" | "error";
+export type PracticeGoalMutationStatus =
+  "idle" | "saving" | "deleting" | "error";
 
 export type HomeSessionComparisonCandidate = {
   sessionId: string;
@@ -98,8 +105,7 @@ export type PracticeSessionDashboardActions = {
   onDeletePracticeGoal: (goalId: string) => Promise<void>;
 };
 
-export type PracticeSessionDashboardResult =
-  PracticeSessionDashboardState &
+export type PracticeSessionDashboardResult = PracticeSessionDashboardState &
   PracticeSessionDashboardActions;
 
 const emptyContinueTargets: ContinuePracticeTargetsResult = {
@@ -195,13 +201,15 @@ const emptyState: PracticeSessionDashboardState = {
   ...emptyPracticeGoals
 };
 
-const continueTargetsErrorMessage = "Continue Practice targets could not be loaded.";
+const continueTargetsErrorMessage =
+  "Continue Practice targets could not be loaded.";
 const recentActivityErrorMessage = "Recent activity could not be loaded.";
 const analyticsErrorMessage = "Practice analytics could not be loaded.";
 const streaksErrorMessage = "Practice streaks could not be loaded.";
 const sessionComparisonErrorMessage = "Session comparison could not be loaded.";
 const practiceGoalsErrorMessage = "Practice goals could not be loaded.";
-const practiceGoalEvaluationsErrorMessage = "Goal progress could not be loaded.";
+const practiceGoalEvaluationsErrorMessage =
+  "Goal progress could not be loaded.";
 const practiceGoalSaveErrorMessage = "Practice goal could not be saved.";
 const practiceGoalDeleteErrorMessage = "Practice goal could not be deleted.";
 
@@ -247,28 +255,48 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
     ] = await Promise.all([
       browserPracticeSessionService.getRecentSession(),
       browserPracticeSessionService
-        .getContinuePracticeTargets({ limit: DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT })
+        .getContinuePracticeTargets({
+          limit: DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT
+        })
         .then((continueTargets) => ({ continueTargets, errorMessage: null }))
-        .catch(() => ({ continueTargets: null, errorMessage: continueTargetsErrorMessage })),
+        .catch(() => ({
+          continueTargets: null,
+          errorMessage: continueTargetsErrorMessage
+        })),
       browserPracticeSessionService.getTodaySummary(),
       browserPracticeSessionService
         .getHomeRecentActivity()
         .then((recentActivity) => ({ recentActivity, errorMessage: null }))
-        .catch(() => ({ recentActivity: null, errorMessage: recentActivityErrorMessage })),
+        .catch(() => ({
+          recentActivity: null,
+          errorMessage: recentActivityErrorMessage
+        })),
       browserPracticeSessionService
         .getHomeDashboardAnalyticsSource()
         .then((analytics) => ({ analytics, errorMessage: null }))
-        .catch(() => ({ analytics: null, errorMessage: analyticsErrorMessage })),
+        .catch(() => ({
+          analytics: null,
+          errorMessage: analyticsErrorMessage
+        })),
       browserPracticeSessionService
         .getHomePracticeStreaks()
         .then((streaks) => ({ streaks, errorMessage: null }))
         .catch(() => ({ streaks: null, errorMessage: streaksErrorMessage })),
       readHomeSessionComparison()
-        .then((sessionComparison) => ({ sessionComparison, errorMessage: null }))
-        .catch(() => ({ sessionComparison: null, errorMessage: sessionComparisonErrorMessage }))
+        .then((sessionComparison) => ({
+          sessionComparison,
+          errorMessage: null
+        }))
+        .catch(() => ({
+          sessionComparison: null,
+          errorMessage: sessionComparisonErrorMessage
+        }))
     ]);
 
-    if (!isMountedRef.current || refreshId !== latestDashboardRefreshIdRef.current) {
+    if (
+      !isMountedRef.current ||
+      refreshId !== latestDashboardRefreshIdRef.current
+    ) {
       return;
     }
 
@@ -276,12 +304,18 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
       ...currentState,
       recentSession,
       continueTarget: null,
-      continueTargets: continueTargetsRead.continueTargets ?? currentState.continueTargets,
-      continueTargetsStatus: continueTargetsRead.errorMessage ? "error" : "loaded",
+      continueTargets:
+        continueTargetsRead.continueTargets ?? currentState.continueTargets,
+      continueTargetsStatus: continueTargetsRead.errorMessage
+        ? "error"
+        : "loaded",
       continueTargetsErrorMessage: continueTargetsRead.errorMessage,
       summary,
-      recentActivity: recentActivityRead.recentActivity ?? currentState.recentActivity,
-      recentActivityStatus: recentActivityRead.errorMessage ? "error" : "loaded",
+      recentActivity:
+        recentActivityRead.recentActivity ?? currentState.recentActivity,
+      recentActivityStatus: recentActivityRead.errorMessage
+        ? "error"
+        : "loaded",
       recentActivityErrorMessage: recentActivityRead.errorMessage,
       analytics: analyticsRead.analytics ?? currentState.analytics,
       analyticsStatus: analyticsRead.errorMessage ? "error" : "loaded",
@@ -289,8 +323,12 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
       streaks: streaksRead.streaks ?? currentState.streaks,
       streaksStatus: streaksRead.errorMessage ? "error" : "loaded",
       streaksErrorMessage: streaksRead.errorMessage,
-      sessionComparison: sessionComparisonRead.sessionComparison ?? currentState.sessionComparison,
-      sessionComparisonStatus: sessionComparisonRead.errorMessage ? "error" : "loaded",
+      sessionComparison:
+        sessionComparisonRead.sessionComparison ??
+        currentState.sessionComparison,
+      sessionComparisonStatus: sessionComparisonRead.errorMessage
+        ? "error"
+        : "loaded",
       sessionComparisonErrorMessage: sessionComparisonRead.errorMessage
     }));
   }, []);
@@ -316,13 +354,17 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
       evaluationErrorMessage = practiceGoalEvaluationsErrorMessage;
     }
 
-    if (!isMountedRef.current || refreshId !== latestPracticeGoalEvaluationRefreshIdRef.current) {
+    if (
+      !isMountedRef.current ||
+      refreshId !== latestPracticeGoalEvaluationRefreshIdRef.current
+    ) {
       return;
     }
 
     setState((currentState) => ({
       ...currentState,
-      practiceGoalEvaluations: evaluations ?? currentState.practiceGoalEvaluations,
+      practiceGoalEvaluations:
+        evaluations ?? currentState.practiceGoalEvaluations,
       practiceGoalProgressStatus: evaluationErrorMessage ? "error" : "loaded",
       practiceGoalProgressErrorMessage: evaluationErrorMessage
     }));
@@ -331,7 +373,8 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
   const refreshPracticeGoals = useCallback(async () => {
     const refreshId = latestPracticeGoalRefreshIdRef.current + 1;
     latestPracticeGoalRefreshIdRef.current = refreshId;
-    const evaluationRefreshId = latestPracticeGoalEvaluationRefreshIdRef.current + 1;
+    const evaluationRefreshId =
+      latestPracticeGoalEvaluationRefreshIdRef.current + 1;
     latestPracticeGoalEvaluationRefreshIdRef.current = evaluationRefreshId;
 
     if (isMountedRef.current) {
@@ -349,22 +392,29 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
     try {
       goals = await practiceGoalService.listPracticeGoals();
     } catch {
-      if (!isMountedRef.current || refreshId !== latestPracticeGoalRefreshIdRef.current) {
+      if (
+        !isMountedRef.current ||
+        refreshId !== latestPracticeGoalRefreshIdRef.current
+      ) {
         return;
       }
 
       setState((currentState) => ({
         ...currentState,
         practiceGoalsStatus: "error",
-        practiceGoalProgressStatus: evaluationRefreshId === latestPracticeGoalEvaluationRefreshIdRef.current
-          ? currentState.practiceGoalEvaluations.length > 0
-            ? "loaded"
-            : "idle"
-          : currentState.practiceGoalProgressStatus,
+        practiceGoalProgressStatus:
+          evaluationRefreshId ===
+          latestPracticeGoalEvaluationRefreshIdRef.current
+            ? currentState.practiceGoalEvaluations.length > 0
+              ? "loaded"
+              : "idle"
+            : currentState.practiceGoalProgressStatus,
         practiceGoalsErrorMessage: practiceGoalsErrorMessage,
-        practiceGoalProgressErrorMessage: evaluationRefreshId === latestPracticeGoalEvaluationRefreshIdRef.current
-          ? null
-          : currentState.practiceGoalProgressErrorMessage
+        practiceGoalProgressErrorMessage:
+          evaluationRefreshId ===
+          latestPracticeGoalEvaluationRefreshIdRef.current
+            ? null
+            : currentState.practiceGoalProgressErrorMessage
       }));
       return;
     }
@@ -378,7 +428,10 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
       evaluationErrorMessage = practiceGoalEvaluationsErrorMessage;
     }
 
-    if (!isMountedRef.current || refreshId !== latestPracticeGoalRefreshIdRef.current) {
+    if (
+      !isMountedRef.current ||
+      refreshId !== latestPracticeGoalRefreshIdRef.current
+    ) {
       return;
     }
 
@@ -389,11 +442,13 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
       ...currentState,
       practiceGoals: goals,
       practiceGoalEvaluations: isLatestEvaluationRefresh
-        ? evaluations ?? currentState.practiceGoalEvaluations
+        ? (evaluations ?? currentState.practiceGoalEvaluations)
         : currentState.practiceGoalEvaluations,
       practiceGoalsStatus: "loaded",
       practiceGoalProgressStatus: isLatestEvaluationRefresh
-        ? evaluationErrorMessage ? "error" : "loaded"
+        ? evaluationErrorMessage
+          ? "error"
+          : "loaded"
         : currentState.practiceGoalProgressStatus,
       practiceGoalsErrorMessage: null,
       practiceGoalProgressErrorMessage: isLatestEvaluationRefresh
@@ -402,73 +457,79 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
     }));
   }, []);
 
-  const savePracticeGoal = useCallback(async (goal: LocalPracticeGoal) => {
-    if (isMountedRef.current) {
-      setState((currentState) => ({
-        ...currentState,
-        practiceGoalMutationStatus: "saving",
-        practiceGoalMutationErrorMessage: null
-      }));
-    }
-
-    try {
-      await practiceGoalService.savePracticeGoal(goal);
-    } catch {
+  const savePracticeGoal = useCallback(
+    async (goal: LocalPracticeGoal) => {
       if (isMountedRef.current) {
         setState((currentState) => ({
           ...currentState,
-          practiceGoalMutationStatus: "error",
-          practiceGoalMutationErrorMessage: practiceGoalSaveErrorMessage
+          practiceGoalMutationStatus: "saving",
+          practiceGoalMutationErrorMessage: null
         }));
       }
-      throw new Error(practiceGoalSaveErrorMessage);
-    }
 
-    if (!isMountedRef.current) {
-      return;
-    }
+      try {
+        await practiceGoalService.savePracticeGoal(goal);
+      } catch {
+        if (isMountedRef.current) {
+          setState((currentState) => ({
+            ...currentState,
+            practiceGoalMutationStatus: "error",
+            practiceGoalMutationErrorMessage: practiceGoalSaveErrorMessage
+          }));
+        }
+        throw new Error(practiceGoalSaveErrorMessage);
+      }
 
-    setState((currentState) => ({
-      ...currentState,
-      practiceGoalMutationStatus: "idle",
-      practiceGoalMutationErrorMessage: null
-    }));
-    void refreshPracticeGoals();
-  }, [refreshPracticeGoals]);
+      if (!isMountedRef.current) {
+        return;
+      }
 
-  const deletePracticeGoal = useCallback(async (goalId: string) => {
-    if (isMountedRef.current) {
       setState((currentState) => ({
         ...currentState,
-        practiceGoalMutationStatus: "deleting",
+        practiceGoalMutationStatus: "idle",
         practiceGoalMutationErrorMessage: null
       }));
-    }
+      void refreshPracticeGoals();
+    },
+    [refreshPracticeGoals]
+  );
 
-    try {
-      await practiceGoalService.deletePracticeGoal(goalId);
-    } catch {
+  const deletePracticeGoal = useCallback(
+    async (goalId: string) => {
       if (isMountedRef.current) {
         setState((currentState) => ({
           ...currentState,
-          practiceGoalMutationStatus: "error",
-          practiceGoalMutationErrorMessage: practiceGoalDeleteErrorMessage
+          practiceGoalMutationStatus: "deleting",
+          practiceGoalMutationErrorMessage: null
         }));
       }
-      throw new Error(practiceGoalDeleteErrorMessage);
-    }
 
-    if (!isMountedRef.current) {
-      return;
-    }
+      try {
+        await practiceGoalService.deletePracticeGoal(goalId);
+      } catch {
+        if (isMountedRef.current) {
+          setState((currentState) => ({
+            ...currentState,
+            practiceGoalMutationStatus: "error",
+            practiceGoalMutationErrorMessage: practiceGoalDeleteErrorMessage
+          }));
+        }
+        throw new Error(practiceGoalDeleteErrorMessage);
+      }
 
-    setState((currentState) => ({
-      ...currentState,
-      practiceGoalMutationStatus: "idle",
-      practiceGoalMutationErrorMessage: null
-    }));
-    void refreshPracticeGoals();
-  }, [refreshPracticeGoals]);
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setState((currentState) => ({
+        ...currentState,
+        practiceGoalMutationStatus: "idle",
+        practiceGoalMutationErrorMessage: null
+      }));
+      void refreshPracticeGoals();
+    },
+    [refreshPracticeGoals]
+  );
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -476,10 +537,12 @@ export function usePracticeSessionDashboard(): PracticeSessionDashboardResult {
     void refreshDashboard();
     void refreshPracticeGoals();
 
-    const unsubscribePracticeSession = browserPracticeSessionService.subscribe(() => {
-      void refreshDashboard();
-      void refreshPracticeGoalEvaluations();
-    });
+    const unsubscribePracticeSession = browserPracticeSessionService.subscribe(
+      () => {
+        void refreshDashboard();
+        void refreshPracticeGoalEvaluations();
+      }
+    );
     const unsubscribePracticeGoal = practiceGoalService.subscribe(() => {
       void refreshPracticeGoals();
     });
@@ -509,7 +572,9 @@ async function readHomeSessionComparison(): Promise<HomeSessionComparisonData> {
   return createHomeSessionComparisonData(comparison);
 }
 
-function createHomeSessionComparisonData(comparison: SessionComparisonResult): HomeSessionComparisonData {
+function createHomeSessionComparisonData(
+  comparison: SessionComparisonResult
+): HomeSessionComparisonData {
   return {
     generatedAt: comparison.generatedAt,
     candidates: comparison.candidates.map(createHomeSessionComparisonCandidate),
@@ -521,7 +586,8 @@ function createHomeSessionComparisonData(comparison: SessionComparisonResult): H
 function createHomeSessionComparisonCandidate(
   candidate: SessionComparisonCandidate
 ): HomeSessionComparisonCandidate {
-  const sourceTypeLabel = candidate.sourceType === "quick" ? "Quick practice" : "Sheet practice";
+  const sourceTypeLabel =
+    candidate.sourceType === "quick" ? "Quick practice" : "Sheet practice";
 
   return {
     sessionId: candidate.sessionId,
@@ -556,7 +622,9 @@ function getSessionComparisonSheetText(candidate: SessionComparisonCandidate) {
   }
 
   if (candidate.targetState === "lookup-failed") {
-    return candidate.sheetId ? `${candidate.sheetId} (lookup failed)` : "Sheet lookup failed";
+    return candidate.sheetId
+      ? `${candidate.sheetId} (lookup failed)`
+      : "Sheet lookup failed";
   }
 
   if (candidate.targetState === "no-target") {
@@ -566,7 +634,9 @@ function getSessionComparisonSheetText(candidate: SessionComparisonCandidate) {
   return candidate.sheetName ?? candidate.sheetId ?? "Sheet practice";
 }
 
-function getSessionComparisonSegmentText(candidate: SessionComparisonCandidate) {
+function getSessionComparisonSegmentText(
+  candidate: SessionComparisonCandidate
+) {
   if (candidate.sourceType === "quick") {
     return "Quick metronome";
   }
@@ -575,7 +645,10 @@ function getSessionComparisonSegmentText(candidate: SessionComparisonCandidate) 
     return "Whole sheet / no segment";
   }
 
-  const segmentText = [candidate.segmentName ?? "Saved segment", candidate.segmentRangeLabel]
+  const segmentText = [
+    candidate.segmentName ?? "Saved segment",
+    candidate.segmentRangeLabel
+  ]
     .filter(Boolean)
     .join(" ");
 
@@ -590,9 +663,20 @@ function getSessionComparisonSegmentText(candidate: SessionComparisonCandidate) 
   return segmentText;
 }
 
-function formatSessionComparisonRecordings(sessionRecordingCount: number, linkedSheetTakes: number) {
-  const safeSessionRecordingCount = Math.max(0, Math.floor(Number.isFinite(sessionRecordingCount) ? sessionRecordingCount : 0));
-  const recordingLabel = safeSessionRecordingCount === 1 ? "1 recording" : `${safeSessionRecordingCount} recordings`;
+function formatSessionComparisonRecordings(
+  sessionRecordingCount: number,
+  linkedSheetTakes: number
+) {
+  const safeSessionRecordingCount = Math.max(
+    0,
+    Math.floor(
+      Number.isFinite(sessionRecordingCount) ? sessionRecordingCount : 0
+    )
+  );
+  const recordingLabel =
+    safeSessionRecordingCount === 1
+      ? "1 recording"
+      : `${safeSessionRecordingCount} recordings`;
 
   if (linkedSheetTakes <= 0 || linkedSheetTakes === safeSessionRecordingCount) {
     return recordingLabel;
@@ -601,9 +685,15 @@ function formatSessionComparisonRecordings(sessionRecordingCount: number, linked
   return `${recordingLabel}; ${linkedSheetTakes} linked sheet ${linkedSheetTakes === 1 ? "take" : "takes"}`;
 }
 
-function formatSessionComparisonGoalContribution(durationMs: number, linkedSheetTakes: number) {
+function formatSessionComparisonGoalContribution(
+  durationMs: number,
+  linkedSheetTakes: number
+) {
   const minutes = formatSessionComparisonMinutes(durationMs);
-  const takeLabel = linkedSheetTakes === 1 ? "1 sheet take linked" : `${linkedSheetTakes} sheet takes linked`;
+  const takeLabel =
+    linkedSheetTakes === 1
+      ? "1 sheet take linked"
+      : `${linkedSheetTakes} sheet takes linked`;
 
   return `Counts as 1 session; adds ${minutes}; ${takeLabel}`;
 }

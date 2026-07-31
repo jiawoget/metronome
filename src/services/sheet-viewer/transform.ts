@@ -27,7 +27,11 @@ export function clampSheetViewerZoom(value: number) {
 
 export function stepSheetViewerZoom(current: number, direction: "in" | "out") {
   const base = Number.isFinite(current) ? current : 1;
-  const next = base + (direction === "in" ? SHEET_VIEWER_TRANSFORM_LIMITS.scaleStep : -SHEET_VIEWER_TRANSFORM_LIMITS.scaleStep);
+  const next =
+    base +
+    (direction === "in"
+      ? SHEET_VIEWER_TRANSFORM_LIMITS.scaleStep
+      : -SHEET_VIEWER_TRANSFORM_LIMITS.scaleStep);
 
   return clampSheetViewerZoom(Number(next.toFixed(2)));
 }
@@ -36,7 +40,9 @@ function normalizeTranslation(value: number | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function hasPositiveFiniteSize(size: { width?: unknown; height?: unknown } | null | undefined) {
+function hasPositiveFiniteSize(
+  size: { width?: unknown; height?: unknown } | null | undefined
+) {
   const width = size?.width;
   const height = size?.height;
 
@@ -50,8 +56,13 @@ function hasPositiveFiniteSize(size: { width?: unknown; height?: unknown } | nul
   );
 }
 
-function hasUsableTransformBounds(bounds: SheetViewerTransformBounds | undefined): bounds is SheetViewerTransformBounds {
-  return hasPositiveFiniteSize(bounds?.viewport) && hasPositiveFiniteSize(bounds?.content);
+function hasUsableTransformBounds(
+  bounds: SheetViewerTransformBounds | undefined
+): bounds is SheetViewerTransformBounds {
+  return (
+    hasPositiveFiniteSize(bounds?.viewport) &&
+    hasPositiveFiniteSize(bounds?.content)
+  );
 }
 
 function roundScale(value: number) {
@@ -66,7 +77,9 @@ function clampTranslation(value: number, maxPan: number) {
   return clampValue(value, -maxPan, maxPan);
 }
 
-export function createSheetViewerTransform(input: Partial<SheetViewerTransform> = {}): SheetViewerTransform {
+export function createSheetViewerTransform(
+  input: Partial<SheetViewerTransform> = {}
+): SheetViewerTransform {
   return {
     scale: clampSheetViewerZoom(input.scale ?? 1),
     translateX: normalizeTranslation(input.translateX),
@@ -102,8 +115,14 @@ export function clampSheetViewerTransform(
 
   const effectiveWidth = bounds.content.width * normalized.scale;
   const effectiveHeight = bounds.content.height * normalized.scale;
-  const maxX = effectiveWidth <= bounds.viewport.width ? 0 : (effectiveWidth - bounds.viewport.width) / 2;
-  const maxY = effectiveHeight <= bounds.viewport.height ? 0 : (effectiveHeight - bounds.viewport.height) / 2;
+  const maxX =
+    effectiveWidth <= bounds.viewport.width
+      ? 0
+      : (effectiveWidth - bounds.viewport.width) / 2;
+  const maxY =
+    effectiveHeight <= bounds.viewport.height
+      ? 0
+      : (effectiveHeight - bounds.viewport.height) / 2;
 
   return {
     ...normalized,
@@ -120,7 +139,9 @@ export function setSheetViewerTransformScale(
   return clampSheetViewerTransform(
     {
       ...createSheetViewerTransform(transform),
-      scale: clampSheetViewerZoom(Number.isFinite(scale) ? roundScale(scale) : 1)
+      scale: clampSheetViewerZoom(
+        Number.isFinite(scale) ? roundScale(scale) : 1
+      )
     },
     bounds
   );

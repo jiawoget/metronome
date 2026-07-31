@@ -372,15 +372,15 @@ Implement P5-06 only. The shortest correct path is one route helper, one Sheet L
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Persisting all Recordings Review filters in the URL | Future reviewed navigation/filter slice |
-| Friendly stale-sheet name lookup in Recordings Review | Future reviewed library/review integration slice, only if users need it |
-| Dedicated sheet detail/history page | Future reviewed library slice |
-| Sort/filter Sheet Library by recordings count or recent practice | Future reviewed library slice |
-| Live subscription refresh while staying on Sheet Library or Recordings Review | Future reviewed slice if needed |
-| Viewer thumbnails, page jump, zoom/pan, assisted page turning | P5-07 through P5-12 |
-| Cloud sync, sheet sharing, automatic score following, scoring, mistake detection | v2 or future reviewed feature |
+| Deferred work                                                                    | Future owner                                                            |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Persisting all Recordings Review filters in the URL                              | Future reviewed navigation/filter slice                                 |
+| Friendly stale-sheet name lookup in Recordings Review                            | Future reviewed library/review integration slice, only if users need it |
+| Dedicated sheet detail/history page                                              | Future reviewed library slice                                           |
+| Sort/filter Sheet Library by recordings count or recent practice                 | Future reviewed library slice                                           |
+| Live subscription refresh while staying on Sheet Library or Recordings Review    | Future reviewed slice if needed                                         |
+| Viewer thumbnails, page jump, zoom/pan, assisted page turning                    | P5-07 through P5-12                                                     |
+| Cloud sync, sheet sharing, automatic score following, scoring, mistake detection | v2 or future reviewed feature                                           |
 
 ## Split Triggers
 

@@ -4,7 +4,11 @@ import {
   getMeterTimeSignatureParts
 } from "@/domain/practice/meter-timing";
 import { isQuickMetronomeTimeSignature } from "@/lib/quick-metronome/control";
-import { MAX_BPM, MIN_BPM, type TimeSignature } from "@/lib/quick-metronome/types";
+import {
+  MAX_BPM,
+  MIN_BPM,
+  type TimeSignature
+} from "@/lib/quick-metronome/types";
 
 export type PreStartCountdownPlan = {
   beatCount: number;
@@ -34,7 +38,11 @@ function assertPositiveInteger(value: number, label: string) {
 function assertQuickCountdownInput(input: QuickAdvancedCountdownInput) {
   assertPositiveInteger(input.count, "Countdown count");
 
-  if (!Number.isFinite(input.bpm) || input.bpm < MIN_BPM || input.bpm > MAX_BPM) {
+  if (
+    !Number.isFinite(input.bpm) ||
+    input.bpm < MIN_BPM ||
+    input.bpm > MAX_BPM
+  ) {
     throw new Error(`Countdown BPM must be between ${MIN_BPM} and ${MAX_BPM}.`);
   }
 
@@ -43,7 +51,9 @@ function assertQuickCountdownInput(input: QuickAdvancedCountdownInput) {
   }
 }
 
-export function toPreStartCountdownPlan(plan: BarCountInReadyPlan): PreStartCountdownPlan {
+export function toPreStartCountdownPlan(
+  plan: BarCountInReadyPlan
+): PreStartCountdownPlan {
   return {
     beatCount: plan.beatCount,
     totalDurationMs: plan.totalDurationMs,
@@ -61,7 +71,8 @@ export function getQuickAdvancedCountdownPlan(
   assertQuickCountdownInput(input);
 
   const { numerator } = getMeterTimeSignatureParts(input.timeSignature);
-  const beatCount = input.mode === "measures" ? input.count * numerator : input.count;
+  const beatCount =
+    input.mode === "measures" ? input.count * numerator : input.count;
   const beatDurationMs = getMeterBeatDurationMs({
     bpm: input.bpm,
     timeSignature: input.timeSignature

@@ -5,7 +5,9 @@ import { BrowserCountdownExecutor } from "@/services/metronome/browser-countdown
 import { assertSchedulableCountdownPlan } from "@/services/metronome/countdown-executor";
 import { createFakeToneAdapter } from "./fake-tone-metronome-adapter";
 
-function createPlan(overrides: Partial<PreStartCountdownPlan> = {}): PreStartCountdownPlan {
+function createPlan(
+  overrides: Partial<PreStartCountdownPlan> = {}
+): PreStartCountdownPlan {
   return {
     beatCount: 3,
     totalDurationMs: 7.25,
@@ -61,7 +63,10 @@ describe("countdown executor", () => {
 
     fakeTone.emitScheduledOnce(12.5, 0);
 
-    expect(fakeTone.adapter.draw).toHaveBeenCalledWith(expect.any(Function), 12.5);
+    expect(fakeTone.adapter.draw).toHaveBeenCalledWith(
+      expect.any(Function),
+      12.5
+    );
     expect(onTick).toHaveBeenCalledWith({
       count: 1,
       beatNumber: 1,
@@ -100,9 +105,11 @@ describe("countdown executor", () => {
 
     expect(onTick).toHaveBeenCalledOnce();
     expect(onComplete).not.toHaveBeenCalled();
-    expect(fakeTone.scheduledOnceHandles.every((handle) =>
-      vi.mocked(handle.cancel).mock.calls.length === 1
-    )).toBe(true);
+    expect(
+      fakeTone.scheduledOnceHandles.every(
+        (handle) => vi.mocked(handle.cancel).mock.calls.length === 1
+      )
+    ).toBe(true);
     expect(fakeTone.adapter.stopTransport).toHaveBeenCalledTimes(2);
     expect(fakeTone.adapter.cancelTransport).toHaveBeenCalledTimes(2);
     expect(fakeTone.adapter.dispose).toHaveBeenCalledTimes(1);
@@ -128,10 +135,16 @@ describe("countdown executor", () => {
   });
 
   it("rejects invalid countdown plans", () => {
-    expect(() => assertSchedulableCountdownPlan(createPlan({ beats: [] }))).toThrow(/without beats/);
-    expect(() => assertSchedulableCountdownPlan(createPlan({ beatCount: 0 }))).toThrow(/positive beat count/);
     expect(() =>
-      assertSchedulableCountdownPlan(createPlan({ totalDurationMs: Number.POSITIVE_INFINITY }))
+      assertSchedulableCountdownPlan(createPlan({ beats: [] }))
+    ).toThrow(/without beats/);
+    expect(() =>
+      assertSchedulableCountdownPlan(createPlan({ beatCount: 0 }))
+    ).toThrow(/positive beat count/);
+    expect(() =>
+      assertSchedulableCountdownPlan(
+        createPlan({ totalDurationMs: Number.POSITIVE_INFINITY })
+      )
     ).toThrow(/positive duration/);
   });
 });

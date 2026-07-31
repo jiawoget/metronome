@@ -343,7 +343,7 @@ export function MeasureGridCalibrationPanel({
     <section
       aria-labelledby="measure-grid-title"
       data-testid="measure-grid-calibration-panel"
-      className="border-border bg-background rounded-md border p-3"
+      className="rounded-md border border-border bg-background p-3"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
@@ -353,7 +353,7 @@ export function MeasureGridCalibrationPanel({
           >
             Measure grid
           </h3>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="mt-1 text-xs text-muted-foreground">
             Offset source:{" "}
             {canUseCurrentTimestamp
               ? "current playback timestamp"
@@ -384,13 +384,13 @@ export function MeasureGridCalibrationPanel({
             step={1}
             value={effectiveDraft.bpm}
             onChange={(event) => updateDraft({ bpm: event.target.value })}
-            className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+            className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
           {validation.errors.bpm ? (
             <p
               id={bpmErrorId}
               role="alert"
-              className="text-destructive mt-1 text-xs font-medium"
+              className="mt-1 text-xs font-medium text-destructive"
             >
               {validation.errors.bpm}
             </p>
@@ -413,7 +413,7 @@ export function MeasureGridCalibrationPanel({
                 timeSignature: event.target.value as TimeSignature
               })
             }
-            className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+            className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {TIME_SIGNATURES.map((timeSignature) => (
               <option key={timeSignature} value={timeSignature}>
@@ -440,13 +440,13 @@ export function MeasureGridCalibrationPanel({
             onChange={(event) =>
               updateDraft({ pickupBeats: event.target.value })
             }
-            className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+            className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
           {validation.errors.pickupBeats ? (
             <p
               id={pickupErrorId}
               role="alert"
-              className="text-destructive mt-1 text-xs font-medium"
+              className="mt-1 text-xs font-medium text-destructive"
             >
               {validation.errors.pickupBeats}
             </p>
@@ -471,16 +471,16 @@ export function MeasureGridCalibrationPanel({
             onChange={(event) =>
               updateDraft({ measureOneOffsetMs: event.target.value })
             }
-            className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+            className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="mt-1 text-xs text-muted-foreground">
             Current: {formatOffset(offsetValue)}
           </p>
           {validation.errors.measureOneOffsetMs ? (
             <p
               id={offsetErrorId}
               role="alert"
-              className="text-destructive mt-1 text-xs font-medium"
+              className="mt-1 text-xs font-medium text-destructive"
             >
               {validation.errors.measureOneOffsetMs}
             </p>
@@ -520,18 +520,18 @@ export function MeasureGridCalibrationPanel({
       {!canUseCurrentTimestamp ? (
         <p
           id={timestampReasonId}
-          className="text-muted-foreground mt-2 text-xs"
+          className="mt-2 text-xs text-muted-foreground"
         >
           No playback timestamp available.
         </p>
       ) : null}
       {effectiveLoadState === "error" && errorMessage ? (
-        <p role="alert" className="text-destructive mt-2 text-sm font-medium">
+        <p role="alert" className="mt-2 text-sm font-medium text-destructive">
           {errorMessage}
         </p>
       ) : null}
       {effectiveLoadState !== "error" && errorMessage ? (
-        <p role="alert" className="text-destructive mt-2 text-sm font-medium">
+        <p role="alert" className="mt-2 text-sm font-medium text-destructive">
           {errorMessage}
         </p>
       ) : null}

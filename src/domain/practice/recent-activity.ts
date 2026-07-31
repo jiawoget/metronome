@@ -13,8 +13,19 @@ import type {
 
 export const DEFAULT_HOME_RECENT_ACTIVITY_LIMIT = 8;
 
-export type HomeRecentActivityKind = "quick-session" | "sheet-session" | "sheet-recording" | "segment-session" | "segment-recording";
-export type HomeRecentActivityTargetState = "valid" | "lookup-failed" | "missing-sheet" | "missing-segment" | "no-target" | "quick";
+export type HomeRecentActivityKind =
+  | "quick-session"
+  | "sheet-session"
+  | "sheet-recording"
+  | "segment-session"
+  | "segment-recording";
+export type HomeRecentActivityTargetState =
+  | "valid"
+  | "lookup-failed"
+  | "missing-sheet"
+  | "missing-segment"
+  | "no-target"
+  | "quick";
 
 export type HomeRecentActivityItem = {
   id: string;
@@ -44,8 +55,14 @@ export type HomeRecentActivityResult = {
 
 export type HomeRecentActivityOptions = { limit?: number };
 export type HomeRecentActivityTargetResolution = {
-  sheets?: Record<string, SessionHistoryLookupResult<SessionHistorySheetTarget>>;
-  segments?: Record<string, SessionHistoryLookupResult<SessionHistorySegmentTarget>>;
+  sheets?: Record<
+    string,
+    SessionHistoryLookupResult<SessionHistorySheetTarget>
+  >;
+  segments?: Record<
+    string,
+    SessionHistoryLookupResult<SessionHistorySegmentTarget>
+  >;
 };
 export type HomeRecentActivitySourceInput = HomeRecentActivityOptions & {
   sessions: PracticeSession[];
@@ -111,30 +128,44 @@ export function selectHomeRecentActivity({
   const normalizedLimit = normalizeLimit(limit);
 
   return {
-    items: Array.from(dedupedItems.values()).sort(compareItems).slice(0, normalizedLimit),
+    items: Array.from(dedupedItems.values())
+      .sort(compareItems)
+      .slice(0, normalizedLimit),
     generatedAt,
     limit: normalizedLimit
   };
 }
 
-function createSessionItem(session: PracticeSession, targets: HomeRecentActivityTargetResolution) {
+function createSessionItem(
+  session: PracticeSession,
+  targets: HomeRecentActivityTargetResolution
+) {
   const sessionId = requiredString(session.id);
 
   if (!sessionId) {
     return null;
   }
 
-  const segmentContext = session.sourceType === "quick" ? null : session.segmentContext;
+  const segmentContext =
+    session.sourceType === "quick" ? null : session.segmentContext;
 
   return createItem({
     id: `session:${encodeURIComponent(sessionId)}`,
-    kind: session.sourceType === "quick" ? "quick-session" : segmentContext ? "segment-session" : "sheet-session",
+    kind:
+      session.sourceType === "quick"
+        ? "quick-session"
+        : segmentContext
+          ? "segment-session"
+          : "sheet-session",
     occurredAt: session.updatedAt || session.startedAt,
-    target: resolveTarget({
-      sourceType: session.sourceType,
-      sheetId: session.sheetId,
-      segmentContext: session.segmentContext
-    }, targets),
+    target: resolveTarget(
+      {
+        sourceType: session.sourceType,
+        sheetId: session.sheetId,
+        segmentContext: session.segmentContext
+      },
+      targets
+    ),
     sessionId,
     recordingId: null,
     durationMs: validDuration(session.durationMs),
@@ -145,7 +176,10 @@ function createSessionItem(session: PracticeSession, targets: HomeRecentActivity
   });
 }
 
-function createRecordingItem(recording: SheetRecordingMetadata, targets: HomeRecentActivityTargetResolution) {
+function createRecordingItem(
+  recording: SheetRecordingMetadata,
+  targets: HomeRecentActivityTargetResolution
+) {
   const recordingId = requiredString(recording.id);
 
   if (!recordingId) {
@@ -156,11 +190,14 @@ function createRecordingItem(recording: SheetRecordingMetadata, targets: HomeRec
     id: `recording:${encodeURIComponent(recordingId)}`,
     kind: recording.segmentContext ? "segment-recording" : "sheet-recording",
     occurredAt: recording.createdAt,
-    target: resolveTarget({
-      sourceType: "sheet",
-      sheetId: recording.sheetId,
-      segmentContext: recording.segmentContext
-    }, targets),
+    target: resolveTarget(
+      {
+        sourceType: "sheet",
+        sheetId: recording.sheetId,
+        segmentContext: recording.segmentContext
+      },
+      targets
+    ),
     sessionId: requiredString(recording.sessionId),
     recordingId,
     sheetNameFallback: recording.sheetName,
@@ -172,14 +209,21 @@ function createRecordingItem(recording: SheetRecordingMetadata, targets: HomeRec
 }
 
 function createItem(input: ItemInput): HomeRecentActivityItem {
-  const sheetName = input.target.sheetName ?? requiredString(input.sheetNameFallback);
+  const sheetName =
+    input.target.sheetName ?? requiredString(input.sheetNameFallback);
 
   return {
     id: input.id,
     kind: input.kind,
     occurredAt: input.occurredAt,
     sortTimestamp: validTimestamp(input.occurredAt),
-    label: labelFor(input.kind, input.target.targetState, input.target.sheetId, sheetName, input.target.segmentName),
+    label: labelFor(
+      input.kind,
+      input.target.targetState,
+      input.target.sheetId,
+      sheetName,
+      input.target.segmentName
+    ),
     metadata: metadataFor(input),
     targetState: input.target.targetState,
     sessionId: input.sessionId,
@@ -195,14 +239,23 @@ function createItem(input: ItemInput): HomeRecentActivityItem {
   };
 }
 
-function resolveTarget(source: TargetSource, targets: HomeRecentActivityTargetResolution): ResolvedTarget {
+function resolveTarget(
+  source: TargetSource,
+  targets: HomeRecentActivityTargetResolution
+): ResolvedTarget {
   const sheetId = requiredString(source.sheetId);
   const segmentContext = source.segmentContext ?? null;
   const segmentId = requiredString(segmentContext?.segmentId);
   const segmentName = requiredString(segmentContext?.segmentName);
 
   if (source.sourceType === "quick") {
-    return target(sheetId || segmentId ? "no-target" : "quick", null, null, null, null);
+    return target(
+      sheetId || segmentId ? "no-target" : "quick",
+      null,
+      null,
+      null,
+      null
+    );
   }
 
   if (!sheetId || (segmentContext && !segmentId)) {
@@ -210,7 +263,10 @@ function resolveTarget(source: TargetSource, targets: HomeRecentActivityTargetRe
   }
 
   const sheetTarget = targets.sheets?.[sheetId];
-  const sheetName = sheetTarget?.state === "valid" ? requiredString(sheetTarget.value.name) : null;
+  const sheetName =
+    sheetTarget?.state === "valid"
+      ? requiredString(sheetTarget.value.name)
+      : null;
 
   if (sheetTarget?.state === "lookup-failed") {
     return target("lookup-failed", sheetId, sheetName, segmentId, segmentName);
@@ -228,13 +284,22 @@ function resolveTarget(source: TargetSource, targets: HomeRecentActivityTargetRe
     return target("no-target", sheetId, sheetName, null, segmentName);
   }
 
-  const segmentTarget = targets.segments?.[createSessionHistorySegmentTargetKey(sheetId, segmentId)];
+  const segmentTarget =
+    targets.segments?.[
+      createSessionHistorySegmentTargetKey(sheetId, segmentId)
+    ];
 
   if (segmentTarget?.state === "lookup-failed") {
     return target("lookup-failed", sheetId, sheetName, segmentId, segmentName);
   }
 
-  return target(segmentTarget?.state === "missing" ? "missing-segment" : "valid", sheetId, sheetName, segmentId, segmentName);
+  return target(
+    segmentTarget?.state === "missing" ? "missing-segment" : "valid",
+    sheetId,
+    sheetName,
+    segmentId,
+    segmentName
+  );
 }
 
 function target(
@@ -259,10 +324,17 @@ function labelFor(
   }
 
   if (kind === "segment-session" || kind === "segment-recording") {
-    return segmentName ?? (targetState === "missing-sheet" ? "Deleted sheet" : sheetName ?? sheetId ?? "Segment practice");
+    return (
+      segmentName ??
+      (targetState === "missing-sheet"
+        ? "Deleted sheet"
+        : (sheetName ?? sheetId ?? "Segment practice"))
+    );
   }
 
-  return targetState === "missing-sheet" ? sheetName ?? "Deleted sheet" : sheetName ?? sheetId ?? "Sheet practice";
+  return targetState === "missing-sheet"
+    ? (sheetName ?? "Deleted sheet")
+    : (sheetName ?? sheetId ?? "Sheet practice");
 }
 
 function metadataFor({
@@ -271,7 +343,10 @@ function metadataFor({
   timeSignature,
   recordingCount,
   segmentContext
-}: Pick<ItemInput, "durationMs" | "bpm" | "timeSignature" | "recordingCount" | "segmentContext">) {
+}: Pick<
+  ItemInput,
+  "durationMs" | "bpm" | "timeSignature" | "recordingCount" | "segmentContext"
+>) {
   return [
     formatDuration(durationMs),
     bpm === null ? null : `${bpm} BPM`,
@@ -299,12 +374,18 @@ function formatDuration(durationMs: number | null) {
   const remainder = seconds % 60;
 
   return minutes > 0
-    ? remainder > 0 ? `${minutes}m ${remainder}s` : `${minutes}m`
+    ? remainder > 0
+      ? `${minutes}m ${remainder}s`
+      : `${minutes}m`
     : `${seconds}s`;
 }
 
 function formatRecordingCount(recordingCount: number | null | undefined) {
-  if (typeof recordingCount !== "number" || !Number.isFinite(recordingCount) || recordingCount <= 0) {
+  if (
+    typeof recordingCount !== "number" ||
+    !Number.isFinite(recordingCount) ||
+    recordingCount <= 0
+  ) {
     return null;
   }
 
@@ -313,10 +394,14 @@ function formatRecordingCount(recordingCount: number | null | undefined) {
   return `${count} recording${count === 1 ? "" : "s"}`;
 }
 
-function formatRange(segmentContext: SheetRecordingSegmentContext | null | undefined) {
+function formatRange(
+  segmentContext: SheetRecordingSegmentContext | null | undefined
+) {
   const range = segmentContext?.range;
 
-  return range && Number.isFinite(range.startMeasure) && Number.isFinite(range.endMeasure)
+  return range &&
+    Number.isFinite(range.startMeasure) &&
+    Number.isFinite(range.endMeasure)
     ? `m${range.startMeasure}-${range.endMeasure}`
     : null;
 }
@@ -337,7 +422,10 @@ function disabledReasonFor(targetState: HomeRecentActivityTargetState) {
   }
 }
 
-function compareItems(left: HomeRecentActivityItem, right: HomeRecentActivityItem) {
+function compareItems(
+  left: HomeRecentActivityItem,
+  right: HomeRecentActivityItem
+) {
   return (
     compareSortValues(sortValue(left), sortValue(right)) ||
     KIND_PRIORITY[left.kind] - KIND_PRIORITY[right.kind] ||
@@ -346,7 +434,9 @@ function compareItems(left: HomeRecentActivityItem, right: HomeRecentActivityIte
 }
 
 function sortValue(item: HomeRecentActivityItem) {
-  return item.sortTimestamp ? Date.parse(item.sortTimestamp) : INVALID_SORT_VALUE;
+  return item.sortTimestamp
+    ? Date.parse(item.sortTimestamp)
+    : INVALID_SORT_VALUE;
 }
 
 function compareSortValues(left: number, right: number) {
@@ -358,11 +448,15 @@ function validTimestamp(value: string) {
 }
 
 function validDuration(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
 }
 
 function validBpm(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : null;
 }
 
 function normalizeLimit(value: number | undefined) {

@@ -52,19 +52,33 @@ export function SessionComparisonPanel({
 }) {
   const [selectedSessionIds, setSelectedSessionIds] = useState<string[]>([]);
   const candidatesById = useMemo(
-    () => new Map(comparison.candidates.map((candidate) => [candidate.sessionId, candidate])),
+    () =>
+      new Map(
+        comparison.candidates.map((candidate) => [
+          candidate.sessionId,
+          candidate
+        ])
+      ),
     [comparison.candidates]
   );
-  const validSelectedSessionIds = selectedSessionIds.filter((sessionId) => candidatesById.has(sessionId));
+  const validSelectedSessionIds = selectedSessionIds.filter((sessionId) =>
+    candidatesById.has(sessionId)
+  );
   const selectedCandidates = validSelectedSessionIds
     .map((sessionId) => candidatesById.get(sessionId))
-    .filter((candidate): candidate is HomeSessionComparisonCandidate => Boolean(candidate));
-  const isInitialLoading = status === "loading" && comparison.candidates.length === 0;
-  const hasMaxSelected = validSelectedSessionIds.length >= comparison.maxSelected;
+    .filter((candidate): candidate is HomeSessionComparisonCandidate =>
+      Boolean(candidate)
+    );
+  const isInitialLoading =
+    status === "loading" && comparison.candidates.length === 0;
+  const hasMaxSelected =
+    validSelectedSessionIds.length >= comparison.maxSelected;
 
   function toggleCandidate(sessionId: string) {
     setSelectedSessionIds((currentIds) => {
-      const currentValidIds = currentIds.filter((currentId) => candidatesById.has(currentId));
+      const currentValidIds = currentIds.filter((currentId) =>
+        candidatesById.has(currentId)
+      );
 
       if (currentValidIds.includes(sessionId)) {
         return currentIds.filter((currentId) => currentId !== sessionId);
@@ -79,7 +93,11 @@ export function SessionComparisonPanel({
   }
 
   return (
-    <Card role="region" aria-labelledby="session-comparison-title" data-testid="session-comparison-panel">
+    <Card
+      role="region"
+      aria-labelledby="session-comparison-title"
+      data-testid="session-comparison-panel"
+    >
       <CardHeader>
         <CardTitle id="session-comparison-title">Session Comparison</CardTitle>
       </CardHeader>
@@ -105,13 +123,17 @@ export function SessionComparisonPanel({
         ) : (
           <div className="space-y-4">
             <fieldset>
-              <legend className="text-sm font-semibold">Select sessions to compare</legend>
+              <legend className="text-sm font-semibold">
+                Select sessions to compare
+              </legend>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 Up to 3 sessions can be compared.
               </p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {comparison.candidates.map((candidate) => {
-                  const isSelected = validSelectedSessionIds.includes(candidate.sessionId);
+                  const isSelected = validSelectedSessionIds.includes(
+                    candidate.sessionId
+                  );
                   const isDisabled = !isSelected && hasMaxSelected;
 
                   return (
@@ -132,8 +154,10 @@ export function SessionComparisonPanel({
                         className="mt-1 h-4 w-4 shrink-0 accent-primary"
                       />
                       <span className="min-w-0">
-                        <span className="block break-words font-medium">{candidate.label}</span>
-                        <span className="mt-1 block break-words text-xs text-muted-foreground">
+                        <span className="block font-medium break-words">
+                          {candidate.label}
+                        </span>
+                        <span className="mt-1 block text-xs break-words text-muted-foreground">
                           {candidate.durationText} · {candidate.recordingsText}
                         </span>
                       </span>
@@ -154,47 +178,47 @@ export function SessionComparisonPanel({
             ) : (
               <div className="overflow-hidden rounded-md border border-border">
                 <div className="grid gap-2 bg-muted px-3 py-3 md:grid-cols-[9rem_repeat(3,minmax(0,1fr))]">
-                  <p className="text-xs font-semibold leading-5 text-muted-foreground">
+                  <p className="text-xs leading-5 font-semibold text-muted-foreground">
                     Selected sessions
                   </p>
                   {selectedCandidates.map((candidate, candidateIndex) => (
                     <div key={candidate.sessionId} className="min-w-0">
                       <h3
                         id={getSelectedSessionHeadingId(candidateIndex)}
-                        className="break-words text-sm font-semibold leading-6 text-foreground"
+                        className="text-sm leading-6 font-semibold break-words text-foreground"
                       >
                         {candidate.label}
                       </h3>
-                      <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
+                      <p className="mt-1 text-xs leading-5 break-words text-muted-foreground">
                         {candidate.sourceTypeLabel}
                       </p>
                     </div>
                   ))}
                 </div>
                 <dl aria-label="Selected session metadata">
-                {metrics.map((metric) => (
-                  <div
-                    key={metric.key}
-                    className="grid gap-2 border-t border-border px-3 py-3 md:grid-cols-[9rem_repeat(3,minmax(0,1fr))]"
-                  >
-                    <dt
-                      id={getMetricLabelId(metric.key)}
-                      className="text-xs font-semibold leading-5 text-muted-foreground"
+                  {metrics.map((metric) => (
+                    <div
+                      key={metric.key}
+                      className="grid gap-2 border-t border-border px-3 py-3 md:grid-cols-[9rem_repeat(3,minmax(0,1fr))]"
                     >
-                      {metric.label}
-                    </dt>
-                    {selectedCandidates.map((candidate, candidateIndex) => (
-                      <dd
-                        key={`${candidate.sessionId}-${metric.key}`}
-                        aria-labelledby={`${getSelectedSessionHeadingId(candidateIndex)} ${getMetricLabelId(metric.key)}`}
-                        className="min-w-0 break-words text-sm leading-6 text-foreground"
+                      <dt
+                        id={getMetricLabelId(metric.key)}
+                        className="text-xs leading-5 font-semibold text-muted-foreground"
                       >
-                        {candidate[metric.key]}
-                      </dd>
-                    ))}
-                  </div>
-                ))}
-              </dl>
+                        {metric.label}
+                      </dt>
+                      {selectedCandidates.map((candidate, candidateIndex) => (
+                        <dd
+                          key={`${candidate.sessionId}-${metric.key}`}
+                          aria-labelledby={`${getSelectedSessionHeadingId(candidateIndex)} ${getMetricLabelId(metric.key)}`}
+                          className="min-w-0 text-sm leading-6 break-words text-foreground"
+                        >
+                          {candidate[metric.key]}
+                        </dd>
+                      ))}
+                    </div>
+                  ))}
+                </dl>
               </div>
             )}
           </div>

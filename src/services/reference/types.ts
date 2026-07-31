@@ -41,8 +41,13 @@ export type ReferenceRepository = {
   listReferences: (sheetId: string) => Promise<SheetReference[]>;
   countAllReferences: () => Promise<number>;
   getActiveReference: (sheetId: string) => Promise<SheetReference | null>;
-  getLocalAudioArtifact: (referenceId: string) => Promise<LocalAudioReferenceArtifact | null>;
-  saveReference: (reference: SheetReference, artifact?: LocalAudioReferenceArtifact | null) => Promise<void>;
+  getLocalAudioArtifact: (
+    referenceId: string
+  ) => Promise<LocalAudioReferenceArtifact | null>;
+  saveReference: (
+    reference: SheetReference,
+    artifact?: LocalAudioReferenceArtifact | null
+  ) => Promise<void>;
   clear: () => Promise<void>;
   subscribe: (listener: () => void) => () => void;
 };
@@ -59,12 +64,20 @@ export type ReferenceService = {
   listReferences: (sheetId: string) => Promise<SheetReference[]>;
   countAllReferences: () => Promise<number>;
   getActiveReference: (sheetId: string) => Promise<SheetReference | null>;
-  getLocalAudioArtifact: (referenceId: string) => Promise<LocalAudioReferenceArtifact | null>;
-  addLocalAudioReference: (input: LocalAudioReferenceInput) => Promise<ReferenceResult<LocalAudioReference>>;
-  saveBilibiliUrlReference: (input: BilibiliUrlReferenceInput) => Promise<ReferenceResult<BilibiliReference>>;
+  getLocalAudioArtifact: (
+    referenceId: string
+  ) => Promise<LocalAudioReferenceArtifact | null>;
+  addLocalAudioReference: (
+    input: LocalAudioReferenceInput
+  ) => Promise<ReferenceResult<LocalAudioReference>>;
+  saveBilibiliUrlReference: (
+    input: BilibiliUrlReferenceInput
+  ) => Promise<ReferenceResult<BilibiliReference>>;
   saveBilibiliSearchResultReference: (
     input: BilibiliResultReferenceInput
   ) => Promise<ReferenceResult<BilibiliReference>>;
-  searchBilibili: (query: string) => Promise<ReferenceResult<BilibiliSearchResult[]>>;
+  searchBilibili: (
+    query: string
+  ) => Promise<ReferenceResult<BilibiliSearchResult[]>>;
   subscribe: (listener: () => void) => () => void;
 };

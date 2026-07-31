@@ -4,21 +4,21 @@
 
 本项目是一个 **Web-first 的吉他练习 App**，第一版优先实现：
 
-* 快速节拍器练习
-* 看谱练习
-* PDF / 图片谱导入与显示
-* 本地音频参考
-* Bilibili 视频参考
-* 录音 / 回放
-* 手动错误标记
-* Practice Segment 练习片段
-* 从指定小节开始重录
+- 快速节拍器练习
+- 看谱练习
+- PDF / 图片谱导入与显示
+- 本地音频参考
+- Bilibili 视频参考
+- 录音 / 回放
+- 手动错误标记
+- Practice Segment 练习片段
+- 从指定小节开始重录
 
 第一版优先适配：
 
-* Web 桌面端
-* iPad 横屏
-* iPhone 竖屏
+- Web 桌面端
+- iPad 横屏
+- iPhone 竖屏
 
 ---
 
@@ -57,10 +57,10 @@ shadcn/ui
 
 用途：
 
-* App 页面组织
-* 响应式 UI
-* Web / iPad / iPhone 适配
-* 快速构建现代化扁平 UI
+- App 页面组织
+- 响应式 UI
+- Web / iPad / iPhone 适配
+- 快速构建现代化扁平 UI
 
 ---
 
@@ -72,11 +72,11 @@ Zustand
 
 用途：
 
-* 节拍器状态
-* 当前练习会话状态
-* 当前谱子状态
-* 当前录音状态
-* Practice Segment 状态
+- 节拍器状态
+- 当前练习会话状态
+- 当前谱子状态
+- 当前录音状态
+- Practice Segment 状态
 
 ---
 
@@ -91,9 +91,9 @@ Prettier / Biome
 
 用途：
 
-* TypeScript 提供编译期类型约束
-* Zod 用于校验数据库返回、用户上传、WASM 返回、外部 API 返回
-* 避免数据结构失控
+- TypeScript 提供编译期类型约束
+- Zod 用于校验数据库返回、用户上传、WASM 返回、外部 API 返回
+- 避免数据结构失控
 
 ---
 
@@ -106,10 +106,10 @@ Dexie.js
 
 用途：
 
-* 本地练习记录缓存
-* 本地录音 metadata
-* 离线访问谱子 metadata
-* 本地用户设置
+- 本地练习记录缓存
+- 本地录音 metadata
+- 离线访问谱子 metadata
+- 本地用户设置
 
 ---
 
@@ -124,12 +124,12 @@ Supabase Storage
 
 用途：
 
-* 用户登录
-* 曲谱 metadata
-* 练习记录
-* 录音文件
-* 本地音频参考文件
-* Practice Segment 数据
+- 用户登录
+- 曲谱 metadata
+- 练习记录
+- 录音文件
+- 本地音频参考文件
+- Practice Segment 数据
 
 第一版也可以先做本地优先，后续再接 Supabase 同步。
 
@@ -148,17 +148,17 @@ wavesurfer.js
 
 用途：
 
-| 能力            | 推荐实现                      |
-| ------------- | ------------------------- |
-| 节拍器           | Tone.js                   |
-| BPM / 拍号 / 细分 | Tone.js + 自定义业务层          |
-| 录音            | MediaRecorder API         |
+| 能力              | 推荐实现                  |
+| ----------------- | ------------------------- |
+| 节拍器            | Tone.js                   |
+| BPM / 拍号 / 细分 | Tone.js + 自定义业务层    |
+| 录音              | MediaRecorder API         |
 | 波形显示          | wavesurfer.js             |
-| A-B 循环        | wavesurfer Regions plugin |
+| A-B 循环          | wavesurfer Regions plugin |
 | 录音波形          | wavesurfer.js             |
-| 本地音频播放        | Web Audio / wavesurfer    |
+| 本地音频播放      | Web Audio / wavesurfer    |
 | 播放速度          | Web Audio / wavesurfer    |
-| 手动对齐          | 保存 offsetMs               |
+| 手动对齐          | 保存 offsetMs             |
 
 ---
 
@@ -172,13 +172,13 @@ Rust + wasm-bindgen
 
 优先用于：
 
-* peak 计算
-* onset detection
-* BPM detection
-* 节奏偏差分析
-* pitch detection
-* 音频对齐
-* 多 take 合成前处理
+- peak 计算
+- onset detection
+- BPM detection
+- 节奏偏差分析
+- pitch detection
+- 音频对齐
+- 多 take 合成前处理
 
 如果需要复用成熟 C/C++ 音频库，再考虑：
 
@@ -188,12 +188,12 @@ C++ + Emscripten
 
 适合用于：
 
-* ffmpeg
-* aubio
-* Essentia
-* Rubber Band
-* SoundTouch
-* 自研 DSP 库
+- ffmpeg
+- aubio
+- Essentia
+- Rubber Band
+- SoundTouch
+- 自研 DSP 库
 
 ---
 
@@ -282,26 +282,26 @@ src/
 
 ```ts
 export interface AudioEngine {
-  loadAudio(input: Blob | ArrayBuffer | string): Promise<void>
+  loadAudio(input: Blob | ArrayBuffer | string): Promise<void>;
 
   play(options?: {
-    startSec?: number
-    endSec?: number
-    loop?: boolean
-    playbackRate?: number
-  }): Promise<void>
+    startSec?: number;
+    endSec?: number;
+    loop?: boolean;
+    playbackRate?: number;
+  }): Promise<void>;
 
-  pause(): void
-  stop(): void
+  pause(): void;
+  stop(): void;
 
   startRecording(options: {
-    startBar: number
-    startBeat: number
-    bpm: number
-    timeSignature: TimeSignature
-  }): Promise<void>
+    startBar: number;
+    startBeat: number;
+    bpm: number;
+    timeSignature: TimeSignature;
+  }): Promise<void>;
 
-  stopRecording(): Promise<RecordingTake>
+  stopRecording(): Promise<RecordingTake>;
 }
 ```
 
@@ -314,22 +314,22 @@ export interface AudioEngine {
 ```ts
 export interface AudioAnalysisEngine {
   computePeaks(input: {
-    samples: Float32Array
-    sampleRate: number
-    samplesPerPixel: number
-  }): Promise<Float32Array>
+    samples: Float32Array;
+    sampleRate: number;
+    samplesPerPixel: number;
+  }): Promise<Float32Array>;
 
   detectOnsets?(input: {
-    samples: Float32Array
-    sampleRate: number
-  }): Promise<Float32Array>
+    samples: Float32Array;
+    sampleRate: number;
+  }): Promise<Float32Array>;
 
   analyzeTiming?(input: {
-    onsetsSec: Float32Array
-    bpm: number
-    beatsPerBar: number
-    offsetSec: number
-  }): Promise<TimingDeviation[]>
+    onsetsSec: Float32Array;
+    bpm: number;
+    beatsPerBar: number;
+    offsetSec: number;
+  }): Promise<TimingDeviation[]>;
 }
 ```
 
@@ -357,27 +357,27 @@ RecordingTake + BeatGrid + ActiveComp
 
 ```ts
 export type RecordingTake = {
-  id: string
-  sessionId: string
-  audioUrl: string
-  startBar: number
-  startBeat: number
-  endBar?: number
-  endBeat?: number
-  bpm: number
-  timeSignature: TimeSignature
-  offsetMs: number
-  createdAt: string
-}
+  id: string;
+  sessionId: string;
+  audioUrl: string;
+  startBar: number;
+  startBeat: number;
+  endBar?: number;
+  endBeat?: number;
+  bpm: number;
+  timeSignature: TimeSignature;
+  offsetMs: number;
+  createdAt: string;
+};
 ```
 
 第一版只需要支持：
 
-* 选择起始小节
-* 倒计时 1-2 小节
-* 从该小节开始新录一个 take
-* 保存 take
-* 回放时按小节选择 active take
+- 选择起始小节
+- 倒计时 1-2 小节
+- 从该小节开始新录一个 take
+- 保存 take
+- 回放时按小节选择 active take
 
 第一版不需要做完整音频导出。
 
@@ -387,19 +387,19 @@ export type RecordingTake = {
 
 第一版只做轻量集成：
 
-* Bilibili 搜索
-* 保存视频链接
-* 保存 bvid / aid / cid 等信息
-* iframe 嵌入播放
-* 保存 startTime / endTime
-* 绑定到 Sheet 或 Practice Segment
+- Bilibili 搜索
+- 保存视频链接
+- 保存 bvid / aid / cid 等信息
+- iframe 嵌入播放
+- 保存 startTime / endTime
+- 绑定到 Sheet 或 Practice Segment
 
 第一版不做：
 
-* 视频下载
-* 音频提取
-* 精确同步控制
-* 自动分析 B站音频
+- 视频下载
+- 音频提取
+- 精确同步控制
+- 自动分析 B站音频
 
 B站视频在第一版中定位为：
 
@@ -417,20 +417,20 @@ B站视频在第一版中定位为：
 
 支持：
 
-* mp3
-* wav
-* m4a
+- mp3
+- wav
+- m4a
 
 第一版能力：
 
-* 上传
-* 播放 / 暂停
-* 音量
-* 播放速度
-* A-B 循环
-* 波形显示
-* 与用户录音波形对照
-* 手动 offset 对齐
+- 上传
+- 播放 / 暂停
+- 音量
+- 播放速度
+- A-B 循环
+- 波形显示
+- 与用户录音波形对照
+- 手动 offset 对齐
 
 ---
 
@@ -493,15 +493,15 @@ iframe 嵌入
 
 为了降低复杂度，MVP 不做：
 
-* AI 自动错音判断
-* 自动识别谱面小节线
-* Guitar Pro / MusicXML 解析
-* 自动下载 B站 / YouTube 视频
-* 自动提取 B站音频
-* 自动 BPM 检测
-* 自动音频对齐
-* 完整音频导出
-* 多轨 DAW 式编辑
+- AI 自动错音判断
+- 自动识别谱面小节线
+- Guitar Pro / MusicXML 解析
+- 自动下载 B站 / YouTube 视频
+- 自动提取 B站音频
+- 自动 BPM 检测
+- 自动音频对齐
+- 完整音频导出
+- 多轨 DAW 式编辑
 
 ---
 

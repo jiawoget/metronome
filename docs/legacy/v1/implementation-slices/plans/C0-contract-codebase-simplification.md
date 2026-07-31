@@ -10,26 +10,26 @@ The coding agent must optimize for correctness first. Net line reduction is requ
 
 Measured local hotspots:
 
-| Area | Approx lines | Notes |
-| --- | ---: | --- |
-| `src/components` | 7,038 | Many controller-style components exceed 450 lines. |
-| `tests/unit` | 7,339 | Repository/service tests repeat domain boundary matrices. |
-| `tests/e2e` | 6,255 | Many specs duplicate IndexedDB/localStorage/sheet/audio setup. |
+| Area             | Approx lines | Notes                                                          |
+| ---------------- | -----------: | -------------------------------------------------------------- |
+| `src/components` |        7,038 | Many controller-style components exceed 450 lines.             |
+| `tests/unit`     |        7,339 | Repository/service tests repeat domain boundary matrices.      |
+| `tests/e2e`      |        6,255 | Many specs duplicate IndexedDB/localStorage/sheet/audio setup. |
 
 Top-heavy files that must drive this cleanup:
 
-| File | Lines | Problem |
-| --- | ---: | --- |
-| `tests/e2e/sheet-recording-review.spec.ts` | 1006 | Repeats sheet import, synthetic mic/audio, localStorage snapshot, long flow helpers. |
-| `tests/unit/practice-segment-repository.test.ts` | 985 | Repeats domain validation matrix and persisted-row malformed cases. |
-| `tests/e2e/recordings-review.spec.ts` | 853 | Repeats recording snapshot/audio/waveform helpers. |
-| `tests/unit/practice-session-service.test.ts` | 719 | Repeats memory repo/factory/session scenario setup. |
-| `src/components/sheet-library/sheet-library-experience.tsx` | 657 | Import/edit metadata forms and field markup repeated. |
-| `src/components/sheet-practice/reference/reference-panel.tsx` | 640 | Large local state controller with repeated form/status patterns. |
-| `src/components/quick-metronome/quick-metronome-experience.tsx` | 627 | Duplicates recording/metronome state with sheet practice. |
-| `src/components/recordings-review/recordings-review-experience.tsx` | 523 | Header/list/details/tile/pill markup in one file. |
-| `src/components/sheet-practice/controls/sheet-practice-controls.tsx` | 506 | Orchestrates metronome, recording, session, v1 panels. |
-| `src/components/measure-grid/..` equivalent | 451 | Manual field validation and async stale-sheet guard. |
+| File                                                                 | Lines | Problem                                                                              |
+| -------------------------------------------------------------------- | ----: | ------------------------------------------------------------------------------------ |
+| `tests/e2e/sheet-recording-review.spec.ts`                           |  1006 | Repeats sheet import, synthetic mic/audio, localStorage snapshot, long flow helpers. |
+| `tests/unit/practice-segment-repository.test.ts`                     |   985 | Repeats domain validation matrix and persisted-row malformed cases.                  |
+| `tests/e2e/recordings-review.spec.ts`                                |   853 | Repeats recording snapshot/audio/waveform helpers.                                   |
+| `tests/unit/practice-session-service.test.ts`                        |   719 | Repeats memory repo/factory/session scenario setup.                                  |
+| `src/components/sheet-library/sheet-library-experience.tsx`          |   657 | Import/edit metadata forms and field markup repeated.                                |
+| `src/components/sheet-practice/reference/reference-panel.tsx`        |   640 | Large local state controller with repeated form/status patterns.                     |
+| `src/components/quick-metronome/quick-metronome-experience.tsx`      |   627 | Duplicates recording/metronome state with sheet practice.                            |
+| `src/components/recordings-review/recordings-review-experience.tsx`  |   523 | Header/list/details/tile/pill markup in one file.                                    |
+| `src/components/sheet-practice/controls/sheet-practice-controls.tsx` |   506 | Orchestrates metronome, recording, session, v1 panels.                               |
+| `src/components/measure-grid/..` equivalent                          |   451 | Manual field validation and async stale-sheet guard.                                 |
 
 Installed but underused packages:
 

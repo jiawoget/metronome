@@ -212,27 +212,27 @@ Out of scope:
 
 ## 8. Boundary Condition Matrix
 
-| Condition | Required behavior | Required evidence |
-| --- | --- | --- |
-| Existing sheet with no saved grid | Sheet opens normally; calibration shows defaults and `Needs calibration`; v0 controls still work | Component test and E2E |
-| Existing saved grid | Draft loads saved values and status is `Calibrated` | Component/service test and E2E reload |
-| Malformed saved grid | Treat as no grid; no crash | Unit/component test with mocked service or seeded malformed row |
-| Service `getGrid` rejects | Sheet still opens; panel shows recoverable load error | Component test |
-| Service `saveGrid` rejects | Show error; draft remains editable; previous saved state not overwritten | Component test and source inspection |
-| Invalid BPM below/above range | Field error; save disabled or blocked; service not called | Component test and E2E negative case |
-| Invalid time signature | Unsupported value cannot be selected; invalid injected draft is rejected | Component test/source inspection |
-| Invalid pickup beats | Pickup must be integer, non-negative, and less than numerator | Component test and E2E negative case |
-| Invalid offset | Negative, fractional, missing, or non-finite offsets block save | Component test and E2E negative case |
-| No timestamp boundary | `Set measure 1 here` disabled; manual offset path remains available | Component test and E2E fallback, if applicable |
-| Timestamp available | Clicking `Set measure 1 here` writes current timestamp to draft offset | Component test with injected timestamp provider and E2E if available |
-| Unsaved changes | Badge shows `Unsaved changes`; save enabled only when draft valid | Component test and E2E |
-| Reload after save | Same grid values and `Calibrated` state restore | E2E with IndexedDB persistence |
-| Sheet switch | New sheet loads its own grid/defaults; old draft does not leak | E2E or component test |
-| Mobile layout | Calibration does not cover sheet or transport; labels do not clip | Responsive E2E |
-| Tablet layout | Controls wrap cleanly; sheet and transport usable | Responsive E2E |
-| Desktop layout | Sheet remains dominant; controls stable | Responsive E2E |
-| Browser console/page errors | No console errors or page errors during flow | E2E console capture |
-| Existing v0 controls | Start/stop metronome and existing recording controls still render and are not displaced | E2E smoke assertions |
+| Condition                         | Required behavior                                                                                | Required evidence                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| Existing sheet with no saved grid | Sheet opens normally; calibration shows defaults and `Needs calibration`; v0 controls still work | Component test and E2E                                               |
+| Existing saved grid               | Draft loads saved values and status is `Calibrated`                                              | Component/service test and E2E reload                                |
+| Malformed saved grid              | Treat as no grid; no crash                                                                       | Unit/component test with mocked service or seeded malformed row      |
+| Service `getGrid` rejects         | Sheet still opens; panel shows recoverable load error                                            | Component test                                                       |
+| Service `saveGrid` rejects        | Show error; draft remains editable; previous saved state not overwritten                         | Component test and source inspection                                 |
+| Invalid BPM below/above range     | Field error; save disabled or blocked; service not called                                        | Component test and E2E negative case                                 |
+| Invalid time signature            | Unsupported value cannot be selected; invalid injected draft is rejected                         | Component test/source inspection                                     |
+| Invalid pickup beats              | Pickup must be integer, non-negative, and less than numerator                                    | Component test and E2E negative case                                 |
+| Invalid offset                    | Negative, fractional, missing, or non-finite offsets block save                                  | Component test and E2E negative case                                 |
+| No timestamp boundary             | `Set measure 1 here` disabled; manual offset path remains available                              | Component test and E2E fallback, if applicable                       |
+| Timestamp available               | Clicking `Set measure 1 here` writes current timestamp to draft offset                           | Component test with injected timestamp provider and E2E if available |
+| Unsaved changes                   | Badge shows `Unsaved changes`; save enabled only when draft valid                                | Component test and E2E                                               |
+| Reload after save                 | Same grid values and `Calibrated` state restore                                                  | E2E with IndexedDB persistence                                       |
+| Sheet switch                      | New sheet loads its own grid/defaults; old draft does not leak                                   | E2E or component test                                                |
+| Mobile layout                     | Calibration does not cover sheet or transport; labels do not clip                                | Responsive E2E                                                       |
+| Tablet layout                     | Controls wrap cleanly; sheet and transport usable                                                | Responsive E2E                                                       |
+| Desktop layout                    | Sheet remains dominant; controls stable                                                          | Responsive E2E                                                       |
+| Browser console/page errors       | No console errors or page errors during flow                                                     | E2E console capture                                                  |
+| Existing v0 controls              | Start/stop metronome and existing recording controls still render and are not displaced          | E2E smoke assertions                                                 |
 
 ## 9. Complete Test Plan
 

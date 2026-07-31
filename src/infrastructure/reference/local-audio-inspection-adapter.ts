@@ -1,13 +1,21 @@
-import type { LocalAudioInspectionAdapter, ReferenceResult } from "@/services/reference";
+import type {
+  LocalAudioInspectionAdapter,
+  ReferenceResult
+} from "@/services/reference";
 import { createBrowserAudioDecodeAdapter } from "@/infrastructure/audio/browser-audio-decode-adapter";
-import { AudioDecodeError, type AudioDecodeAdapter } from "@/services/audio-analysis";
+import {
+  AudioDecodeError,
+  type AudioDecodeAdapter
+} from "@/services/audio-analysis";
 
 export class BrowserLocalAudioInspectionAdapter implements LocalAudioInspectionAdapter {
   constructor(
     private readonly decodeAdapter: AudioDecodeAdapter = createBrowserAudioDecodeAdapter()
   ) {}
 
-  async inspectFile(file: File): Promise<ReferenceResult<{ durationMs: number }>> {
+  async inspectFile(
+    file: File
+  ): Promise<ReferenceResult<{ durationMs: number }>> {
     if (typeof window === "undefined") {
       return {
         ok: false,

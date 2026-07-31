@@ -372,14 +372,14 @@ Stop and return to planning if implementation appears to require:
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Page number jump form and invalid input handling | P5-09 |
-| Viewer zoom-pan domain state | P5-10 |
-| Viewer zoom-pan UI controls and gestures | P5-11 |
-| Assisted/manual page turning at segment boundaries | P5-12 |
-| Persistent thumbnail cache with cleanup/export/import support | Future reviewed storage/performance slice |
-| Import-time thumbnail precomputation | Future reviewed performance slice |
-| Thumbnail rail virtualization / progressive rendering for very large PDFs | Future viewer performance slice |
-| Thumbnail retry button or advanced per-page fallback UI | Future UI hardening slice if P5-08 evidence shows need |
-| Cloud sync, score following, automatic recognition, mistake detection | v2 or future reviewed feature |
+| Deferred work                                                             | Future owner                                           |
+| ------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Page number jump form and invalid input handling                          | P5-09                                                  |
+| Viewer zoom-pan domain state                                              | P5-10                                                  |
+| Viewer zoom-pan UI controls and gestures                                  | P5-11                                                  |
+| Assisted/manual page turning at segment boundaries                        | P5-12                                                  |
+| Persistent thumbnail cache with cleanup/export/import support             | Future reviewed storage/performance slice              |
+| Import-time thumbnail precomputation                                      | Future reviewed performance slice                      |
+| Thumbnail rail virtualization / progressive rendering for very large PDFs | Future viewer performance slice                        |
+| Thumbnail retry button or advanced per-page fallback UI                   | Future UI hardening slice if P5-08 evidence shows need |
+| Cloud sync, score following, automatic recognition, mistake detection     | v2 or future reviewed feature                          |

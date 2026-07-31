@@ -34,9 +34,13 @@ describe("quick metronome controls", () => {
   it("validates time signature, subdivision, accent, and countdown selections", () => {
     expect(parseTimeSignature("3/4")).toBe("3/4");
     expect(parseTimeSignature("12/8")).toBe("12/8");
-    expect(parseTimeSignature("5/4")).toBe(DEFAULT_METRONOME_SETTINGS.timeSignature);
+    expect(parseTimeSignature("5/4")).toBe(
+      DEFAULT_METRONOME_SETTINGS.timeSignature
+    );
     expect(parseSubdivision("triplet")).toBe("triplet");
-    expect(parseSubdivision("quintuplet")).toBe(DEFAULT_METRONOME_SETTINGS.subdivision);
+    expect(parseSubdivision("quintuplet")).toBe(
+      DEFAULT_METRONOME_SETTINGS.subdivision
+    );
     expect(parseAccentMode("every-beat")).toBe("every-beat");
     expect(parseAccentMode("random")).toBe(DEFAULT_METRONOME_SETTINGS.accent);
     expect(parseCountdownBeats("8")).toBe(8);
@@ -62,10 +66,42 @@ describe("quick metronome controls", () => {
   });
 
   it("derives timing and accent behavior from meter settings", () => {
-    expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "4/4", subdivision: "quarter" }))).toBe(500);
-    expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "4/4", subdivision: "eighth" }))).toBe(250);
-    expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "6/8", subdivision: "quarter" }))).toBe(250);
-    expect(Math.round(getTickIntervalMs({ bpm: 120, timeSignature: "12/8", subdivision: "quarter" }))).toBe(250);
+    expect(
+      Math.round(
+        getTickIntervalMs({
+          bpm: 120,
+          timeSignature: "4/4",
+          subdivision: "quarter"
+        })
+      )
+    ).toBe(500);
+    expect(
+      Math.round(
+        getTickIntervalMs({
+          bpm: 120,
+          timeSignature: "4/4",
+          subdivision: "eighth"
+        })
+      )
+    ).toBe(250);
+    expect(
+      Math.round(
+        getTickIntervalMs({
+          bpm: 120,
+          timeSignature: "6/8",
+          subdivision: "quarter"
+        })
+      )
+    ).toBe(250);
+    expect(
+      Math.round(
+        getTickIntervalMs({
+          bpm: 120,
+          timeSignature: "12/8",
+          subdivision: "quarter"
+        })
+      )
+    ).toBe(250);
 
     expect(
       isAccentTick(0, {

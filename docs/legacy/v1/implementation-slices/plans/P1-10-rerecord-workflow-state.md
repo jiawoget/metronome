@@ -49,10 +49,7 @@ Replace or extend the current `SheetPracticeRerecordState` with an explicit shap
 
 ```ts
 export type SheetPracticeRerecordStatus =
-  | "unavailable"
-  | "ready"
-  | "invalid"
-  | "error";
+  "unavailable" | "ready" | "invalid" | "error";
 
 export type SheetPracticeRerecordUnavailableReason =
   | "no-source-recording"

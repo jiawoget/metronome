@@ -56,9 +56,11 @@ function PresetGroup({
     <section className="grid gap-2" aria-label={title}>
       <h4 className="text-sm font-medium">{title}</h4>
       {presets.length === 0 ? (
-        <p className="text-muted-foreground text-xs leading-5">{emptyText}</p>
+        <p className="text-xs leading-5 text-muted-foreground">{emptyText}</p>
       ) : (
-        <div className="grid gap-2">{presets.map((preset) => children(preset))}</div>
+        <div className="grid gap-2">
+          {presets.map((preset) => children(preset))}
+        </div>
       )}
     </section>
   );
@@ -83,8 +85,9 @@ export function SheetMetronomePresetControl({
     useState<SheetMetronomePresetSaveScope>("sheet");
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
-  const [confirmDeletePresetId, setConfirmDeletePresetId] =
-    useState<string | null>(null);
+  const [confirmDeletePresetId, setConfirmDeletePresetId] = useState<
+    string | null
+  >(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const mountedRef = useRef(false);
@@ -240,7 +243,9 @@ export function SheetMetronomePresetControl({
       await service.savePreset({
         sheetId,
         segmentId:
-          effectiveSaveScope === "segment" ? selectedSegment?.id ?? null : null,
+          effectiveSaveScope === "segment"
+            ? (selectedSegment?.id ?? null)
+            : null,
         name: trimmedName,
         settings: createSheetMetronomePresetSettingsSnapshot({
           settings,
@@ -423,13 +428,13 @@ export function SheetMetronomePresetControl({
   return (
     <section
       aria-label="Sheet metronome presets"
-      className="bg-muted/40 grid min-w-0 gap-3 rounded-md px-3 py-2"
+      className="grid min-w-0 gap-3 rounded-md bg-muted/40 px-3 py-2"
     >
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <ListMusic className="h-4 w-4" aria-hidden="true" />
         <h3 className="text-sm font-medium">Metronome presets</h3>
         {isListLoading ? (
-          <span className="text-muted-foreground text-xs">Loading...</span>
+          <span className="text-xs text-muted-foreground">Loading...</span>
         ) : null}
       </div>
 
@@ -476,11 +481,11 @@ export function SheetMetronomePresetControl({
 
       <div aria-live="polite" className="min-h-5">
         {errorMessage ? (
-          <p role="alert" className="text-destructive text-xs leading-5">
+          <p role="alert" className="text-xs leading-5 text-destructive">
             {errorMessage}
           </p>
         ) : statusMessage ? (
-          <p role="status" className="text-muted-foreground text-xs leading-5">
+          <p role="status" className="text-xs leading-5 text-muted-foreground">
             {statusMessage}
           </p>
         ) : null}

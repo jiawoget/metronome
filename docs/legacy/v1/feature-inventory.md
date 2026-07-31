@@ -540,4 +540,3 @@ Deferred items are tracked in `docs/v2`.
 - Automatic mistake detection and user-facing scoring.
 - Guitar Pro and MusicXML import.
 - Automatic BPM or time-signature detection from imported files.
-

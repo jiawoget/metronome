@@ -152,9 +152,9 @@ shared E2E helper with identical defaults:
 - range `5..12`
 - `targetBpm: 96`
 - `measureGridVersion:
-  "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000"`
+"bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000"`
 - grid snapshot `{ bpm: 96, timeSignature: "4/4", pickupBeats: 0,
-  measureOneOffsetMs: 1_000 }`
+measureOneOffsetMs: 1_000 }`
 - measure range `11_000..31_000`
 
 ### Recording Defaults
@@ -215,7 +215,7 @@ The shared E2E recording helpers must therefore make valid audio fixtures
 artifact-backed by default when a scenario supplies an audio artifact:
 
 - `artifactRef: { kind: "indexeddb", artifactId: recording.id,
-  storageVersion: 1 }`
+storageVersion: 1 }`
 - a matching IndexedDB row in `RECORDING_ARTIFACT_DB_NAME` /
   `recordingArtifacts`
 - `artifactId === recordingId`

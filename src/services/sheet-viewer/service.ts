@@ -43,14 +43,22 @@ type SheetViewerServiceOptions = {
 };
 
 export type SheetViewerService = {
-  loadSheet: (sheetId: string | null | undefined) => Promise<SheetViewerLoadState>;
-  loadPageThumbnails: (sheetId: string | null | undefined) => Promise<SheetPageThumbnailSet>;
+  loadSheet: (
+    sheetId: string | null | undefined
+  ) => Promise<SheetViewerLoadState>;
+  loadPageThumbnails: (
+    sheetId: string | null | undefined
+  ) => Promise<SheetPageThumbnailSet>;
   revokePageThumbnails: (thumbnails: SheetPageThumbnailSet) => void;
   createArtifactObjectUrls: (artifact: SheetArtifact) => SheetViewerObjectUrls;
   revokeArtifactObjectUrls: (objectUrls: SheetViewerObjectUrls) => void;
 };
 
-function errorState(code: SheetViewerErrorCode, title: string, message: string) {
+function errorState(
+  code: SheetViewerErrorCode,
+  title: string,
+  message: string
+) {
   return {
     status: "error",
     code,
@@ -73,7 +81,9 @@ export function createSheetViewerService({
     createArtifactObjectUrls(artifact) {
       return {
         sheetId: artifact.sheetId,
-        urls: artifact.files.map((file) => viewerAdapter.createFileUrl(file.blob))
+        urls: artifact.files.map((file) =>
+          viewerAdapter.createFileUrl(file.blob)
+        )
       };
     },
 
@@ -104,7 +114,11 @@ export function createSheetViewerService({
 
       const artifact = await sheetLibrary.getArtifact(normalizedSheetId);
 
-      if (!artifact || artifact.files.length === 0 || !hasReadableArtifactFile(artifact)) {
+      if (
+        !artifact ||
+        artifact.files.length === 0 ||
+        !hasReadableArtifactFile(artifact)
+      ) {
         return errorState(
           "missing-artifact",
           "Sheet file missing",
@@ -134,7 +148,10 @@ export function createSheetViewerService({
         status: "ready",
         sheet,
         artifact,
-        pageCount: Math.max(inspection.pageCount ?? sheet.pageCount ?? sheet.imageCount ?? 1, 1),
+        pageCount: Math.max(
+          inspection.pageCount ?? sheet.pageCount ?? sheet.imageCount ?? 1,
+          1
+        ),
         imageDimensions: inspection.imageDimensions
       };
     },
@@ -168,7 +185,11 @@ export function createSheetViewerService({
         }
 
         thumbnailBlobs = generated.thumbnails;
-        rememberSheetViewerThumbnailBlobs(thumbnailCache, cacheKey, thumbnailBlobs);
+        rememberSheetViewerThumbnailBlobs(
+          thumbnailCache,
+          cacheKey,
+          thumbnailBlobs
+        );
       }
 
       return {
@@ -190,7 +211,9 @@ export function createSheetViewerService({
         return;
       }
 
-      thumbnails.thumbnails.forEach((thumbnail) => viewerAdapter.revokeFileUrl(thumbnail.url));
+      thumbnails.thumbnails.forEach((thumbnail) =>
+        viewerAdapter.revokeFileUrl(thumbnail.url)
+      );
     }
   };
 

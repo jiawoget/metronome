@@ -80,7 +80,7 @@ filterSheets(sheets, {
   category: categoryFilter,
   favorite: favoritesOnly ? "favorites" : "all",
   tag: tagFilter
-})
+});
 ```
 
 Do not add a tag sidebar, tag cloud, global saved filters, sort order changes, or URL query params. Those are bigger library-management features and are not needed for P5-02.

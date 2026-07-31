@@ -13,7 +13,11 @@ describe("PreflightShell", () => {
       })
     ).toBeVisible();
     expect(screen.getByText("Smoke-ready shell")).toBeVisible();
-    expect(screen.getByText(/Product modules are intentionally unavailable/i)).toBeVisible();
-    expect(screen.queryByRole("button", { name: /play/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Product modules are intentionally unavailable/i)
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /play/i })
+    ).not.toBeInTheDocument();
   });
 });

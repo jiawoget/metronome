@@ -35,20 +35,20 @@ not create a generic IndexedDB query DSL.
 
 Current matching local helpers:
 
-| File | Current reader shape | Notable differences |
-| --- | --- | --- |
-| `tests/e2e/sheet-practice-controls.spec.ts` | `getPracticeSnapshot(page)` returns `{ sessions, recordings }`; reads sessions from `PRACTICE_SESSION_DB_NAME`; reads recording-history `recordings`; uses `indexedDB.databases()` when available to avoid opening a nonexistent DB. | Session rows include `bpm` and `timeSignature` in the local type. Initial empty assertion expects exactly `{ sessions: [], recordings: [] }`. |
-| `tests/e2e/sheet-practice-session.spec.ts` | `getPracticeSnapshot(page)` returns `{ sessions, recordings }`; reads sessions from `PRACTICE_SESSION_DB_NAME`; reads recording-history `recordings`; uses `indexedDB.databases()` when available to avoid opening a nonexistent DB. | Session rows include `durationMs` in the local type. Initial empty assertion expects exactly `{ sessions: [], recordings: [] }`. |
-| `tests/e2e/reference-system.spec.ts` | `getPracticeSnapshot(page)` reads sessions from `PRACTICE_SESSION_DB_NAME`, then uses shared `readRecordingHistory(page)` and returns `{ sessions, recordings }`. | Does not currently use `indexedDB.databases()` pre-check; it handles missing `sessions` store by returning `[]`. |
-| `tests/e2e/sheet-practice-integration.spec.ts` | `getPracticeSnapshot(page)` returns `{ sessions, recordings, errorMarkers }`; reads sessions from `PRACTICE_SESSION_DB_NAME`; reads recording-history `recordings` and `errorMarkers`. | Needs `errorMarkers` preserved. It currently passes local `practiceDbName` and `recordingHistoryStorageKey` constants into `page.evaluate(...)`. |
+| File                                           | Current reader shape                                                                                                                                                                                                                 | Notable differences                                                                                                                              |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tests/e2e/sheet-practice-controls.spec.ts`    | `getPracticeSnapshot(page)` returns `{ sessions, recordings }`; reads sessions from `PRACTICE_SESSION_DB_NAME`; reads recording-history `recordings`; uses `indexedDB.databases()` when available to avoid opening a nonexistent DB. | Session rows include `bpm` and `timeSignature` in the local type. Initial empty assertion expects exactly `{ sessions: [], recordings: [] }`.    |
+| `tests/e2e/sheet-practice-session.spec.ts`     | `getPracticeSnapshot(page)` returns `{ sessions, recordings }`; reads sessions from `PRACTICE_SESSION_DB_NAME`; reads recording-history `recordings`; uses `indexedDB.databases()` when available to avoid opening a nonexistent DB. | Session rows include `durationMs` in the local type. Initial empty assertion expects exactly `{ sessions: [], recordings: [] }`.                 |
+| `tests/e2e/reference-system.spec.ts`           | `getPracticeSnapshot(page)` reads sessions from `PRACTICE_SESSION_DB_NAME`, then uses shared `readRecordingHistory(page)` and returns `{ sessions, recordings }`.                                                                    | Does not currently use `indexedDB.databases()` pre-check; it handles missing `sessions` store by returning `[]`.                                 |
+| `tests/e2e/sheet-practice-integration.spec.ts` | `getPracticeSnapshot(page)` returns `{ sessions, recordings, errorMarkers }`; reads sessions from `PRACTICE_SESSION_DB_NAME`; reads recording-history `recordings` and `errorMarkers`.                                               | Needs `errorMarkers` preserved. It currently passes local `practiceDbName` and `recordingHistoryStorageKey` constants into `page.evaluate(...)`. |
 
 Adjacent but out-of-scope readers:
 
-| File | Why excluded from D1-03 implementation by default |
-| --- | --- |
-| `tests/e2e/practice-session.spec.ts` | Uses `getPracticeSessions(page)` for quick-session behavior only, plus a broader `clearBrowserData(...)` that clears all localStorage on `/`. This is not the same Sheet Practice snapshot reader shape. |
-| `tests/e2e/recordings-review.spec.ts` | Already uses `readRecordingHistory(...)` / `seedRecordingHistory(...)` fixture helpers and is not a practice-session IndexedDB snapshot helper target. |
-| `tests/e2e/settings-local-data.spec.ts` | Reads broad settings/local-data persistence counts; not the same Sheet Practice snapshot reader shape. |
+| File                                    | Why excluded from D1-03 implementation by default                                                                                                                                                        |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/e2e/practice-session.spec.ts`    | Uses `getPracticeSessions(page)` for quick-session behavior only, plus a broader `clearBrowserData(...)` that clears all localStorage on `/`. This is not the same Sheet Practice snapshot reader shape. |
+| `tests/e2e/recordings-review.spec.ts`   | Already uses `readRecordingHistory(...)` / `seedRecordingHistory(...)` fixture helpers and is not a practice-session IndexedDB snapshot helper target.                                                   |
+| `tests/e2e/settings-local-data.spec.ts` | Reads broad settings/local-data persistence counts; not the same Sheet Practice snapshot reader shape.                                                                                                   |
 
 ## Scope
 
@@ -87,9 +87,12 @@ Status/plan files:
 Prefer one narrow E2E helper that returns raw snapshot data, for example:
 
 ```ts
-export async function readPracticeSnapshot(page: Page, options?: {
-  includeErrorMarkers?: boolean;
-}) {
+export async function readPracticeSnapshot(
+  page: Page,
+  options?: {
+    includeErrorMarkers?: boolean;
+  }
+) {
   // read sessions from PRACTICE_SESSION_DB_NAME
   // read recording-history recordings from RECORDING_HISTORY_STORAGE_KEY
   // include errorMarkers only when requested

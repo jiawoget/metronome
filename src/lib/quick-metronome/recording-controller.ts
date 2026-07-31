@@ -16,14 +16,18 @@ import type {
   RecordingArtifact
 } from "@/lib/quick-metronome/types";
 
-function isQuickRecording(recording: { type: string }): recording is QuickRecording {
+function isQuickRecording(recording: {
+  type: string;
+}): recording is QuickRecording {
   return recording.type === "quick";
 }
 
 function getLatestQuickRecording() {
-  return recordingHistoryRepository
-    .getSnapshot()
-    .recordings.find(isQuickRecording) ?? null;
+  return (
+    recordingHistoryRepository
+      .getSnapshot()
+      .recordings.find(isQuickRecording) ?? null
+  );
 }
 
 function saveQuickRecordingMetadata(recording: QuickRecording) {
@@ -158,8 +162,7 @@ export const quickRecordingController = {
 
       if (metadataSaved) {
         try {
-          const result =
-            deleteQuickRecordingMetadataByIdentity(metadataSaved);
+          const result = deleteQuickRecordingMetadataByIdentity(metadataSaved);
           await cleanupCommittedRecordingArtifactsOrThrow(
             result.artifactCleanupRecordingIds
           );
@@ -185,7 +188,9 @@ export const quickRecordingController = {
       }
 
       if (rollbackErrors.length > 0) {
-        throw new Error("Recording save failed, and rollback cleanup could not fully restore local state.");
+        throw new Error(
+          "Recording save failed, and rollback cleanup could not fully restore local state."
+        );
       }
 
       throw error;

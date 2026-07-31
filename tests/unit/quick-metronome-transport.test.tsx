@@ -19,7 +19,9 @@ function createTransportService() {
   };
 }
 
-function createBarCountInPlan(overrides: Partial<BarCountInReadyPlan> = {}): BarCountInReadyPlan {
+function createBarCountInPlan(
+  overrides: Partial<BarCountInReadyPlan> = {}
+): BarCountInReadyPlan {
   return {
     status: "ready",
     scope: "whole-sheet",
@@ -77,7 +79,9 @@ function createPreStartCountdownPlan(): PreStartCountdownPlan {
   };
 }
 
-function createCountdownTick(overrides: Partial<CountdownExecutorTick> = {}): CountdownExecutorTick {
+function createCountdownTick(
+  overrides: Partial<CountdownExecutorTick> = {}
+): CountdownExecutorTick {
   return {
     count: 1,
     beatNumber: 1,
@@ -424,7 +428,9 @@ describe("useMetronomeTransport", () => {
       countdown.options.onTick?.(createCountdownTick());
     });
 
-    expect(onTick).toHaveBeenCalledWith(expect.objectContaining({ remainingBeats: 1 }));
+    expect(onTick).toHaveBeenCalledWith(
+      expect.objectContaining({ remainingBeats: 1 })
+    );
     expect(result.current.countdownRemaining).toBe(1);
 
     await act(async () => {

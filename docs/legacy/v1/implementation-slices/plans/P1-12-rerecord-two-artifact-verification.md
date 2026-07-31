@@ -126,12 +126,14 @@ Add or extend a dedicated E2E scenario in `tests/e2e/sheet-segment-recording.spe
 11. Stop/save the second take.
 12. Read recording history again and assert exactly two sheet recordings for that sheet.
 13. Assert two distinct artifacts and records:
-   - recording ids differ
-   - history contains two separate entries
-   - both `audioDataUrl` values are audio data URLs and non-empty
-   - both `sizeBytes > 0`
-   - both have finite non-empty `trustedPeaks`
-   - if synthetic microphone produces byte-identical blobs, do not require `audioDataUrl` inequality; instead require distinct ids/history entries and decoded artifact validity for both. If payloads normally differ, assert they differ as an additional signal.
+
+- recording ids differ
+- history contains two separate entries
+- both `audioDataUrl` values are audio data URLs and non-empty
+- both `sizeBytes > 0`
+- both have finite non-empty `trustedPeaks`
+- if synthetic microphone produces byte-identical blobs, do not require `audioDataUrl` inequality; instead require distinct ids/history entries and decoded artifact validity for both. If payloads normally differ, assert they differ as an additional signal.
+
 14. Assert both segment contexts equal the expected context:
 
 ```ts
@@ -155,12 +157,14 @@ Add or extend a dedicated E2E scenario in `tests/e2e/sheet-segment-recording.spe
 
 15. Assert both `segmentContext.segmentId` values are truthy and equal to each other.
 16. Assert the first persisted recording still equals the first snapshot for immutable fields after the second save:
-   - same `id`
-   - same artifact fields
-   - same `createdAt`
-   - same `durationMs`
-   - same `segmentContext`
-   - same `sessionId` if current service contract keeps it stable
+
+- same `id`
+- same artifact fields
+- same `createdAt`
+- same `durationMs`
+- same `segmentContext`
+- same `sessionId` if current service contract keeps it stable
+
 17. Reload the Sheet Practice page.
 18. Read recording history and assert both recordings remain present with the same ids, artifact fields, and segment contexts.
 19. Navigate to `/recordings`.

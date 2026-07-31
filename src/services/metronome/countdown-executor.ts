@@ -29,11 +29,15 @@ export type CountdownExecutor = {
 
 export function assertSchedulableCountdownPlan(plan: PreStartCountdownPlan) {
   if (!Number.isFinite(plan.beatCount) || plan.beatCount <= 0) {
-    throw new Error("Cannot schedule a pre-start countdown without a positive beat count.");
+    throw new Error(
+      "Cannot schedule a pre-start countdown without a positive beat count."
+    );
   }
 
   if (!Number.isFinite(plan.totalDurationMs) || plan.totalDurationMs <= 0) {
-    throw new Error("Cannot schedule a pre-start countdown without a positive duration.");
+    throw new Error(
+      "Cannot schedule a pre-start countdown without a positive duration."
+    );
   }
 
   if (plan.beats.length === 0) {

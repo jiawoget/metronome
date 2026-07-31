@@ -14,7 +14,9 @@ import {
   type SettingsRepository
 } from "@/services/settings";
 
-function createMemorySettingsRepository(initialSettings: UserSettings | null = null): SettingsRepository {
+function createMemorySettingsRepository(
+  initialSettings: UserSettings | null = null
+): SettingsRepository {
   let settings = initialSettings;
 
   return {
@@ -48,7 +50,9 @@ describe("settings services", () => {
       referenceDefaultVolume: 100
     });
 
-    expect(normalizeUserSettings({ defaultBpm: "fast" })).toEqual(DEFAULT_USER_SETTINGS);
+    expect(normalizeUserSettings({ defaultBpm: "fast" })).toEqual(
+      DEFAULT_USER_SETTINGS
+    );
   });
 
   it("persists updates and resets settings through the repository boundary", async () => {
@@ -128,4 +132,3 @@ describe("settings services", () => {
     });
   });
 });
-

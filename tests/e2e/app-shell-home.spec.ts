@@ -85,7 +85,12 @@ async function seedHomeAnalyticsActivity(page: Page) {
               keyPath: "id"
             });
 
-            for (const indexName of ["sourceType", "sheetId", "startedAt", "updatedAt"]) {
+            for (const indexName of [
+              "sourceType",
+              "sheetId",
+              "startedAt",
+              "updatedAt"
+            ]) {
               store.createIndex(indexName, indexName);
             }
           }
@@ -185,7 +190,11 @@ async function seedHomePracticeStreakActivity(page: Page) {
     (databaseName: string) =>
       new Promise<void>((resolve, reject) => {
         const now = new Date();
-        const createLocalTimestamp = (dayOffset: number, hour: number, minute = 0) =>
+        const createLocalTimestamp = (
+          dayOffset: number,
+          hour: number,
+          minute = 0
+        ) =>
           new Date(
             now.getFullYear(),
             now.getMonth(),
@@ -290,7 +299,12 @@ async function seedHomePracticeStreakActivity(page: Page) {
               keyPath: "id"
             });
 
-            for (const indexName of ["sourceType", "sheetId", "startedAt", "updatedAt"]) {
+            for (const indexName of [
+              "sourceType",
+              "sheetId",
+              "startedAt",
+              "updatedAt"
+            ]) {
               store.createIndex(indexName, indexName);
             }
           }
@@ -395,7 +409,12 @@ async function seedHomeGoalProgressActivity(page: Page) {
               keyPath: "id"
             });
 
-            for (const indexName of ["sourceType", "sheetId", "startedAt", "updatedAt"]) {
+            for (const indexName of [
+              "sourceType",
+              "sheetId",
+              "startedAt",
+              "updatedAt"
+            ]) {
               store.createIndex(indexName, indexName);
             }
           }
@@ -535,13 +554,7 @@ async function seedHomeSessionComparisonActivity(
   ];
 
   await page.evaluate(
-    ({
-      databaseName,
-      rows
-    }: {
-      databaseName: string;
-      rows: unknown[];
-    }) =>
+    ({ databaseName, rows }: { databaseName: string; rows: unknown[] }) =>
       new Promise<void>((resolve, reject) => {
         const openRequest = indexedDB.open(databaseName);
 
@@ -553,7 +566,12 @@ async function seedHomeSessionComparisonActivity(
               keyPath: "id"
             });
 
-            for (const indexName of ["sourceType", "sheetId", "startedAt", "updatedAt"]) {
+            for (const indexName of [
+              "sourceType",
+              "sheetId",
+              "startedAt",
+              "updatedAt"
+            ]) {
               store.createIndex(indexName, indexName);
             }
           }
@@ -621,7 +639,11 @@ async function seedHomeSessionComparisonActivity(
 async function expectNoHorizontalOverflow(page: Page) {
   await expect
     .poll(() =>
-      page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
+      page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth
+      )
     )
     .toBe(true);
 }
@@ -634,7 +656,8 @@ async function installFakeMicrophone(page: Page) {
         getUserMedia: async () => {
           const audioWindow = window as Window &
             typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-          const AudioContextConstructor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+          const AudioContextConstructor =
+            audioWindow.AudioContext || audioWindow.webkitAudioContext;
           const audioContext = new AudioContextConstructor();
           const destination = audioContext.createMediaStreamDestination();
           const oscillator = audioContext.createOscillator();
@@ -653,11 +676,19 @@ async function installFakeMicrophone(page: Page) {
   });
 }
 
-async function selectGoalOption(page: Page, label: string, value: string, optionName: RegExp) {
-  const field = label === "Goal kind"
-    ? page.getByTestId("practice-goal-kind")
-    : page.getByTestId("practice-goal-period");
-  const tagName = await field.evaluate((element) => element.tagName).catch(() => "");
+async function selectGoalOption(
+  page: Page,
+  label: string,
+  value: string,
+  optionName: RegExp
+) {
+  const field =
+    label === "Goal kind"
+      ? page.getByTestId("practice-goal-kind")
+      : page.getByTestId("practice-goal-period");
+  const tagName = await field
+    .evaluate((element) => element.tagName)
+    .catch(() => "");
 
   if (tagName === "SELECT") {
     await field.selectOption(value);
@@ -697,7 +728,9 @@ async function saveMeasureGridThroughUi(page: Page) {
   await page.getByRole("spinbutton", { name: "Pickup beats" }).fill("0");
   await page.getByRole("spinbutton", { name: "Measure 1 offset" }).fill("1000");
   await page.getByRole("button", { name: "Save grid" }).click();
-  await expect(page.getByTestId("measure-grid-status")).toContainText("Calibrated");
+  await expect(page.getByTestId("measure-grid-status")).toContainText(
+    "Calibrated"
+  );
 }
 
 async function createPracticeSegmentThroughUi(page: Page) {
@@ -708,11 +741,18 @@ async function createPracticeSegmentThroughUi(page: Page) {
   await page.getByRole("spinbutton", { name: "Target BPM" }).fill("96");
   await page.getByLabel("Segment notes").fill("Keep the bridge even.");
   await page.getByRole("button", { name: "Save segment" }).click();
-  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("1 saved");
+  await expect(
+    page.getByTestId("practice-segment-selector-status")
+  ).toContainText("1 saved");
   await expect(page.getByText("Bridge focus").first()).toBeVisible();
-  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Bridge focus");
+  await expect(
+    page.getByTestId("practice-segment-active-summary")
+  ).toContainText("Bridge focus");
 
-  const row = page.locator("[data-testid^='practice-segment-row-']").filter({ hasText: "Bridge focus" }).first();
+  const row = page
+    .locator("[data-testid^='practice-segment-row-']")
+    .filter({ hasText: "Bridge focus" })
+    .first();
   const rowTestId = await row.getAttribute("data-testid");
   const segmentId = rowTestId?.replace("practice-segment-row-", "") ?? "";
 
@@ -767,7 +807,9 @@ async function searchCommandPalette(page: Page, query: string) {
   return dialog;
 }
 
-test("app shell home navigation works on desktop and mobile without console errors", async ({ page }) => {
+test("app shell home navigation works on desktop and mobile without console errors", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -785,25 +827,42 @@ test("app shell home navigation works on desktop and mobile without console erro
   await expect(page.getByTestId("desktop-sidebar")).toBeVisible();
   await expect(page.getByTestId("mobile-bottom-nav")).toBeHidden();
   await expect(page.getByText("Today Practice Summary")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Practice Streaks" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Practice Streaks" })
+  ).toBeVisible();
   await expect(page.getByText("No local practice streak yet.")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Recent Activity" })
+  ).toBeVisible();
   await expect(page.getByText("No local practice activity yet.")).toBeVisible();
   await expect(page.getByText("No recent practice targets yet.")).toBeVisible();
   await expect(page.getByText(/No sheets imported yet/i)).toBeVisible();
   await expect(page.getByRole("link", { name: "Import Sheet" })).toBeVisible();
-  await expect(page.getByText(/Opens the Sheet Library import flow/i)).toBeVisible();
-  await expect(page.getByText(/Quick takes appear after recording/i)).toBeVisible();
-  await expect(page.getByText(/No recording or playback active/i).first()).toBeVisible();
+  await expect(
+    page.getByText(/Opens the Sheet Library import flow/i)
+  ).toBeVisible();
+  await expect(
+    page.getByText(/Quick takes appear after recording/i)
+  ).toBeVisible();
+  await expect(
+    page.getByText(/No recording or playback active/i).first()
+  ).toBeVisible();
 
   const sidebar = page.getByTestId("desktop-sidebar");
-  await expect(sidebar.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+  await expect(sidebar.getByRole("link", { name: "Home" })).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
   await expect(page.getByTestId("diagnostics-panel")).toBeVisible();
 
-  await page.getByRole("button", { name: "Hide devtools for this session" }).click();
+  await page
+    .getByRole("button", { name: "Hide devtools for this session" })
+    .click();
   await expect(page.getByTestId("diagnostics-panel")).toHaveCount(0);
   await expect(page.getByTestId("diagnostics-restore")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Restore diagnostics" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Restore diagnostics" })
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Restore diagnostics" }).click();
   await expect(page.getByTestId("diagnostics-panel")).toBeVisible();
@@ -811,24 +870,38 @@ test("app shell home navigation works on desktop and mobile without console erro
 
   await page.getByRole("link", { name: "Open Quick Metronome" }).click();
   await expect(page).toHaveURL(/\/quick-metronome$/);
-  await expect(page.getByRole("heading", { name: "Quick Metronome" })).toBeVisible();
-  await expect(sidebar.getByRole("link", { name: "Quick Metronome" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("heading", { name: "Quick Metronome" })
+  ).toBeVisible();
+  await expect(
+    sidebar.getByRole("link", { name: "Quick Metronome" })
+  ).toHaveAttribute("aria-current", "page");
 
   await sidebar.getByRole("link", { name: "Home" }).click();
   await page.getByRole("link", { name: "Import Sheet" }).click();
   await expect(page).toHaveURL(/\/sheet-library$/);
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet Library" })
+  ).toBeVisible();
   await expect(page.getByText(/Import Sheet entry lands here/i)).toBeVisible();
-  await expect(sidebar.getByRole("link", { name: "Sheet Library" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    sidebar.getByRole("link", { name: "Sheet Library" })
+  ).toHaveAttribute("aria-current", "page");
 
   await sidebar.getByRole("link", { name: "Sheet Library" }).click();
   await expect(page).toHaveURL(/\/sheet-library$/);
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet Library" })
+  ).toBeVisible();
 
   await sidebar.getByRole("link", { name: "Sheet Practice" }).click();
   await expect(page).toHaveURL(/\/sheet-practice$/);
-  await expect(page.getByRole("heading", { name: "No sheet selected" })).toBeVisible();
-  await expect(sidebar.getByRole("link", { name: "Sheet Practice" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("heading", { name: "No sheet selected" })
+  ).toBeVisible();
+  await expect(
+    sidebar.getByRole("link", { name: "Sheet Practice" })
+  ).toHaveAttribute("aria-current", "page");
 
   await sidebar.getByRole("link", { name: "Recordings" }).click();
   await expect(page).toHaveURL(/\/recordings$/);
@@ -837,33 +910,54 @@ test("app shell home navigation works on desktop and mobile without console erro
   await sidebar.getByRole("link", { name: "Settings" }).click();
   await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-  await expect(sidebar.getByRole("link", { name: "Settings" })).toHaveAttribute("aria-current", "page");
+  await expect(sidebar.getByRole("link", { name: "Settings" })).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
 
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto("/");
   await expect(page.getByTestId("desktop-sidebar")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Recent Activity" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Practice Streaks" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Recent Activity" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Practice Streaks" })
+  ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByTestId("desktop-sidebar")).toBeHidden();
   await expect(page.getByTestId("mobile-bottom-nav")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Recent Activity" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Practice Streaks" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Recent Activity" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Practice Streaks" })
+  ).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   const mobileNav = page.getByTestId("mobile-bottom-nav");
   await mobileNav.getByLabel("Quick Metronome").click();
   await expect(page).toHaveURL(/\/quick-metronome$/);
-  await expect(page.getByRole("heading", { name: "Quick Metronome" })).toBeVisible();
-  await expect(mobileNav.getByLabel("Quick Metronome")).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("heading", { name: "Quick Metronome" })
+  ).toBeVisible();
+  await expect(mobileNav.getByLabel("Quick Metronome")).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
 
   await mobileNav.getByLabel("Sheet Practice").click();
   await expect(page).toHaveURL(/\/sheet-practice$/);
-  await expect(page.getByRole("heading", { name: "No sheet selected" })).toBeVisible();
-  await expect(mobileNav.getByLabel("Sheet Practice")).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("heading", { name: "No sheet selected" })
+  ).toBeVisible();
+  await expect(mobileNav.getByLabel("Sheet Practice")).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
 
   await mobileNav.getByLabel("Recordings").click();
   await expect(page).toHaveURL(/\/recordings$/);
@@ -876,7 +970,9 @@ test("app shell home navigation works on desktop and mobile without console erro
   expect(consoleErrors).toEqual([]);
 });
 
-test("home Continue Practice recommendations navigate to quick, sheet, and segment targets", async ({ page }) => {
+test("home Continue Practice recommendations navigate to quick, sheet, and segment targets", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -911,7 +1007,9 @@ test("home Continue Practice recommendations navigate to quick, sheet, and segme
   });
 
   await page.goto(`/sheet-practice/${sheetId}`);
-  await expect(page.getByRole("heading", { name: "Continue Practice Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Continue Practice Sheet" })
+  ).toBeVisible();
   await page.getByRole("button", { name: "Start recording" }).click();
   await expect(page.getByText("Recording without metronome.")).toBeVisible();
   await page.waitForTimeout(700);
@@ -924,61 +1022,100 @@ test("home Continue Practice recommendations navigate to quick, sheet, and segme
   await expect(page.getByText("Recording without metronome.")).toBeVisible();
   await page.waitForTimeout(700);
   await page.getByRole("button", { name: "Stop recording" }).click();
-  await expect(page.getByText("Recording saved for Bridge focus.")).toBeVisible();
+  await expect(
+    page.getByText("Recording saved for Bridge focus.")
+  ).toBeVisible();
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
   const panel = page.getByRole("region", { name: "Continue Practice" });
 
   await expect(panel).toBeVisible();
-  await expect(panel.getByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
-    "href",
-    "/quick-metronome"
-  );
   await expect(
-    panel.getByRole("link", { name: "Continue sheet practice Continue Practice Sheet" })
+    panel.getByRole("link", { name: "Continue quick practice" })
+  ).toHaveAttribute("href", "/quick-metronome");
+  await expect(
+    panel.getByRole("link", {
+      name: "Continue sheet practice Continue Practice Sheet"
+    })
   ).toHaveAttribute("href", `/sheet-practice/${sheetId}`);
   await expect(
-    panel.getByRole("link", { name: /Continue segment Bridge focus .* Continue Practice Sheet/ })
-  ).toHaveAttribute("href", `/sheet-practice?sheetId=${sheetId}&segmentId=${segmentId}`);
-  await expect(page.getByRole("link", { name: "Continue Practice", exact: true })).toHaveCount(0);
+    panel.getByRole("link", {
+      name: /Continue segment Bridge focus .* Continue Practice Sheet/
+    })
+  ).toHaveAttribute(
+    "href",
+    `/sheet-practice?sheetId=${sheetId}&segmentId=${segmentId}`
+  );
+  await expect(
+    page.getByRole("link", { name: "Continue Practice", exact: true })
+  ).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
   await panel.getByRole("link", { name: "Continue quick practice" }).click();
   await expect(page).toHaveURL(/\/quick-metronome$/);
-  await expect(page.getByRole("heading", { name: "Quick Metronome" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Quick Metronome" })
+  ).toBeVisible();
 
   await page.goto("/");
-  await panel.getByRole("link", { name: "Continue sheet practice Continue Practice Sheet" }).click();
+  await panel
+    .getByRole("link", {
+      name: "Continue sheet practice Continue Practice Sheet"
+    })
+    .click();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
-  await expect(page.getByRole("heading", { name: "Continue Practice Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Continue Practice Sheet" })
+  ).toBeVisible();
 
   await page.goto("/");
-  await panel.getByRole("link", { name: /Continue segment Bridge focus .* Continue Practice Sheet/ }).click();
-  await expect.poll(() => new URL(page.url()).searchParams.get("sheetId")).toBe(sheetId);
-  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBe(segmentId);
-  await expect(page.getByRole("heading", { name: "Continue Practice Sheet" })).toBeVisible();
-  await expect(page.getByTestId(`practice-segment-row-${segmentId}`)).toHaveAttribute(
-    "aria-pressed",
-    "true"
-  );
-  await expect(page.getByTestId("practice-segment-active-summary")).toContainText("Bridge focus");
+  await panel
+    .getByRole("link", {
+      name: /Continue segment Bridge focus .* Continue Practice Sheet/
+    })
+    .click();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("sheetId"))
+    .toBe(sheetId);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("segmentId"))
+    .toBe(segmentId);
+  await expect(
+    page.getByRole("heading", { name: "Continue Practice Sheet" })
+  ).toBeVisible();
+  await expect(
+    page.getByTestId(`practice-segment-row-${segmentId}`)
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByTestId("practice-segment-active-summary")
+  ).toContainText("Bridge focus");
 
   await page.getByRole("button", { name: "Delete Bridge focus" }).click();
-  await page.getByRole("button", { name: "Confirm delete Bridge focus" }).click();
-  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("0 saved");
+  await page
+    .getByRole("button", { name: "Confirm delete Bridge focus" })
+    .click();
+  await expect(
+    page.getByTestId("practice-segment-selector-status")
+  ).toContainText("0 saved");
 
   await page.goto("/");
   await page.reload();
-  await expect(panel.getByRole("link", { name: /Continue segment Bridge focus/ })).toHaveCount(0);
   await expect(
-    panel.getByRole("link", { name: "Continue sheet practice Continue Practice Sheet" })
+    panel.getByRole("link", { name: /Continue segment Bridge focus/ })
+  ).toHaveCount(0);
+  await expect(
+    panel.getByRole("link", {
+      name: "Continue sheet practice Continue Practice Sheet"
+    })
   ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(panel).toBeVisible();
-  await expect(panel.getByRole("link", { name: "Continue quick practice" })).toBeVisible();
+  await expect(
+    panel.getByRole("link", { name: "Continue quick practice" })
+  ).toBeVisible();
   await expectNoHorizontalOverflow(page);
   expect(consoleErrors).toEqual([]);
 });
@@ -1013,7 +1150,9 @@ test("command palette navigates routes and valid practice targets with guard and
   let dialog = await openCommandPaletteWithShortcut(page);
 
   await expect(dialog.getByRole("option", { name: /Home/ })).toBeVisible();
-  await expect(dialog.getByRole("option", { name: /Recordings/ })).toBeVisible();
+  await expect(
+    dialog.getByRole("option", { name: /Recordings/ })
+  ).toBeVisible();
   await searchCommandPalette(page, "recordings");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/recordings$/);
@@ -1024,7 +1163,9 @@ test("command palette navigates routes and valid practice targets with guard and
   await searchCommandPalette(page, "quick metronome");
   await dialog.getByRole("option", { name: /Quick Metronome/ }).click();
   await expect(page).toHaveURL(/\/quick-metronome$/);
-  await expect(page.getByRole("heading", { name: "Quick Metronome" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Quick Metronome" })
+  ).toBeVisible();
 
   await page.goto("/quick-metronome");
   await page.getByRole("button", { name: "Start metronome" }).click();
@@ -1039,7 +1180,9 @@ test("command palette navigates routes and valid practice targets with guard and
   });
 
   await page.goto(`/sheet-practice/${sheetId}`);
-  await expect(page.getByRole("heading", { name: "Palette Continue Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Palette Continue Sheet" })
+  ).toBeVisible();
   await page.getByRole("button", { name: "Start recording" }).click();
   await expect(page.getByText("Recording without metronome.")).toBeVisible();
   await page.waitForTimeout(700);
@@ -1052,7 +1195,9 @@ test("command palette navigates routes and valid practice targets with guard and
   await expect(page.getByText("Recording without metronome.")).toBeVisible();
   await page.waitForTimeout(700);
   await page.getByRole("button", { name: "Stop recording" }).click();
-  await expect(page.getByText("Recording saved for Bridge focus.")).toBeVisible();
+  await expect(
+    page.getByText("Recording saved for Bridge focus.")
+  ).toBeVisible();
 
   await page.goto("/");
   dialog = await openCommandPaletteWithTrigger(page);
@@ -1065,27 +1210,38 @@ test("command palette navigates routes and valid practice targets with guard and
   await searchCommandPalette(page, "Palette Continue Sheet");
   await dialog.getByRole("option", { name: /Palette Continue Sheet/ }).click();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
-  await expect(page.getByRole("heading", { name: "Palette Continue Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Palette Continue Sheet" })
+  ).toBeVisible();
 
   await page.goto("/");
   dialog = await openCommandPaletteWithTrigger(page);
   await searchCommandPalette(page, "Bridge focus");
   await dialog.getByRole("option", { name: /Bridge focus/ }).click();
-  await expect.poll(() => new URL(page.url()).searchParams.get("sheetId")).toBe(sheetId);
-  await expect.poll(() => new URL(page.url()).searchParams.get("segmentId")).toBe(segmentId);
-  await expect(page.getByTestId(`practice-segment-row-${segmentId}`)).toHaveAttribute(
-    "aria-pressed",
-    "true"
-  );
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("sheetId"))
+    .toBe(sheetId);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("segmentId"))
+    .toBe(segmentId);
+  await expect(
+    page.getByTestId(`practice-segment-row-${segmentId}`)
+  ).toHaveAttribute("aria-pressed", "true");
 
   await page.getByRole("button", { name: "Delete Bridge focus" }).click();
-  await page.getByRole("button", { name: "Confirm delete Bridge focus" }).click();
-  await expect(page.getByTestId("practice-segment-selector-status")).toContainText("0 saved");
+  await page
+    .getByRole("button", { name: "Confirm delete Bridge focus" })
+    .click();
+  await expect(
+    page.getByTestId("practice-segment-selector-status")
+  ).toContainText("0 saved");
 
   const sameShellStaleCheckUrl = page.url();
   dialog = await openCommandPaletteWithTrigger(page);
   await searchCommandPalette(page, "Bridge focus");
-  await expect(dialog.getByRole("option", { name: /Bridge focus/ })).toHaveCount(0);
+  await expect(
+    dialog.getByRole("option", { name: /Bridge focus/ })
+  ).toHaveCount(0);
   await expect(dialog.getByText("No commands found.")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
@@ -1100,17 +1256,17 @@ test("command palette navigates routes and valid practice targets with guard and
   await searchCommandPalette(page, "recordings");
   await dialog.getByRole("option", { name: /Recordings/ }).click();
   await expect(page).toHaveURL(blockedUrl);
-  await expect(page.getByTestId("active-recording-navigation-guard")).toContainText(
-    "Navigation blocked while quick recording is active."
-  );
+  await expect(
+    page.getByTestId("active-recording-navigation-guard")
+  ).toContainText("Navigation blocked while quick recording is active.");
 
   await expect(dialog).toBeVisible();
   await searchCommandPalette(page, "settings");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(blockedUrl);
-  await expect(page.getByTestId("active-recording-navigation-guard")).toContainText(
-    "Navigation blocked while quick recording is active."
-  );
+  await expect(
+    page.getByTestId("active-recording-navigation-guard")
+  ).toContainText("Navigation blocked while quick recording is active.");
 
   await page.getByRole("button", { name: "Stop recording" }).click();
   await expect(page.getByText(/^Recording saved/)).toBeVisible();
@@ -1121,12 +1277,16 @@ test("command palette navigates routes and valid practice targets with guard and
   await expect(dialog.getByRole("option", { name: /Home/ })).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: "Open command palette" })).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Open command palette" })
+  ).toBeFocused();
 
   expect(consoleErrors).toEqual([]);
 });
 
-test("home recent activity renders persisted rows as read-only across responsive viewports", async ({ page }) => {
+test("home recent activity renders persisted rows as read-only across responsive viewports", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -1157,7 +1317,9 @@ test("home recent activity renders persisted rows as read-only across responsive
   await page.getByRole("button", { name: "Start metronome" }).click();
   await expect(page.getByTestId("sheet-session-source")).toHaveText("sheet");
   await page.getByRole("button", { name: "Stop metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Stopped"
+  );
   await seedMissingSheetActivity(page);
 
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -1165,8 +1327,12 @@ test("home recent activity renders persisted rows as read-only across responsive
   const panel = page.getByRole("region", { name: "Recent Activity" });
 
   await expect(panel).toBeVisible();
-  await expect(panel.getByText("Quick Practice", { exact: true })).toBeVisible();
-  await expect(panel.getByText("Recent Activity Sheet", { exact: true })).toBeVisible();
+  await expect(
+    panel.getByText("Quick Practice", { exact: true })
+  ).toBeVisible();
+  await expect(
+    panel.getByText("Recent Activity Sheet", { exact: true })
+  ).toBeVisible();
   await expect(panel.getByText("Deleted sheet", { exact: true })).toBeVisible();
   await expect(panel.getByText("Status: Quick practice")).toBeVisible();
   await expect(panel.getByText("Status: Ready")).toBeVisible();
@@ -1177,7 +1343,9 @@ test("home recent activity renders persisted rows as read-only across responsive
 
   await expect(activityRows).toHaveCount(3);
   await expect(activityRows.locator("a,button")).toHaveCount(0);
-  await expect(panel.locator("[data-testid='recent-activity-row'][tabindex]")).toHaveCount(0);
+  await expect(
+    panel.locator("[data-testid='recent-activity-row'][tabindex]")
+  ).toHaveCount(0);
   await activityRows.first().click();
   await expect(page).toHaveURL(/\/$/);
 
@@ -1187,7 +1355,9 @@ test("home recent activity renders persisted rows as read-only across responsive
 
   await page.setViewportSize({ width: 1024, height: 768 });
   await expect(panel).toBeVisible();
-  await expect(panel.getByText("Recent Activity Sheet", { exact: true })).toBeVisible();
+  await expect(
+    panel.getByText("Recent Activity Sheet", { exact: true })
+  ).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1199,7 +1369,9 @@ test("home recent activity renders persisted rows as read-only across responsive
   expect(consoleErrors).toEqual([]);
 });
 
-test("home practice analytics renders persisted local totals across responsive viewports", async ({ page }) => {
+test("home practice analytics renders persisted local totals across responsive viewports", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -1221,32 +1393,46 @@ test("home practice analytics renders persisted local totals across responsive v
   const panel = page.getByRole("region", { name: "Practice Analytics" });
 
   await expect(panel).toBeVisible();
-  await expect(page.getByTestId("home-analytics-total-practice")).toHaveText("6 min");
+  await expect(page.getByTestId("home-analytics-total-practice")).toHaveText(
+    "6 min"
+  );
   await expect(page.getByTestId("home-analytics-sessions")).toHaveText("3");
   await expect(page.getByTestId("home-analytics-sheet-takes")).toHaveText("1");
-  await expect(page.getByTestId("home-analytics-practiced-sheets")).toHaveText("2");
-  await expect(page.getByTestId("home-analytics-segment-sessions")).toHaveText("1");
+  await expect(page.getByTestId("home-analytics-practiced-sheets")).toHaveText(
+    "2"
+  );
+  await expect(page.getByTestId("home-analytics-segment-sessions")).toHaveText(
+    "1"
+  );
   await expectNoHorizontalOverflow(page);
 
   await page.reload();
   await expect(panel).toBeVisible();
-  await expect(page.getByTestId("home-analytics-total-practice")).toHaveText("6 min");
+  await expect(page.getByTestId("home-analytics-total-practice")).toHaveText(
+    "6 min"
+  );
 
   await page.setViewportSize({ width: 1024, height: 768 });
   await expect(panel).toBeVisible();
-  await expect(page.getByTestId("home-analytics-practiced-sheets")).toHaveText("2");
+  await expect(page.getByTestId("home-analytics-practiced-sheets")).toHaveText(
+    "2"
+  );
   await expectNoHorizontalOverflow(page);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByTestId("mobile-bottom-nav")).toBeVisible();
   await expect(panel).toBeVisible();
-  await expect(page.getByTestId("home-analytics-segment-sessions")).toHaveText("1");
+  await expect(page.getByTestId("home-analytics-segment-sessions")).toHaveText(
+    "1"
+  );
   await expectNoHorizontalOverflow(page);
 
   expect(consoleErrors).toEqual([]);
 });
 
-test("home practice goals create edit delete and persist evaluator progress after reload", async ({ page }) => {
+test("home practice goals create edit delete and persist evaluator progress after reload", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -1406,7 +1592,9 @@ test("home session comparison selects persisted quick sheet and segment sessions
   await expect(segmentSession).toBeVisible();
 
   await quickSession.check();
-  await expect(panel.getByText("Select another session to compare.")).toBeVisible();
+  await expect(
+    panel.getByText("Select another session to compare.")
+  ).toBeVisible();
 
   await sheetSession.check();
   await expect(panel.getByText("Session type", { exact: true })).toBeVisible();
@@ -1415,24 +1603,33 @@ test("home session comparison selects persisted quick sheet and segment sessions
   await expect(panel.getByText("Sheet", { exact: true })).toBeVisible();
   await expect(panel.getByText("Segment", { exact: true })).toBeVisible();
   await expect(panel.getByText("Events", { exact: true })).toBeVisible();
-  await expect(panel.getByText("Event details not available yet", { exact: true })).toHaveCount(2);
+  await expect(
+    panel.getByText("Event details not available yet", { exact: true })
+  ).toHaveCount(2);
   await expect(panel.getByText(/Quick practice/i).first()).toBeVisible();
   await expect(panel.getByText(/Sheet practice/i).first()).toBeVisible();
   await expect(panel.getByText("Comparison Sheet").first()).toBeVisible();
   await expect(panel.getByText(/2 min|120 sec/i).first()).toBeVisible();
   await expect(panel.getByText(/3 min|180 sec/i).first()).toBeVisible();
-  await expect(panel.getByText(/1 .*take|1 .*recording|Recordings: 1/i).first()).toBeVisible();
+  await expect(
+    panel.getByText(/1 .*take|1 .*recording|Recordings: 1/i).first()
+  ).toBeVisible();
 
   await segmentSession.check();
   await expect(panel.getByText("Bridge focus").first()).toBeVisible();
   await expect(panel.getByText(/m5-12|Measures 5-12/i).first()).toBeVisible();
-  await expect(panel.getByText("Up to 3 sessions can be compared.")).toBeVisible();
+  await expect(
+    panel.getByText("Up to 3 sessions can be compared.")
+  ).toBeVisible();
   await expect
     .poll(() =>
       panel
         .getByRole("checkbox")
-        .evaluateAll((checkboxes) =>
-          checkboxes.filter((checkbox) => (checkbox as HTMLInputElement).disabled).length
+        .evaluateAll(
+          (checkboxes) =>
+            checkboxes.filter(
+              (checkbox) => (checkbox as HTMLInputElement).disabled
+            ).length
         )
     )
     .toBeGreaterThan(0);
@@ -1462,7 +1659,9 @@ test("home session comparison selects persisted quick sheet and segment sessions
   expect(consoleErrors).toEqual([]);
 });
 
-test("home practice streaks render persisted local-day streaks across responsive viewports", async ({ page }) => {
+test("home practice streaks render persisted local-day streaks across responsive viewports", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -1486,7 +1685,9 @@ test("home practice streaks render persisted local-day streaks across responsive
   await expect(panel).toBeVisible();
   await expect(page.getByTestId("home-streak-current")).toHaveText("2 days");
   await expect(page.getByTestId("home-streak-longest")).toHaveText("3 days");
-  await expect(page.getByTestId("home-streak-today-status")).toHaveText("Practiced today.");
+  await expect(page.getByTestId("home-streak-today-status")).toHaveText(
+    "Practiced today."
+  );
   await expectNoHorizontalOverflow(page);
 
   await page.reload();

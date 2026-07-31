@@ -58,11 +58,8 @@ function createDeferred<T>() {
 }
 
 function HookHarness() {
-  const {
-    continueTargets,
-    continueTargetsStatus,
-    refreshContinueTargets
-  } = useCommandPaletteContinueTargets();
+  const { continueTargets, continueTargetsStatus, refreshContinueTargets } =
+    useCommandPaletteContinueTargets();
 
   return (
     <div>
@@ -92,12 +89,16 @@ describe("useCommandPaletteContinueTargets", () => {
     const reload = createDeferred<ContinuePracticeTargetsResult>();
 
     serviceMocks.getContinuePracticeTargets
-      .mockResolvedValueOnce(createContinueTargetsResult([createSegmentTarget()]))
+      .mockResolvedValueOnce(
+        createContinueTargetsResult([createSegmentTarget()])
+      )
       .mockReturnValueOnce(reload.promise);
 
     render(<HookHarness />);
 
-    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("loaded"));
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("loaded")
+    );
     expect(screen.getByTestId("targets")).toHaveTextContent(
       "segment:sheet-alpha:segment-alpha"
     );
@@ -112,7 +113,9 @@ describe("useCommandPaletteContinueTargets", () => {
       await reload.promise;
     });
 
-    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("loaded"));
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("loaded")
+    );
     expect(screen.getByTestId("targets")).toHaveTextContent("");
     expect(serviceMocks.getContinuePracticeTargets).toHaveBeenCalledWith({
       limit: 5

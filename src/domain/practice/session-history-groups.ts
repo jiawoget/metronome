@@ -24,8 +24,14 @@ export type SessionHistorySegmentTarget = {
 };
 
 export type SessionHistoryTargetResolution = {
-  sheets?: Record<string, SessionHistoryLookupResult<SessionHistorySheetTarget>>;
-  segments?: Record<string, SessionHistoryLookupResult<SessionHistorySegmentTarget>>;
+  sheets?: Record<
+    string,
+    SessionHistoryLookupResult<SessionHistorySheetTarget>
+  >;
+  segments?: Record<
+    string,
+    SessionHistoryLookupResult<SessionHistorySegmentTarget>
+  >;
 };
 
 export type SessionHistoryGroup = {
@@ -81,10 +87,15 @@ export function groupPracticeSessionsByHistory(
 
   const finalizedGroups = Array.from(groups.values()).map(finalizeGroup);
 
-  return finalizedGroups.sort(mode === "date" ? compareDateGroups : compareGroupsByNewest);
+  return finalizedGroups.sort(
+    mode === "date" ? compareDateGroups : compareGroupsByNewest
+  );
 }
 
-export function createSessionHistorySegmentTargetKey(sheetId: string, segmentId: string) {
+export function createSessionHistorySegmentTargetKey(
+  sheetId: string,
+  segmentId: string
+) {
   return `${encodeURIComponent(sheetId)}:${encodeURIComponent(segmentId)}`;
 }
 
@@ -145,12 +156,18 @@ function getSheetGroupSeed(
 
   const sheetTarget = targets.sheets?.[sheetId];
   const targetState = getSheetTargetState(sheetTarget);
-  const sheetName = sheetTarget?.state === "valid" ? normalizeRequiredString(sheetTarget.value.name) : null;
+  const sheetName =
+    sheetTarget?.state === "valid"
+      ? normalizeRequiredString(sheetTarget.value.name)
+      : null;
 
   return createGroupSeed({
     id: `sheet:id:${encodeURIComponent(sheetId)}`,
     mode: "sheet",
-    label: targetState === "missing-sheet" ? "Deleted sheet" : sheetName ?? sheetId,
+    label:
+      targetState === "missing-sheet"
+        ? "Deleted sheet"
+        : (sheetName ?? sheetId),
     sortKey: sheetId,
     targetState,
     sheetId,
@@ -185,8 +202,13 @@ function getSegmentGroupSeed(
   }
 
   const sheetTarget = targets.sheets?.[sheetId];
-  const sheetName = sheetTarget?.state === "valid" ? normalizeRequiredString(sheetTarget.value.name) : null;
-  const segmentId = normalizeRequiredString(session.segmentContext?.segmentId ?? null);
+  const sheetName =
+    sheetTarget?.state === "valid"
+      ? normalizeRequiredString(sheetTarget.value.name)
+      : null;
+  const segmentId = normalizeRequiredString(
+    session.segmentContext?.segmentId ?? null
+  );
 
   if (!segmentId) {
     return createGroupSeed({
@@ -200,8 +222,13 @@ function getSegmentGroupSeed(
     });
   }
 
-  const segmentTarget = targets.segments?.[createSessionHistorySegmentTargetKey(sheetId, segmentId)];
-  const segmentName = normalizeRequiredString(session.segmentContext?.segmentName ?? null);
+  const segmentTarget =
+    targets.segments?.[
+      createSessionHistorySegmentTargetKey(sheetId, segmentId)
+    ];
+  const segmentName = normalizeRequiredString(
+    session.segmentContext?.segmentName ?? null
+  );
 
   return createGroupSeed({
     id: `segment:sheet:${encodeURIComponent(sheetId)}:id:${encodeURIComponent(segmentId)}`,
@@ -218,7 +245,10 @@ function getSegmentGroupSeed(
 
 function createGroupSeed(
   seed: Partial<SessionHistoryGroupSeed> &
-    Pick<SessionHistoryGroupSeed, "id" | "mode" | "label" | "sortKey" | "targetState">
+    Pick<
+      SessionHistoryGroupSeed,
+      "id" | "mode" | "label" | "sortKey" | "targetState"
+    >
 ): SessionHistoryGroupSeed {
   return {
     sheetId: null,
@@ -243,15 +273,26 @@ function pushSessionToGroup(
 
 function finalizeGroup(group: MutableSessionHistoryGroup): SessionHistoryGroup {
   const sessions = [...group.sessions].sort(compareSessionsByNewest);
-  const latestSession = sessions.find((session) => getSessionSortValue(session) !== INVALID_SORT_VALUE) ?? null;
+  const latestSession =
+    sessions.find(
+      (session) => getSessionSortValue(session) !== INVALID_SORT_VALUE
+    ) ?? null;
 
   return {
     ...group,
     sessions,
     sessionCount: sessions.length,
-    recordingCount: sessions.reduce((total, session) => total + session.recordingCount, 0),
-    durationMs: sessions.reduce((total, session) => total + session.durationMs, 0),
-    latestUpdatedAt: latestSession ? getSessionActivityTimestamp(latestSession) : null
+    recordingCount: sessions.reduce(
+      (total, session) => total + session.recordingCount,
+      0
+    ),
+    durationMs: sessions.reduce(
+      (total, session) => total + session.durationMs,
+      0
+    ),
+    latestUpdatedAt: latestSession
+      ? getSessionActivityTimestamp(latestSession)
+      : null
   };
 }
 
@@ -262,14 +303,21 @@ function getSheetTargetState(
     return "valid";
   }
 
-  return sheetTarget.state === "lookup-failed" ? "lookup-failed" : "missing-sheet";
+  return sheetTarget.state === "lookup-failed"
+    ? "lookup-failed"
+    : "missing-sheet";
 }
 
 function getSegmentTargetState(
-  sheetTarget: SessionHistoryLookupResult<SessionHistorySheetTarget> | undefined,
-  segmentTarget: SessionHistoryLookupResult<SessionHistorySegmentTarget> | undefined
+  sheetTarget:
+    SessionHistoryLookupResult<SessionHistorySheetTarget> | undefined,
+  segmentTarget:
+    SessionHistoryLookupResult<SessionHistorySegmentTarget> | undefined
 ): SessionHistoryGroupTargetState {
-  if (sheetTarget?.state === "lookup-failed" || segmentTarget?.state === "lookup-failed") {
+  if (
+    sheetTarget?.state === "lookup-failed" ||
+    segmentTarget?.state === "lookup-failed"
+  ) {
     return "lookup-failed";
   }
 
@@ -280,7 +328,10 @@ function getSegmentTargetState(
   return segmentTarget?.state === "missing" ? "missing-segment" : "valid";
 }
 
-function compareDateGroups(left: SessionHistoryGroup, right: SessionHistoryGroup) {
+function compareDateGroups(
+  left: SessionHistoryGroup,
+  right: SessionHistoryGroup
+) {
   if (left.localDate && right.localDate && left.localDate !== right.localDate) {
     return right.localDate.localeCompare(left.localDate);
   }
@@ -292,27 +343,44 @@ function compareDateGroups(left: SessionHistoryGroup, right: SessionHistoryGroup
   return compareGroupsByNewest(left, right);
 }
 
-function compareGroupsByNewest(left: SessionHistoryGroup, right: SessionHistoryGroup) {
+function compareGroupsByNewest(
+  left: SessionHistoryGroup,
+  right: SessionHistoryGroup
+) {
   return (
-    compareSortValuesByNewest(getGroupSortValue(left), getGroupSortValue(right)) ||
+    compareSortValuesByNewest(
+      getGroupSortValue(left),
+      getGroupSortValue(right)
+    ) ||
     compareStrings(left.id, right.id) ||
     compareNullableStrings(left.sheetId, right.sheetId) ||
     compareNullableStrings(left.segmentId, right.segmentId)
   );
 }
 
-function compareSessionsByNewest(left: PracticeSession, right: PracticeSession) {
+function compareSessionsByNewest(
+  left: PracticeSession,
+  right: PracticeSession
+) {
   return (
-    compareSortValuesByNewest(getSessionSortValue(left), getSessionSortValue(right)) ||
+    compareSortValuesByNewest(
+      getSessionSortValue(left),
+      getSessionSortValue(right)
+    ) ||
     compareStrings(left.id, right.id) ||
     compareStrings(left.sourceType, right.sourceType) ||
     compareNullableStrings(left.sheetId, right.sheetId) ||
-    compareNullableStrings(left.segmentContext?.segmentId ?? null, right.segmentContext?.segmentId ?? null)
+    compareNullableStrings(
+      left.segmentContext?.segmentId ?? null,
+      right.segmentContext?.segmentId ?? null
+    )
   );
 }
 
 function getGroupSortValue(group: SessionHistoryGroup) {
-  return group.latestUpdatedAt ? getTimestampSortValue(group.latestUpdatedAt) : INVALID_SORT_VALUE;
+  return group.latestUpdatedAt
+    ? getTimestampSortValue(group.latestUpdatedAt)
+    : INVALID_SORT_VALUE;
 }
 
 function getSessionSortValue(session: PracticeSession) {

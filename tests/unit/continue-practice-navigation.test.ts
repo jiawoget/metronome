@@ -26,7 +26,9 @@ function createTarget(
 
 describe("continue practice navigation", () => {
   it("routes quick targets to Quick Metronome", () => {
-    expect(getContinuePracticeTargetHref(createTarget())).toBe("/quick-metronome");
+    expect(getContinuePracticeTargetHref(createTarget())).toBe(
+      "/quick-metronome"
+    );
   });
 
   it("routes sheet targets with the existing Sheet Practice path helper", () => {

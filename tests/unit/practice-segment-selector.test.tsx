@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -38,7 +44,9 @@ function resetRecordingWorkflowStore() {
   });
 }
 
-function createSegment(overrides: Partial<PracticeSegment> = {}): PracticeSegment {
+function createSegment(
+  overrides: Partial<PracticeSegment> = {}
+): PracticeSegment {
   return {
     id: "segment-alpha",
     sheetId: "sheet-alpha",
@@ -67,14 +75,19 @@ function createPracticeSegmentService({
   error?: Error | null;
   saveError?: Error | null;
   deleteError?: Error | null;
-  getSegmentOverride?: (sheetId: string, segmentId: string) => Promise<PracticeSegment | null>;
+  getSegmentOverride?: (
+    sheetId: string,
+    segmentId: string
+  ) => Promise<PracticeSegment | null>;
   saveSegmentOverride?: (segment: PracticeSegment) => Promise<PracticeSegment>;
   deleteSegmentOverride?: (sheetId: string, segmentId: string) => Promise<void>;
 } = {}) {
   const segmentsBySheet = new Map<string, Map<string, PracticeSegment>>();
 
   for (const segment of segments) {
-    const sheetSegments = segmentsBySheet.get(segment.sheetId) ?? new Map<string, PracticeSegment>();
+    const sheetSegments =
+      segmentsBySheet.get(segment.sheetId) ??
+      new Map<string, PracticeSegment>();
     sheetSegments.set(segment.id, segment);
     segmentsBySheet.set(segment.sheetId, sheetSegments);
   }
@@ -103,7 +116,9 @@ function createPracticeSegmentService({
         return saveSegmentOverride(segment);
       }
 
-      const sheetSegments = segmentsBySheet.get(segment.sheetId) ?? new Map<string, PracticeSegment>();
+      const sheetSegments =
+        segmentsBySheet.get(segment.sheetId) ??
+        new Map<string, PracticeSegment>();
       sheetSegments.set(segment.id, segment);
       segmentsBySheet.set(segment.sheetId, sheetSegments);
 
@@ -179,7 +194,9 @@ async function renderPanel({
   );
 
   await waitFor(() => {
-    expect(screen.getByTestId("practice-segment-selector-status")).not.toHaveTextContent("Loading");
+    expect(
+      screen.getByTestId("practice-segment-selector-status")
+    ).not.toHaveTextContent("Loading");
   });
 
   return { practiceSegmentService, measureGridService };
@@ -224,21 +241,31 @@ describe("PracticeSegmentSelectorPanel", () => {
   it("loads to an empty state with a create affordance", async () => {
     const { practiceSegmentService, measureGridService } = await renderPanel();
 
-    expect(practiceSegmentService.listSegments).toHaveBeenCalledWith("sheet-alpha");
+    expect(practiceSegmentService.listSegments).toHaveBeenCalledWith(
+      "sheet-alpha"
+    );
     expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
-    expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("0 saved");
+    expect(
+      screen.getByTestId("practice-segment-selector-status")
+    ).toHaveTextContent("0 saved");
     expect(screen.getByText("No saved segments yet.")).toBeVisible();
     expect(screen.getByRole("button", { name: "New segment" })).toBeEnabled();
   });
 
   it("shows service errors locally", async () => {
     await renderPanel({
-      practiceSegmentService: createPracticeSegmentService({ error: new Error("segment read failed") })
+      practiceSegmentService: createPracticeSegmentService({
+        error: new Error("segment read failed")
+      })
     });
 
-    expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("Unavailable");
+    expect(
+      screen.getByTestId("practice-segment-selector-status")
+    ).toHaveTextContent("Unavailable");
     expect(screen.getByText("segment read failed")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Start metronome" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Start metronome" })
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "New segment" })).toBeDisabled();
   });
 
@@ -260,7 +287,9 @@ describe("PracticeSegmentSelectorPanel", () => {
     await user.click(screen.getByRole("button", { name: "Save segment" }));
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("1 saved");
+      expect(
+        screen.getByTestId("practice-segment-selector-status")
+      ).toHaveTextContent("1 saved");
     });
 
     expect(practiceSegmentService.saveSegment).toHaveBeenCalledTimes(1);
@@ -277,8 +306,12 @@ describe("PracticeSegmentSelectorPanel", () => {
       grid: createPracticeSegmentGridAssociation(currentGrid)
     });
     expect(screen.getAllByText("Bridge polish").length).toBeGreaterThan(0);
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Active segment");
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Bridge polish");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Active segment");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Bridge polish");
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: expect.stringMatching(/^segment_/)
@@ -308,14 +341,18 @@ describe("PracticeSegmentSelectorPanel", () => {
       expect(screen.getByText("Segment name already exists.")).toBeVisible();
     });
 
-    expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("1 saved");
+    expect(
+      screen.getByTestId("practice-segment-selector-status")
+    ).toHaveTextContent("1 saved");
     expect(screen.getByText("Bridge")).toBeVisible();
     expect(screen.getByTestId("practice-segment-editor")).toBeVisible();
   });
 
   it("blocks create when the current grid is missing or cannot be loaded", async () => {
     const missingGridService = createMeasureGridService({ grid: null });
-    const gridErrorService = createMeasureGridService({ error: new Error("grid read failed") });
+    const gridErrorService = createMeasureGridService({
+      error: new Error("grid read failed")
+    });
     const { rerender } = render(
       <PracticeSegmentSelectorPanel
         sheetId="sheet-alpha"
@@ -325,11 +362,15 @@ describe("PracticeSegmentSelectorPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("0 saved");
+      expect(
+        screen.getByTestId("practice-segment-selector-status")
+      ).toHaveTextContent("0 saved");
     });
 
     expect(screen.getByRole("button", { name: "New segment" })).toBeDisabled();
-    expect(screen.getByText("Save a measure grid before creating segments.")).toBeVisible();
+    expect(
+      screen.getByText("Save a measure grid before creating segments.")
+    ).toBeVisible();
 
     rerender(
       <PracticeSegmentSelectorPanel
@@ -344,7 +385,9 @@ describe("PracticeSegmentSelectorPanel", () => {
     });
 
     expect(screen.getByRole("button", { name: "New segment" })).toBeDisabled();
-    expect(screen.getByText("Save a measure grid before creating segments.")).toBeVisible();
+    expect(
+      screen.getByText("Save a measure grid before creating segments.")
+    ).toBeVisible();
   });
 
   it("validates create drafts before calling save", async () => {
@@ -355,7 +398,9 @@ describe("PracticeSegmentSelectorPanel", () => {
     await user.click(screen.getByRole("button", { name: "New segment" }));
 
     expect(screen.getByText("Segment name is required.")).toBeVisible();
-    expect(screen.getByText("Measures must be whole numbers starting at 1.")).toBeVisible();
+    expect(
+      screen.getByText("Measures must be whole numbers starting at 1.")
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "Save segment" })).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("Segment name"), {
@@ -374,9 +419,17 @@ describe("PracticeSegmentSelectorPanel", () => {
       target: { value: "n".repeat(1001) }
     });
 
-    expect(screen.getByText("End measure must be greater than or equal to start measure.")).toBeVisible();
-    expect(screen.getByText("Target BPM must be an integer from 30 to 300.")).toBeVisible();
-    expect(screen.getByText("Notes must be 1000 characters or fewer.")).toBeVisible();
+    expect(
+      screen.getByText(
+        "End measure must be greater than or equal to start measure."
+      )
+    ).toBeVisible();
+    expect(
+      screen.getByText("Target BPM must be an integer from 30 to 300.")
+    ).toBeVisible();
+    expect(
+      screen.getByText("Notes must be 1000 characters or fewer.")
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "Save segment" })).toBeDisabled();
     expect(practiceSegmentService.saveSegment).not.toHaveBeenCalled();
   });
@@ -409,11 +462,21 @@ describe("PracticeSegmentSelectorPanel", () => {
 
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
 
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Active segment");
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Measures 5 to 12");
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Measures 5-12");
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Target 96 BPM");
-    expect(screen.getByTestId("practice-segment-active-status")).toHaveTextContent("Ready");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Active segment");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Measures 5 to 12");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Measures 5-12");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Target 96 BPM");
+    expect(
+      screen.getByTestId("practice-segment-active-status")
+    ).toHaveTextContent("Ready");
     expect(screen.getByText("Active")).toBeVisible();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
@@ -425,13 +488,19 @@ describe("PracticeSegmentSelectorPanel", () => {
 
   it("edits a segment while preserving id, sheet id, and active selection", async () => {
     const user = userEvent.setup();
-    const practiceSegmentService = createPracticeSegmentService({ segments: [createSegment()] });
+    const practiceSegmentService = createPracticeSegmentService({
+      segments: [createSegment()]
+    });
 
     await renderPanel({ practiceSegmentService });
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
-    await user.click(screen.getByRole("button", { name: "Edit Measures 5 to 12" }));
+    await user.click(
+      screen.getByRole("button", { name: "Edit Measures 5 to 12" })
+    );
 
-    expect(screen.getByLabelText("Segment name")).toHaveValue("Measures 5 to 12");
+    expect(screen.getByLabelText("Segment name")).toHaveValue(
+      "Measures 5 to 12"
+    );
     expect(screen.getByLabelText("Start measure")).toHaveValue(5);
     expect(screen.getByLabelText("End measure")).toHaveValue(12);
     expect(screen.getByLabelText("Target BPM")).toHaveValue(96);
@@ -450,7 +519,10 @@ describe("PracticeSegmentSelectorPanel", () => {
       expect(screen.getAllByText("Bridge revision").length).toBeGreaterThan(0);
     });
 
-    expect(practiceSegmentService.getSegment).toHaveBeenCalledWith("sheet-alpha", "segment-alpha");
+    expect(practiceSegmentService.getSegment).toHaveBeenCalledWith(
+      "sheet-alpha",
+      "segment-alpha"
+    );
     expect(practiceSegmentService.saveSegment).toHaveBeenCalledWith({
       id: "segment-alpha",
       sheetId: "sheet-alpha",
@@ -463,9 +535,15 @@ describe("PracticeSegmentSelectorPanel", () => {
       notes: "Slower first.",
       grid: createPracticeSegmentGridAssociation(currentGrid)
     });
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Active segment");
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Bridge revision");
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Measures 6-9");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Active segment");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Bridge revision");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Measures 6-9");
   });
 
   it("does not resurrect a missing segment during edit save", async () => {
@@ -476,7 +554,9 @@ describe("PracticeSegmentSelectorPanel", () => {
     });
 
     await renderPanel({ practiceSegmentService });
-    await user.click(screen.getByRole("button", { name: "Edit Measures 5 to 12" }));
+    await user.click(
+      screen.getByRole("button", { name: "Edit Measures 5 to 12" })
+    );
     await fillSegmentEditor({ user, name: "Should not save" });
     await user.click(screen.getByRole("button", { name: "Save segment" }));
 
@@ -485,7 +565,9 @@ describe("PracticeSegmentSelectorPanel", () => {
     });
 
     expect(practiceSegmentService.saveSegment).not.toHaveBeenCalled();
-    expect(screen.queryByTestId("practice-segment-editor")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("practice-segment-editor")
+    ).not.toBeInTheDocument();
   });
 
   it("requires delete confirmation, clears active delete, and preserves non-active selection", async () => {
@@ -505,34 +587,57 @@ describe("PracticeSegmentSelectorPanel", () => {
 
     await renderPanel({ practiceSegmentService });
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
-    await user.click(screen.getByRole("button", { name: "Delete Slow polish" }));
+    await user.click(
+      screen.getByRole("button", { name: "Delete Slow polish" })
+    );
     expect(screen.getByText("Delete Slow polish (Measure 2)?")).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(practiceSegmentService.deleteSegment).not.toHaveBeenCalled();
     expect(screen.getByText("Slow polish")).toBeVisible();
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Measures 5 to 12");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Measures 5 to 12");
 
-    await user.click(screen.getByRole("button", { name: "Delete Slow polish" }));
-    await user.click(screen.getByRole("button", { name: "Confirm delete Slow polish" }));
+    await user.click(
+      screen.getByRole("button", { name: "Delete Slow polish" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Confirm delete Slow polish" })
+    );
 
     await waitFor(() => {
       expect(screen.queryByText("Slow polish")).not.toBeInTheDocument();
     });
 
-    expect(practiceSegmentService.deleteSegment).toHaveBeenCalledWith("sheet-alpha", "segment-beta");
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Measures 5 to 12");
+    expect(practiceSegmentService.deleteSegment).toHaveBeenCalledWith(
+      "sheet-alpha",
+      "segment-beta"
+    );
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Measures 5 to 12");
 
-    await user.click(screen.getByRole("button", { name: "Delete Measures 5 to 12" }));
-    await user.click(screen.getByRole("button", { name: "Confirm delete Measures 5 to 12" }));
+    await user.click(
+      screen.getByRole("button", { name: "Delete Measures 5 to 12" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Confirm delete Measures 5 to 12" })
+    );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("0 saved");
+      expect(
+        screen.getByTestId("practice-segment-selector-status")
+      ).toHaveTextContent("0 saved");
     });
 
     expect(screen.getByTestId("practice-segment-empty-state")).toBeVisible();
-    expect(screen.queryByTestId("practice-segment-active-summary")).not.toBeInTheDocument();
-    expect(useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId).toBeNull();
+    expect(
+      screen.queryByTestId("practice-segment-active-summary")
+    ).not.toBeInTheDocument();
+    expect(
+      useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId
+    ).toBeNull();
   });
 
   it("does not lock new-sheet controls when switching sheets while a save is unresolved", async () => {
@@ -557,7 +662,9 @@ describe("PracticeSegmentSelectorPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("0 saved");
+      expect(
+        screen.getByTestId("practice-segment-selector-status")
+      ).toHaveTextContent("0 saved");
     });
     await user.click(screen.getByRole("button", { name: "New segment" }));
     await fillSegmentEditor({ user });
@@ -578,8 +685,12 @@ describe("PracticeSegmentSelectorPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("Bravo only")).toBeVisible();
       expect(screen.getByRole("button", { name: "New segment" })).toBeEnabled();
-      expect(screen.getByRole("button", { name: "Edit Bravo only" })).toBeEnabled();
-      expect(screen.getByRole("button", { name: "Delete Bravo only" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Edit Bravo only" })
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Delete Bravo only" })
+      ).toBeEnabled();
     });
 
     await act(async () => {
@@ -595,8 +706,12 @@ describe("PracticeSegmentSelectorPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("Bravo only")).toBeVisible();
       expect(screen.getByRole("button", { name: "New segment" })).toBeEnabled();
-      expect(screen.getByRole("button", { name: "Edit Bravo only" })).toBeEnabled();
-      expect(screen.getByRole("button", { name: "Delete Bravo only" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Edit Bravo only" })
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Delete Bravo only" })
+      ).toBeEnabled();
     });
     expect(screen.queryByText("Alpha saved late")).not.toBeInTheDocument();
   });
@@ -625,11 +740,17 @@ describe("PracticeSegmentSelectorPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("Measures 5 to 12")).toBeVisible();
     });
-    await user.click(screen.getByRole("button", { name: "Delete Measures 5 to 12" }));
-    await user.click(screen.getByRole("button", { name: "Confirm delete Measures 5 to 12" }));
+    await user.click(
+      screen.getByRole("button", { name: "Delete Measures 5 to 12" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Confirm delete Measures 5 to 12" })
+    );
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Deleting..." })).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Deleting..." })
+      ).toBeDisabled();
     });
 
     rerender(
@@ -643,8 +764,12 @@ describe("PracticeSegmentSelectorPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("Bravo only")).toBeVisible();
       expect(screen.getByRole("button", { name: "New segment" })).toBeEnabled();
-      expect(screen.getByRole("button", { name: "Edit Bravo only" })).toBeEnabled();
-      expect(screen.getByRole("button", { name: "Delete Bravo only" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Edit Bravo only" })
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Delete Bravo only" })
+      ).toBeEnabled();
     });
 
     await act(async () => {
@@ -655,8 +780,12 @@ describe("PracticeSegmentSelectorPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("Bravo only")).toBeVisible();
       expect(screen.getByRole("button", { name: "New segment" })).toBeEnabled();
-      expect(screen.getByRole("button", { name: "Edit Bravo only" })).toBeEnabled();
-      expect(screen.getByRole("button", { name: "Delete Bravo only" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Edit Bravo only" })
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Delete Bravo only" })
+      ).toBeEnabled();
     });
   });
 
@@ -678,14 +807,22 @@ describe("PracticeSegmentSelectorPanel", () => {
     });
 
     await renderPanel({ practiceSegmentService });
-    await user.click(screen.getByRole("button", { name: "Edit Measures 5 to 12" }));
+    await user.click(
+      screen.getByRole("button", { name: "Edit Measures 5 to 12" })
+    );
     expect(screen.getByRole("button", { name: "Save segment" })).toBeEnabled();
 
-    await user.click(screen.getByRole("button", { name: "Delete Slow polish" }));
-    await user.click(screen.getByRole("button", { name: "Confirm delete Slow polish" }));
+    await user.click(
+      screen.getByRole("button", { name: "Delete Slow polish" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Confirm delete Slow polish" })
+    );
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Save segment" })).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Save segment" })
+      ).toBeDisabled();
     });
 
     fireEvent.submit(screen.getByTestId("practice-segment-editor"));
@@ -715,7 +852,9 @@ describe("PracticeSegmentSelectorPanel", () => {
       expect(screen.getByText("Measures 5 to 12")).toBeVisible();
     });
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
-    await user.click(screen.getByRole("button", { name: "Edit Measures 5 to 12" }));
+    await user.click(
+      screen.getByRole("button", { name: "Edit Measures 5 to 12" })
+    );
     await fillSegmentEditor({ user, name: "Failed save" });
     await user.click(screen.getByRole("button", { name: "Save segment" }));
 
@@ -723,7 +862,9 @@ describe("PracticeSegmentSelectorPanel", () => {
       expect(screen.getByText("write failed")).toBeVisible();
     });
     expect(screen.getAllByText("Measures 5 to 12").length).toBeGreaterThan(0);
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Measures 5 to 12");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Measures 5 to 12");
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
@@ -744,14 +885,20 @@ describe("PracticeSegmentSelectorPanel", () => {
       expect(screen.getAllByText("Measures 5 to 12").length).toBeGreaterThan(0);
     });
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
-    await user.click(screen.getByRole("button", { name: "Delete Measures 5 to 12" }));
-    await user.click(screen.getByRole("button", { name: "Confirm delete Measures 5 to 12" }));
+    await user.click(
+      screen.getByRole("button", { name: "Delete Measures 5 to 12" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Confirm delete Measures 5 to 12" })
+    );
 
     await waitFor(() => {
       expect(screen.getByText("delete failed")).toBeVisible();
     });
     expect(screen.getAllByText("Measures 5 to 12").length).toBeGreaterThan(0);
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Measures 5 to 12");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Measures 5 to 12");
   });
 
   it("maps grid statuses through the domain helper", async () => {
@@ -767,54 +914,74 @@ describe("PracticeSegmentSelectorPanel", () => {
     const { rerender } = render(
       <PracticeSegmentSelectorPanel
         sheetId="sheet-alpha"
-        practiceSegmentService={createPracticeSegmentService({ segments: [createSegment()] })}
+        practiceSegmentService={createPracticeSegmentService({
+          segments: [createSegment()]
+        })}
         measureGridService={createMeasureGridService({ grid: null })}
       />
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-status-segment-alpha")).toHaveTextContent("Needs calibration");
+      expect(
+        screen.getByTestId("practice-segment-status-segment-alpha")
+      ).toHaveTextContent("Needs calibration");
     });
 
     rerender(
       <PracticeSegmentSelectorPanel
         sheetId="sheet-alpha"
-        practiceSegmentService={createPracticeSegmentService({ segments: [createSegment()] })}
+        practiceSegmentService={createPracticeSegmentService({
+          segments: [createSegment()]
+        })}
         measureGridService={createMeasureGridService({ grid: staleGrid })}
       />
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-status-segment-alpha")).toHaveTextContent("Grid changed");
+      expect(
+        screen.getByTestId("practice-segment-status-segment-alpha")
+      ).toHaveTextContent("Grid changed");
     });
 
     rerender(
       <PracticeSegmentSelectorPanel
         sheetId="sheet-alpha"
-        practiceSegmentService={createPracticeSegmentService({ segments: [invalidAssociationSegment] })}
+        practiceSegmentService={createPracticeSegmentService({
+          segments: [invalidAssociationSegment]
+        })}
         measureGridService={createMeasureGridService({ grid: currentGrid })}
       />
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-status-segment-invalid")).toHaveTextContent("Needs review");
+      expect(
+        screen.getByTestId("practice-segment-status-segment-invalid")
+      ).toHaveTextContent("Needs review");
     });
   });
 
   it("keeps segment rows visible when the grid read fails", async () => {
     await renderPanel({
-      practiceSegmentService: createPracticeSegmentService({ segments: [createSegment()] }),
-      measureGridService: createMeasureGridService({ error: new Error("grid read failed") })
+      practiceSegmentService: createPracticeSegmentService({
+        segments: [createSegment()]
+      }),
+      measureGridService: createMeasureGridService({
+        error: new Error("grid read failed")
+      })
     });
 
     expect(screen.getByText(/grid read failed/)).toBeVisible();
     expect(screen.getByText("Measures 5 to 12")).toBeVisible();
-    expect(screen.getByTestId("practice-segment-status-segment-alpha")).toHaveTextContent("Needs calibration");
+    expect(
+      screen.getByTestId("practice-segment-status-segment-alpha")
+    ).toHaveTextContent("Needs calibration");
   });
 
   it("clears active selection when the loaded list no longer contains the selected segment", async () => {
     const user = userEvent.setup();
-    const firstService = createPracticeSegmentService({ segments: [createSegment()] });
+    const firstService = createPracticeSegmentService({
+      segments: [createSegment()]
+    });
     const secondService = createPracticeSegmentService({
       segments: [
         createSegment({
@@ -851,7 +1018,9 @@ describe("PracticeSegmentSelectorPanel", () => {
     });
     expect(screen.getByText("Choose a segment")).toBeVisible();
     expect(screen.queryByText("Active segment")).not.toBeInTheDocument();
-    expect(useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId).toBeNull();
+    expect(
+      useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId
+    ).toBeNull();
   });
 
   it("selects an initial return segment after validating the loaded segment list", async () => {
@@ -865,17 +1034,18 @@ describe("PracticeSegmentSelectorPanel", () => {
       practiceSegmentService
     });
 
-    expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent(
-      "Active segment"
-    );
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent(
-      "Measures 5 to 12"
-    );
-    expect(screen.queryByTestId("practice-segment-return-status")).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("practice-segment-row-segment-alpha")
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Active segment");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Measures 5 to 12");
+    expect(
+      screen.queryByTestId("practice-segment-return-status")
+    ).not.toBeInTheDocument();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: "segment-alpha"
@@ -890,16 +1060,17 @@ describe("PracticeSegmentSelectorPanel", () => {
       })
     });
 
-    expect(screen.getByTestId("practice-segment-return-status")).toHaveTextContent(
+    expect(
+      screen.getByTestId("practice-segment-return-status")
+    ).toHaveTextContent(
       "Saved segment is no longer available. Sheet practice is ready without a selected segment."
     );
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent(
-      "Choose a segment"
-    );
-    expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
-      "aria-pressed",
-      "false"
-    );
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Choose a segment");
+    expect(
+      screen.getByTestId("practice-segment-row-segment-alpha")
+    ).toHaveAttribute("aria-pressed", "false");
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: null,
@@ -926,13 +1097,12 @@ describe("PracticeSegmentSelectorPanel", () => {
       practiceSegmentService
     });
 
-    expect(screen.getByTestId("practice-segment-return-status")).toHaveTextContent(
-      "Saved segment is no longer available"
-    );
-    expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
-      "aria-pressed",
-      "false"
-    );
+    expect(
+      screen.getByTestId("practice-segment-return-status")
+    ).toHaveTextContent("Saved segment is no longer available");
+    expect(
+      screen.getByTestId("practice-segment-row-segment-alpha")
+    ).toHaveAttribute("aria-pressed", "false");
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: null,
@@ -950,14 +1120,15 @@ describe("PracticeSegmentSelectorPanel", () => {
       })
     });
 
-    expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
-      "aria-pressed",
-      "false"
-    );
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent(
-      "Choose a segment"
-    );
-    expect(screen.queryByTestId("practice-segment-return-status")).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("practice-segment-row-segment-alpha")
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Choose a segment");
+    expect(
+      screen.queryByTestId("practice-segment-return-status")
+    ).not.toBeInTheDocument();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: null
@@ -988,25 +1159,22 @@ describe("PracticeSegmentSelectorPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
-        "aria-pressed",
-        "true"
-      );
+      expect(
+        screen.getByTestId("practice-segment-row-segment-alpha")
+      ).toHaveAttribute("aria-pressed", "true");
     });
 
     await user.click(screen.getByTestId("practice-segment-row-segment-beta"));
 
-    expect(screen.getByTestId("practice-segment-row-segment-alpha")).toHaveAttribute(
-      "aria-pressed",
-      "false"
-    );
-    expect(screen.getByTestId("practice-segment-row-segment-beta")).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
-    expect(useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId).toBe(
-      "segment-beta"
-    );
+    expect(
+      screen.getByTestId("practice-segment-row-segment-alpha")
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(
+      screen.getByTestId("practice-segment-row-segment-beta")
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId
+    ).toBe("segment-beta");
 
     rerender(
       <PracticeSegmentSelectorPanel
@@ -1019,14 +1187,13 @@ describe("PracticeSegmentSelectorPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-row-segment-beta")).toHaveAttribute(
-        "aria-pressed",
-        "true"
-      );
+      expect(
+        screen.getByTestId("practice-segment-row-segment-beta")
+      ).toHaveAttribute("aria-pressed", "true");
     });
-    expect(useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId).toBe(
-      "segment-beta"
-    );
+    expect(
+      useSheetPracticeRecordingWorkflowStore.getState().activeSegmentId
+    ).toBe("segment-beta");
   });
 
   it("clears active selection when switching away from a sheet and does not restore it on switch back", async () => {
@@ -1058,7 +1225,9 @@ describe("PracticeSegmentSelectorPanel", () => {
       expect(screen.getByText("Measures 5 to 12")).toBeVisible();
     });
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Active segment");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Active segment");
 
     rerender(
       <PracticeSegmentSelectorPanel
@@ -1071,8 +1240,12 @@ describe("PracticeSegmentSelectorPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("Bravo only")).toBeVisible();
     });
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Choose a segment");
-    expect(screen.getByTestId("practice-segment-active-summary")).not.toHaveTextContent("Active segment");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Choose a segment");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).not.toHaveTextContent("Active segment");
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-bravo",
       activeSegmentId: null
@@ -1089,8 +1262,12 @@ describe("PracticeSegmentSelectorPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("Measures 5 to 12")).toBeVisible();
     });
-    expect(screen.getByTestId("practice-segment-active-summary")).toHaveTextContent("Choose a segment");
-    expect(screen.getByTestId("practice-segment-active-summary")).not.toHaveTextContent("Active segment");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).toHaveTextContent("Choose a segment");
+    expect(
+      screen.getByTestId("practice-segment-active-summary")
+    ).not.toHaveTextContent("Active segment");
   });
 
   it("reloads by sheet id and ignores late old-sheet results", async () => {
@@ -1100,14 +1277,18 @@ describe("PracticeSegmentSelectorPanel", () => {
     const bravoGrid = createDeferred<MeasureGrid | null>();
     const practiceSegmentService: PracticeSegmentService = {
       listSegments: vi.fn((sheetId) =>
-        sheetId === "sheet-alpha" ? alphaSegments.promise : bravoSegments.promise
+        sheetId === "sheet-alpha"
+          ? alphaSegments.promise
+          : bravoSegments.promise
       ),
       getSegment: vi.fn(async () => null),
       saveSegment: vi.fn(async (segment) => segment),
       deleteSegment: vi.fn(async () => undefined)
     };
     const measureGridService: MeasureGridService = {
-      getGrid: vi.fn((sheetId) => (sheetId === "sheet-alpha" ? alphaGrid.promise : bravoGrid.promise)),
+      getGrid: vi.fn((sheetId) =>
+        sheetId === "sheet-alpha" ? alphaGrid.promise : bravoGrid.promise
+      ),
       saveGrid: vi.fn(async (_sheetId, grid) => grid),
       clearGrid: vi.fn(async () => undefined)
     };
@@ -1147,8 +1328,12 @@ describe("PracticeSegmentSelectorPanel", () => {
 
     expect(screen.getByText("Bravo only")).toBeVisible();
     expect(screen.queryByText("Alpha late")).not.toBeInTheDocument();
-    expect(practiceSegmentService.listSegments).toHaveBeenCalledWith("sheet-alpha");
-    expect(practiceSegmentService.listSegments).toHaveBeenCalledWith("sheet-bravo");
+    expect(practiceSegmentService.listSegments).toHaveBeenCalledWith(
+      "sheet-alpha"
+    );
+    expect(practiceSegmentService.listSegments).toHaveBeenCalledWith(
+      "sheet-bravo"
+    );
     expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
     expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-bravo");
   });

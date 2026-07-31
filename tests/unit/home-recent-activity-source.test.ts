@@ -36,7 +36,9 @@ function createSegmentContext(
   };
 }
 
-function createSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
+function createSession(
+  overrides: Partial<PracticeSession> = {}
+): PracticeSession {
   return {
     id: "quick-session",
     sourceType: "quick",
@@ -186,12 +188,29 @@ describe("home recent activity source", () => {
       generatedAt: "2026-06-21T12:06:00.000Z"
     });
 
-    expect(result.items.map((item) => [item.id, item.kind, item.targetState, item.label])).toEqual([
+    expect(
+      result.items.map((item) => [
+        item.id,
+        item.kind,
+        item.targetState,
+        item.label
+      ])
+    ).toEqual([
       ["session:quick-session", "quick-session", "quick", "Quick Practice"],
       ["session:sheet-session", "sheet-session", "valid", "Alpha Sheet"],
-      ["session:segment-session", "segment-session", "valid", "Historical Bridge"],
+      [
+        "session:segment-session",
+        "segment-session",
+        "valid",
+        "Historical Bridge"
+      ],
       ["recording:sheet-recording", "sheet-recording", "valid", "Alpha Sheet"],
-      ["recording:segment-recording", "segment-recording", "valid", "Historical Bridge"]
+      [
+        "recording:segment-recording",
+        "segment-recording",
+        "valid",
+        "Historical Bridge"
+      ]
     ]);
     expect(result.items[2]).toMatchObject({
       sheetId: "sheet-alpha",
@@ -318,7 +337,9 @@ describe("home recent activity source", () => {
       "recording:failed-segment": "lookup-failed",
       "recording:missing-segment": "missing-segment"
     });
-    expect(result.items.find((item) => item.id === "session:blank-sheet")).toMatchObject({
+    expect(
+      result.items.find((item) => item.id === "session:blank-sheet")
+    ).toMatchObject({
       kind: "sheet-session",
       label: "Sheet practice",
       disabledReason: "No target is available for this local activity."
@@ -412,14 +433,18 @@ describe("home recent activity source", () => {
       durationMs: 5_000,
       metadata: expect.arrayContaining(["5s"])
     });
-    expect(byId.get("session:persisted-duration")?.durationMs).not.toBe(600_000);
+    expect(byId.get("session:persisted-duration")?.durationMs).not.toBe(
+      600_000
+    );
     expect(byId.get("session:bad-session-duration")).toMatchObject({
       durationMs: null
     });
     expect(byId.get("recording:bad-recording-duration")).toMatchObject({
       durationMs: null
     });
-    expect(byId.get("recording:bad-recording-duration")?.metadata.join(" ")).not.toContain("NaN");
+    expect(
+      byId.get("recording:bad-recording-duration")?.metadata.join(" ")
+    ).not.toContain("NaN");
   });
 
   it("dedupes source identities and upgrades segment context without parallel sheet rows", () => {
@@ -482,7 +507,14 @@ describe("home recent activity source", () => {
       generatedAt: "2026-06-21T12:00:00.000Z"
     });
 
-    expect(result.items.map((item) => [item.id, item.sheetId, item.segmentId, item.targetState])).toEqual([
+    expect(
+      result.items.map((item) => [
+        item.id,
+        item.sheetId,
+        item.segmentId,
+        item.targetState
+      ])
+    ).toEqual([
       ["session:alpha-shared", "sheet-alpha", "segment-shared", "valid"],
       ["session:beta-shared", "sheet-beta", "segment-shared", "valid"]
     ]);

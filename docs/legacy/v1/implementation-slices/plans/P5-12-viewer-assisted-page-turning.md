@@ -350,16 +350,16 @@ Stop and return to planning if implementation appears to require:
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Automatic score following | v2 or future reviewed score-following feature |
-| Audio-based page turning / onset or waveform-driven turns | Future audio-analysis feature, not Pack 5 |
-| PDF recognition, OCR, barline/page-region mapping | Future score-analysis feature |
-| Per-sheet persisted assisted-turn preferences | Future reviewed navigation/persistence slice |
-| Multiple queued turns or turn schedule editor | Future viewer ergonomics slice after P5-12 proves useful |
-| Page-specific segment-to-page mapping | Future reviewed viewer/segment mapping slice |
-| Overlay cues or annotations on the sheet | Future overlay/annotation slice |
-| Reference playback synchronized turns | Future reference integration slice |
+| Deferred work                                             | Future owner                                             |
+| --------------------------------------------------------- | -------------------------------------------------------- |
+| Automatic score following                                 | v2 or future reviewed score-following feature            |
+| Audio-based page turning / onset or waveform-driven turns | Future audio-analysis feature, not Pack 5                |
+| PDF recognition, OCR, barline/page-region mapping         | Future score-analysis feature                            |
+| Per-sheet persisted assisted-turn preferences             | Future reviewed navigation/persistence slice             |
+| Multiple queued turns or turn schedule editor             | Future viewer ergonomics slice after P5-12 proves useful |
+| Page-specific segment-to-page mapping                     | Future reviewed viewer/segment mapping slice             |
+| Overlay cues or annotations on the sheet                  | Future overlay/annotation slice                          |
+| Reference playback synchronized turns                     | Future reference integration slice                       |
 
 ## Concise Coding-Agent Prompt
 

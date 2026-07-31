@@ -13,7 +13,10 @@ declare global {
 }
 
 function createBilibiliSearchAdapter() {
-  if (typeof window !== "undefined" && window.__referenceSystemUseFixtureSearch === true) {
+  if (
+    typeof window !== "undefined" &&
+    window.__referenceSystemUseFixtureSearch === true
+  ) {
     return new DeterministicBilibiliSearchAdapter();
   }
 

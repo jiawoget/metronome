@@ -121,10 +121,9 @@ describe("recordings review take grouping", () => {
       takeCount: 2,
       latestRecordedAt: "2026-06-21T13:00:00.000Z"
     });
-    expect(grouping.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
-      "sheet-alpha-segment-new",
-      "sheet-alpha-segment-old"
-    ]);
+    expect(
+      grouping.takeGroups[0].recordings.map((recording) => recording.id)
+    ).toEqual(["sheet-alpha-segment-new", "sheet-alpha-segment-old"]);
 
     expect(grouping.takeGroups[1]).toMatchObject({
       kind: "sheet-no-segment",
@@ -135,10 +134,9 @@ describe("recordings review take grouping", () => {
       takeCount: 2,
       latestRecordedAt: "2026-06-21T12:00:00.000Z"
     });
-    expect(grouping.takeGroups[1].recordings.map((recording) => recording.id)).toEqual([
-      "sheet-alpha-none-null",
-      "sheet-alpha-none-legacy"
-    ]);
+    expect(
+      grouping.takeGroups[1].recordings.map((recording) => recording.id)
+    ).toEqual(["sheet-alpha-none-null", "sheet-alpha-none-legacy"]);
   });
 
   it("normalizes missing, null, malformed, and empty segment metadata into the no-segment bucket", () => {
@@ -177,7 +175,9 @@ describe("recordings review take grouping", () => {
       segmentName: null,
       takeCount: 4
     });
-    expect(grouping.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
+    expect(
+      grouping.takeGroups[0].recordings.map((recording) => recording.id)
+    ).toEqual([
       "malformed-segment-context",
       "empty-segment-id",
       "explicit-null-segment",
@@ -210,12 +210,12 @@ describe("recordings review take grouping", () => {
       "sheet-no-segment",
       "sheet-segment"
     ]);
-    expect(grouping.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
-      "whole-sheet"
-    ]);
-    expect(grouping.takeGroups[1].recordings.map((recording) => recording.id)).toEqual([
-      "real-none-segment"
-    ]);
+    expect(
+      grouping.takeGroups[0].recordings.map((recording) => recording.id)
+    ).toEqual(["whole-sheet"]);
+    expect(
+      grouping.takeGroups[1].recordings.map((recording) => recording.id)
+    ).toEqual(["real-none-segment"]);
   });
 
   it("keeps invalid sheet recordings out of take groups while preserving them separately", () => {
@@ -239,13 +239,12 @@ describe("recordings review take grouping", () => {
     ]);
 
     expect(grouping.takeGroups).toHaveLength(1);
-    expect(grouping.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
-      "sheet-valid"
-    ]);
-    expect(grouping.ungroupedRecordings.map((recording) => recording.id)).toEqual([
-      "sheet-blank-id",
-      "sheet-missing-id"
-    ]);
+    expect(
+      grouping.takeGroups[0].recordings.map((recording) => recording.id)
+    ).toEqual(["sheet-valid"]);
+    expect(
+      grouping.ungroupedRecordings.map((recording) => recording.id)
+    ).toEqual(["sheet-blank-id", "sheet-missing-id"]);
   });
 
   it("treats invalid timestamps as oldest without throwing", () => {
@@ -267,11 +266,9 @@ describe("recordings review take grouping", () => {
       })
     ]);
 
-    expect(grouping.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
-      "valid-newest",
-      "valid-older",
-      "invalid-created-at"
-    ]);
+    expect(
+      grouping.takeGroups[0].recordings.map((recording) => recording.id)
+    ).toEqual(["valid-newest", "valid-older", "invalid-created-at"]);
     expect(grouping.takeGroups[0].latestRecording.id).toBe("valid-newest");
   });
 
@@ -350,10 +347,9 @@ describe("recordings review take grouping", () => {
       "sheet:sheet-a:segment:id:segment-b",
       "sheet:sheet-b:segment:id:segment-a"
     ]);
-    expect(firstOrder.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
-      "sheet-a-segment-a-1",
-      "sheet-a-segment-a-2"
-    ]);
+    expect(
+      firstOrder.takeGroups[0].recordings.map((recording) => recording.id)
+    ).toEqual(["sheet-a-segment-a-1", "sheet-a-segment-a-2"]);
 
     expect(reversedOrder).toEqual(firstOrder);
   });
@@ -433,10 +429,9 @@ describe("recordings review take grouping", () => {
       "sheet:sheet-a:segment:id:segment-b",
       "sheet:sheet-b:segment:id:segment-a"
     ]);
-    expect(firstOrder.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
-      "sheet-a-segment-a-invalid-1",
-      "sheet-a-segment-a-invalid-2"
-    ]);
+    expect(
+      firstOrder.takeGroups[0].recordings.map((recording) => recording.id)
+    ).toEqual(["sheet-a-segment-a-invalid-1", "sheet-a-segment-a-invalid-2"]);
 
     expect(reversedOrder).toEqual(firstOrder);
   });
@@ -465,10 +460,9 @@ describe("recordings review take grouping", () => {
     expect(recordings.map((recording) => recording.id)).toEqual(originalOrder);
     expect(grouping.takeGroups[0].recordings).not.toBe(recordings);
     expect(grouping.quickRecordings).not.toBe(recordings);
-    expect(grouping.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
-      "newer-recording",
-      "older-recording"
-    ]);
+    expect(
+      grouping.takeGroups[0].recordings.map((recording) => recording.id)
+    ).toEqual(["newer-recording", "older-recording"]);
   });
 
   it("groups normalized repository snapshots through the service boundary", () => {
@@ -510,7 +504,10 @@ describe("recordings review take grouping", () => {
       errorMarkers: []
     };
 
-    window.localStorage.setItem(RECORDINGS_STORAGE_KEY, JSON.stringify(rawSnapshot));
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify(rawSnapshot)
+    );
 
     const grouping = recordingHistoryRepository.getTakeGroups();
 
@@ -524,7 +521,9 @@ describe("recordings review take grouping", () => {
       kind: "sheet-no-segment",
       takeCount: 3
     });
-    expect(grouping.takeGroups[0].recordings.map((recording) => recording.id)).toEqual([
+    expect(
+      grouping.takeGroups[0].recordings.map((recording) => recording.id)
+    ).toEqual([
       "malformed-segment-sheet",
       "null-segment-sheet",
       "legacy-sheet"
@@ -532,7 +531,9 @@ describe("recordings review take grouping", () => {
   });
 });
 
-function createQuickRecording(overrides: MakeQuickReviewRecordingOverrides = {}) {
+function createQuickRecording(
+  overrides: MakeQuickReviewRecordingOverrides = {}
+) {
   return makeQuickReviewRecording(overrides, {
     withArtifactRef: false
   });

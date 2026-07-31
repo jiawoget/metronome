@@ -9,10 +9,7 @@ import {
 import { browserPracticeSessionService } from "@/services/practice-session/browser";
 
 export type CommandPaletteContinueTargetsStatus =
-  | "idle"
-  | "loading"
-  | "loaded"
-  | "error";
+  "idle" | "loading" | "loaded" | "error";
 
 type CommandPaletteContinueTargetsSnapshot = {
   continueTargets: ContinuePracticeTargetsResult;
@@ -20,11 +17,12 @@ type CommandPaletteContinueTargetsSnapshot = {
   continueTargetsErrorMessage: string | null;
 };
 
-export type CommandPaletteContinueTargetsState = CommandPaletteContinueTargetsSnapshot & {
-  refreshContinueTargets: (
-    options?: CommandPaletteContinueTargetsRefreshOptions
-  ) => Promise<void>;
-};
+export type CommandPaletteContinueTargetsState =
+  CommandPaletteContinueTargetsSnapshot & {
+    refreshContinueTargets: (
+      options?: CommandPaletteContinueTargetsRefreshOptions
+    ) => Promise<void>;
+  };
 
 export type CommandPaletteContinueTargetsRefreshOptions = {
   clearTargets?: boolean;
@@ -54,73 +52,76 @@ export function useCommandPaletteContinueTargets(
   const isMountedRef = useRef(false);
   const latestRefreshIdRef = useRef(0);
 
-  const refreshContinueTargets = useCallback(async ({
-    clearTargets = false
-  }: CommandPaletteContinueTargetsRefreshOptions = {}) => {
-    if (!isMountedRef.current) {
-      return;
-    }
+  const refreshContinueTargets = useCallback(
+    async ({
+      clearTargets = false
+    }: CommandPaletteContinueTargetsRefreshOptions = {}) => {
+      if (!isMountedRef.current) {
+        return;
+      }
 
-    if (typeof indexedDB === "undefined") {
-      setState({
-        continueTargets: {
-          ...emptyContinueTargets,
-          limit
-        },
-        continueTargetsStatus: "loaded",
-        continueTargetsErrorMessage: null
-      });
-      return;
-    }
-
-    const refreshId = latestRefreshIdRef.current + 1;
-    latestRefreshIdRef.current = refreshId;
-
-    if (isMountedRef.current) {
-      setState((currentState) => ({
-        ...currentState,
-        continueTargets: clearTargets
-          ? {
-              ...emptyContinueTargets,
-              limit
-            }
-          : currentState.continueTargets,
-        continueTargetsStatus: "loading",
-        continueTargetsErrorMessage: null
-      }));
-    }
-
-    try {
-      const continueTargets =
-        await browserPracticeSessionService.getContinuePracticeTargets({
-          limit
+      if (typeof indexedDB === "undefined") {
+        setState({
+          continueTargets: {
+            ...emptyContinueTargets,
+            limit
+          },
+          continueTargetsStatus: "loaded",
+          continueTargetsErrorMessage: null
         });
-
-      if (!isMountedRef.current || refreshId !== latestRefreshIdRef.current) {
         return;
       }
 
-      setState({
-        continueTargets,
-        continueTargetsStatus: "loaded",
-        continueTargetsErrorMessage: null
-      });
-    } catch {
-      if (!isMountedRef.current || refreshId !== latestRefreshIdRef.current) {
-        return;
+      const refreshId = latestRefreshIdRef.current + 1;
+      latestRefreshIdRef.current = refreshId;
+
+      if (isMountedRef.current) {
+        setState((currentState) => ({
+          ...currentState,
+          continueTargets: clearTargets
+            ? {
+                ...emptyContinueTargets,
+                limit
+              }
+            : currentState.continueTargets,
+          continueTargetsStatus: "loading",
+          continueTargetsErrorMessage: null
+        }));
       }
 
-      setState((currentState) => ({
-        ...currentState,
-        continueTargets: {
-          ...emptyContinueTargets,
-          limit
-        },
-        continueTargetsStatus: "error",
-        continueTargetsErrorMessage: continueTargetsErrorMessage
-      }));
-    }
-  }, [limit]);
+      try {
+        const continueTargets =
+          await browserPracticeSessionService.getContinuePracticeTargets({
+            limit
+          });
+
+        if (!isMountedRef.current || refreshId !== latestRefreshIdRef.current) {
+          return;
+        }
+
+        setState({
+          continueTargets,
+          continueTargetsStatus: "loaded",
+          continueTargetsErrorMessage: null
+        });
+      } catch {
+        if (!isMountedRef.current || refreshId !== latestRefreshIdRef.current) {
+          return;
+        }
+
+        setState((currentState) => ({
+          ...currentState,
+          continueTargets: {
+            ...emptyContinueTargets,
+            limit
+          },
+          continueTargetsStatus: "error",
+          continueTargetsErrorMessage: continueTargetsErrorMessage
+        }));
+      }
+    },
+    [limit]
+  );
 
   useEffect(() => {
     isMountedRef.current = true;

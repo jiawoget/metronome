@@ -42,7 +42,9 @@ function createSegmentContext(
   };
 }
 
-function createSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
+function createSession(
+  overrides: Partial<PracticeSession> = {}
+): PracticeSession {
   return {
     id: "session-alpha",
     sourceType: "quick",
@@ -60,7 +62,9 @@ function createSession(overrides: Partial<PracticeSession> = {}): PracticeSessio
   };
 }
 
-function createRecording(overrides: Partial<SheetRecordingMetadata> = {}): SheetRecordingMetadata {
+function createRecording(
+  overrides: Partial<SheetRecordingMetadata> = {}
+): SheetRecordingMetadata {
   return {
     id: "recording-alpha",
     type: "sheet",
@@ -76,7 +80,9 @@ function createRecording(overrides: Partial<SheetRecordingMetadata> = {}): Sheet
   };
 }
 
-function createGoal(overrides: Partial<LocalPracticeGoal> = {}): LocalPracticeGoal {
+function createGoal(
+  overrides: Partial<LocalPracticeGoal> = {}
+): LocalPracticeGoal {
   return {
     id: "goal-alpha",
     kind: "minutes",
@@ -418,7 +424,9 @@ describe("practice session duration rules", () => {
           id: "alpha-recording",
           sheetId: "sheet-alpha",
           createdAt: "2026-06-21T12:03:00.000Z",
-          segmentContext: createSegmentContext({ segmentId: "segment-recording" })
+          segmentContext: createSegmentContext({
+            segmentId: "segment-recording"
+          })
         }),
         createRecording({
           id: "alpha-invalid-time-recording",

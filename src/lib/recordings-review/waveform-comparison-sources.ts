@@ -42,8 +42,7 @@ export type WaveformComparisonUnavailableSource = {
 };
 
 export type WaveformComparisonSourceState =
-  | WaveformComparisonReadySource
-  | WaveformComparisonUnavailableSource;
+  WaveformComparisonReadySource | WaveformComparisonUnavailableSource;
 
 export type WaveformComparisonSourcesResult = {
   sources: WaveformComparisonSourceState[];
@@ -63,16 +62,23 @@ type WaveformComparisonContext = {
   segmentId?: string | null;
 };
 
-const UNAVAILABLE_MESSAGES: Record<WaveformComparisonUnavailableReason, string> = {
-  "not-sheet-take": "Only saved sheet takes can be used for waveform comparison.",
-  "missing-recording": "This recording is no longer available in local review history.",
-  "missing-artifact": "This recording has no accessible local audio artifact. This recording has no accessible audio artifact in local storage.",
+const UNAVAILABLE_MESSAGES: Record<
+  WaveformComparisonUnavailableReason,
+  string
+> = {
+  "not-sheet-take":
+    "Only saved sheet takes can be used for waveform comparison.",
+  "missing-recording":
+    "This recording is no longer available in local review history.",
+  "missing-artifact":
+    "This recording has no accessible local audio artifact. This recording has no accessible audio artifact in local storage.",
   "unsupported-mime": "This recording artifact is not a supported audio type.",
   "decode-failed": "This recording artifact could not be decoded locally.",
   "empty-audio": "This recording artifact decoded as empty audio.",
   "invalid-peaks": "This recording has invalid waveform peak data.",
   "invalid-duration": "This recording has invalid duration metadata.",
-  "stale-group-membership": "This recording is no longer part of the selected take group."
+  "stale-group-membership":
+    "This recording is no longer part of the selected take group."
 };
 
 export function getWaveformComparisonEligibility(
@@ -86,7 +92,10 @@ export function getWaveformComparisonEligibility(
     });
   }
 
-  if (recording.type !== "sheet" || !normalizeRequiredString(recording.sheetId)) {
+  if (
+    recording.type !== "sheet" ||
+    !normalizeRequiredString(recording.sheetId)
+  ) {
     return createUnavailableSource({
       recordingId: recording.id,
       recording,
@@ -176,7 +185,9 @@ export async function loadWaveformComparisonSource(
 export async function loadWaveformComparisonSources(
   recordings: ReviewRecording[]
 ): Promise<WaveformComparisonSourcesResult> {
-  const sources = await Promise.all(recordings.map(loadWaveformComparisonSource));
+  const sources = await Promise.all(
+    recordings.map(loadWaveformComparisonSource)
+  );
 
   return createSourcesResult(sources);
 }
@@ -187,7 +198,8 @@ export async function loadWaveformComparisonSourcesForRecordingIds(
   const recordings = recordingHistoryRepository.getSnapshot().recordings;
   const sources = await Promise.all(
     recordingIds.map(async (recordingId) => {
-      const recording = recordings.find((candidate) => candidate.id === recordingId) ?? null;
+      const recording =
+        recordings.find((candidate) => candidate.id === recordingId) ?? null;
 
       if (!recording) {
         return createUnavailableSource({
@@ -215,10 +227,12 @@ export async function loadWaveformComparisonSourcesForGroup({
   const currentGroup =
     recordingHistoryRepository
       .getTakeGroups()
-      .takeGroups.find((candidate) => candidate.groupId === group.groupId) ?? null;
+      .takeGroups.find((candidate) => candidate.groupId === group.groupId) ??
+    null;
   const sources = await Promise.all(
     recordingIds.map(async (recordingId) => {
-      const recording = recordings.find((candidate) => candidate.id === recordingId) ?? null;
+      const recording =
+        recordings.find((candidate) => candidate.id === recordingId) ?? null;
 
       if (!recording) {
         return createUnavailableSource({
@@ -229,7 +243,9 @@ export async function loadWaveformComparisonSourcesForGroup({
       }
 
       const groupRecording =
-        currentGroup?.recordings.find((candidate) => candidate.id === recordingId) ?? null;
+        currentGroup?.recordings.find(
+          (candidate) => candidate.id === recordingId
+        ) ?? null;
 
       if (!groupRecording) {
         return createUnavailableSource({
@@ -255,10 +271,12 @@ function createSourcesResult(
   context: WaveformComparisonContext = {}
 ): WaveformComparisonSourcesResult {
   const readySources = sources.filter(
-    (source): source is WaveformComparisonReadySource => source.status === "ready"
+    (source): source is WaveformComparisonReadySource =>
+      source.status === "ready"
   );
   const unavailableSources = sources.filter(
-    (source): source is WaveformComparisonUnavailableSource => source.status === "unavailable"
+    (source): source is WaveformComparisonUnavailableSource =>
+      source.status === "unavailable"
   );
 
   return {
@@ -300,7 +318,10 @@ function mapArtifactErrorToUnavailableReason(
   if (error instanceof Error && "reason" in error) {
     const reason = (error as { reason?: string }).reason;
 
-    if (reason === "missing-artifact-ref" || reason === "missing-artifact-body") {
+    if (
+      reason === "missing-artifact-ref" ||
+      reason === "missing-artifact-body"
+    ) {
       return "missing-artifact";
     }
 
@@ -314,7 +335,9 @@ function mapArtifactErrorToUnavailableReason(
   }
 
   const message =
-    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+    error instanceof Error
+      ? error.message.toLowerCase()
+      : String(error).toLowerCase();
 
   if (message.includes("no accessible audio artifact")) {
     return "missing-artifact";

@@ -91,8 +91,7 @@ function createPreview(
     kind,
     pageCount: kind === "pdf" ? 2 : null,
     imageCount: kind === "image" ? 1 : 0,
-    imageDimensions:
-      kind === "image" ? [{ width: 800, height: 1000 }] : [],
+    imageDimensions: kind === "image" ? [{ width: 800, height: 1000 }] : [],
     mimeTypes: [kind === "pdf" ? "application/pdf" : "image/png"],
     sizeBytes: 1024,
     originalFileNames: [kind === "pdf" ? "preview.pdf" : "preview.png"],
@@ -249,9 +248,9 @@ describe("SheetLibraryExperience practice summaries", () => {
 
     render(<SheetLibraryExperience />);
 
-    expect(
-      await screen.findByRole("alert")
-    ).toHaveTextContent("Sheet library could not be loaded.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Sheet library could not be loaded."
+    );
     expect(screen.queryByText("Loading sheets...")).not.toBeInTheDocument();
   });
 
@@ -281,16 +280,12 @@ describe("SheetLibraryExperience practice summaries", () => {
 
     fireEvent.change(input, {
       target: {
-        files: [
-          new File(["first"], "first.pdf", { type: "application/pdf" })
-        ]
+        files: [new File(["first"], "first.pdf", { type: "application/pdf" })]
       }
     });
     fireEvent.change(input, {
       target: {
-        files: [
-          new File(["second"], "second.png", { type: "image/png" })
-        ]
+        files: [new File(["second"], "second.png", { type: "image/png" })]
       }
     });
 
@@ -309,9 +304,7 @@ describe("SheetLibraryExperience practice summaries", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent(
-        "Ready: 1 image."
-      );
+      expect(screen.getByRole("status")).toHaveTextContent("Ready: 1 image.");
       expect(screen.getByLabelText("Name")).toHaveValue("second");
     });
   });
@@ -421,7 +414,9 @@ describe("SheetLibraryExperience practice summaries", () => {
     });
 
     await screen.findByRole("status");
-    fireEvent.click(screen.getByRole("button", { name: "Save Imported Sheet" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save Imported Sheet" })
+    );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "single import unavailable"
@@ -501,9 +496,7 @@ describe("SheetLibraryExperience practice summaries", () => {
     expect(screen.getByLabelText("Edit sheet name")).toHaveValue(
       "Edited Alpha"
     );
-    expect(
-      screen.getByRole("button", { name: "Save metadata" })
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Save metadata" })).toBeEnabled();
   });
 
   it("clears favorite and tag row states when service calls throw", async () => {

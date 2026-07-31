@@ -119,7 +119,9 @@ function createReferenceService({
     listReferences: vi.fn(async () => currentReferences),
     countAllReferences: vi.fn(async () => 1),
     getActiveReference: vi.fn(async () => currentActiveReference),
-    getLocalAudioArtifact: vi.fn(async (referenceId: string) => artifacts.get(referenceId) ?? null),
+    getLocalAudioArtifact: vi.fn(
+      async (referenceId: string) => artifacts.get(referenceId) ?? null
+    ),
     addLocalAudioReference: vi.fn(),
     saveBilibiliUrlReference: vi.fn(),
     saveBilibiliSearchResultReference: vi.fn(),
@@ -135,7 +137,10 @@ function createReferenceService({
 
   return {
     service,
-    setActiveReference(nextActiveReference: SheetReference | null, nextReferences = currentReferences) {
+    setActiveReference(
+      nextActiveReference: SheetReference | null,
+      nextReferences = currentReferences
+    ) {
       currentActiveReference = nextActiveReference;
       currentReferences = nextReferences;
       for (const listener of listeners) {
@@ -158,11 +163,13 @@ function createAudioPlayer(): LocalReferenceAudioPlayer {
 function createSessionService(session: PracticeSession | null = sheetSession) {
   return {
     ensureSheetSession: vi.fn(async () => session),
-    captureSessionEvent: vi.fn(async (input: PracticeSessionEventCaptureInput) => {
-      void input;
+    captureSessionEvent: vi.fn(
+      async (input: PracticeSessionEventCaptureInput) => {
+        void input;
 
-      return null;
-    })
+        return null;
+      }
+    )
   };
 }
 
@@ -202,10 +209,14 @@ describe("ReferencePanel playback timestamp", () => {
 
     await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
     await waitFor(() => {
-      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(
+        localReference.id
+      );
     });
 
-    await user.click(screen.getByRole("button", { name: "Play local reference" }));
+    await user.click(
+      screen.getByRole("button", { name: "Play local reference" })
+    );
     dispatchReferenceAudioState(localReference.id, 0.1, "playing");
 
     await waitFor(() => {
@@ -252,10 +263,14 @@ describe("ReferencePanel playback timestamp", () => {
 
     await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
     await waitFor(() => {
-      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(
+        localReference.id
+      );
     });
 
-    await user.click(screen.getByRole("button", { name: "Play local reference" }));
+    await user.click(
+      screen.getByRole("button", { name: "Play local reference" })
+    );
     dispatchReferenceAudioState(localReference.id, 0.1, "playing");
 
     await waitFor(() => {
@@ -311,12 +326,22 @@ describe("ReferencePanel playback timestamp", () => {
 
     await user.type(screen.getByPlaceholderText("Search Bilibili"), "alpha");
     await user.click(screen.getByRole("button", { name: "Search Bilibili" }));
-    await expect(screen.findByText("Alpha Bilibili result")).resolves.toBeVisible();
-    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_started");
-    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_stopped");
+    await expect(
+      screen.findByText("Alpha Bilibili result")
+    ).resolves.toBeVisible();
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "reference_started"
+    );
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "reference_stopped"
+    );
 
     await user.click(screen.getByText("Alpha Bilibili result"));
-    await user.click(screen.getByRole("button", { name: "Save selected result" }));
+    await user.click(
+      screen.getByRole("button", { name: "Save selected result" })
+    );
 
     await waitFor(() => {
       expect(service.saveBilibiliSearchResultReference).toHaveBeenCalledWith({
@@ -340,11 +365,21 @@ describe("ReferencePanel playback timestamp", () => {
     });
 
     setActiveReference(bilibiliReference, [bilibiliReference]);
-    await expect(screen.findByText("Bilibili reference")).resolves.toBeVisible();
-    await user.click(screen.getByRole("link", { name: "Open Bilibili reference" }));
+    await expect(
+      screen.findByText("Bilibili reference")
+    ).resolves.toBeVisible();
+    await user.click(
+      screen.getByRole("link", { name: "Open Bilibili reference" })
+    );
 
-    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_started");
-    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_stopped");
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "reference_started"
+    );
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "reference_stopped"
+    );
   });
 
   it("does not capture playback events when a local reference artifact is missing", async () => {
@@ -369,8 +404,14 @@ describe("ReferencePanel playback timestamp", () => {
       );
     });
 
-    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_started");
-    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_stopped");
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "reference_started"
+    );
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "reference_stopped"
+    );
   });
 
   it("does not capture reference_stopped for playback errors before a playing transition", async () => {
@@ -388,13 +429,18 @@ describe("ReferencePanel playback timestamp", () => {
 
     await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
     await waitFor(() => {
-      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(
+        localReference.id
+      );
     });
 
     dispatchReferenceAudioState(localReference.id, 0, "error");
 
     await new Promise((resolve) => window.setTimeout(resolve, 0));
-    expectNoCaptureKind(sessionService.captureSessionEvent, "reference_stopped");
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "reference_stopped"
+    );
   });
 
   it("reports local audio playback time as milliseconds for measure-grid calibration", async () => {
@@ -413,7 +459,9 @@ describe("ReferencePanel playback timestamp", () => {
 
     await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
     await waitFor(() => {
-      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(
+        localReference.id
+      );
     });
 
     dispatchReferenceAudioState(localReference.id, 1.234);
@@ -439,7 +487,9 @@ describe("ReferencePanel playback timestamp", () => {
 
     await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
     await waitFor(() => {
-      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(
+        localReference.id
+      );
     });
     dispatchReferenceAudioState(localReference.id, 1.234);
 
@@ -481,7 +531,9 @@ describe("ReferencePanel playback timestamp", () => {
 
     await expect(screen.findByText("Alpha reference")).resolves.toBeVisible();
     await waitFor(() => {
-      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(localReference.id);
+      expect(service.getLocalAudioArtifact).toHaveBeenCalledWith(
+        localReference.id
+      );
     });
     dispatchReferenceAudioState(localReference.id, 1.234);
 
@@ -492,7 +544,9 @@ describe("ReferencePanel playback timestamp", () => {
 
     setActiveReference(bilibiliReference, [bilibiliReference]);
 
-    await expect(screen.findByText("Bilibili reference")).resolves.toBeVisible();
+    await expect(
+      screen.findByText("Bilibili reference")
+    ).resolves.toBeVisible();
     await waitFor(() => {
       expect(onPlaybackTimestampChange).toHaveBeenCalledWith(null);
     });

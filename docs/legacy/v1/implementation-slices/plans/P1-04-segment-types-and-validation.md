@@ -61,10 +61,7 @@ export type PracticeSegment = {
 };
 
 export type PracticeSegmentGridStatus =
-  | "current"
-  | "stale"
-  | "missing-grid"
-  | "invalid-association";
+  "current" | "stale" | "missing-grid" | "invalid-association";
 ```
 
 Field contract:
@@ -92,7 +89,10 @@ Grid association policy:
 Optional helper allowed in this slice:
 
 ```ts
-export function getPracticeSegmentRangeMs(segment: PracticeSegment, grid: MeasureGrid): MeasureRangeMs;
+export function getPracticeSegmentRangeMs(
+  segment: PracticeSegment,
+  grid: MeasureGrid
+): MeasureRangeMs;
 ```
 
 If implemented, it must delegate to `getMeasureRangeMs(grid, segment.range)`. It must not duplicate MeasureGrid math. This helper is useful but not required for P1-04 readiness; stale-status and validation are the required helpers.
@@ -107,17 +107,25 @@ Follow existing `src/domain/practice/measure-grid/index.ts` patterns:
 
 ```ts
 export function parsePracticeSegment(value: unknown): PracticeSegment | null;
-export function validatePracticeSegment(value: PracticeSegment): PracticeSegment;
-export function parsePracticeSegmentGridAssociation(value: unknown): PracticeSegmentGridAssociation | null;
+export function validatePracticeSegment(
+  value: PracticeSegment
+): PracticeSegment;
+export function parsePracticeSegmentGridAssociation(
+  value: unknown
+): PracticeSegmentGridAssociation | null;
 export function validatePracticeSegmentGridAssociation(
   value: PracticeSegmentGridAssociation
 ): PracticeSegmentGridAssociation;
 export function parsePracticeSegmentName(value: unknown): string | null;
 export function validatePracticeSegmentName(value: string): string;
 export function parsePracticeSegmentNotes(value: unknown): string | null;
-export function validatePracticeSegmentNotes(value: string | null): string | null;
+export function validatePracticeSegmentNotes(
+  value: string | null
+): string | null;
 export function parsePracticeSegmentTargetBpm(value: unknown): number | null;
-export function validatePracticeSegmentTargetBpm(value: number | null): number | null;
+export function validatePracticeSegmentTargetBpm(
+  value: number | null
+): number | null;
 ```
 
 Name behavior:
@@ -204,36 +212,36 @@ P1-04 must not implement:
 
 ## 7. Boundary Condition Matrix
 
-| Condition | Required behavior | Required evidence |
-| --- | --- | --- |
-| Valid segment | Accept non-empty id, sheetId, name, range `5-12`, optional target BPM, notes, and valid grid association | Unit test |
-| Empty id | Reject; `parsePracticeSegment` returns `null`, `validatePracticeSegment` throws | Negative unit test |
-| Empty sheetId | Reject; no sheet existence lookup | Negative unit test and source inspection |
-| Name with leading/trailing spaces | Normalize to trimmed name | Unit test |
-| Empty or whitespace name | Reject | Negative unit test |
-| Long name over 80 chars | Reject | Boundary unit test |
-| Name exactly 80 chars | Accept | Boundary unit test |
-| One-measure range | Accept start equal to end | Unit test |
-| Start measure 0/negative/fractional | Reject through MeasureGrid range validation | Negative unit test |
-| End before start | Reject | Negative unit test |
-| Missing/non-numeric range fields | Reject | Negative unit test |
-| `targetBpm` null | Accept and preserve/null-normalize | Unit test |
-| `targetBpm` 30 and 300 | Accept | Boundary unit test |
-| `targetBpm` 29, 301, fractional, string, NaN | Reject | Negative unit test |
-| Notes null/empty/whitespace | Normalize to `null` | Unit test |
-| Notes with internal newline | Accept as plain text | Unit test |
-| Notes over 1000 chars | Reject | Boundary unit test |
-| Notes exactly 1000 chars | Accept | Boundary unit test |
-| Valid grid association | Deterministic version and validated snapshot are created | Unit test |
-| Same grid object values, different object identity | Status is `current` | Unit test |
-| Grid BPM changed | Status is `stale` | Unit test |
-| Grid time signature changed | Status is `stale` | Unit test |
-| Grid pickup beats changed | Status is `stale` | Unit test |
-| Grid offset changed | Status is `stale` | Unit test |
-| Missing current grid | Status is `missing-grid` | Unit test |
-| Malformed association | Parse returns `null` or status is `invalid-association`; validate throws | Negative unit test |
-| Deterministic helpers | Same validated grid always produces same version string | Unit test |
-| Source boundary | No UI/storage/service files changed | Source inspection |
+| Condition                                          | Required behavior                                                                                        | Required evidence                        |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Valid segment                                      | Accept non-empty id, sheetId, name, range `5-12`, optional target BPM, notes, and valid grid association | Unit test                                |
+| Empty id                                           | Reject; `parsePracticeSegment` returns `null`, `validatePracticeSegment` throws                          | Negative unit test                       |
+| Empty sheetId                                      | Reject; no sheet existence lookup                                                                        | Negative unit test and source inspection |
+| Name with leading/trailing spaces                  | Normalize to trimmed name                                                                                | Unit test                                |
+| Empty or whitespace name                           | Reject                                                                                                   | Negative unit test                       |
+| Long name over 80 chars                            | Reject                                                                                                   | Boundary unit test                       |
+| Name exactly 80 chars                              | Accept                                                                                                   | Boundary unit test                       |
+| One-measure range                                  | Accept start equal to end                                                                                | Unit test                                |
+| Start measure 0/negative/fractional                | Reject through MeasureGrid range validation                                                              | Negative unit test                       |
+| End before start                                   | Reject                                                                                                   | Negative unit test                       |
+| Missing/non-numeric range fields                   | Reject                                                                                                   | Negative unit test                       |
+| `targetBpm` null                                   | Accept and preserve/null-normalize                                                                       | Unit test                                |
+| `targetBpm` 30 and 300                             | Accept                                                                                                   | Boundary unit test                       |
+| `targetBpm` 29, 301, fractional, string, NaN       | Reject                                                                                                   | Negative unit test                       |
+| Notes null/empty/whitespace                        | Normalize to `null`                                                                                      | Unit test                                |
+| Notes with internal newline                        | Accept as plain text                                                                                     | Unit test                                |
+| Notes over 1000 chars                              | Reject                                                                                                   | Boundary unit test                       |
+| Notes exactly 1000 chars                           | Accept                                                                                                   | Boundary unit test                       |
+| Valid grid association                             | Deterministic version and validated snapshot are created                                                 | Unit test                                |
+| Same grid object values, different object identity | Status is `current`                                                                                      | Unit test                                |
+| Grid BPM changed                                   | Status is `stale`                                                                                        | Unit test                                |
+| Grid time signature changed                        | Status is `stale`                                                                                        | Unit test                                |
+| Grid pickup beats changed                          | Status is `stale`                                                                                        | Unit test                                |
+| Grid offset changed                                | Status is `stale`                                                                                        | Unit test                                |
+| Missing current grid                               | Status is `missing-grid`                                                                                 | Unit test                                |
+| Malformed association                              | Parse returns `null` or status is `invalid-association`; validate throws                                 | Negative unit test                       |
+| Deterministic helpers                              | Same validated grid always produces same version string                                                  | Unit test                                |
+| Source boundary                                    | No UI/storage/service files changed                                                                      | Source inspection                        |
 
 ## 8. Exact Test Plan
 

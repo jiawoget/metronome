@@ -46,7 +46,9 @@ export function getNormalizedTakeSelections(snapshot: RecordingReviewSnapshot) {
   return normalizeTakeSelectionMetadataEntries(snapshot.takeSelections);
 }
 
-export function getNormalizedRecordingOrganizations(snapshot: RecordingReviewSnapshot) {
+export function getNormalizedRecordingOrganizations(
+  snapshot: RecordingReviewSnapshot
+) {
   return normalizeRecordingOrganizationEntries(
     snapshot.recordingOrganization,
     snapshot.recordings.map((recording) => recording.id)
@@ -59,8 +61,12 @@ export function deleteRecordingFromSnapshot(
 ) {
   return buildRecordingReviewSnapshot({
     ...snapshot,
-    recordings: snapshot.recordings.filter((recording) => recording.id !== recordingId),
-    errorMarkers: snapshot.errorMarkers.filter((marker) => marker.recordingId !== recordingId),
+    recordings: snapshot.recordings.filter(
+      (recording) => recording.id !== recordingId
+    ),
+    errorMarkers: snapshot.errorMarkers.filter(
+      (marker) => marker.recordingId !== recordingId
+    ),
     takeSelections: removeRecordingReferencesFromTakeSelections({
       takeSelections: getNormalizedTakeSelections(snapshot),
       recordingIds: [recordingId],
@@ -117,14 +123,18 @@ export function getArtifactCleanupRecordingIds({
   );
 }
 
-export function omitPersistedAudioBody(recording: ReviewRecording): ReviewRecording {
+export function omitPersistedAudioBody(
+  recording: ReviewRecording
+): ReviewRecording {
   return {
     ...recording,
     audioDataUrl: null
   };
 }
 
-export function isSessionWithId(value: unknown): value is { id: string; sourceType?: unknown } {
+export function isSessionWithId(
+  value: unknown
+): value is { id: string; sourceType?: unknown } {
   return (
     !!value &&
     typeof value === "object" &&

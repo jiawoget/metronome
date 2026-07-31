@@ -24,7 +24,9 @@ import {
 import { recordingHistoryMetadataRepository } from "@/infrastructure/db/recording-history-metadata-repository";
 import { createPracticeGoalService } from "@/services/practice-goals";
 
-function createGoal(overrides: Partial<LocalPracticeGoal> = {}): LocalPracticeGoal {
+function createGoal(
+  overrides: Partial<LocalPracticeGoal> = {}
+): LocalPracticeGoal {
   return {
     id: "goal-alpha",
     kind: "minutes",
@@ -35,7 +37,9 @@ function createGoal(overrides: Partial<LocalPracticeGoal> = {}): LocalPracticeGo
   };
 }
 
-function createSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
+function createSession(
+  overrides: Partial<PracticeSession> = {}
+): PracticeSession {
   return {
     id: "session-alpha",
     sourceType: "sheet",
@@ -105,15 +109,32 @@ describe("practice goal validation", () => {
 
   it("rejects malformed goal records through parsing", () => {
     expect(parseLocalPracticeGoal({ ...createGoal(), id: "   " })).toBeNull();
-    expect(parseLocalPracticeGoal({ ...createGoal(), kind: "weekly" })).toBeNull();
-    expect(parseLocalPracticeGoal({ ...createGoal(), period: "forever" })).toBeNull();
-    expect(parseLocalPracticeGoal({ ...createGoal(), status: "paused" })).toBeNull();
+    expect(
+      parseLocalPracticeGoal({ ...createGoal(), kind: "weekly" })
+    ).toBeNull();
+    expect(
+      parseLocalPracticeGoal({ ...createGoal(), period: "forever" })
+    ).toBeNull();
+    expect(
+      parseLocalPracticeGoal({ ...createGoal(), status: "paused" })
+    ).toBeNull();
     expect(parseLocalPracticeGoal({ ...createGoal(), target: 0 })).toBeNull();
     expect(parseLocalPracticeGoal({ ...createGoal(), target: 1.5 })).toBeNull();
-    expect(parseLocalPracticeGoal({ ...createGoal(), target: Number.NaN })).toBeNull();
-    expect(parseLocalPracticeGoal({ ...createGoal(), target: Number.POSITIVE_INFINITY })).toBeNull();
-    expect(parseLocalPracticeGoal({ ...createGoal(), createdAt: "not-a-date" })).toBeNull();
-    expect(parseLocalPracticeGoal({ ...createGoal(), completedAt: "not-a-date" })).toBeNull();
+    expect(
+      parseLocalPracticeGoal({ ...createGoal(), target: Number.NaN })
+    ).toBeNull();
+    expect(
+      parseLocalPracticeGoal({
+        ...createGoal(),
+        target: Number.POSITIVE_INFINITY
+      })
+    ).toBeNull();
+    expect(
+      parseLocalPracticeGoal({ ...createGoal(), createdAt: "not-a-date" })
+    ).toBeNull();
+    expect(
+      parseLocalPracticeGoal({ ...createGoal(), completedAt: "not-a-date" })
+    ).toBeNull();
   });
 });
 
@@ -137,16 +158,20 @@ describe("practice goal browser repository", () => {
       })
     );
 
-    await expect(practiceGoalRepository.getGoal("goal-alpha")).resolves.toEqual({
-      id: "goal-alpha",
-      kind: "minutes",
-      target: 1,
-      period: "today",
-      createdAt: "2026-06-21T08:00:00.000Z",
-      completedAt: null,
-      status: "active"
-    });
-    await expect(practiceGoalRepository.getGoal(" goal-alpha ")).resolves.toEqual({
+    await expect(practiceGoalRepository.getGoal("goal-alpha")).resolves.toEqual(
+      {
+        id: "goal-alpha",
+        kind: "minutes",
+        target: 1,
+        period: "today",
+        createdAt: "2026-06-21T08:00:00.000Z",
+        completedAt: null,
+        status: "active"
+      }
+    );
+    await expect(
+      practiceGoalRepository.getGoal(" goal-alpha ")
+    ).resolves.toEqual({
       id: "goal-alpha",
       kind: "minutes",
       target: 1,
@@ -200,15 +225,17 @@ describe("practice goal browser repository", () => {
       })
     );
 
-    await expect(practiceGoalRepository.getGoal("goal-alpha")).resolves.toEqual({
-      id: "goal-alpha",
-      kind: "minutes",
-      target: 3,
-      period: "all-time",
-      createdAt: "2026-06-21T08:00:00.000Z",
-      completedAt: null,
-      status: "active"
-    });
+    await expect(practiceGoalRepository.getGoal("goal-alpha")).resolves.toEqual(
+      {
+        id: "goal-alpha",
+        kind: "minutes",
+        target: 3,
+        period: "all-time",
+        createdAt: "2026-06-21T08:00:00.000Z",
+        completedAt: null,
+        status: "active"
+      }
+    );
   });
 
   it("rejects invalid writes without leaving a partial row behind", async () => {
@@ -220,7 +247,9 @@ describe("practice goal browser repository", () => {
         })
       )
     ).rejects.toThrow();
-    await expect(practiceGoalRepository.getGoal("invalid-goal")).resolves.toBeNull();
+    await expect(
+      practiceGoalRepository.getGoal("invalid-goal")
+    ).resolves.toBeNull();
     await expect(practiceGoalRepository.listGoals()).resolves.toEqual([]);
   });
 
@@ -236,7 +265,9 @@ describe("practice goal browser repository", () => {
     });
     resetPracticeGoalDatabaseConnectionForTests();
 
-    await expect(practiceGoalRepository.getGoal("invalid-goal")).resolves.toBeNull();
+    await expect(
+      practiceGoalRepository.getGoal("invalid-goal")
+    ).resolves.toBeNull();
     await expect(practiceGoalRepository.listGoals()).resolves.toEqual([
       expect.objectContaining({
         id: "goal-alpha"
@@ -264,15 +295,18 @@ describe("practice goal browser repository", () => {
     await expect(practiceGoalRepository.deleteGoal("   ")).rejects.toThrow(
       "Practice goal id is required."
     );
-    await expect(practiceGoalRepository.deleteGoal("missing-goal")).resolves.toBeUndefined();
+    await expect(
+      practiceGoalRepository.deleteGoal("missing-goal")
+    ).resolves.toBeUndefined();
     await expect(practiceGoalRepository.listGoals()).resolves.toHaveLength(1);
   });
 
   it("fires subscriptions only for save, delete of an existing goal, and clear with changed state", async () => {
     let notifications = 0;
-    const unsubscribe = practiceGoalRepository.subscribe?.(() => {
-      notifications += 1;
-    }) ?? (() => undefined);
+    const unsubscribe =
+      practiceGoalRepository.subscribe?.(() => {
+        notifications += 1;
+      }) ?? (() => undefined);
 
     await practiceGoalRepository.saveGoal(createGoal());
     expect(notifications).toBe(1);
@@ -339,7 +373,9 @@ describe("practice goal browser repository", () => {
     );
     resetPracticeGoalDatabaseConnectionForTests();
 
-    await expect(practiceGoalRepository.getGoal("goal-persisted")).resolves.toEqual({
+    await expect(
+      practiceGoalRepository.getGoal("goal-persisted")
+    ).resolves.toEqual({
       id: "goal-persisted",
       kind: "sessions",
       target: 2,
@@ -353,7 +389,9 @@ describe("practice goal browser repository", () => {
   it("keeps goal storage separate from sessions and recordings during clear operations", async () => {
     const session = createSession();
 
-    await practiceGoalRepository.saveGoal(createGoal({ id: "goal-before-goal-clear" }));
+    await practiceGoalRepository.saveGoal(
+      createGoal({ id: "goal-before-goal-clear" })
+    );
     await practiceSessionRepository.saveSession(session);
     await recordingHistoryMetadataRepository.saveRecordingMetadata(
       createRecording({
@@ -365,14 +403,20 @@ describe("practice goal browser repository", () => {
     await practiceGoalRepository.clear();
 
     await expect(practiceGoalRepository.listGoals()).resolves.toEqual([]);
-    await expect(practiceSessionRepository.listSessions()).resolves.toEqual([session]);
-    await expect(recordingHistoryMetadataRepository.listRecordingMetadata()).resolves.toEqual([
+    await expect(practiceSessionRepository.listSessions()).resolves.toEqual([
+      session
+    ]);
+    await expect(
+      recordingHistoryMetadataRepository.listRecordingMetadata()
+    ).resolves.toEqual([
       expect.objectContaining({
         id: "recording-alpha"
       })
     ]);
 
-    await practiceGoalRepository.saveGoal(createGoal({ id: "goal-before-session-clear" }));
+    await practiceGoalRepository.saveGoal(
+      createGoal({ id: "goal-before-session-clear" })
+    );
     await practiceSessionRepository.clear();
 
     await expect(practiceGoalRepository.listGoals()).resolves.toEqual([
@@ -455,7 +499,9 @@ describe("practice goal browser repository", () => {
     await practiceSessionRepository.saveSession(session);
 
     await expect(
-      createRepositoryBackedGoalService("2026-06-21T15:00:00.000Z").getPracticeGoalEvaluations()
+      createRepositoryBackedGoalService(
+        "2026-06-21T15:00:00.000Z"
+      ).getPracticeGoalEvaluations()
     ).resolves.toEqual([
       expect.objectContaining({
         goalId: "completed-goal",
@@ -479,7 +525,9 @@ describe("practice goal browser repository", () => {
       }
     ]);
     await expect(
-      createRepositoryBackedGoalService("2026-06-21T15:00:00.000Z").getPracticeGoalEvaluations()
+      createRepositoryBackedGoalService(
+        "2026-06-21T15:00:00.000Z"
+      ).getPracticeGoalEvaluations()
     ).resolves.toEqual([
       expect.objectContaining({
         goalId: "completed-goal",

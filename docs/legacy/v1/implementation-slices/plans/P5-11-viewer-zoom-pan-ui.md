@@ -382,13 +382,13 @@ Stop and return to planning if implementation appears to require:
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Pointer-anchored zoom / zoom-to-cursor | Future viewer interaction hardening if users need it |
-| Fit width / fit page controls | Future reviewed viewer ergonomics slice |
-| Pinch zoom, wheel zoom, and inertial pan | Future gesture hardening slice after basic UI proves stable |
-| Persisted per-sheet transform or URL transform state | Future reviewed navigation/persistence slice |
-| Page-specific transform memory | Future reviewed viewer ergonomics slice |
-| Directional pan controls | Only if drag/native scroll evidence is insufficient |
-| Assisted/manual page turning at segment boundaries | P5-12 |
-| Cloud sync, score following, automatic recognition, mistake detection | v2 or future reviewed feature |
+| Deferred work                                                         | Future owner                                                |
+| --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Pointer-anchored zoom / zoom-to-cursor                                | Future viewer interaction hardening if users need it        |
+| Fit width / fit page controls                                         | Future reviewed viewer ergonomics slice                     |
+| Pinch zoom, wheel zoom, and inertial pan                              | Future gesture hardening slice after basic UI proves stable |
+| Persisted per-sheet transform or URL transform state                  | Future reviewed navigation/persistence slice                |
+| Page-specific transform memory                                        | Future reviewed viewer ergonomics slice                     |
+| Directional pan controls                                              | Only if drag/native scroll evidence is insufficient         |
+| Assisted/manual page turning at segment boundaries                    | P5-12                                                       |
+| Cloud sync, score following, automatic recognition, mistake detection | v2 or future reviewed feature                               |

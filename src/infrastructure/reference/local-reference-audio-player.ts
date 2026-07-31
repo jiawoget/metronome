@@ -1,4 +1,8 @@
-import { clampReferenceVolume, type LocalAudioReference, type LocalAudioReferenceArtifact } from "@/domain/reference";
+import {
+  clampReferenceVolume,
+  type LocalAudioReference,
+  type LocalAudioReferenceArtifact
+} from "@/domain/reference";
 
 type ReferenceAudioSnapshot = {
   referenceId: string | null;
@@ -85,7 +89,10 @@ export class BrowserLocalReferenceAudioPlayer {
       state: this.state,
       currentTime: this.audio?.currentTime ?? 0,
       volume: this.audio?.volume ?? 1,
-      duration: this.audio?.duration && Number.isFinite(this.audio.duration) ? this.audio.duration : 0,
+      duration:
+        this.audio?.duration && Number.isFinite(this.audio.duration)
+          ? this.audio.duration
+          : 0,
       message: null
     };
   }

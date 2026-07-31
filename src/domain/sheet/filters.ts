@@ -18,9 +18,13 @@ export type SheetFilterOptions = {
   tag?: string | null;
 };
 
-export function formatPageCount(sheet: Pick<ImportedSheet, "kind" | "pageCount" | "imageCount">) {
+export function formatPageCount(
+  sheet: Pick<ImportedSheet, "kind" | "pageCount" | "imageCount">
+) {
   if (sheet.kind === "pdf") {
-    return sheet.pageCount === 1 ? "1 page" : `${sheet.pageCount ?? "Unknown"} pages`;
+    return sheet.pageCount === 1
+      ? "1 page"
+      : `${sheet.pageCount ?? "Unknown"} pages`;
   }
 
   return sheet.imageCount === 1 ? "1 image" : `${sheet.imageCount} images`;
@@ -50,7 +54,10 @@ function matchesSheetSearch(sheet: ImportedSheet, query: string) {
   return haystack.includes(normalizedQuery);
 }
 
-function matchesOrganizationFilters(sheet: ImportedSheet, options: SheetFilterOptions) {
+function matchesOrganizationFilters(
+  sheet: ImportedSheet,
+  options: SheetFilterOptions
+) {
   const organization = resolveSheetOrganization(sheet);
 
   if ((options.favorite ?? "all") === "favorites" && !organization.favorite) {
@@ -69,7 +76,9 @@ function matchesOrganizationFilters(sheet: ImportedSheet, options: SheetFilterOp
     return false;
   }
 
-  return organization.tags.some((tag) => tag.toLowerCase() === normalizedTag.toLowerCase());
+  return organization.tags.some(
+    (tag) => tag.toLowerCase() === normalizedTag.toLowerCase()
+  );
 }
 
 export function filterSheets(

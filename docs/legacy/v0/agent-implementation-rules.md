@@ -373,40 +373,49 @@ Verification agents should report using this structure:
 # Verification Report: Module Name
 
 ## Result
+
 PASS / FAIL
 
 ## Tested Build
+
 Commit, branch, or timestamp.
 
 ## Acceptance Criteria Results
+
 - [pass/fail] Criterion.
 
 ## User Path Evidence
+
 - Path tested:
 - Steps:
 - Result:
 
 ## Automated Tests
+
 - Command:
 - Result:
 
 ## UI / Browser Checks
+
 - Pages visited:
 - Screenshots:
 - Console errors:
 
 ## Persistence Checks
+
 - What was saved:
 - How reload was tested:
 - Result:
 
 ## Issues
+
 - Severity:
 - Repro steps:
 - Expected:
 - Actual:
 
 ## Decision
+
 Why this passes or fails.
 ```
 

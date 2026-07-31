@@ -1,4 +1,7 @@
-import { formatPracticeDuration, type PracticeSession } from "@/domain/practice";
+import {
+  formatPracticeDuration,
+  type PracticeSession
+} from "@/domain/practice";
 
 import { StatusTile } from "@/components/sheet-practice/controls/status-tile";
 
@@ -26,7 +29,7 @@ export function PracticeStatusPanel({
   isRecordingActive
 }: PracticeStatusPanelProps) {
   return (
-    <div className="border-border bg-muted flex min-w-0 flex-col justify-between gap-3 rounded-md border p-3">
+    <div className="flex min-w-0 flex-col justify-between gap-3 rounded-md border border-border bg-muted p-3">
       <div>
         <h2
           id="sheet-practice-controls-title"
@@ -34,7 +37,7 @@ export function PracticeStatusPanel({
         >
           Practice Controls
         </h2>
-        <p className="text-muted-foreground mt-1 truncate text-xs font-semibold tracking-[0.08em] uppercase">
+        <p className="mt-1 truncate text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
           {sheetName}
         </p>
       </div>
@@ -43,7 +46,7 @@ export function PracticeStatusPanel({
           label="Metronome"
           value={
             isCounting
-              ? activeBarCountInTickDetail ?? `Counting ${countdownRemaining}`
+              ? (activeBarCountInTickDetail ?? `Counting ${countdownRemaining}`)
               : isPlaying
                 ? "Playing"
                 : "Stopped"

@@ -101,8 +101,10 @@ function getBarCountInBeats({
   totalDurationMs: number;
 }): BarCountInBeat[] {
   return Array.from({ length: beatCount }, (_, index) => {
-    const sourceMeasureNumber = startMeasure - countInMeasures + Math.floor(index / beatsPerMeasure);
-    const displayedSourceMeasureNumber = sourceMeasureNumber >= 1 ? sourceMeasureNumber : null;
+    const sourceMeasureNumber =
+      startMeasure - countInMeasures + Math.floor(index / beatsPerMeasure);
+    const displayedSourceMeasureNumber =
+      sourceMeasureNumber >= 1 ? sourceMeasureNumber : null;
     const offsetMs = -totalDurationMs + beatDurationMs * index;
 
     return {
@@ -124,12 +126,19 @@ export function getBarCountInPlan({
 }: BarCountInInput): BarCountInPlan {
   const validatedGrid = validateMeasureGrid(measureGrid);
   const validatedCountInMeasures = validateCountInMeasures(countInMeasures);
-  const validatedSegment = selectedSegment === null ? null : validatePracticeSegment(selectedSegment);
-  const { numerator: beatsPerMeasure } = getTimeSignatureParts(validatedGrid.timeSignature);
-  const scope: BarCountInScope = validatedSegment === null ? "whole-sheet" : "selected-segment";
+  const validatedSegment =
+    selectedSegment === null ? null : validatePracticeSegment(selectedSegment);
+  const { numerator: beatsPerMeasure } = getTimeSignatureParts(
+    validatedGrid.timeSignature
+  );
+  const scope: BarCountInScope =
+    validatedSegment === null ? "whole-sheet" : "selected-segment";
   const startMeasure = validatedSegment?.range.startMeasure ?? 1;
   const startMs = getMeasureStartMs(validatedGrid, startMeasure);
-  const segmentRange = validatedSegment === null ? null : cloneMeasureRange(validatedSegment.range);
+  const segmentRange =
+    validatedSegment === null
+      ? null
+      : cloneMeasureRange(validatedSegment.range);
 
   if (
     validatedSegment !== null &&

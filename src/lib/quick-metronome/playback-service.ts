@@ -22,4 +22,3 @@ export class BrowserRecordingPlaybackService {
     this.audio = null;
   }
 }
-

@@ -10,9 +10,7 @@ import type {
 } from "@/services/sheet-viewer/types";
 
 export type SheetViewerPageThumbnailState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | SheetPageThumbnailSet;
+  { status: "idle" } | { status: "loading" } | SheetPageThumbnailSet;
 
 type ReadyThumbnailSet = Extract<SheetPageThumbnailSet, { status: "ready" }>;
 
@@ -21,7 +19,8 @@ function sheetViewerLoadFailedState(): SheetViewerLoadState {
     status: "error",
     code: "load-failed",
     title: "Sheet viewer unavailable",
-    message: "The sheet could not be loaded. Return to Sheet Library and try again."
+    message:
+      "The sheet could not be loaded. Return to Sheet Library and try again."
   };
 }
 
@@ -34,7 +33,9 @@ function thumbnailLoadFailedState(): SheetPageThumbnailSet {
   };
 }
 
-export function useBrowserSheetViewer(sheetId: string | null): SheetViewerLoadState | { status: "loading" } {
+export function useBrowserSheetViewer(
+  sheetId: string | null
+): SheetViewerLoadState | { status: "loading" } {
   const [state, setState] = useState<{
     sheetId: string | null;
     value: SheetViewerLoadState;
@@ -81,14 +82,18 @@ export function useBrowserSheetViewer(sheetId: string | null): SheetViewerLoadSt
 export function useBrowserSheetViewerObjectUrls(
   state: SheetViewerLoadState | { status: "loading" }
 ): SheetViewerObjectUrls | null {
-  const [objectUrls, setObjectUrls] = useState<SheetViewerObjectUrls | null>(null);
+  const [objectUrls, setObjectUrls] = useState<SheetViewerObjectUrls | null>(
+    null
+  );
 
   useEffect(() => {
     if (state.status !== "ready") {
       return;
     }
 
-    const nextObjectUrls = browserSheetViewerService.createArtifactObjectUrls(state.artifact);
+    const nextObjectUrls = browserSheetViewerService.createArtifactObjectUrls(
+      state.artifact
+    );
     let isActive = true;
 
     queueMicrotask(() => {
@@ -110,7 +115,9 @@ export function useBrowserSheetViewerObjectUrls(
   return objectUrls;
 }
 
-export function useBrowserSheetViewerPageThumbnails(sheetId: string | null): SheetViewerPageThumbnailState {
+export function useBrowserSheetViewerPageThumbnails(
+  sheetId: string | null
+): SheetViewerPageThumbnailState {
   const [state, setState] = useState<{
     sheetId: string | null;
     value: SheetViewerPageThumbnailState;

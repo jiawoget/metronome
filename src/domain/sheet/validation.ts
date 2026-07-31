@@ -12,7 +12,11 @@ const SHEET_TAG_MAX_COUNT = 12;
 const tagControlOrCommaPattern = /[,\u0000-\u001F\u007F\u2028\u2029]/;
 
 const sheetMetadataSchema = z.object({
-  name: z.string().trim().min(1, "Sheet name is required.").max(120, "Sheet name is too long."),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Sheet name is required.")
+    .max(120, "Sheet name is too long."),
   category: z.enum(SHEET_CATEGORIES),
   bpm: z.coerce
     .number()
@@ -22,7 +26,10 @@ const sheetMetadataSchema = z.object({
   timeSignature: z
     .string()
     .trim()
-    .regex(/^[1-9][0-9]?\/(?:2|4|8|16)$/, "Use a time signature like 4/4, 3/4, or 6/8.")
+    .regex(
+      /^[1-9][0-9]?\/(?:2|4|8|16)$/,
+      "Use a time signature like 4/4, 3/4, or 6/8."
+    )
 });
 
 export type SheetValidationResult =
@@ -35,7 +42,9 @@ export type SheetValidationResult =
       errors: string[];
     };
 
-export function validateSheetMetadata(input: SheetMetadataInput): SheetValidationResult {
+export function validateSheetMetadata(
+  input: SheetMetadataInput
+): SheetValidationResult {
   const result = sheetMetadataSchema.safeParse(input);
 
   if (!result.success) {
@@ -149,7 +158,9 @@ export function validateSheetOrganizationInput(input: {
     }
 
     if (tagControlOrCommaPattern.test(tag)) {
-      errors.add("Tags cannot contain commas, line breaks, or control characters.");
+      errors.add(
+        "Tags cannot contain commas, line breaks, or control characters."
+      );
       continue;
     }
 

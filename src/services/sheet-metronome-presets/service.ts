@@ -45,9 +45,10 @@ function compareSheetMetronomePresets(
     return updatedAtComparison;
   }
 
-  const normalizedNameComparison = normalizeSheetMetronomePresetNameForComparison(
-    left.name
-  ).localeCompare(normalizeSheetMetronomePresetNameForComparison(right.name));
+  const normalizedNameComparison =
+    normalizeSheetMetronomePresetNameForComparison(left.name).localeCompare(
+      normalizeSheetMetronomePresetNameForComparison(right.name)
+    );
 
   if (normalizedNameComparison !== 0) {
     return normalizedNameComparison;
@@ -101,9 +102,7 @@ function filterPresetsByScope(
     options.segmentId
   );
 
-  return presets.filter(
-    (preset) => preset.segmentId === normalizedSegmentId
-  );
+  return presets.filter((preset) => preset.segmentId === normalizedSegmentId);
 }
 
 export function createSheetMetronomePresetService({

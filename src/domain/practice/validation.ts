@@ -17,22 +17,30 @@ import {
   measureRangeSchema
 } from "@/domain/practice/measure-grid";
 
-const isoDateSchema = z.iso
-  .datetime({ offset: true })
-  .refine((value) => {
+const isoDateSchema = z.iso.datetime({ offset: true }).refine(
+  (value) => {
     const parsedValue = new Date(value);
 
-    return Number.isFinite(parsedValue.getTime()) && parsedValue.toISOString() === value;
-  }, {
+    return (
+      Number.isFinite(parsedValue.getTime()) &&
+      parsedValue.toISOString() === value
+    );
+  },
+  {
     message: "Expected a strict ISO datetime with a real calendar date."
-  });
+  }
+);
 
 export function parsePracticeTimeSignature(value: unknown) {
   return isSupportedTimeSignature(value) ? value : null;
 }
 
 const practiceTimeSignatureSchema = z.enum(SUPPORTED_TIME_SIGNATURES);
-const LOCAL_PRACTICE_GOAL_STATUSES = ["active", "completed", "invalid"] as const;
+const LOCAL_PRACTICE_GOAL_STATUSES = [
+  "active",
+  "completed",
+  "invalid"
+] as const;
 const localPracticeGoalStatusSchema = z.enum(LOCAL_PRACTICE_GOAL_STATUSES);
 const trimmedRequiredStringSchema = z.string().trim().min(1);
 const segmentNameSchema = z.string().trim().min(1).max(80);
@@ -93,10 +101,11 @@ const sheetRecordingSegmentContextSchema = z
     }
   });
 
-const sheetRecordingSegmentContextFieldSchema = sheetRecordingSegmentContextSchema
-  .nullable()
-  .optional()
-  .transform((value) => value ?? null);
+const sheetRecordingSegmentContextFieldSchema =
+  sheetRecordingSegmentContextSchema
+    .nullable()
+    .optional()
+    .transform((value) => value ?? null);
 
 const practiceSessionSchema = z
   .object({
@@ -169,8 +178,13 @@ const localPracticeGoalSchema = z.object({
   target: z.number().finite().int().positive(),
   period: z.enum(["today", "all-time"]),
   createdAt: isoDateSchema,
-  completedAt: isoDateSchema.nullable().optional().transform((value) => value ?? null),
-  status: localPracticeGoalStatusSchema.optional().transform((value) => value ?? "active")
+  completedAt: isoDateSchema
+    .nullable()
+    .optional()
+    .transform((value) => value ?? null),
+  status: localPracticeGoalStatusSchema
+    .optional()
+    .transform((value) => value ?? "active")
 });
 
 export function parsePracticeSession(value: unknown): PracticeSession | null {
@@ -179,7 +193,9 @@ export function parsePracticeSession(value: unknown): PracticeSession | null {
   return result.success ? result.data : null;
 }
 
-export function parseLocalPracticeGoal(value: unknown): LocalPracticeGoal | null {
+export function parseLocalPracticeGoal(
+  value: unknown
+): LocalPracticeGoal | null {
   const result = localPracticeGoalSchema.safeParse(value);
 
   return result.success ? result.data : null;

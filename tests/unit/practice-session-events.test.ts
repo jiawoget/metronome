@@ -84,7 +84,9 @@ describe("practice session event domain", () => {
       schemaVersion: PRACTICE_SESSION_EVENT_SCHEMA_VERSION
     });
     expect(
-      validatePracticeSessionEvent(buildEvent({ kind: "session_ended" }) as never)
+      validatePracticeSessionEvent(
+        buildEvent({ kind: "session_ended" }) as never
+      )
     ).toEqual({
       id: "event-1",
       sessionId: "session-1",
@@ -314,9 +316,7 @@ describe("practice session event domain", () => {
         schemaVersion: PRACTICE_SESSION_EVENT_SCHEMA_VERSION
       })
     ).toBeNull();
-    expect(
-      parsePracticeSessionEvent(buildEvent({ id: "   " }))
-    ).toBeNull();
+    expect(parsePracticeSessionEvent(buildEvent({ id: "   " }))).toBeNull();
     expect(
       parsePracticeSessionEvent(buildEvent({ sessionId: "   " }))
     ).toBeNull();

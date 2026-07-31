@@ -4,10 +4,17 @@ import type { WavArtifact } from "./audio";
 import { RECORDING_ARTIFACT_DB_NAME } from "./storage";
 
 type E2ERecordingType = "quick" | "sheet";
-type E2ERecordingArtifact = Pick<WavArtifact, "dataUrl" | "durationMs" | "sizeBytes"> & {
+type E2ERecordingArtifact = Pick<
+  WavArtifact,
+  "dataUrl" | "durationMs" | "sizeBytes"
+> & {
   mimeType?: string;
 };
-type E2ERecordingArtifactRef = { kind: "indexeddb"; artifactId: string; storageVersion: 1 };
+type E2ERecordingArtifactRef = {
+  kind: "indexeddb";
+  artifactId: string;
+  storageVersion: 1;
+};
 type E2ERecordingSettings = { bpm: number; timeSignature: string };
 type E2ERecordingOverrides = Record<string, unknown> & {
   id: string;
@@ -141,7 +148,8 @@ export async function seedE2ERecordingArtifacts(
   recordings: E2EReviewRecording[]
 ) {
   const artifacts = recordings.flatMap((recording) => {
-    const seedDataUrl = seedArtifactDataUrls.get(recording) ?? recording.audioDataUrl;
+    const seedDataUrl =
+      seedArtifactDataUrls.get(recording) ?? recording.audioDataUrl;
 
     if (
       recording.artifactRef?.kind !== "indexeddb" ||
@@ -172,7 +180,9 @@ export async function seedE2ERecordingArtifacts(
       const artifactsWithBlobs = await Promise.all(
         artifactsToSeed.map(async (artifact) => ({
           ...artifact,
-          blob: await fetch(artifact.dataUrl).then((response) => response.blob())
+          blob: await fetch(artifact.dataUrl).then((response) =>
+            response.blob()
+          )
         }))
       );
       const database = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -181,12 +191,22 @@ export async function seedE2ERecordingArtifacts(
         request.onupgradeneeded = () => {
           const upgradeDatabase = request.result;
 
-          if (!upgradeDatabase.objectStoreNames.contains("recordingArtifacts")) {
-            const store = upgradeDatabase.createObjectStore("recordingArtifacts", {
-              keyPath: "artifactId"
-            });
+          if (
+            !upgradeDatabase.objectStoreNames.contains("recordingArtifacts")
+          ) {
+            const store = upgradeDatabase.createObjectStore(
+              "recordingArtifacts",
+              {
+                keyPath: "artifactId"
+              }
+            );
 
-            for (const indexName of ["recordingId", "recordingType", "createdAt", "updatedAt"]) {
+            for (const indexName of [
+              "recordingId",
+              "recordingType",
+              "createdAt",
+              "updatedAt"
+            ]) {
               store.createIndex(indexName, indexName);
             }
           }
@@ -196,7 +216,10 @@ export async function seedE2ERecordingArtifacts(
       });
 
       await new Promise<void>((resolve, reject) => {
-        const transaction = database.transaction("recordingArtifacts", "readwrite");
+        const transaction = database.transaction(
+          "recordingArtifacts",
+          "readwrite"
+        );
         const store = transaction.objectStore("recordingArtifacts");
 
         transaction.oncomplete = () => {

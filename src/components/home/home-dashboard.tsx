@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent
+} from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -52,8 +58,10 @@ import {
 import { getContinuePracticeTargetHref } from "@/components/home/continue-practice-navigation";
 import { SessionComparisonPanel } from "@/components/home/session-comparison-panel";
 
-export type PracticeGoalManagementReadStatus = PracticeSessionDashboardReadStatus;
-export type PracticeGoalManagementMutationStatus = "idle" | "saving" | "deleting" | "error";
+export type PracticeGoalManagementReadStatus =
+  PracticeSessionDashboardReadStatus;
+export type PracticeGoalManagementMutationStatus =
+  "idle" | "saving" | "deleting" | "error";
 
 export type HomeGoalManagementData = {
   practiceGoals?: LocalPracticeGoal[];
@@ -64,10 +72,18 @@ export type HomeGoalManagementData = {
   practiceGoalProgressErrorMessage?: string | null;
   practiceGoalMutationStatus?: PracticeGoalManagementMutationStatus;
   practiceGoalMutationErrorMessage?: string | null;
-  savePracticeGoal?: (goal: LocalPracticeGoal) => Promise<void | boolean> | void | boolean;
-  deletePracticeGoal?: (goalId: string) => Promise<void | boolean> | void | boolean;
-  onSavePracticeGoal?: (goal: LocalPracticeGoal) => Promise<void | boolean> | void | boolean;
-  onDeletePracticeGoal?: (goalId: string) => Promise<void | boolean> | void | boolean;
+  savePracticeGoal?: (
+    goal: LocalPracticeGoal
+  ) => Promise<void | boolean> | void | boolean;
+  deletePracticeGoal?: (
+    goalId: string
+  ) => Promise<void | boolean> | void | boolean;
+  onSavePracticeGoal?: (
+    goal: LocalPracticeGoal
+  ) => Promise<void | boolean> | void | boolean;
+  onDeletePracticeGoal?: (
+    goalId: string
+  ) => Promise<void | boolean> | void | boolean;
   createPracticeGoalId?: () => string;
   getPracticeGoalNow?: () => Date;
 };
@@ -100,7 +116,10 @@ export type HomeDashboardData = HomeGoalManagementData & {
   recentRecordings: [];
 };
 
-type HomeDashboardRenderableData = (HomeDashboardData | PracticeSessionDashboardState) & Partial<HomeGoalManagementData>;
+type HomeDashboardRenderableData = (
+  HomeDashboardData | PracticeSessionDashboardState
+) &
+  Partial<HomeGoalManagementData>;
 
 const practiceGoalKinds = ["minutes", "sessions", "takes"] as const;
 const practiceGoalPeriods = ["today", "all-time"] as const;
@@ -197,52 +216,80 @@ const emptyHomeDashboardData: HomeDashboardData = {
   recentRecordings: []
 };
 
-export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDashboardData }) {
+export function HomeDashboard({
+  data = emptyHomeDashboardData
+}: {
+  data?: HomeDashboardData;
+}) {
   const liveData = usePracticeSessionDashboard();
-  const dashboardData = (data === emptyHomeDashboardData ? liveData : data) as HomeDashboardRenderableData;
-  const continueTargets = dashboardData.continueTargets ?? emptyContinuePracticeTargets;
+  const dashboardData = (
+    data === emptyHomeDashboardData ? liveData : data
+  ) as HomeDashboardRenderableData;
+  const continueTargets =
+    dashboardData.continueTargets ?? emptyContinuePracticeTargets;
   const continueTargetsStatus = dashboardData.continueTargetsStatus ?? "idle";
-  const continueTargetsErrorMessage = dashboardData.continueTargetsErrorMessage ?? null;
-  const recentActivity = dashboardData.recentActivity ?? emptyHomeRecentActivity;
+  const continueTargetsErrorMessage =
+    dashboardData.continueTargetsErrorMessage ?? null;
+  const recentActivity =
+    dashboardData.recentActivity ?? emptyHomeRecentActivity;
   const recentActivityStatus = dashboardData.recentActivityStatus ?? "idle";
-  const recentActivityErrorMessage = dashboardData.recentActivityErrorMessage ?? null;
+  const recentActivityErrorMessage =
+    dashboardData.recentActivityErrorMessage ?? null;
   const analytics = dashboardData.analytics ?? emptyHomeAnalytics;
   const analyticsStatus = dashboardData.analyticsStatus ?? "idle";
   const analyticsErrorMessage = dashboardData.analyticsErrorMessage ?? null;
   const streaks = dashboardData.streaks ?? emptyHomeStreaks;
   const streaksStatus = dashboardData.streaksStatus ?? "idle";
   const streaksErrorMessage = dashboardData.streaksErrorMessage ?? null;
-  const sessionComparison = dashboardData.sessionComparison ?? emptyHomeSessionComparison;
-  const sessionComparisonStatus = dashboardData.sessionComparisonStatus ?? "idle";
-  const sessionComparisonErrorMessage = dashboardData.sessionComparisonErrorMessage ?? null;
+  const sessionComparison =
+    dashboardData.sessionComparison ?? emptyHomeSessionComparison;
+  const sessionComparisonStatus =
+    dashboardData.sessionComparisonStatus ?? "idle";
+  const sessionComparisonErrorMessage =
+    dashboardData.sessionComparisonErrorMessage ?? null;
   const practiceGoals = dashboardData.practiceGoals ?? [];
   const practiceGoalEvaluations = dashboardData.practiceGoalEvaluations ?? [];
   const practiceGoalsStatus = dashboardData.practiceGoalsStatus ?? "idle";
-  const practiceGoalProgressStatus = dashboardData.practiceGoalProgressStatus ?? "idle";
-  const practiceGoalsErrorMessage = dashboardData.practiceGoalsErrorMessage ?? null;
-  const practiceGoalProgressErrorMessage = dashboardData.practiceGoalProgressErrorMessage ?? null;
-  const practiceGoalMutationStatus = dashboardData.practiceGoalMutationStatus ?? "idle";
-  const practiceGoalMutationErrorMessage = dashboardData.practiceGoalMutationErrorMessage ?? null;
+  const practiceGoalProgressStatus =
+    dashboardData.practiceGoalProgressStatus ?? "idle";
+  const practiceGoalsErrorMessage =
+    dashboardData.practiceGoalsErrorMessage ?? null;
+  const practiceGoalProgressErrorMessage =
+    dashboardData.practiceGoalProgressErrorMessage ?? null;
+  const practiceGoalMutationStatus =
+    dashboardData.practiceGoalMutationStatus ?? "idle";
+  const practiceGoalMutationErrorMessage =
+    dashboardData.practiceGoalMutationErrorMessage ?? null;
 
   return (
-    <section aria-labelledby="home-title" className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+    <section
+      aria-labelledby="home-title"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-5"
+    >
       <header className="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
             Practice Dashboard
           </p>
-          <h1 id="home-title" className="text-3xl font-semibold tracking-normal sm:text-4xl">
+          <h1
+            id="home-title"
+            className="text-3xl font-semibold tracking-normal sm:text-4xl"
+          >
             Home
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Start from a module entry, or return here as practice history becomes available.
+            Start from a module entry, or return here as practice history
+            becomes available.
           </p>
         </div>
         <div
           aria-label="Global status"
           className="flex min-h-12 items-center gap-3 rounded-md border border-border bg-card px-4 py-3 text-sm shadow-soft"
         >
-          <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground" aria-hidden="true" />
+          <span
+            className="h-2.5 w-2.5 rounded-full bg-muted-foreground"
+            aria-hidden="true"
+          />
           <span className="font-medium">No recording or playback active.</span>
         </div>
       </header>
@@ -257,15 +304,19 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
               <Link
                 href="/quick-metronome"
                 aria-label="Open Quick Metronome"
-                className="group rounded-md border border-border bg-primary px-4 py-4 text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="group rounded-md border border-border bg-primary px-4 py-4 text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <div className="flex items-start justify-between gap-3">
                   <Gauge className="h-6 w-6 shrink-0" aria-hidden="true" />
-                  <ArrowRight className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                  <ArrowRight
+                    className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                  />
                 </div>
                 <h2 className="mt-5 text-lg font-semibold">Quick Metronome</h2>
                 <p className="mt-2 text-sm leading-6">
-                  Start timed playback, record a quick take, and replay the latest quick recording.
+                  Start timed playback, record a quick take, and replay the
+                  latest quick recording.
                 </p>
               </Link>
 
@@ -286,16 +337,37 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
             <CardContent>
               <dl className="grid grid-cols-3 gap-3">
                 <div className="rounded-md border border-border bg-muted px-3 py-3">
-                  <dt className="text-xs font-medium text-muted-foreground">Minutes</dt>
-                  <dd data-testid="today-summary-minutes" className="mt-2 text-2xl font-semibold">{dashboardData.summary.minutesToday}</dd>
+                  <dt className="text-xs font-medium text-muted-foreground">
+                    Minutes
+                  </dt>
+                  <dd
+                    data-testid="today-summary-minutes"
+                    className="mt-2 text-2xl font-semibold"
+                  >
+                    {dashboardData.summary.minutesToday}
+                  </dd>
                 </div>
                 <div className="rounded-md border border-border bg-muted px-3 py-3">
-                  <dt className="text-xs font-medium text-muted-foreground">Sessions</dt>
-                  <dd data-testid="today-summary-sessions" className="mt-2 text-2xl font-semibold">{dashboardData.summary.sessionsToday}</dd>
+                  <dt className="text-xs font-medium text-muted-foreground">
+                    Sessions
+                  </dt>
+                  <dd
+                    data-testid="today-summary-sessions"
+                    className="mt-2 text-2xl font-semibold"
+                  >
+                    {dashboardData.summary.sessionsToday}
+                  </dd>
                 </div>
                 <div className="rounded-md border border-border bg-muted px-3 py-3">
-                  <dt className="text-xs font-medium text-muted-foreground">Recordings</dt>
-                  <dd data-testid="today-summary-recordings" className="mt-2 text-2xl font-semibold">{dashboardData.summary.recordingsToday}</dd>
+                  <dt className="text-xs font-medium text-muted-foreground">
+                    Recordings
+                  </dt>
+                  <dd
+                    data-testid="today-summary-recordings"
+                    className="mt-2 text-2xl font-semibold"
+                  >
+                    {dashboardData.summary.recordingsToday}
+                  </dd>
                 </div>
               </dl>
             </CardContent>
@@ -322,8 +394,13 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
             progressErrorMessage={practiceGoalProgressErrorMessage}
             mutationStatus={practiceGoalMutationStatus}
             mutationErrorMessage={practiceGoalMutationErrorMessage}
-            onSavePracticeGoal={dashboardData.onSavePracticeGoal ?? dashboardData.savePracticeGoal}
-            onDeletePracticeGoal={dashboardData.onDeletePracticeGoal ?? dashboardData.deletePracticeGoal}
+            onSavePracticeGoal={
+              dashboardData.onSavePracticeGoal ?? dashboardData.savePracticeGoal
+            }
+            onDeletePracticeGoal={
+              dashboardData.onDeletePracticeGoal ??
+              dashboardData.deletePracticeGoal
+            }
             createPracticeGoalId={dashboardData.createPracticeGoalId}
             getPracticeGoalNow={dashboardData.getPracticeGoalNow}
           />
@@ -352,7 +429,8 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
           </CardHeader>
           <CardContent>
             <p className="text-sm leading-6 text-muted-foreground">
-              No sheets imported yet. Open Sheet Library to import PDF or image practice sheets.
+              No sheets imported yet. Open Sheet Library to import PDF or image
+              practice sheets.
             </p>
             <Button asChild variant="secondary" className="mt-4 w-full">
               <Link href="/sheet-library">Open Sheet Library</Link>
@@ -395,7 +473,8 @@ export function HomeDashboard({ data = emptyHomeDashboardData }: { data?: HomeDa
           </CardHeader>
           <CardContent>
             <p className="text-sm leading-6 text-muted-foreground">
-              Settings has a top-level route shell. Preferences are not editable in this module.
+              Settings has a top-level route shell. Preferences are not editable
+              in this module.
             </p>
             <Button asChild variant="secondary" className="mt-4 w-full">
               <Link href="/settings">Open Settings</Link>
@@ -444,20 +523,31 @@ function PracticeGoalsPanel({
   progressErrorMessage: string | null;
   mutationStatus: PracticeGoalManagementMutationStatus;
   mutationErrorMessage: string | null;
-  onSavePracticeGoal?: (goal: LocalPracticeGoal) => Promise<void | boolean> | void | boolean;
-  onDeletePracticeGoal?: (goalId: string) => Promise<void | boolean> | void | boolean;
+  onSavePracticeGoal?: (
+    goal: LocalPracticeGoal
+  ) => Promise<void | boolean> | void | boolean;
+  onDeletePracticeGoal?: (
+    goalId: string
+  ) => Promise<void | boolean> | void | boolean;
   createPracticeGoalId?: () => string;
   getPracticeGoalNow?: () => Date;
 }) {
   const isMountedRef = useRef(false);
   const [formMode, setFormMode] = useState<PracticeGoalFormMode | null>(null);
-  const [draft, setDraft] = useState<PracticeGoalDraft>(createDefaultPracticeGoalDraft());
+  const [draft, setDraft] = useState<PracticeGoalDraft>(
+    createDefaultPracticeGoalDraft()
+  );
   const [targetError, setTargetError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [confirmDeleteGoalId, setConfirmDeleteGoalId] = useState<string | null>(null);
+  const [confirmDeleteGoalId, setConfirmDeleteGoalId] = useState<string | null>(
+    null
+  );
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [localMutationStatus, setLocalMutationStatus] = useState<PracticeGoalManagementMutationStatus>("idle");
-  const evaluationsByGoalId = new Map(evaluations.map((evaluation) => [evaluation.goalId, evaluation]));
+  const [localMutationStatus, setLocalMutationStatus] =
+    useState<PracticeGoalManagementMutationStatus>("idle");
+  const evaluationsByGoalId = new Map(
+    evaluations.map((evaluation) => [evaluation.goalId, evaluation])
+  );
   const hasGoalSurface =
     status !== "idle" ||
     goals.length > 0 ||
@@ -466,8 +556,10 @@ function PracticeGoalsPanel({
     Boolean(onDeletePracticeGoal);
   const isInitialLoading = status === "loading" && goals.length === 0;
   const isUnavailable = !hasGoalSurface;
-  const isSaving = mutationStatus === "saving" || localMutationStatus === "saving";
-  const isDeleting = mutationStatus === "deleting" || localMutationStatus === "deleting";
+  const isSaving =
+    mutationStatus === "saving" || localMutationStatus === "saving";
+  const isDeleting =
+    mutationStatus === "deleting" || localMutationStatus === "deleting";
   const visibleMutationError = formError ?? mutationErrorMessage;
 
   useEffect(() => {
@@ -592,7 +684,11 @@ function PracticeGoalsPanel({
   }
 
   return (
-    <Card role="region" aria-labelledby="practice-goals-title" data-testid="practice-goals-panel">
+    <Card
+      role="region"
+      aria-labelledby="practice-goals-title"
+      data-testid="practice-goals-panel"
+    >
       <CardHeader className="flex-row items-center justify-between gap-3">
         <CardTitle id="practice-goals-title">Practice Goals</CardTitle>
         <Button
@@ -654,7 +750,11 @@ function PracticeGoalsPanel({
 
           {formMode ? (
             <form
-              aria-label={formMode.kind === "create" ? "Create practice goal" : "Edit practice goal"}
+              aria-label={
+                formMode.kind === "create"
+                  ? "Create practice goal"
+                  : "Edit practice goal"
+              }
               data-testid="practice-goal-form"
               className="grid gap-3 rounded-md border border-border bg-muted px-3 py-3"
               onSubmit={handleSubmit}
@@ -664,9 +764,11 @@ function PracticeGoalsPanel({
                   Goal kind
                   <select
                     data-testid="practice-goal-kind"
-                    className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     value={draft.kind}
-                    onChange={(event: ChangeEvent<HTMLSelectElement>) => updateDraft("kind", event.target.value)}
+                    onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                      updateDraft("kind", event.target.value)
+                    }
                   >
                     <option value="minutes">Minutes</option>
                     <option value="sessions">Sessions</option>
@@ -677,9 +779,11 @@ function PracticeGoalsPanel({
                   Period
                   <select
                     data-testid="practice-goal-period"
-                    className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     value={draft.period}
-                    onChange={(event: ChangeEvent<HTMLSelectElement>) => updateDraft("period", event.target.value)}
+                    onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                      updateDraft("period", event.target.value)
+                    }
                   >
                     <option value="today">Today</option>
                     <option value="all-time">All-time</option>
@@ -689,25 +793,45 @@ function PracticeGoalsPanel({
                   Target
                   <input
                     data-testid="practice-goal-target"
-                    className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     inputMode="numeric"
                     value={draft.targetText}
                     aria-invalid={targetError ? "true" : "false"}
-                    aria-describedby={targetError ? "practice-goal-target-error" : undefined}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => updateDraft("targetText", event.target.value)}
+                    aria-describedby={
+                      targetError ? "practice-goal-target-error" : undefined
+                    }
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      updateDraft("targetText", event.target.value)
+                    }
                   />
                 </label>
               </div>
               {targetError ? (
-                <p id="practice-goal-target-error" className="text-xs leading-5 text-destructive">
+                <p
+                  id="practice-goal-target-error"
+                  className="text-xs leading-5 text-destructive"
+                >
                   {targetError}
                 </p>
               ) : null}
               <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" disabled={isSaving} data-testid="practice-goal-save">
-                  {isSaving ? "Saving" : formMode.kind === "create" ? "Create goal" : "Save goal"}
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  data-testid="practice-goal-save"
+                >
+                  {isSaving
+                    ? "Saving"
+                    : formMode.kind === "create"
+                      ? "Create goal"
+                      : "Save goal"}
                 </Button>
-                <Button type="button" variant="ghost" onClick={closeForm} data-testid="practice-goal-cancel">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={closeForm}
+                  data-testid="practice-goal-cancel"
+                >
                   <X className="h-4 w-4" aria-hidden="true" />
                   Cancel
                 </Button>
@@ -715,7 +839,10 @@ function PracticeGoalsPanel({
             </form>
           ) : null}
 
-          {goals.length === 0 && !isInitialLoading && !isUnavailable && status !== "error" ? (
+          {goals.length === 0 &&
+          !isInitialLoading &&
+          !isUnavailable &&
+          status !== "error" ? (
             <div
               data-testid="practice-goals-empty"
               className="rounded-md border border-border bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground"
@@ -725,7 +852,10 @@ function PracticeGoalsPanel({
           ) : null}
 
           {goals.length > 0 ? (
-            <ul className="divide-y divide-border" aria-label="Local practice goals">
+            <ul
+              className="divide-y divide-border"
+              aria-label="Local practice goals"
+            >
               {goals.map((goal) => (
                 <PracticeGoalRow
                   key={goal.id}
@@ -733,7 +863,9 @@ function PracticeGoalsPanel({
                   evaluation={evaluationsByGoalId.get(goal.id) ?? null}
                   isDeleting={isDeleting && confirmDeleteGoalId === goal.id}
                   isConfirmingDelete={confirmDeleteGoalId === goal.id}
-                  deleteError={confirmDeleteGoalId === goal.id ? deleteError : null}
+                  deleteError={
+                    confirmDeleteGoalId === goal.id ? deleteError : null
+                  }
                   onEdit={() => openEditForm(goal)}
                   onRequestDelete={() => {
                     setDeleteError(null);
@@ -776,19 +908,25 @@ function PracticeGoalRow({
   onConfirmDelete: () => void;
 }) {
   const status = getGoalEvaluationStatus(evaluation);
-  const progressRatio = evaluation ? clampGoalProgressRatio(evaluation.progressRatio) : 0;
+  const progressRatio = evaluation
+    ? clampGoalProgressRatio(evaluation.progressRatio)
+    : 0;
 
   return (
-    <li data-testid="practice-goal-row" data-goal-id={goal.id} className="grid gap-3 py-3 first:pt-0 last:pb-0">
+    <li
+      data-testid="practice-goal-row"
+      data-goal-id={goal.id}
+      className="grid gap-3 py-3 first:pt-0 last:pb-0"
+    >
       <div className="flex min-w-0 items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="min-w-0 break-words text-sm font-semibold leading-5">
+            <p className="min-w-0 text-sm leading-5 font-semibold break-words">
               {getPracticeGoalLabel(goal)}
             </p>
             <span
               data-goal-id={goal.id}
-              className={`rounded-md border px-2 py-0.5 text-xs font-medium leading-5 ${status.className}`}
+              className={`rounded-md border px-2 py-0.5 text-xs leading-5 font-medium ${status.className}`}
             >
               {status.label}
             </span>
@@ -796,16 +934,29 @@ function PracticeGoalRow({
           <p
             data-testid="practice-goal-progress"
             data-goal-id={goal.id}
-            className="mt-1 break-words text-xs leading-5 text-muted-foreground"
+            className="mt-1 text-xs leading-5 break-words text-muted-foreground"
           >
             {formatPracticeGoalProgress(goal, evaluation)}
           </p>
-          <div className="mt-2 h-2 overflow-hidden rounded-md bg-muted" aria-hidden="true">
-            <div className="h-full bg-primary" style={{ width: `${progressRatio * 100}%` }} />
+          <div
+            className="mt-2 h-2 overflow-hidden rounded-md bg-muted"
+            aria-hidden="true"
+          >
+            <div
+              className="h-full bg-primary"
+              style={{ width: `${progressRatio * 100}%` }}
+            />
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button type="button" variant="ghost" size="icon" title="Edit goal" aria-label="Edit goal" onClick={onEdit}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            title="Edit goal"
+            aria-label="Edit goal"
+            onClick={onEdit}
+          >
             <Pencil className="h-4 w-4" aria-hidden="true" />
           </Button>
           <Button
@@ -828,12 +979,21 @@ function PracticeGoalRow({
           data-testid="practice-goal-delete-confirm"
           className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3"
         >
-          <p className="text-sm leading-6 text-destructive">Delete this goal?</p>
+          <p className="text-sm leading-6 text-destructive">
+            Delete this goal?
+          </p>
           {deleteError ? (
-            <p className="mt-1 text-xs leading-5 text-destructive">{deleteError}</p>
+            <p className="mt-1 text-xs leading-5 text-destructive">
+              {deleteError}
+            </p>
           ) : null}
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" disabled={isDeleting} onClick={onCancelDelete}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isDeleting}
+              onClick={onCancelDelete}
+            >
               Cancel
             </Button>
             <Button
@@ -863,15 +1023,25 @@ function PracticeStreaksPanel({
 }) {
   const hasHistory = streaks.emptyState.hasPracticeHistory;
   const hasGeneratedAt = streaks.generatedAt.trim().length > 0;
-  const isInitialLoading = status === "loading" && !hasGeneratedAt && !hasHistory;
+  const isInitialLoading =
+    status === "loading" && !hasGeneratedAt && !hasHistory;
   const isUnavailable = status === "idle" && !hasGeneratedAt && !hasHistory;
   const canShowDerivedStreaks = hasGeneratedAt || hasHistory;
-  const todayStatus = canShowDerivedStreaks ? getPracticeStreakTodayStatus(streaks) : null;
+  const todayStatus = canShowDerivedStreaks
+    ? getPracticeStreakTodayStatus(streaks)
+    : null;
 
   return (
-    <Card role="region" aria-labelledby="practice-streaks-title" data-testid="practice-streaks-panel">
+    <Card
+      role="region"
+      aria-labelledby="practice-streaks-title"
+      data-testid="practice-streaks-panel"
+    >
       <CardHeader>
-        <CardTitle id="practice-streaks-title" className="flex items-center gap-2">
+        <CardTitle
+          id="practice-streaks-title"
+          className="flex items-center gap-2"
+        >
           <Flame className="h-5 w-5 text-accent" aria-hidden="true" />
           Practice Streaks
         </CardTitle>
@@ -926,7 +1096,10 @@ function PracticeStreaksPanel({
             ) : null}
 
             {todayStatus ? (
-              <p data-testid="home-streak-today-status" className="text-sm leading-6 text-muted-foreground">
+              <p
+                data-testid="home-streak-today-status"
+                className="text-sm leading-6 text-muted-foreground"
+              >
                 {todayStatus}
               </p>
             ) : null}
@@ -975,12 +1148,20 @@ function PracticeAnalyticsPanel({
 }) {
   const hasHistory = analytics.emptyState.hasPracticeHistory;
   const hasGeneratedAt = analytics.generatedAt.trim().length > 0;
-  const isInitialLoading = status === "loading" && !hasGeneratedAt && !hasHistory;
+  const isInitialLoading =
+    status === "loading" && !hasGeneratedAt && !hasHistory;
 
   return (
-    <Card role="region" aria-labelledby="practice-analytics-title" data-testid="practice-analytics-panel">
+    <Card
+      role="region"
+      aria-labelledby="practice-analytics-title"
+      data-testid="practice-analytics-panel"
+    >
       <CardHeader>
-        <CardTitle id="practice-analytics-title" className="flex items-center gap-2">
+        <CardTitle
+          id="practice-analytics-title"
+          className="flex items-center gap-2"
+        >
           <BarChart3 className="h-5 w-5 text-accent" aria-hidden="true" />
           Practice Analytics
         </CardTitle>
@@ -1046,7 +1227,10 @@ function PracticeAnalyticsPanel({
             </dl>
 
             <p className="text-xs leading-5 text-muted-foreground">
-              Local history totals{hasGeneratedAt ? ` · Updated ${formatAnalyticsTimestamp(analytics.generatedAt)}` : ""}
+              Local history totals
+              {hasGeneratedAt
+                ? ` · Updated ${formatAnalyticsTimestamp(analytics.generatedAt)}`
+                : ""}
             </p>
           </div>
         )}
@@ -1066,10 +1250,13 @@ function AnalyticsMetric({
 }) {
   return (
     <div className="min-h-20 rounded-md border border-border bg-muted px-3 py-3">
-      <dt className="break-words text-xs font-medium leading-5 text-muted-foreground">
+      <dt className="text-xs leading-5 font-medium break-words text-muted-foreground">
         {label}
       </dt>
-      <dd data-testid={testId} className="mt-2 break-words text-2xl font-semibold leading-8">
+      <dd
+        data-testid={testId}
+        className="mt-2 text-2xl leading-8 font-semibold break-words"
+      >
         {value}
       </dd>
     </div>
@@ -1132,9 +1319,15 @@ function ContinuePracticePanel({
           </Button>
         </div>
       ) : (
-        <ul className="mt-3 divide-y divide-border" aria-label="Continue Practice recommendations">
+        <ul
+          className="mt-3 divide-y divide-border"
+          aria-label="Continue Practice recommendations"
+        >
           {targets.map((target, index) => (
-            <ContinuePracticeTargetRow key={`${target.targetKey}-${index}`} target={target} />
+            <ContinuePracticeTargetRow
+              key={`${target.targetKey}-${index}`}
+              target={target}
+            />
           ))}
         </ul>
       )}
@@ -1142,7 +1335,11 @@ function ContinuePracticePanel({
   );
 }
 
-function ContinuePracticeTargetRow({ target }: { target: ContinuePracticeTargetIdentity }) {
+function ContinuePracticeTargetRow({
+  target
+}: {
+  target: ContinuePracticeTargetIdentity;
+}) {
   const row = getContinuePracticeRowContent(target);
 
   if (!row) {
@@ -1155,25 +1352,23 @@ function ContinuePracticeTargetRow({ target }: { target: ContinuePracticeTargetI
     return (
       <li
         data-testid="continue-practice-row-disabled"
-        className="flex min-w-0 gap-3 py-3 first:pt-0 last:pb-0 text-muted-foreground"
+        className="flex min-w-0 gap-3 py-3 text-muted-foreground first:pt-0 last:pb-0"
       >
         <ContinuePracticeKindIcon kind={target.kind} />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="min-w-0 break-words text-sm font-semibold leading-5">
+            <p className="min-w-0 text-sm leading-5 font-semibold break-words">
               {row.title}
             </p>
-            <span className="rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium leading-5">
+            <span className="rounded-md border border-border bg-muted px-2 py-0.5 text-xs leading-5 font-medium">
               {row.typeLabel}
             </span>
-            <span className="rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium leading-5">
+            <span className="rounded-md border border-border bg-muted px-2 py-0.5 text-xs leading-5 font-medium">
               Unavailable
             </span>
           </div>
-          <p className="mt-1 break-words text-xs leading-5">
-            {row.metadata}
-          </p>
-          <p className="mt-2 break-words text-xs leading-5">
+          <p className="mt-1 text-xs leading-5 break-words">{row.metadata}</p>
+          <p className="mt-2 text-xs leading-5 break-words">
             Target unavailable.
           </p>
         </div>
@@ -1187,19 +1382,19 @@ function ContinuePracticeTargetRow({ target }: { target: ContinuePracticeTargetI
         href={href}
         aria-label={row.accessibleName}
         data-testid="continue-practice-row-link"
-        className="group flex min-w-0 gap-3 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="group flex min-w-0 gap-3 py-3 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         <ContinuePracticeKindIcon kind={target.kind} />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="min-w-0 break-words text-sm font-semibold leading-5 text-foreground">
+            <p className="min-w-0 text-sm leading-5 font-semibold break-words text-foreground">
               {row.title}
             </p>
-            <span className="rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium leading-5 text-muted-foreground">
+            <span className="rounded-md border border-border bg-muted px-2 py-0.5 text-xs leading-5 font-medium text-muted-foreground">
               {row.typeLabel}
             </span>
           </div>
-          <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
+          <p className="mt-1 text-xs leading-5 break-words text-muted-foreground">
             {row.metadata}
           </p>
         </div>
@@ -1217,7 +1412,8 @@ function ContinuePracticeKindIcon({
 }: {
   kind: ContinuePracticeTargetIdentity["kind"];
 }) {
-  const className = "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-accent";
+  const className =
+    "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-accent";
 
   if (kind === "quick") {
     return (
@@ -1256,13 +1452,20 @@ function getContinuePracticeRowContent(target: ContinuePracticeTargetIdentity) {
     case "segment": {
       const title = target.segmentName ?? "Saved segment";
       const sheetLabel = target.sheetName ?? target.sheetId;
-      const metadata = [target.segmentRangeLabel, sheetLabel].filter(Boolean).join(" · ");
+      const metadata = [target.segmentRangeLabel, sheetLabel]
+        .filter(Boolean)
+        .join(" · ");
 
       return {
         title,
         typeLabel: "Segment",
         metadata,
-        accessibleName: ["Continue segment", title, target.segmentRangeLabel, sheetLabel]
+        accessibleName: [
+          "Continue segment",
+          title,
+          target.segmentRangeLabel,
+          sheetLabel
+        ]
           .filter(Boolean)
           .join(" ")
       };
@@ -1295,9 +1498,16 @@ function RecentActivityPanel({
   const isInitialLoading = status === "loading" && items.length === 0;
 
   return (
-    <Card role="region" aria-labelledby="recent-activity-title" data-testid="recent-activity-panel">
+    <Card
+      role="region"
+      aria-labelledby="recent-activity-title"
+      data-testid="recent-activity-panel"
+    >
       <CardHeader>
-        <CardTitle id="recent-activity-title" className="flex items-center gap-2">
+        <CardTitle
+          id="recent-activity-title"
+          className="flex items-center gap-2"
+        >
           <History className="h-5 w-5 text-accent" aria-hidden="true" />
           Recent Activity
         </CardTitle>
@@ -1319,7 +1529,10 @@ function RecentActivityPanel({
             No local practice activity yet.
           </div>
         ) : (
-          <ul className="divide-y divide-border" aria-label="Recent practice activity">
+          <ul
+            className="divide-y divide-border"
+            aria-label="Recent practice activity"
+          >
             {items.map((item) => (
               <RecentActivityRow key={item.id} item={item} />
             ))}
@@ -1351,24 +1564,27 @@ function RecentActivityRow({ item }: { item: HomeRecentActivityItem }) {
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="min-w-0 break-words text-sm font-semibold leading-5 text-foreground">
+          <p className="min-w-0 text-sm leading-5 font-semibold break-words text-foreground">
             {item.label}
           </p>
           <span
-            className={`rounded-md border px-2 py-0.5 text-xs font-medium leading-5 ${status.className}`}
+            className={`rounded-md border px-2 py-0.5 text-xs leading-5 font-medium ${status.className}`}
           >
             Status: {status.label}
           </span>
         </div>
-        <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
+        <p className="mt-1 text-xs leading-5 break-words text-muted-foreground">
           {getActivityKindLabel(item.kind)} · {timestamp}
         </p>
         {item.metadata.length > 0 ? (
-          <ul className="mt-2 flex min-w-0 flex-wrap gap-1.5" aria-label={`Metadata for ${item.label}`}>
+          <ul
+            className="mt-2 flex min-w-0 flex-wrap gap-1.5"
+            aria-label={`Metadata for ${item.label}`}
+          >
             {item.metadata.map((metadata) => (
               <li
                 key={metadata}
-                className="max-w-full break-words rounded-md border border-border bg-muted px-2 py-0.5 text-xs leading-5 text-muted-foreground"
+                className="max-w-full rounded-md border border-border bg-muted px-2 py-0.5 text-xs leading-5 break-words text-muted-foreground"
               >
                 {metadata}
               </li>
@@ -1376,7 +1592,7 @@ function RecentActivityRow({ item }: { item: HomeRecentActivityItem }) {
           </ul>
         ) : null}
         {item.disabledReason ? (
-          <p className="mt-2 break-words text-xs leading-5 text-muted-foreground">
+          <p className="mt-2 text-xs leading-5 break-words text-muted-foreground">
             Stale: {item.disabledReason}
           </p>
         ) : null}
@@ -1576,7 +1792,10 @@ function validatePracticeGoalDraft(draft: PracticeGoalDraft):
   }
 
   if (target > maxPracticeGoalTarget) {
-    return { valid: false, message: `Enter a target of ${maxPracticeGoalTarget} or less.` };
+    return {
+      valid: false,
+      message: `Enter a target of ${maxPracticeGoalTarget} or less.`
+    };
   }
 
   return { valid: true, target };
@@ -1635,8 +1854,15 @@ function getGoalEvaluationStatus(evaluation: GoalCompletionEvaluation | null) {
   }
 }
 
-function formatPracticeGoalProgress(goal: LocalPracticeGoal, evaluation: GoalCompletionEvaluation | null) {
-  if (!evaluation || evaluation.status === "invalid" || evaluation.target === null) {
+function formatPracticeGoalProgress(
+  goal: LocalPracticeGoal,
+  evaluation: GoalCompletionEvaluation | null
+) {
+  if (
+    !evaluation ||
+    evaluation.status === "invalid" ||
+    evaluation.target === null
+  ) {
     return "Progress unavailable.";
   }
 

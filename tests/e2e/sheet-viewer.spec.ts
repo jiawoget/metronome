@@ -66,7 +66,9 @@ async function clearSheetDatabase(page: Page) {
     );
   }
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet Library" })
+  ).toBeVisible();
 }
 
 function getSheetPracticePath(sheetId: string) {
@@ -77,7 +79,11 @@ async function seedSheets(page: Page, optionsList: SeedSheetOptions[]) {
   const seeds = await Promise.all(
     optionsList.map(async (options) => ({
       options,
-      bytes: options.fixtureName ? Array.from(await fs.readFile(path.join(sheetFixturesDir, options.fixtureName))) : null
+      bytes: options.fixtureName
+        ? Array.from(
+            await fs.readFile(path.join(sheetFixturesDir, options.fixtureName))
+          )
+        : null
     }))
   );
 
@@ -89,8 +95,12 @@ async function seedSheets(page: Page, optionsList: SeedSheetOptions[]) {
         openRequest.onerror = () => reject(openRequest.error);
         openRequest.onupgradeneeded = () => {
           const database = openRequest.result;
-          const sheetsStore = database.createObjectStore("sheets", { keyPath: "id" });
-          const artifactsStore = database.createObjectStore("artifacts", { keyPath: "sheetId" });
+          const sheetsStore = database.createObjectStore("sheets", {
+            keyPath: "id"
+          });
+          const artifactsStore = database.createObjectStore("artifacts", {
+            keyPath: "sheetId"
+          });
 
           sheetsStore.createIndex("name", "name");
           sheetsStore.createIndex("category", "category");
@@ -102,12 +112,17 @@ async function seedSheets(page: Page, optionsList: SeedSheetOptions[]) {
         openRequest.onsuccess = () => {
           try {
             const database = openRequest.result;
-            const transaction = database.transaction(["sheets", "artifacts"], "readwrite");
+            const transaction = database.transaction(
+              ["sheets", "artifacts"],
+              "readwrite"
+            );
             const sheetsStore = transaction.objectStore("sheets");
             const artifactsStore = transaction.objectStore("artifacts");
 
             browserSeeds.forEach(({ options, bytes }) => {
-              const mimeType = options.mimeType ?? (options.kind === "pdf" ? "application/pdf" : "image/png");
+              const mimeType =
+                options.mimeType ??
+                (options.kind === "pdf" ? "application/pdf" : "image/png");
               const sheet = {
                 id: options.id,
                 name: options.name,
@@ -115,12 +130,17 @@ async function seedSheets(page: Page, optionsList: SeedSheetOptions[]) {
                 bpm: 96,
                 timeSignature: "4/4",
                 kind: options.kind,
-                pageCount: options.pageCount ?? (options.kind === "pdf" ? 1 : options.imageCount ?? 1),
-                imageCount: options.imageCount ?? (options.kind === "image" ? 1 : 0),
+                pageCount:
+                  options.pageCount ??
+                  (options.kind === "pdf" ? 1 : (options.imageCount ?? 1)),
+                imageCount:
+                  options.imageCount ?? (options.kind === "image" ? 1 : 0),
                 imageDimensions: options.imageDimensions ?? [],
                 mimeTypes: [mimeType],
                 sizeBytes: bytes?.length ?? 512,
-                originalFileNames: [options.fixtureName ?? "missing-artifact.pdf"],
+                originalFileNames: [
+                  options.fixtureName ?? "missing-artifact.pdf"
+                ],
                 createdAt: "2026-06-21T11:00:00.000Z",
                 updatedAt: "2026-06-21T11:00:00.000Z",
                 lastPracticedAt: null
@@ -139,7 +159,9 @@ async function seedSheets(page: Page, optionsList: SeedSheetOptions[]) {
                       mimeType,
                       sizeBytes: bytes.length,
                       pageNumber: 1,
-                      blob: new Blob([new Uint8Array(bytes)], { type: mimeType }),
+                      blob: new Blob([new Uint8Array(bytes)], {
+                        type: mimeType
+                      }),
                       width: options.imageDimensions?.[0]?.width ?? null,
                       height: options.imageDimensions?.[0]?.height ?? null
                     }
@@ -195,7 +217,8 @@ async function seedAssistedPageTurnSegment(page: Page, sheetId: string) {
           targetBpm: null,
           notes: null,
           grid: {
-            measureGridVersion: "bpm:240|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:0",
+            measureGridVersion:
+              "bpm:240|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:0",
             measureGridSnapshot: grid
           }
         };
@@ -208,7 +231,9 @@ async function seedAssistedPageTurnSegment(page: Page, sheetId: string) {
               const database = request.result;
 
               if (!database.objectStoreNames.contains("grids")) {
-                const store = database.createObjectStore("grids", { keyPath: "sheetId" });
+                const store = database.createObjectStore("grids", {
+                  keyPath: "sheetId"
+                });
                 store.createIndex("updatedAt", "updatedAt");
               }
             };
@@ -251,7 +276,10 @@ async function seedAssistedPageTurnSegment(page: Page, sheetId: string) {
             request.onerror = () => seedReject(request.error);
             request.onsuccess = () => {
               const database = request.result;
-              const transaction = database.transaction(["segments"], "readwrite");
+              const transaction = database.transaction(
+                ["segments"],
+                "readwrite"
+              );
 
               transaction.objectStore("segments").put({
                 sheetId: targetSheetId,
@@ -278,7 +306,10 @@ async function seedAssistedPageTurnSegment(page: Page, sheetId: string) {
   );
 }
 
-async function installManualSegmentPageTurnTimerHarness(page: Page, expectedDelayMs: number) {
+async function installManualSegmentPageTurnTimerHarness(
+  page: Page,
+  expectedDelayMs: number
+) {
   await page.evaluate((targetDelayMs) => {
     const nativeSetTimeout = window.setTimeout.bind(window);
     const nativeClearTimeout = window.clearTimeout.bind(window);
@@ -309,7 +340,11 @@ async function installManualSegmentPageTurnTimerHarness(page: Page, expectedDela
       }
     };
 
-    window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+    window.setTimeout = ((
+      handler: TimerHandler,
+      timeout?: number,
+      ...args: unknown[]
+    ) => {
       if (typeof handler === "function" && timeout === targetDelayMs) {
         manualDelay = timeout;
         manualTimer = () => handler(...args);
@@ -333,11 +368,13 @@ async function installManualSegmentPageTurnTimerHarness(page: Page, expectedDela
 
 async function getManualSegmentPageTurnTimerDelay(page: Page) {
   return page.evaluate(() => {
-    const harness = (window as Window & {
-      __metronomeManualSegmentPageTurnTimer?: {
-        getDelay: () => number | null;
-      };
-    }).__metronomeManualSegmentPageTurnTimer;
+    const harness = (
+      window as Window & {
+        __metronomeManualSegmentPageTurnTimer?: {
+          getDelay: () => number | null;
+        };
+      }
+    ).__metronomeManualSegmentPageTurnTimer;
 
     return harness?.getDelay() ?? null;
   });
@@ -345,11 +382,13 @@ async function getManualSegmentPageTurnTimerDelay(page: Page) {
 
 async function runManualSegmentPageTurnTimer(page: Page) {
   return page.evaluate(() => {
-    const harness = (window as Window & {
-      __metronomeManualSegmentPageTurnTimer?: {
-        run: () => boolean;
-      };
-    }).__metronomeManualSegmentPageTurnTimer;
+    const harness = (
+      window as Window & {
+        __metronomeManualSegmentPageTurnTimer?: {
+          run: () => boolean;
+        };
+      }
+    ).__metronomeManualSegmentPageTurnTimer;
 
     return harness?.run() ?? false;
   });
@@ -357,11 +396,13 @@ async function runManualSegmentPageTurnTimer(page: Page) {
 
 async function loadPageThumbnailsInBrowser(page: Page, sheetId: string) {
   return page.evaluate(async (targetSheetId): Promise<BrowserThumbnailSet> => {
-    const service = (window as Window & {
-      __metronomeSheetViewerService?: {
-        loadPageThumbnails: (sheetId: string) => Promise<BrowserThumbnailSet>;
-      };
-    }).__metronomeSheetViewerService;
+    const service = (
+      window as Window & {
+        __metronomeSheetViewerService?: {
+          loadPageThumbnails: (sheetId: string) => Promise<BrowserThumbnailSet>;
+        };
+      }
+    ).__metronomeSheetViewerService;
 
     if (!service) {
       throw new Error("Sheet viewer E2E service is unavailable.");
@@ -371,13 +412,18 @@ async function loadPageThumbnailsInBrowser(page: Page, sheetId: string) {
   }, sheetId);
 }
 
-async function revokePageThumbnailsInBrowser(page: Page, thumbnails: BrowserThumbnailSet) {
+async function revokePageThumbnailsInBrowser(
+  page: Page,
+  thumbnails: BrowserThumbnailSet
+) {
   await page.evaluate((thumbnailSet) => {
-    const service = (window as Window & {
-      __metronomeSheetViewerService?: {
-        revokePageThumbnails: (thumbnails: BrowserThumbnailSet) => void;
-      };
-    }).__metronomeSheetViewerService;
+    const service = (
+      window as Window & {
+        __metronomeSheetViewerService?: {
+          revokePageThumbnails: (thumbnails: BrowserThumbnailSet) => void;
+        };
+      }
+    ).__metronomeSheetViewerService;
 
     if (!service) {
       throw new Error("Sheet viewer E2E service is unavailable.");
@@ -388,18 +434,29 @@ async function revokePageThumbnailsInBrowser(page: Page, thumbnails: BrowserThum
 }
 
 async function expectThumbnailUrlsDecodable(page: Page, urls: string[]) {
-  const dimensions = await page.evaluate(async (thumbnailUrls) => Promise.all(
-    thumbnailUrls.map((url) => new Promise<{ width: number; height: number }>((resolve, reject) => {
-      const image = new Image();
+  const dimensions = await page.evaluate(
+    async (thumbnailUrls) =>
+      Promise.all(
+        thumbnailUrls.map(
+          (url) =>
+            new Promise<{ width: number; height: number }>(
+              (resolve, reject) => {
+                const image = new Image();
 
-      image.onload = () => resolve({
-        width: image.naturalWidth,
-        height: image.naturalHeight
-      });
-      image.onerror = () => reject(new Error(`Thumbnail did not decode: ${url}`));
-      image.src = url;
-    }))
-  ), urls);
+                image.onload = () =>
+                  resolve({
+                    width: image.naturalWidth,
+                    height: image.naturalHeight
+                  });
+                image.onerror = () =>
+                  reject(new Error(`Thumbnail did not decode: ${url}`));
+                image.src = url;
+              }
+            )
+        )
+      ),
+    urls
+  );
 
   for (const dimension of dimensions) {
     expect(dimension.width).toBeGreaterThan(0);
@@ -411,13 +468,17 @@ async function expectThumbnailUrlsDecodable(page: Page, urls: string[]) {
 
 async function expectThumbnailUrlRevoked(page: Page, url: string) {
   await expect(
-    page.evaluate((thumbnailUrl) => new Promise((resolve, reject) => {
-      const image = new Image();
+    page.evaluate(
+      (thumbnailUrl) =>
+        new Promise((resolve, reject) => {
+          const image = new Image();
 
-      image.onload = () => resolve("loaded");
-      image.onerror = () => reject(new Error("revoked"));
-      image.src = thumbnailUrl;
-    }), url)
+          image.onload = () => resolve("loaded");
+          image.onerror = () => reject(new Error("revoked"));
+          image.src = thumbnailUrl;
+        }),
+      url
+    )
   ).rejects.toThrow("revoked");
 }
 
@@ -426,40 +487,55 @@ async function expectPdfCanvasRendered(page: Page) {
 
   await expect(canvas).toBeVisible();
 
-  const getCanvasStats = () => canvas.evaluate((node) => {
-    const canvasElement = node as HTMLCanvasElement;
-    const context = canvasElement.getContext("2d");
+  const getCanvasStats = () =>
+    canvas.evaluate((node) => {
+      const canvasElement = node as HTMLCanvasElement;
+      const context = canvasElement.getContext("2d");
 
-    if (!context) {
-      return { width: canvasElement.width, height: canvasElement.height, changedPixels: 0 };
-    }
-
-    const data = context.getImageData(0, 0, canvasElement.width, canvasElement.height).data;
-    let changedPixels = 0;
-
-    for (let index = 0; index < data.length; index += 4) {
-      const red = data[index] ?? 255;
-      const green = data[index + 1] ?? 255;
-      const blue = data[index + 2] ?? 255;
-      const alpha = data[index + 3] ?? 0;
-
-      if (alpha > 0 && (red < 250 || green < 250 || blue < 250)) {
-        changedPixels += 1;
+      if (!context) {
+        return {
+          width: canvasElement.width,
+          height: canvasElement.height,
+          changedPixels: 0
+        };
       }
-    }
 
-    return {
-      width: canvasElement.width,
-      height: canvasElement.height,
-      changedPixels
-    };
-  });
+      const data = context.getImageData(
+        0,
+        0,
+        canvasElement.width,
+        canvasElement.height
+      ).data;
+      let changedPixels = 0;
 
-  await expect.poll(async () => (await getCanvasStats()).width).toBeGreaterThan(100);
-  await expect.poll(async () => (await getCanvasStats()).height).toBeGreaterThan(100);
+      for (let index = 0; index < data.length; index += 4) {
+        const red = data[index] ?? 255;
+        const green = data[index + 1] ?? 255;
+        const blue = data[index + 2] ?? 255;
+        const alpha = data[index + 3] ?? 0;
+
+        if (alpha > 0 && (red < 250 || green < 250 || blue < 250)) {
+          changedPixels += 1;
+        }
+      }
+
+      return {
+        width: canvasElement.width,
+        height: canvasElement.height,
+        changedPixels
+      };
+    });
+
+  await expect
+    .poll(async () => (await getCanvasStats()).width)
+    .toBeGreaterThan(100);
+  await expect
+    .poll(async () => (await getCanvasStats()).height)
+    .toBeGreaterThan(100);
   await expect
     .poll(async () => (await getCanvasStats()).changedPixels, {
-      message: "PDF canvas should contain non-white painted pixels after PDF.js rendering completes"
+      message:
+        "PDF canvas should contain non-white painted pixels after PDF.js rendering completes"
     })
     .toBeGreaterThan(100);
 
@@ -468,7 +544,9 @@ async function expectPdfCanvasRendered(page: Page) {
 
 async function expectViewerControlsDoNotOverlap(page: Page) {
   const scrollBox = await page.getByTestId("sheet-viewer-scroll").boundingBox();
-  const controlsBox = await page.getByTestId("sheet-practice-controls").boundingBox();
+  const controlsBox = await page
+    .getByTestId("sheet-practice-controls")
+    .boundingBox();
 
   expect(scrollBox).not.toBeNull();
   expect(controlsBox).not.toBeNull();
@@ -496,8 +574,12 @@ async function expectManualSegmentControlsDoNotOverlap(
   page: Page,
   statusText = "Ready: 1s."
 ) {
-  const toggleBox = await page.getByRole("checkbox", { name: "Manual segment page turn" }).boundingBox();
-  const armButtonBox = await page.getByRole("button", { name: "Arm manual page turn" }).boundingBox();
+  const toggleBox = await page
+    .getByRole("checkbox", { name: "Manual segment page turn" })
+    .boundingBox();
+  const armButtonBox = await page
+    .getByRole("button", { name: "Arm manual page turn" })
+    .boundingBox();
   const statusBox = await page.getByText(statusText).boundingBox();
 
   expect(toggleBox).not.toBeNull();
@@ -513,33 +595,45 @@ async function expectManualSegmentControlsDoNotOverlap(
 }
 
 async function getTransformContentTranslate(page: Page) {
-  return page.getByTestId("sheet-viewer-transform-content").evaluate((element) => {
-    const transform = getComputedStyle(element).transform;
+  return page
+    .getByTestId("sheet-viewer-transform-content")
+    .evaluate((element) => {
+      const transform = getComputedStyle(element).transform;
 
-    if (transform === "none") {
-      return { x: 0, y: 0 };
-    }
+      if (transform === "none") {
+        return { x: 0, y: 0 };
+      }
 
-    const matrix = new DOMMatrixReadOnly(transform);
+      const matrix = new DOMMatrixReadOnly(transform);
 
-    return {
-      x: matrix.m41,
-      y: matrix.m42
-    };
-  });
+      return {
+        x: matrix.m41,
+        y: matrix.m42
+      };
+    });
 }
 
 async function expectTransformContentDefault(page: Page) {
-  await expect.poll(async () => {
-    const translate = await getTransformContentTranslate(page);
+  await expect
+    .poll(async () => {
+      const translate = await getTransformContentTranslate(page);
 
-    return Math.abs(translate.x) + Math.abs(translate.y);
-  }).toBe(0);
+      return Math.abs(translate.x) + Math.abs(translate.y);
+    })
+    .toBe(0);
 }
 
-async function dragTransformContent(page: Page, deltaX: number, deltaY: number) {
-  const contentBox = await page.getByTestId("sheet-viewer-transform-content").boundingBox();
-  const viewportBox = await page.getByTestId("sheet-viewer-scroll").boundingBox();
+async function dragTransformContent(
+  page: Page,
+  deltaX: number,
+  deltaY: number
+) {
+  const contentBox = await page
+    .getByTestId("sheet-viewer-transform-content")
+    .boundingBox();
+  const viewportBox = await page
+    .getByTestId("sheet-viewer-scroll")
+    .boundingBox();
 
   expect(contentBox).not.toBeNull();
   expect(viewportBox).not.toBeNull();
@@ -550,11 +644,17 @@ async function dragTransformContent(page: Page, deltaX: number, deltaY: number) 
 
   const x = Math.max(
     viewportBox.x + 20,
-    Math.min(contentBox.x + contentBox.width / 2, viewportBox.x + viewportBox.width - 20)
+    Math.min(
+      contentBox.x + contentBox.width / 2,
+      viewportBox.x + viewportBox.width - 20
+    )
   );
   const y = Math.max(
     viewportBox.y + 20,
-    Math.min(contentBox.y + Math.min(100, contentBox.height / 2), viewportBox.y + viewportBox.height - 20)
+    Math.min(
+      contentBox.y + Math.min(100, contentBox.height / 2),
+      viewportBox.y + viewportBox.height - 20
+    )
   );
 
   await page.mouse.move(x, y);
@@ -565,8 +665,12 @@ async function dragTransformContent(page: Page, deltaX: number, deltaY: number) 
 
 async function getTransformPanStats(page: Page) {
   return page.evaluate(() => {
-    const viewport = document.querySelector<HTMLElement>("[data-testid='sheet-viewer-scroll']");
-    const content = document.querySelector<HTMLElement>("[data-testid='sheet-viewer-transform-content']");
+    const viewport = document.querySelector<HTMLElement>(
+      "[data-testid='sheet-viewer-scroll']"
+    );
+    const content = document.querySelector<HTMLElement>(
+      "[data-testid='sheet-viewer-transform-content']"
+    );
 
     if (!viewport || !content) {
       throw new Error("Sheet viewer transform elements are unavailable.");
@@ -574,7 +678,10 @@ async function getTransformPanStats(page: Page) {
 
     const contentRect = content.getBoundingClientRect();
     const transform = getComputedStyle(content).transform;
-    const matrix = transform === "none" ? new DOMMatrixReadOnly() : new DOMMatrixReadOnly(transform);
+    const matrix =
+      transform === "none"
+        ? new DOMMatrixReadOnly()
+        : new DOMMatrixReadOnly(transform);
     const maxX = Math.max(0, (contentRect.width - viewport.clientWidth) / 2);
     const maxY = Math.max(0, (contentRect.height - viewport.clientHeight) / 2);
 
@@ -588,7 +695,11 @@ async function getTransformPanStats(page: Page) {
   });
 }
 
-async function submitPageJump(page: Page, value: string, submitWithEnter = false) {
+async function submitPageJump(
+  page: Page,
+  value: string,
+  submitWithEnter = false
+) {
   const input = page.getByRole("textbox", { name: "Page number" });
 
   await input.fill(value);
@@ -604,9 +715,13 @@ async function submitPageJump(page: Page, value: string, submitWithEnter = false
 async function expectPageJumpError(page: Page, value: string, message: string) {
   await submitPageJump(page, value);
   await expect(page.getByText(message, { exact: true })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Page number" })).toHaveAttribute("aria-invalid", "true");
+  await expect(
+    page.getByRole("textbox", { name: "Page number" })
+  ).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("button", { name: "Go to page 1" })
+  ).toHaveAttribute("aria-current", "page");
 }
 
 test("sheet viewer manual segment page turn is opt-in, manually armed, and cancelable", async ({
@@ -634,16 +749,22 @@ test("sheet viewer manual segment page turn is opt-in, manually armed, and cance
 
   await seedAssistedPageTurnSegment(page, sheetId);
   await link.click();
-  await expect(page.getByRole("heading", { name: "Assisted Page Turn PDF" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Assisted Page Turn PDF" })
+  ).toBeVisible();
   await expectPdfCanvasRendered(page);
 
-  const manualPageTurnToggle = page.getByRole("checkbox", { name: "Manual segment page turn" });
+  const manualPageTurnToggle = page.getByRole("checkbox", {
+    name: "Manual segment page turn"
+  });
   const armButton = page.getByRole("button", { name: "Arm manual page turn" });
 
   await expect(manualPageTurnToggle).not.toBeChecked();
   await expect(armButton).toBeDisabled();
   await manualPageTurnToggle.check();
-  await expect(page.getByText("Select a segment to arm a timed page turn.")).toBeVisible();
+  await expect(
+    page.getByText("Select a segment to arm a timed page turn.")
+  ).toBeVisible();
   await page.getByTestId("practice-segment-row-segment-assisted-turn").click();
   await expect(armButton).toBeEnabled();
   await expect(page.getByText("Ready: 1s.")).toBeVisible();
@@ -655,7 +776,9 @@ test("sheet viewer manual segment page turn is opt-in, manually armed, and cance
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
   expect(await runManualSegmentPageTurnTimer(page)).toBe(true);
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("button", { name: "Go to page 2" })
+  ).toHaveAttribute("aria-current", "page");
   await expect(page.getByLabel("Zoom level")).toHaveText("100%");
   await expect(armButton).toBeDisabled();
   await expect(page.getByText("Already on the last page.")).toBeVisible();
@@ -711,24 +834,40 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
 
   await link.click();
   await expect(page).toHaveURL(/\/sheet-practice\/sheet_/);
-  await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Viewer Two Page PDF" })
+  ).toBeVisible();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Page thumbnails" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("button", { name: "Go to page 2" })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Page thumbnails" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Go to page 1" })
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("button", { name: "Go to page 2" })
+  ).toBeVisible();
   await expect(page.getByLabel("Zoom level")).toHaveText("100%");
   await expectTransformContentDefault(page);
   let canvas = await expectPdfCanvasRendered(page);
-  const initialWidth = await canvas.evaluate((node) => (node as HTMLCanvasElement).width);
+  const initialWidth = await canvas.evaluate(
+    (node) => (node as HTMLCanvasElement).width
+  );
 
-  await expect(page.getByRole("textbox", { name: "Page number" })).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Page number" })
+  ).toBeVisible();
   await submitPageJump(page, "2");
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("button", { name: "Go to page 2" })
+  ).toHaveAttribute("aria-current", "page");
   await expectPdfCanvasRendered(page);
   await submitPageJump(page, "1", true);
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("button", { name: "Go to page 1" })
+  ).toHaveAttribute("aria-current", "page");
 
   await expectPageJumpError(page, "999", "Page must be between 1 and 2.");
   await expectPageJumpError(page, "abc", "Enter a page number from 1 to 2.");
@@ -737,7 +876,9 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   await expectPageJumpError(page, "0", "Page must be between 1 and 2.");
   await submitPageJump(page, "2");
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("button", { name: "Go to page 2" })
+  ).toHaveAttribute("aria-current", "page");
 
   await page.getByRole("button", { name: "Previous page" }).click();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
@@ -748,7 +889,9 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
 
   await page.getByRole("button", { name: "Next page" }).click();
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("button", { name: "Go to page 2" })
+  ).toHaveAttribute("aria-current", "page");
   await expectPdfCanvasRendered(page);
   await page.getByRole("button", { name: "Previous page" }).click();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
@@ -757,10 +900,16 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   await page.getByRole("button", { name: "Zoom in" }).click();
   await expect(page.getByLabel("Zoom level")).toHaveText("150%");
   canvas = await expectPdfCanvasRendered(page);
-  await expect.poll(() => canvas.evaluate((node) => (node as HTMLCanvasElement).width)).toBeGreaterThan(initialWidth);
+  await expect
+    .poll(() => canvas.evaluate((node) => (node as HTMLCanvasElement).width))
+    .toBeGreaterThan(initialWidth);
   await dragTransformContent(page, 90, 60);
-  await expect.poll(async () => (await getTransformContentTranslate(page)).x).toBeGreaterThan(0);
-  await expect.poll(async () => (await getTransformContentTranslate(page)).y).toBeGreaterThan(0);
+  await expect
+    .poll(async () => (await getTransformContentTranslate(page)).x)
+    .toBeGreaterThan(0);
+  await expect
+    .poll(async () => (await getTransformContentTranslate(page)).y)
+    .toBeGreaterThan(0);
   const panStats = await getTransformPanStats(page);
   expect(Math.abs(panStats.x)).toBeLessThanOrEqual(panStats.maxX + 1);
   expect(Math.abs(panStats.y)).toBeLessThanOrEqual(panStats.maxY + 1);
@@ -775,7 +924,9 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   await expect(page.getByLabel("Zoom level")).toHaveText("125%");
   await submitPageJump(page, "2");
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("button", { name: "Go to page 2" })
+  ).toHaveAttribute("aria-current", "page");
   await expect(page.getByLabel("Zoom level")).toHaveText("100%");
   await expectTransformContentDefault(page);
   await page.getByRole("button", { name: "Previous page" }).click();
@@ -788,20 +939,30 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
     element.scrollTop = 120;
     element.scrollLeft = 80;
   });
-  await expect.poll(() => scrollArea.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect
+    .poll(() => scrollArea.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Viewer Two Page PDF" })
+  ).toBeVisible();
   await page.getByRole("button", { name: "Zoom in" }).click();
   await expect(page.getByLabel("Zoom level")).toHaveText("125%");
   await page.getByRole("button", { name: "Reset zoom" }).click();
   await expect(page.getByLabel("Zoom level")).toHaveText("100%");
   await expectTransformContentDefault(page);
-  await expect(page.getByRole("button", { name: "Page thumbnails" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Page thumbnails" })
+  ).toBeVisible();
   await page.getByRole("button", { name: "Page thumbnails" }).click();
-  await expect(page.getByRole("button", { name: "Page thumbnails" })).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    page.getByRole("button", { name: "Page thumbnails" })
+  ).toHaveAttribute("aria-expanded", "true");
   await page.getByRole("button", { name: "Go to page 2" }).click();
-  await expect(page.getByRole("button", { name: "Page thumbnails" })).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    page.getByRole("button", { name: "Page thumbnails" })
+  ).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
   await expectPdfCanvasRendered(page);
   await submitPageJump(page, "1");
@@ -809,33 +970,51 @@ test("sheet viewer renders imported PDF with navigation, zoom, scroll, resize, r
   await expectPdfCanvasRendered(page);
   await expectViewerControlsDoNotOverlap(page);
   await page.setViewportSize({ width: 900, height: 800 });
-  await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Page thumbnails" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Page thumbnails" })).toBeHidden();
+  await expect(
+    page.getByRole("heading", { name: "Viewer Two Page PDF" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Page thumbnails" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Page thumbnails" })
+  ).toBeHidden();
   await page.getByRole("button", { name: "Page thumbnails" }).click();
-  await expect(page.getByRole("button", { name: "Page thumbnails" })).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    page.getByRole("button", { name: "Page thumbnails" })
+  ).toHaveAttribute("aria-expanded", "true");
   await page.getByRole("button", { name: "Go to page 1" }).click();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
   await expectViewerControlsDoNotOverlap(page);
   await page.setViewportSize({ width: 1280, height: 800 });
-  await expect(page.getByRole("navigation", { name: "Page thumbnails" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("navigation", { name: "Page thumbnails" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Go to page 1" })
+  ).toHaveAttribute("aria-current", "page");
   await expectPdfCanvasRendered(page);
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Viewer Two Page PDF" })
+  ).toBeVisible();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
   await expectPdfCanvasRendered(page);
 
   await page.goto(getSheetPracticePath(sheetId));
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
-  await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Viewer Two Page PDF" })
+  ).toBeVisible();
   await expect(page.getByText("Page 1 of 2")).toBeVisible();
   await expectPdfCanvasRendered(page);
 
   await page.getByRole("link", { name: "Library", exact: true }).click();
   await expect(page).toHaveURL(/\/sheet-library$/);
-  await expect(page.getByRole("heading", { name: "Viewer Two Page PDF" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Viewer Two Page PDF" })
+  ).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 });
@@ -863,9 +1042,14 @@ test("sheet viewer thumbnail service returns decodable blob thumbnails for impor
   });
 
   await page.goto(getSheetPracticePath(pdfSheet.sheetId));
-  await expect(page.getByRole("heading", { name: "Thumbnail Two Page PDF" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Thumbnail Two Page PDF" })
+  ).toBeVisible();
 
-  const pdfThumbnails = await loadPageThumbnailsInBrowser(page, pdfSheet.sheetId);
+  const pdfThumbnails = await loadPageThumbnailsInBrowser(
+    page,
+    pdfSheet.sheetId
+  );
 
   expect(pdfThumbnails).toMatchObject({
     status: "ready",
@@ -877,10 +1061,23 @@ test("sheet viewer thumbnail service returns decodable blob thumbnails for impor
     throw new Error(`PDF thumbnail service failed: ${pdfThumbnails.code}`);
   }
 
-  expect(pdfThumbnails.thumbnails.map((thumbnail) => thumbnail.pageNumber)).toEqual([1, 2]);
-  expect(pdfThumbnails.thumbnails.every((thumbnail) => thumbnail.url.startsWith("blob:"))).toBe(true);
-  expect(pdfThumbnails.thumbnails.every((thumbnail) => thumbnail.width > 0 && thumbnail.height > 0)).toBe(true);
-  await expectThumbnailUrlsDecodable(page, pdfThumbnails.thumbnails.map((thumbnail) => thumbnail.url));
+  expect(
+    pdfThumbnails.thumbnails.map((thumbnail) => thumbnail.pageNumber)
+  ).toEqual([1, 2]);
+  expect(
+    pdfThumbnails.thumbnails.every((thumbnail) =>
+      thumbnail.url.startsWith("blob:")
+    )
+  ).toBe(true);
+  expect(
+    pdfThumbnails.thumbnails.every(
+      (thumbnail) => thumbnail.width > 0 && thumbnail.height > 0
+    )
+  ).toBe(true);
+  await expectThumbnailUrlsDecodable(
+    page,
+    pdfThumbnails.thumbnails.map((thumbnail) => thumbnail.url)
+  );
   await revokePageThumbnailsInBrowser(page, pdfThumbnails);
   await expectThumbnailUrlRevoked(page, pdfThumbnails.thumbnails[0].url);
 
@@ -892,9 +1089,14 @@ test("sheet viewer thumbnail service returns decodable blob thumbnails for impor
   });
 
   await page.goto(getSheetPracticePath(imageSheet.sheetId));
-  await expect(page.getByRole("heading", { name: "Thumbnail Pixel Scale" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Thumbnail Pixel Scale" })
+  ).toBeVisible();
 
-  const imageThumbnails = await loadPageThumbnailsInBrowser(page, imageSheet.sheetId);
+  const imageThumbnails = await loadPageThumbnailsInBrowser(
+    page,
+    imageSheet.sheetId
+  );
 
   expect(imageThumbnails).toMatchObject({
     status: "ready",
@@ -906,17 +1108,23 @@ test("sheet viewer thumbnail service returns decodable blob thumbnails for impor
     throw new Error(`Image thumbnail service failed: ${imageThumbnails.code}`);
   }
 
-  expect(imageThumbnails.thumbnails.map((thumbnail) => thumbnail.pageNumber)).toEqual([1]);
+  expect(
+    imageThumbnails.thumbnails.map((thumbnail) => thumbnail.pageNumber)
+  ).toEqual([1]);
   expect(imageThumbnails.thumbnails[0].url).toMatch(/^blob:/);
   expect(imageThumbnails.thumbnails[0].width).toBeGreaterThan(0);
   expect(imageThumbnails.thumbnails[0].height).toBeGreaterThan(0);
   await expectThumbnailUrlsDecodable(page, [imageThumbnails.thumbnails[0].url]);
   await revokePageThumbnailsInBrowser(page, imageThumbnails);
 
-  expect(consoleErrors.filter((error) => !error.includes("ERR_FILE_NOT_FOUND"))).toEqual([]);
+  expect(
+    consoleErrors.filter((error) => !error.includes("ERR_FILE_NOT_FOUND"))
+  ).toEqual([]);
 });
 
-test("sheet viewer renders imported image artifact with zoom, resize, and reload", async ({ page }) => {
+test("sheet viewer renders imported image artifact with zoom, resize, and reload", async ({
+  page
+}) => {
   const consoleErrors: string[] = [];
 
   page.on("console", (message) => {
@@ -937,16 +1145,28 @@ test("sheet viewer renders imported image artifact with zoom, resize, and reload
   });
 
   await link.click();
-  await expect(page.getByRole("heading", { name: "Viewer Pixel Scale" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Viewer Pixel Scale" })
+  ).toBeVisible();
   await expect(page.getByText("Page 1 of 1")).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Page thumbnails" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("textbox", { name: "Page number" })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Page thumbnails" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Go to page 1" })
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("textbox", { name: "Page number" })
+  ).toBeVisible();
   await submitPageJump(page, "2");
-  await expect(page.getByText("Page must be between 1 and 1.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Page must be between 1 and 1.", { exact: true })
+  ).toBeVisible();
   await expect(page.getByText("Page 1 of 1")).toBeVisible();
   await submitPageJump(page, "1");
-  await expect(page.getByText("Page must be between 1 and 1.", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByText("Page must be between 1 and 1.", { exact: true })
+  ).toHaveCount(0);
 
   const image = page
     .getByTestId("sheet-viewer-scroll")
@@ -969,15 +1189,19 @@ test("sheet viewer renders imported image artifact with zoom, resize, and reload
 
   await page.getByRole("button", { name: "Zoom in" }).click();
   await expect(page.getByLabel("Zoom level")).toHaveText("125%");
-  await expect.poll(() => image.evaluate((node) => (node as HTMLImageElement).clientWidth)).toBeGreaterThan(
-    initialDimensions.clientWidth
-  );
+  await expect
+    .poll(() =>
+      image.evaluate((node) => (node as HTMLImageElement).clientWidth)
+    )
+    .toBeGreaterThan(initialDimensions.clientWidth);
   const imagePanBefore = await getTransformPanStats(page);
   await dragTransformContent(page, 80, 40);
   const imagePanAfter = await getTransformPanStats(page);
 
   if (imagePanBefore.hasOverflow) {
-    expect(Math.abs(imagePanAfter.x) + Math.abs(imagePanAfter.y)).toBeGreaterThan(0);
+    expect(
+      Math.abs(imagePanAfter.x) + Math.abs(imagePanAfter.y)
+    ).toBeGreaterThan(0);
   } else {
     expect(Math.abs(imagePanAfter.x) + Math.abs(imagePanAfter.y)).toBe(0);
   }
@@ -991,7 +1215,9 @@ test("sheet viewer renders imported image artifact with zoom, resize, and reload
   await expect(image).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Viewer Pixel Scale" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Viewer Pixel Scale" })
+  ).toBeVisible();
   await expect(image).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
@@ -1038,28 +1264,44 @@ test("sheet viewer shows clear states for missing id, unknown sheet, missing art
   ]);
 
   await page.goto("/sheet-practice");
-  await expect(page.getByRole("heading", { name: "No sheet selected" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "No sheet selected" })
+  ).toBeVisible();
 
   await page.goto("/sheet-practice?sheetId=unknown-sheet");
-  await expect(page.getByRole("heading", { name: "Sheet not found" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet not found" })
+  ).toBeVisible();
 
   await page.goto("/sheet-practice/unknown-sheet");
-  await expect(page.getByRole("heading", { name: "Sheet not found" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet not found" })
+  ).toBeVisible();
 
   await page.goto("/sheet-practice?sheetId=sheet-missing-artifact");
-  await expect(page.getByRole("heading", { name: "Sheet file missing" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet file missing" })
+  ).toBeVisible();
 
   await page.goto("/sheet-practice?sheetId=sheet-bad-pdf");
-  await expect(page.getByRole("heading", { name: "PDF cannot be rendered" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "PDF cannot be rendered" })
+  ).toBeVisible();
 
   await page.goto("/sheet-practice?sheetId=sheet-bad-image");
-  await expect(page.getByRole("heading", { name: "Image cannot be rendered" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Image cannot be rendered" })
+  ).toBeVisible();
 
-  await expect(loadPageThumbnailsInBrowser(page, "sheet-bad-pdf")).resolves.toMatchObject({
+  await expect(
+    loadPageThumbnailsInBrowser(page, "sheet-bad-pdf")
+  ).resolves.toMatchObject({
     status: "error",
     code: "bad-pdf"
   });
-  await expect(loadPageThumbnailsInBrowser(page, "sheet-bad-image")).resolves.toMatchObject({
+  await expect(
+    loadPageThumbnailsInBrowser(page, "sheet-bad-image")
+  ).resolves.toMatchObject({
     status: "error",
     code: "bad-image"
   });

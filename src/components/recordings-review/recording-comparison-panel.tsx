@@ -4,9 +4,7 @@ import {
   formatDuration,
   formatRecordingDate
 } from "@/lib/recordings-review/format";
-import {
-  getRecordingDisplayName
-} from "@/lib/recordings-review/history";
+import { getRecordingDisplayName } from "@/lib/recordings-review/history";
 import { resolveRecordingOrganization } from "@/lib/recordings-review/recording-organization-metadata";
 import type {
   RecordingErrorMarker,
@@ -65,12 +63,15 @@ export function RecordingComparisonPanel({
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h2 id="recording-comparison-title" className="text-base font-semibold">
+          <h2
+            id="recording-comparison-title"
+            className="text-base font-semibold"
+          >
             Recording comparison
           </h2>
           <p
             data-testid="recording-comparison-status"
-            className="text-muted-foreground mt-1 text-sm break-words"
+            className="mt-1 text-sm break-words text-muted-foreground"
           >
             {statusText}
           </p>
@@ -82,7 +83,7 @@ export function RecordingComparisonPanel({
         <p
           role="status"
           data-testid="recording-comparison-limit"
-          className="text-muted-foreground text-xs font-medium"
+          className="text-xs font-medium text-muted-foreground"
         >
           {limitText}
         </p>
@@ -149,16 +150,16 @@ function RecordingComparisonMetadataCard({
     <section
       data-testid={`recording-comparison-metadata-${recording.id}`}
       aria-label={`${displayName} comparison metadata`}
-      className="border-border bg-muted/40 min-w-0 rounded-md border px-3 py-3"
+      className="min-w-0 rounded-md border border-border bg-muted/40 px-3 py-3"
     >
       <h3 className="text-sm font-semibold break-words">{displayName}</h3>
       <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
         {fields.map((field) => (
           <div
             key={field.label}
-            className="border-border bg-background rounded-md border px-2 py-2"
+            className="rounded-md border border-border bg-background px-2 py-2"
           >
-            <dt className="text-muted-foreground text-xs font-medium">
+            <dt className="text-xs font-medium text-muted-foreground">
               {field.label}
             </dt>
             <dd className="mt-1 font-semibold break-words">{field.value}</dd>
@@ -215,7 +216,8 @@ function getRecordingComparisonMetadataFields({
     },
     {
       label: "Tags",
-      value: organization.tags.length > 0 ? organization.tags.join(", ") : "No tags"
+      value:
+        organization.tags.length > 0 ? organization.tags.join(", ") : "No tags"
     },
     {
       label: "Organization",

@@ -514,11 +514,11 @@ Verification should run the focused commands above and inspect changed files. PA
 
 ## Deferred Work
 
-| Deferred work | Future owner |
-| --- | --- |
-| Goal create/edit/delete commands | Future reviewed command/action slice after P3-16 proves navigation-only palette |
-| Session comparison, session analytics comparison, or review comparison commands | `P3-17 practice-session-session-comparison` or a future reviewed comparison slice |
-| Recording playback or management commands | Future recordings command slice, if desired |
-| Import/export/cleanup/settings commands | Pack 8 or later reviewed settings/local-data slice |
-| Command aliases, custom shortcuts, recent commands, telemetry, or plugin commands | Future explicit feature |
-| Cross-device/cloud command sync | v2 |
+| Deferred work                                                                     | Future owner                                                                      |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Goal create/edit/delete commands                                                  | Future reviewed command/action slice after P3-16 proves navigation-only palette   |
+| Session comparison, session analytics comparison, or review comparison commands   | `P3-17 practice-session-session-comparison` or a future reviewed comparison slice |
+| Recording playback or management commands                                         | Future recordings command slice, if desired                                       |
+| Import/export/cleanup/settings commands                                           | Pack 8 or later reviewed settings/local-data slice                                |
+| Command aliases, custom shortcuts, recent commands, telemetry, or plugin commands | Future explicit feature                                                           |
+| Cross-device/cloud command sync                                                   | v2                                                                                |

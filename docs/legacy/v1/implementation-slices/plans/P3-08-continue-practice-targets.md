@@ -470,16 +470,16 @@ Verification should run the focused commands above. PASS requires:
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Render multiple Continue Practice recommendation rows on Home | `P3-09 continue-practice-ui-navigation` |
-| Navigate from a target into Quick Metronome, Sheet Practice, or Sheet Practice with selected segment context | `P3-09 continue-practice-ui-navigation` |
-| Route/query contract for restoring selected segment focus in Sheet Practice | `P3-09 continue-practice-ui-navigation` |
-| Command palette over valid local practice targets | `P3-16 home-command-palette` |
-| Goal completion, dashboard analytics, streaks, and goal UI | `P3-10` through `P3-15` |
-| Event-derived target ranking from durable event replay | Future explicit event-persistence/replay slice |
-| Recording media/artifact availability validation for recommendations | Future recording review or cleanup slice if product requires it |
-| Cloud/cross-device resume | v2 |
+| Deferred work                                                                                                | Future owner                                                    |
+| ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| Render multiple Continue Practice recommendation rows on Home                                                | `P3-09 continue-practice-ui-navigation`                         |
+| Navigate from a target into Quick Metronome, Sheet Practice, or Sheet Practice with selected segment context | `P3-09 continue-practice-ui-navigation`                         |
+| Route/query contract for restoring selected segment focus in Sheet Practice                                  | `P3-09 continue-practice-ui-navigation`                         |
+| Command palette over valid local practice targets                                                            | `P3-16 home-command-palette`                                    |
+| Goal completion, dashboard analytics, streaks, and goal UI                                                   | `P3-10` through `P3-15`                                         |
+| Event-derived target ranking from durable event replay                                                       | Future explicit event-persistence/replay slice                  |
+| Recording media/artifact availability validation for recommendations                                         | Future recording review or cleanup slice if product requires it |
+| Cloud/cross-device resume                                                                                    | v2                                                              |
 
 ## Split Triggers
 

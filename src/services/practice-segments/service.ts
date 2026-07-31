@@ -1,5 +1,8 @@
 import { validatePracticeSegment } from "@/domain/practice";
-import type { PracticeSegmentRepository, PracticeSegmentService } from "@/services/practice-segments/types";
+import type {
+  PracticeSegmentRepository,
+  PracticeSegmentService
+} from "@/services/practice-segments/types";
 import {
   DUPLICATE_PRACTICE_SEGMENT_NAME_ERROR_MESSAGE,
   normalizePracticeSegmentId,
@@ -7,7 +10,9 @@ import {
   normalizePracticeSegmentSheetId
 } from "@/services/practice-segments/validation";
 
-export function createPracticeSegmentService(repository: PracticeSegmentRepository): PracticeSegmentService {
+export function createPracticeSegmentService(
+  repository: PracticeSegmentRepository
+): PracticeSegmentService {
   return {
     async listSegments(sheetId) {
       return repository.listSegments(normalizePracticeSegmentSheetId(sheetId));
@@ -22,10 +27,15 @@ export function createPracticeSegmentService(repository: PracticeSegmentReposito
 
     async saveSegment(segment) {
       const validatedSegment = validatePracticeSegment(segment);
-      const normalizedName = normalizePracticeSegmentNameForComparison(validatedSegment.name);
+      const normalizedName = normalizePracticeSegmentNameForComparison(
+        validatedSegment.name
+      );
 
       if (repository.saveSegmentIfNoDuplicateName) {
-        const didSave = await repository.saveSegmentIfNoDuplicateName(validatedSegment, normalizedName);
+        const didSave = await repository.saveSegmentIfNoDuplicateName(
+          validatedSegment,
+          normalizedName
+        );
 
         if (!didSave) {
           throw new Error(DUPLICATE_PRACTICE_SEGMENT_NAME_ERROR_MESSAGE);
@@ -35,11 +45,14 @@ export function createPracticeSegmentService(repository: PracticeSegmentReposito
       }
 
       // Generic repositories are single-writer only here; browser persistence uses the optional transactional guard.
-      const sameSheetSegments = await repository.listSegments(validatedSegment.sheetId);
+      const sameSheetSegments = await repository.listSegments(
+        validatedSegment.sheetId
+      );
       const duplicateSegment = sameSheetSegments.find(
         (existingSegment) =>
           existingSegment.id !== validatedSegment.id &&
-          normalizePracticeSegmentNameForComparison(existingSegment.name) === normalizedName
+          normalizePracticeSegmentNameForComparison(existingSegment.name) ===
+            normalizedName
       );
 
       if (duplicateSegment) {

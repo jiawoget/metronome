@@ -1,5 +1,13 @@
-import type { ImportedSheet, SheetArtifact, SheetArtifactFile, SheetArtifactStatus } from "@/domain/sheet";
-import type { SheetImportAdapter, SheetImportResult } from "@/services/sheet-library";
+import type {
+  ImportedSheet,
+  SheetArtifact,
+  SheetArtifactFile,
+  SheetArtifactStatus
+} from "@/domain/sheet";
+import type {
+  SheetImportAdapter,
+  SheetImportResult
+} from "@/services/sheet-library";
 
 const PDF_MIME_TYPES = new Set(["application/pdf"]);
 const IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/jpg"]);
@@ -15,13 +23,19 @@ function isPdf(file: File) {
 function isImage(file: File) {
   const extension = getFileExtension(file);
 
-  return IMAGE_MIME_TYPES.has(file.type) || extension === "png" || extension === "jpg" || extension === "jpeg";
+  return (
+    IMAGE_MIME_TYPES.has(file.type) ||
+    extension === "png" ||
+    extension === "jpg" ||
+    extension === "jpeg"
+  );
 }
 
 function unsupportedResult() {
   return {
     ok: false,
-    message: "Unsupported file type. Upload one PDF or one or more PNG/JPG image files."
+    message:
+      "Unsupported file type. Upload one PDF or one or more PNG/JPG image files."
   } satisfies SheetImportResult;
 }
 
@@ -81,7 +95,11 @@ async function decodeImage(blob: Blob) {
   });
 }
 
-function toArtifactFile(file: File, index: number, dimensions?: { width: number; height: number }): SheetArtifactFile {
+function toArtifactFile(
+  file: File,
+  index: number,
+  dimensions?: { width: number; height: number }
+): SheetArtifactFile {
   return {
     name: file.name,
     mimeType: file.type || (isPdf(file) ? "application/pdf" : "image/*"),
@@ -100,7 +118,10 @@ function inaccessibleArtifactStatus(): SheetArtifactStatus {
   };
 }
 
-async function inspectPdfArtifact(sheet: ImportedSheet, artifact: SheetArtifact) {
+async function inspectPdfArtifact(
+  sheet: ImportedSheet,
+  artifact: SheetArtifact
+) {
   const file = artifact.files[0];
 
   if (!file || file.blob.size === 0) {
@@ -129,17 +150,29 @@ async function inspectPdfArtifact(sheet: ImportedSheet, artifact: SheetArtifact)
   }
 }
 
-async function inspectImageArtifact(sheet: ImportedSheet, artifact: SheetArtifact) {
-  if (artifact.files.length !== sheet.imageCount || artifact.files.some((file) => file.blob.size === 0)) {
+async function inspectImageArtifact(
+  sheet: ImportedSheet,
+  artifact: SheetArtifact
+) {
+  if (
+    artifact.files.length !== sheet.imageCount ||
+    artifact.files.some((file) => file.blob.size === 0)
+  ) {
     return inaccessibleArtifactStatus();
   }
 
   try {
-    const dimensions = await Promise.all(artifact.files.map((file) => decodeImage(file.blob)));
+    const dimensions = await Promise.all(
+      artifact.files.map((file) => decodeImage(file.blob))
+    );
     const dimensionsMatch = dimensions.every((dimension, index) => {
       const expected = sheet.imageDimensions[index];
 
-      return !!expected && expected.width === dimension.width && expected.height === dimension.height;
+      return (
+        !!expected &&
+        expected.width === dimension.width &&
+        expected.height === dimension.height
+      );
     });
 
     if (!dimensionsMatch) {
@@ -204,7 +237,8 @@ export const browserSheetImportAdapter: SheetImportAdapter = {
       } catch {
         return {
           ok: false,
-          message: "The uploaded PDF could not be read. Choose a valid PDF file."
+          message:
+            "The uploaded PDF could not be read. Choose a valid PDF file."
         };
       }
     }
@@ -220,16 +254,21 @@ export const browserSheetImportAdapter: SheetImportAdapter = {
             pageCount: imageFiles.length,
             imageCount: imageFiles.length,
             imageDimensions: dimensions,
-            mimeTypes: Array.from(new Set(imageFiles.map((file) => file.type || "image/*"))),
+            mimeTypes: Array.from(
+              new Set(imageFiles.map((file) => file.type || "image/*"))
+            ),
             sizeBytes: imageFiles.reduce((total, file) => total + file.size, 0),
             originalFileNames: imageFiles.map((file) => file.name),
-            files: imageFiles.map((file, index) => toArtifactFile(file, index, dimensions[index]))
+            files: imageFiles.map((file, index) =>
+              toArtifactFile(file, index, dimensions[index])
+            )
           }
         };
       } catch {
         return {
           ok: false,
-          message: "The uploaded image could not be decoded. Choose a valid PNG or JPG file."
+          message:
+            "The uploaded image could not be decoded. Choose a valid PNG or JPG file."
         };
       }
     }

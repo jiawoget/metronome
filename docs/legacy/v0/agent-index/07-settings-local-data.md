@@ -43,4 +43,3 @@ Clear All Local Data with confirmation, cleanup, and reset to defaults.
   defaults unless future work wires global settings consumption into them.
   Treat that as a known integration boundary to verify before relying on global
   default consumption.
-

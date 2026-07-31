@@ -19,7 +19,9 @@ export type SheetPracticeControlInitialState = {
   unsupportedTimeSignature: string | null;
 };
 
-function isSupportedTimeSignature(value: string | null): value is TimeSignature {
+function isSupportedTimeSignature(
+  value: string | null
+): value is TimeSignature {
   return isQuickMetronomeTimeSignature(value);
 }
 
@@ -33,14 +35,18 @@ export function createSheetPracticeControlInitialState(
   defaults: SheetPracticeControlDefaults
 ): SheetPracticeControlInitialState {
   const unsupportedTimeSignature =
-    defaults.timeSignature !== null && !isSupportedTimeSignature(defaults.timeSignature)
+    defaults.timeSignature !== null &&
+    !isSupportedTimeSignature(defaults.timeSignature)
       ? defaults.timeSignature
       : null;
 
   return {
     settings: {
       ...DEFAULT_METRONOME_SETTINGS,
-      bpm: defaults.bpm === null ? DEFAULT_METRONOME_SETTINGS.bpm : clampBpm(defaults.bpm),
+      bpm:
+        defaults.bpm === null
+          ? DEFAULT_METRONOME_SETTINGS.bpm
+          : clampBpm(defaults.bpm),
       timeSignature:
         defaults.timeSignature === null
           ? DEFAULT_METRONOME_SETTINGS.timeSignature

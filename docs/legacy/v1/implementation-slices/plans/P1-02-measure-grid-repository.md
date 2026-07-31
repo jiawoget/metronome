@@ -154,22 +154,22 @@ Out of scope:
 
 ## 7. Boundary Condition Matrix
 
-| Condition | Required behavior | Required evidence |
-| --- | --- | --- |
-| Missing grid for valid `sheetId` | `getGrid` resolves `null` | Service unit test and Dexie repository test |
-| Empty `sheetId` | `getGrid`, `saveGrid`, and `clearGrid` reject; no empty-key row is created | Negative service tests |
-| Whitespace `sheetId` | Trim before use or reject consistently; document chosen behavior in test names | Negative/normalization service tests |
-| Invalid save grid | `saveGrid` rejects before repository mutation | Unit test with previous valid grid preserved |
-| Invalid persisted row | Repository read returns `null` and does not throw | Malformed fixture tests |
-| Update existing grid | Later `saveGrid` replaces the full grid for same sheet | Service and Dexie tests |
-| Multi-sheet isolation | Save/update/clear for sheet A does not affect sheet B | Service and Dexie tests |
-| Clear missing grid | `clearGrid` resolves successfully | Service or Dexie test |
-| Clear existing grid | Only requested sheet becomes `null` | Service and Dexie tests |
-| Reload/storage boundary | After connection reset, saved grid is still readable | Dexie test |
-| Legacy/no-grid records | Missing table row or row without `grid` maps to `null` | Malformed fixture tests |
-| Failed validation after valid save | Previous valid row remains readable | Service unit test; Dexie test if repository validates too |
-| Storage write failure | Error propagates and caller cannot mistake it for saved calibration | Repository fake that throws, or service unit with throwing repository |
-| Sheet lifecycle absence | Repository does not require sheet library lookup | Source inspection checklist |
+| Condition                          | Required behavior                                                              | Required evidence                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| Missing grid for valid `sheetId`   | `getGrid` resolves `null`                                                      | Service unit test and Dexie repository test                           |
+| Empty `sheetId`                    | `getGrid`, `saveGrid`, and `clearGrid` reject; no empty-key row is created     | Negative service tests                                                |
+| Whitespace `sheetId`               | Trim before use or reject consistently; document chosen behavior in test names | Negative/normalization service tests                                  |
+| Invalid save grid                  | `saveGrid` rejects before repository mutation                                  | Unit test with previous valid grid preserved                          |
+| Invalid persisted row              | Repository read returns `null` and does not throw                              | Malformed fixture tests                                               |
+| Update existing grid               | Later `saveGrid` replaces the full grid for same sheet                         | Service and Dexie tests                                               |
+| Multi-sheet isolation              | Save/update/clear for sheet A does not affect sheet B                          | Service and Dexie tests                                               |
+| Clear missing grid                 | `clearGrid` resolves successfully                                              | Service or Dexie test                                                 |
+| Clear existing grid                | Only requested sheet becomes `null`                                            | Service and Dexie tests                                               |
+| Reload/storage boundary            | After connection reset, saved grid is still readable                           | Dexie test                                                            |
+| Legacy/no-grid records             | Missing table row or row without `grid` maps to `null`                         | Malformed fixture tests                                               |
+| Failed validation after valid save | Previous valid row remains readable                                            | Service unit test; Dexie test if repository validates too             |
+| Storage write failure              | Error propagates and caller cannot mistake it for saved calibration            | Repository fake that throws, or service unit with throwing repository |
+| Sheet lifecycle absence            | Repository does not require sheet library lookup                               | Source inspection checklist                                           |
 
 ## 8. Test Plan
 

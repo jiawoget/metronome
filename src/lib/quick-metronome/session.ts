@@ -1,5 +1,9 @@
 import type { PracticeSession } from "@/domain/practice";
-import type { MetronomeSettings, QuickRecording, RecordingArtifact } from "@/lib/quick-metronome/types";
+import type {
+  MetronomeSettings,
+  QuickRecording,
+  RecordingArtifact
+} from "@/lib/quick-metronome/types";
 
 function createId(prefix: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -20,7 +24,8 @@ export function createQuickRecording({
   settings: MetronomeSettings;
   createdAt?: Date;
 }) {
-  const durationMs = artifact.analysis?.decodedDurationMs ?? artifact.durationMs;
+  const durationMs =
+    artifact.analysis?.decodedDurationMs ?? artifact.durationMs;
   const recordingId = createId("recording");
 
   return {

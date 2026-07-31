@@ -81,8 +81,14 @@ export type SessionComparisonOptions = {
 };
 
 export type SessionComparisonTargetResolution = {
-  sheets?: Record<string, SessionHistoryLookupResult<SessionHistorySheetTarget>>;
-  segments?: Record<string, SessionHistoryLookupResult<SessionHistorySegmentTarget>>;
+  sheets?: Record<
+    string,
+    SessionHistoryLookupResult<SessionHistorySheetTarget>
+  >;
+  segments?: Record<
+    string,
+    SessionHistoryLookupResult<SessionHistorySegmentTarget>
+  >;
 };
 
 export type SessionComparisonSourceInput = SessionComparisonOptions & {
@@ -118,29 +124,46 @@ export function getSessionComparison({
 }: SessionComparisonSourceInput): SessionComparisonResult {
   const linkedRecordings = summarizeLinkedRecordings(recordings);
   const candidates = sessions
-    .map((session) => createCandidate(session, linkedRecordings.get(session.id), targets))
-    .filter((candidate): candidate is SessionComparisonCandidate => candidate !== null)
+    .map((session) =>
+      createCandidate(session, linkedRecordings.get(session.id), targets)
+    )
+    .filter(
+      (candidate): candidate is SessionComparisonCandidate => candidate !== null
+    )
     .sort(compareCandidates)
     .slice(0, normalizeLimit(limit));
-  const candidateIds = new Set(candidates.map((candidate) => candidate.sessionId));
-  const sanitizedSelectedSessionIds = sanitizeSelectedSessionIds(selectedSessionIds, candidateIds);
+  const candidateIds = new Set(
+    candidates.map((candidate) => candidate.sessionId)
+  );
+  const sanitizedSelectedSessionIds = sanitizeSelectedSessionIds(
+    selectedSessionIds,
+    candidateIds
+  );
   const comparedSessions = sanitizedSelectedSessionIds
-    .map((sessionId) => candidates.find((candidate) => candidate.sessionId === sessionId))
-    .filter((candidate): candidate is SessionComparisonCandidate => candidate !== undefined);
+    .map((sessionId) =>
+      candidates.find((candidate) => candidate.sessionId === sessionId)
+    )
+    .filter(
+      (candidate): candidate is SessionComparisonCandidate =>
+        candidate !== undefined
+    );
 
   return {
     generatedAt,
     candidates,
     selectedSessionIds: sanitizedSelectedSessionIds,
     comparedSessions,
-    metrics: comparedSessions.length >= 2 ? createMetrics(comparedSessions) : [],
+    metrics:
+      comparedSessions.length >= 2 ? createMetrics(comparedSessions) : [],
     unavailable: createUnavailableEntries(),
     limit: normalizeLimit(limit),
     maxSelected: SESSION_COMPARISON_MAX_SELECTED
   };
 }
 
-function summarizeLinkedRecordings(recordings: readonly SheetRecordingMetadata[]) {
+function summarizeLinkedRecordings(
+  recordings: readonly SheetRecordingMetadata[]
+) {
   const summaries = new Map<string, LinkedRecordingSummary>();
 
   for (const recording of recordings) {
@@ -214,20 +237,42 @@ function resolveTarget(
   const segmentRangeLabel = formatSegmentRange(segmentContext);
 
   if (!sheetId || (segmentContext && !segmentId)) {
-    return target("no-target", sheetId, null, segmentId, snapshotSegmentName, segmentRangeLabel);
+    return target(
+      "no-target",
+      sheetId,
+      null,
+      segmentId,
+      snapshotSegmentName,
+      segmentRangeLabel
+    );
   }
 
   const sheetTarget = targets.sheets?.[sheetId];
-  const sheetName = sheetTarget?.state === "valid"
-    ? requiredString(sheetTarget.value.name)
-    : null;
+  const sheetName =
+    sheetTarget?.state === "valid"
+      ? requiredString(sheetTarget.value.name)
+      : null;
 
   if (sheetTarget?.state === "lookup-failed") {
-    return target("lookup-failed", sheetId, sheetName, segmentId, snapshotSegmentName, segmentRangeLabel);
+    return target(
+      "lookup-failed",
+      sheetId,
+      sheetName,
+      segmentId,
+      snapshotSegmentName,
+      segmentRangeLabel
+    );
   }
 
   if (sheetTarget?.state === "missing") {
-    return target("missing-sheet", sheetId, sheetName, segmentId, snapshotSegmentName, segmentRangeLabel);
+    return target(
+      "missing-sheet",
+      sheetId,
+      sheetName,
+      segmentId,
+      snapshotSegmentName,
+      segmentRangeLabel
+    );
   }
 
   if (!segmentContext) {
@@ -235,20 +280,51 @@ function resolveTarget(
   }
 
   if (!segmentId) {
-    return target("no-target", sheetId, sheetName, null, snapshotSegmentName, segmentRangeLabel);
+    return target(
+      "no-target",
+      sheetId,
+      sheetName,
+      null,
+      snapshotSegmentName,
+      segmentRangeLabel
+    );
   }
 
-  const segmentTarget = targets.segments?.[createSessionHistorySegmentTargetKey(sheetId, segmentId)];
+  const segmentTarget =
+    targets.segments?.[
+      createSessionHistorySegmentTargetKey(sheetId, segmentId)
+    ];
 
   if (segmentTarget?.state === "lookup-failed") {
-    return target("lookup-failed", sheetId, sheetName, segmentId, snapshotSegmentName, segmentRangeLabel);
+    return target(
+      "lookup-failed",
+      sheetId,
+      sheetName,
+      segmentId,
+      snapshotSegmentName,
+      segmentRangeLabel
+    );
   }
 
   if (segmentTarget?.state === "missing") {
-    return target("missing-segment", sheetId, sheetName, segmentId, snapshotSegmentName, segmentRangeLabel);
+    return target(
+      "missing-segment",
+      sheetId,
+      sheetName,
+      segmentId,
+      snapshotSegmentName,
+      segmentRangeLabel
+    );
   }
 
-  return target("valid", sheetId, sheetName, segmentId, snapshotSegmentName, segmentRangeLabel);
+  return target(
+    "valid",
+    sheetId,
+    sheetName,
+    segmentId,
+    snapshotSegmentName,
+    segmentRangeLabel
+  );
 }
 
 function target(
@@ -269,8 +345,13 @@ function target(
   };
 }
 
-function createCandidateLabel(session: PracticeSession, target: ResolvedTarget) {
-  const timestamp = formatTimestamp(validTimestamp(session.updatedAt || session.startedAt));
+function createCandidateLabel(
+  session: PracticeSession,
+  target: ResolvedTarget
+) {
+  const timestamp = formatTimestamp(
+    validTimestamp(session.updatedAt || session.startedAt)
+  );
 
   if (session.sourceType === "quick") {
     return `Quick practice - ${timestamp}`;
@@ -309,30 +390,52 @@ function sanitizeSelectedSessionIds(
   return sanitized;
 }
 
-function createMetrics(comparedSessions: SessionComparisonCandidate[]): SessionComparisonMetric[] {
+function createMetrics(
+  comparedSessions: SessionComparisonCandidate[]
+): SessionComparisonMetric[] {
   return [
     metric("sessionType", "Session type", comparedSessions, (session) =>
-      value(session.sourceType === "quick" ? "Quick practice" : "Sheet practice")),
+      value(
+        session.sourceType === "quick" ? "Quick practice" : "Sheet practice"
+      )
+    ),
     metric("started", "Started", comparedSessions, (session) =>
-      timestampValue(session.startedAt)),
+      timestampValue(session.startedAt)
+    ),
     metric("updated", "Last updated", comparedSessions, (session) =>
-      timestampValue(session.updatedAt)),
+      timestampValue(session.updatedAt)
+    ),
     metric("duration", "Duration", comparedSessions, (session) =>
-      value(formatDuration(session.durationMs))),
+      value(formatDuration(session.durationMs))
+    ),
     metric("bpm", "BPM", comparedSessions, (session) =>
-      session.bpm === null ? value("Not set", "muted") : value(`${session.bpm} BPM`)),
+      session.bpm === null
+        ? value("Not set", "muted")
+        : value(`${session.bpm} BPM`)
+    ),
     metric("timeSignature", "Time signature", comparedSessions, (session) =>
-      session.timeSignature ? value(session.timeSignature) : value("Not set", "muted")),
+      session.timeSignature
+        ? value(session.timeSignature)
+        : value("Not set", "muted")
+    ),
     metric("recordings", "Recordings", comparedSessions, (session) =>
-      value(formatRecordingSummary(session))),
+      value(formatRecordingSummary(session))
+    ),
     metric("sheet", "Sheet", comparedSessions, (session) =>
-      targetValue(session, formatSheetLabel(session))),
+      targetValue(session, formatSheetLabel(session))
+    ),
     metric("segment", "Segment", comparedSessions, (session) =>
-      targetValue(session, formatSegmentLabel(session))),
-    metric("goalContribution", "Goal contribution", comparedSessions, (session) =>
-      value(formatGoalContribution(session))),
+      targetValue(session, formatSegmentLabel(session))
+    ),
+    metric(
+      "goalContribution",
+      "Goal contribution",
+      comparedSessions,
+      (session) => value(formatGoalContribution(session))
+    ),
     metric("events", "Events", comparedSessions, () =>
-      value("Event details not available yet", "muted"))
+      value("Event details not available yet", "muted")
+    )
   ];
 }
 
@@ -340,7 +443,10 @@ function metric(
   key: string,
   label: string,
   sessions: SessionComparisonCandidate[],
-  getValue: (session: SessionComparisonCandidate) => { text: string; tone: SessionComparisonValueTone }
+  getValue: (session: SessionComparisonCandidate) => {
+    text: string;
+    tone: SessionComparisonValueTone;
+  }
 ): SessionComparisonMetric {
   return {
     key,
@@ -359,13 +465,13 @@ function value(text: string, tone: SessionComparisonValueTone = "neutral") {
 function timestampValue(timestamp: string) {
   const formattedTimestamp = formatTimestamp(validTimestamp(timestamp));
 
-  return value(formattedTimestamp, formattedTimestamp === "Unknown time" ? "muted" : "neutral");
+  return value(
+    formattedTimestamp,
+    formattedTimestamp === "Unknown time" ? "muted" : "neutral"
+  );
 }
 
-function targetValue(
-  session: SessionComparisonCandidate,
-  text: string
-) {
+function targetValue(session: SessionComparisonCandidate, text: string) {
   return value(
     text,
     session.targetState === "missing-sheet" ||
@@ -378,7 +484,10 @@ function targetValue(
 }
 
 function formatRecordingSummary(session: SessionComparisonCandidate) {
-  if (session.recordingCount === 0 && session.linkedRecordingMetadataCount === 0) {
+  if (
+    session.recordingCount === 0 &&
+    session.linkedRecordingMetadataCount === 0
+  ) {
     return "No recordings";
   }
 
@@ -404,7 +513,9 @@ function formatSheetLabel(session: SessionComparisonCandidate) {
   }
 
   if (session.targetState === "lookup-failed") {
-    return session.sheetId ? `${session.sheetId} (lookup failed)` : "Sheet lookup failed";
+    return session.sheetId
+      ? `${session.sheetId} (lookup failed)`
+      : "Sheet lookup failed";
   }
 
   if (session.targetState === "no-target") {
@@ -424,11 +535,14 @@ function formatSegmentLabel(session: SessionComparisonCandidate) {
   }
 
   const label = [
-    session.segmentName ?? (
-      session.targetState === "missing-segment" ? "Deleted segment" : "Saved segment"
-    ),
+    session.segmentName ??
+      (session.targetState === "missing-segment"
+        ? "Deleted segment"
+        : "Saved segment"),
     session.segmentRangeLabel
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   if (session.targetState === "missing-segment") {
     return `${label} (missing)`;
@@ -456,17 +570,22 @@ function createUnavailableEntries(): SessionComparisonUnavailable[] {
     {
       key: "events",
       label: "Events",
-      reason: "Event details are unavailable because no durable session event read source is exposed."
+      reason:
+        "Event details are unavailable because no durable session event read source is exposed."
     },
     {
       key: "audio",
       label: "Audio",
-      reason: "Audio and waveform comparison are outside this metadata-only read model."
+      reason:
+        "Audio and waveform comparison are outside this metadata-only read model."
     }
   ];
 }
 
-function compareCandidates(left: SessionComparisonCandidate, right: SessionComparisonCandidate) {
+function compareCandidates(
+  left: SessionComparisonCandidate,
+  right: SessionComparisonCandidate
+) {
   return (
     compareSortValues(getSortValue(left), getSortValue(right)) ||
     left.sessionId.localeCompare(right.sessionId) ||
@@ -477,7 +596,9 @@ function compareCandidates(left: SessionComparisonCandidate, right: SessionCompa
 }
 
 function getSortValue(candidate: SessionComparisonCandidate) {
-  return candidate.sortTimestamp ? Date.parse(candidate.sortTimestamp) : INVALID_SORT_VALUE;
+  return candidate.sortTimestamp
+    ? Date.parse(candidate.sortTimestamp)
+    : INVALID_SORT_VALUE;
 }
 
 function compareSortValues(left: number, right: number) {
@@ -518,14 +639,20 @@ function formatDuration(durationMs: number) {
   const remainder = seconds % 60;
 
   return minutes > 0
-    ? remainder > 0 ? `${minutes}m ${remainder}s` : `${minutes}m`
+    ? remainder > 0
+      ? `${minutes}m ${remainder}s`
+      : `${minutes}m`
     : `${seconds}s`;
 }
 
-function formatSegmentRange(segmentContext: SheetRecordingSegmentContext | null | undefined) {
+function formatSegmentRange(
+  segmentContext: SheetRecordingSegmentContext | null | undefined
+) {
   const range = segmentContext?.range;
 
-  return range && Number.isFinite(range.startMeasure) && Number.isFinite(range.endMeasure)
+  return range &&
+    Number.isFinite(range.startMeasure) &&
+    Number.isFinite(range.endMeasure)
     ? `m${range.startMeasure}-${range.endMeasure}`
     : null;
 }
@@ -535,7 +662,9 @@ function validTimestamp(value: string) {
 }
 
 function validDuration(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : 0;
 }
 
 function validCount(value: unknown) {

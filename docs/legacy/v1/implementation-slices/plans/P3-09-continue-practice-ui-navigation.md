@@ -390,14 +390,14 @@ The coding agent must report:
 
 ## Deferred Work
 
-| Deferred work | Future owner |
-| --- | --- |
-| Command palette over valid local practice targets | `P3-16 home-command-palette` |
-| Goal completion, analytics, streaks, and goal UI | `P3-10` through `P3-15` |
-| Event-derived recommendation ranking | Future explicit event replay/ranking slice |
-| Recording artifact availability validation for recommendations | Future recording review or cleanup slice |
-| Cross-device/cloud continue practice | v2 |
-| Recording-specific resume from Home using `recordingId` | Future explicit take-review/resume slice |
+| Deferred work                                                  | Future owner                               |
+| -------------------------------------------------------------- | ------------------------------------------ |
+| Command palette over valid local practice targets              | `P3-16 home-command-palette`               |
+| Goal completion, analytics, streaks, and goal UI               | `P3-10` through `P3-15`                    |
+| Event-derived recommendation ranking                           | Future explicit event replay/ranking slice |
+| Recording artifact availability validation for recommendations | Future recording review or cleanup slice   |
+| Cross-device/cloud continue practice                           | v2                                         |
+| Recording-specific resume from Home using `recordingId`        | Future explicit take-review/resume slice   |
 
 ## Split Triggers
 

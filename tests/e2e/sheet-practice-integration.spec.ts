@@ -46,7 +46,11 @@ type PracticeSnapshot = {
     latestRecordingId: string | null;
   }>;
   recordings: SavedSheetRecording[];
-  errorMarkers: Array<{ recordingId: string; timestampMs: number; note: string | null }>;
+  errorMarkers: Array<{
+    recordingId: string;
+    timestampMs: number;
+    note: string | null;
+  }>;
 };
 
 type LayoutViewport = {
@@ -58,28 +62,54 @@ type LayoutViewport = {
 };
 
 const layoutViewports: LayoutViewport[] = [
-  { name: "desktop", width: 1280, height: 820, expectControlsInInitialViewport: true, minViewerHeight: 220 },
-  { name: "tablet", width: 1000, height: 768, expectControlsInInitialViewport: false, minViewerHeight: 220 },
-  { name: "mobile", width: 390, height: 844, expectControlsInInitialViewport: false, minViewerHeight: 160 }
+  {
+    name: "desktop",
+    width: 1280,
+    height: 820,
+    expectControlsInInitialViewport: true,
+    minViewerHeight: 220
+  },
+  {
+    name: "tablet",
+    width: 1000,
+    height: 768,
+    expectControlsInInitialViewport: false,
+    minViewerHeight: 220
+  },
+  {
+    name: "mobile",
+    width: 390,
+    height: 844,
+    expectControlsInInitialViewport: false,
+    minViewerHeight: 160
+  }
 ];
 
 async function clearState(page: Page) {
-  await clearSheetLibraryTestState(page, [SHEET_LIBRARY_DB_NAME, PRACTICE_SESSION_DB_NAME]);
+  await clearSheetLibraryTestState(page, [
+    SHEET_LIBRARY_DB_NAME,
+    PRACTICE_SESSION_DB_NAME
+  ]);
 }
 
 async function importIntegrationSheet(page: Page) {
   await page.goto("/sheet-library");
-  await page.getByLabel("File").setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
+  await page
+    .getByLabel("File")
+    .setInputFiles(path.join(sheetFixturesDir, "real-sheet.png"));
   await expect(page.getByText(/^Ready:/)).toBeVisible();
   await page.getByLabel("Name").fill("Integrated Practice Sheet");
   await page.getByLabel("BPM").fill("84");
   await page.getByLabel("Time signature").fill("4/4");
   await page.getByRole("button", { name: "Save Imported Sheet" }).click();
-  await expect(page.getByRole("heading", { name: "Integrated Practice Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Integrated Practice Sheet" })
+  ).toBeVisible();
 
   const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
   const href = await link.getAttribute("href");
-  const sheetId = new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
+  const sheetId =
+    new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
 
   expect(sheetId).toBeTruthy();
 
@@ -87,36 +117,62 @@ async function importIntegrationSheet(page: Page) {
 }
 
 async function getPracticeSnapshot(page: Page) {
-  return readPracticeSnapshot<PracticeSnapshot>(page, { includeErrorMarkers: true });
+  return readPracticeSnapshot<PracticeSnapshot>(page, {
+    includeErrorMarkers: true
+  });
 }
 
-async function expectSheetPriorityLayout(page: Page, viewport: LayoutViewport, phase: string) {
-  const sheetImage = page
-    .getByTestId("sheet-viewer-scroll")
-    .getByRole("img", { name: "Integrated Practice Sheet page 1", exact: true });
+async function expectSheetPriorityLayout(
+  page: Page,
+  viewport: LayoutViewport,
+  phase: string
+) {
+  const sheetImage = page.getByTestId("sheet-viewer-scroll").getByRole("img", {
+    name: "Integrated Practice Sheet page 1",
+    exact: true
+  });
 
-  await page.setViewportSize({ width: viewport.width, height: viewport.height });
+  await page.setViewportSize({
+    width: viewport.width,
+    height: viewport.height
+  });
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect(sheetImage).toBeVisible();
   await expect(page.getByTestId("sheet-viewer-scroll")).toBeVisible();
   await expect(page.getByTestId("sheet-practice-controls")).toBeVisible();
 
   const layout = await page.evaluate(() => {
-    const viewer = document.querySelector("[data-testid='sheet-viewer-scroll']")?.getBoundingClientRect();
-    const controls = document.querySelector("[data-testid='sheet-practice-controls']")?.getBoundingClientRect();
-    const sheet = document.querySelector("img[alt='Integrated Practice Sheet page 1']")?.getBoundingClientRect();
+    const viewer = document
+      .querySelector("[data-testid='sheet-viewer-scroll']")
+      ?.getBoundingClientRect();
+    const controls = document
+      .querySelector("[data-testid='sheet-practice-controls']")
+      ?.getBoundingClientRect();
+    const sheet = document
+      .querySelector("img[alt='Integrated Practice Sheet page 1']")
+      ?.getBoundingClientRect();
 
     return viewer && controls && sheet
       ? {
-          sheetVisibleHeight: Math.max(0, Math.min(sheet.bottom, window.innerHeight) - Math.max(sheet.top, 0)),
-          sheetVisibleWidth: Math.max(0, Math.min(sheet.right, window.innerWidth) - Math.max(sheet.left, 0)),
+          sheetVisibleHeight: Math.max(
+            0,
+            Math.min(sheet.bottom, window.innerHeight) - Math.max(sheet.top, 0)
+          ),
+          sheetVisibleWidth: Math.max(
+            0,
+            Math.min(sheet.right, window.innerWidth) - Math.max(sheet.left, 0)
+          ),
           viewerHeight: viewer.height,
           viewerWidth: viewer.width,
           viewerBottomDocument: viewer.bottom + window.scrollY,
           controlsTopDocument: controls.top + window.scrollY,
           controlsHeight: controls.height,
           controlsWidth: controls.width,
-          controlsVisibleHeight: Math.max(0, Math.min(controls.bottom, window.innerHeight) - Math.max(controls.top, 0)),
+          controlsVisibleHeight: Math.max(
+            0,
+            Math.min(controls.bottom, window.innerHeight) -
+              Math.max(controls.top, 0)
+          ),
           controlsTop: controls.top,
           documentHeight: document.documentElement.scrollHeight,
           viewportHeight: window.innerHeight,
@@ -126,18 +182,34 @@ async function expectSheetPriorityLayout(page: Page, viewport: LayoutViewport, p
   });
 
   expect(layout).not.toBeNull();
-  expect(layout?.viewerWidth, `${phase} ${viewport.name}: viewer has width`).toBeGreaterThan(240);
-  expect(layout?.viewerHeight, `${phase} ${viewport.name}: viewer has height`).toBeGreaterThan(
-    viewport.minViewerHeight
-  );
-  expect(layout?.sheetVisibleWidth, `${phase} ${viewport.name}: sheet image intersects viewport`).toBeGreaterThan(80);
-  expect(layout?.sheetVisibleHeight, `${phase} ${viewport.name}: sheet image intersects viewport`).toBeGreaterThan(80);
+  expect(
+    layout?.viewerWidth,
+    `${phase} ${viewport.name}: viewer has width`
+  ).toBeGreaterThan(240);
+  expect(
+    layout?.viewerHeight,
+    `${phase} ${viewport.name}: viewer has height`
+  ).toBeGreaterThan(viewport.minViewerHeight);
+  expect(
+    layout?.sheetVisibleWidth,
+    `${phase} ${viewport.name}: sheet image intersects viewport`
+  ).toBeGreaterThan(80);
+  expect(
+    layout?.sheetVisibleHeight,
+    `${phase} ${viewport.name}: sheet image intersects viewport`
+  ).toBeGreaterThan(80);
   expect(
     layout?.controlsTopDocument,
     `${phase} ${viewport.name}: controls are laid out after the sheet viewer without overlaying it`
   ).toBeGreaterThanOrEqual((layout?.viewerBottomDocument ?? 0) - 1);
-  expect(layout?.controlsWidth, `${phase} ${viewport.name}: controls have width`).toBeGreaterThan(240);
-  expect(layout?.controlsHeight, `${phase} ${viewport.name}: controls have height`).toBeGreaterThan(120);
+  expect(
+    layout?.controlsWidth,
+    `${phase} ${viewport.name}: controls have width`
+  ).toBeGreaterThan(240);
+  expect(
+    layout?.controlsHeight,
+    `${phase} ${viewport.name}: controls have height`
+  ).toBeGreaterThan(120);
 
   if (viewport.expectControlsInInitialViewport) {
     expect(
@@ -156,7 +228,11 @@ async function expectSheetPriorityLayout(page: Page, viewport: LayoutViewport, p
   }
 }
 
-async function expectControlsOperableAfterLayoutEvidence(page: Page, phase: string, viewport: LayoutViewport) {
+async function expectControlsOperableAfterLayoutEvidence(
+  page: Page,
+  phase: string,
+  viewport: LayoutViewport
+) {
   await page.getByTestId("sheet-practice-controls").scrollIntoViewIfNeeded();
   await expect(
     page.getByRole("button", { name: "Start metronome" }),
@@ -168,7 +244,10 @@ async function expectControlsOperableAfterLayoutEvidence(page: Page, phase: stri
   ).toBeVisible();
 }
 
-async function expectIntegratedLayoutAcrossViewports(page: Page, phase: string) {
+async function expectIntegratedLayoutAcrossViewports(
+  page: Page,
+  phase: string
+) {
   for (const viewport of layoutViewports) {
     await expectSheetPriorityLayout(page, viewport, phase);
     await expectControlsOperableAfterLayoutEvidence(page, phase, viewport);
@@ -204,10 +283,14 @@ test("sheet practice parent integration opens from library and preserves sheet, 
     e2eWindow.__sheetRecordingPlaybackEvents = [];
     e2eWindow.__sheetMarkerSeekEvents = [];
     window.addEventListener("quick-metronome:scheduled-tick", (event) => {
-      e2eWindow.__sheetMetronomeTraces?.push((event as CustomEvent<MetronomeTrace>).detail);
+      e2eWindow.__sheetMetronomeTraces?.push(
+        (event as CustomEvent<MetronomeTrace>).detail
+      );
     });
     window.addEventListener("recordings-review:playback", (event) => {
-      e2eWindow.__sheetRecordingPlaybackEvents?.push((event as CustomEvent).detail);
+      e2eWindow.__sheetRecordingPlaybackEvents?.push(
+        (event as CustomEvent).detail
+      );
     });
     window.addEventListener("recordings-review:seek", (event) => {
       e2eWindow.__sheetMarkerSeekEvents?.push((event as CustomEvent).detail);
@@ -220,34 +303,54 @@ test("sheet practice parent integration opens from library and preserves sheet, 
 
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
-  await expect(page.getByRole("heading", { name: "Integrated Practice Sheet" })).toBeVisible();
-  await expect(page.getByRole("spinbutton", { name: /^BPM$/ })).toHaveValue("84");
-  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue("4/4");
+  await expect(
+    page.getByRole("heading", { name: "Integrated Practice Sheet" })
+  ).toBeVisible();
+  await expect(page.getByRole("spinbutton", { name: /^BPM$/ })).toHaveValue(
+    "84"
+  );
+  await expect(page.getByLabel("Time signature", { exact: true })).toHaveValue(
+    "4/4"
+  );
   await expectIntegratedLayoutAcrossViewports(page, "initial open");
   await expect(page.getByTestId("sheet-session-id")).toHaveText("none");
   expect(await getPracticeSnapshot(page)).toMatchObject({ sessions: [] });
 
   await page.getByRole("button", { name: "Start metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Playing");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Playing"
+  );
   await expect(page.getByTestId("sheet-session-source")).toContainText("sheet");
-  await expect(page.getByTestId("sheet-session-sheet-id")).toContainText(sheetId);
+  await expect(page.getByTestId("sheet-session-sheet-id")).toContainText(
+    sheetId
+  );
   await page.waitForFunction(() => {
-    const e2eWindow = window as Window & { __sheetMetronomeTraces?: MetronomeTrace[] };
+    const e2eWindow = window as Window & {
+      __sheetMetronomeTraces?: MetronomeTrace[];
+    };
 
-    return (e2eWindow.__sheetMetronomeTraces ?? []).filter(
-      (trace) => trace.bpm === 84 && trace.subdivision === "quarter"
-    ).length >= 3;
+    return (
+      (e2eWindow.__sheetMetronomeTraces ?? []).filter(
+        (trace) => trace.bpm === 84 && trace.subdivision === "quarter"
+      ).length >= 3
+    );
   });
   await page.getByRole("button", { name: "Stop metronome" }).click();
-  await expect(page.getByTestId("sheet-metronome-state")).toContainText("Stopped");
+  await expect(page.getByTestId("sheet-metronome-state")).toContainText(
+    "Stopped"
+  );
 
   await page.getByRole("button", { name: "Start recording" }).click();
-  await expect(page.getByTestId("sheet-recording-state")).toContainText("active");
+  await expect(page.getByTestId("sheet-recording-state")).toContainText(
+    "active"
+  );
   await page.waitForTimeout(850);
   await page.getByRole("button", { name: "Stop recording" }).click();
   await expect(page.getByText("Recording saved.")).toBeVisible();
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
-  await expect(page.getByTestId("sheet-waveform-source")).toContainText("trusted peaks");
+  await expect(page.getByTestId("sheet-waveform-source")).toContainText(
+    "trusted peaks"
+  );
 
   let snapshot = await getPracticeSnapshot(page);
   const sheetRecordings = snapshot.recordings.filter(
@@ -268,7 +371,10 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   });
   expect(sheetRecordings[0]?.trustedPeaks.length).toBeGreaterThan(12);
 
-  const decodedRecording = await decodeRecordingHistoryAudio(page, sheetRecordings[0]?.id ?? "");
+  const decodedRecording = await decodeRecordingHistoryAudio(
+    page,
+    sheetRecordings[0]?.id ?? ""
+  );
 
   expect(decodedRecording.decodedDurationMs).toBeGreaterThan(600);
   expect(decodedRecording.rmsAmplitude).toBeGreaterThan(0.01);
@@ -276,7 +382,9 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   expect(decodedRecording.estimatedFrequencyHz ?? 0).toBeGreaterThan(390);
   expect(decodedRecording.estimatedFrequencyHz ?? 0).toBeLessThan(490);
 
-  await page.getByRole("button", { name: "Play latest sheet recording" }).click();
+  await page
+    .getByRole("button", { name: "Play latest sheet recording" })
+    .click();
   await page.waitForFunction((recordingId) => {
     const e2eWindow = window as Window & {
       __sheetRecordingPlaybackEvents?: { recordingId: string; state: string }[];
@@ -286,34 +394,50 @@ test("sheet practice parent integration opens from library and preserves sheet, 
       (event) => event.recordingId === recordingId && event.state === "playing"
     );
   }, sheetRecordings[0]?.id);
-  await page.getByRole("button", { name: "Pause latest sheet recording" }).click();
+  await page
+    .getByRole("button", { name: "Pause latest sheet recording" })
+    .click();
 
   await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("");
   await page.getByRole("button", { name: "Mark Error" }).click();
   await expect(page.getByTestId("sheet-error-marker-error")).toContainText(
     "Choose a valid recording timestamp."
   );
-  await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("-1");
+  await page
+    .getByRole("spinbutton", { name: "Marker time seconds" })
+    .fill("-1");
   await page.getByRole("button", { name: "Mark Error" }).click();
   await expect(page.getByTestId("sheet-error-marker-error")).toContainText(
     "Marker time must be within the recording."
   );
-  await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("99");
+  await page
+    .getByRole("spinbutton", { name: "Marker time seconds" })
+    .fill("99");
   await page.getByRole("button", { name: "Mark Error" }).click();
   await expect(page.getByTestId("sheet-error-marker-error")).toContainText(
     "Marker time must be within the recording."
   );
   expect((await getPracticeSnapshot(page)).errorMarkers).toEqual([]);
 
-  await page.getByRole("spinbutton", { name: "Marker time seconds" }).fill("0.4");
-  await page.getByRole("textbox", { name: "Marker note" }).fill("  Integrated marker  ");
+  await page
+    .getByRole("spinbutton", { name: "Marker time seconds" })
+    .fill("0.4");
+  await page
+    .getByRole("textbox", { name: "Marker note" })
+    .fill("  Integrated marker  ");
   await page.getByRole("button", { name: "Mark Error" }).click();
-  await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Integrated marker");
+  await expect(page.getByTestId("sheet-error-marker-list")).toContainText(
+    "Integrated marker"
+  );
   await expectIntegratedLayoutAcrossViewports(page, "recording and marker UI");
   await page.getByRole("button", { name: /Seek to marker 0:00/ }).click();
   await page.waitForFunction((recordingId) => {
     const e2eWindow = window as Window & {
-      __sheetMarkerSeekEvents?: { recordingId: string; timestampMs: number; currentTimeMs: number }[];
+      __sheetMarkerSeekEvents?: {
+        recordingId: string;
+        timestampMs: number;
+        currentTimeMs: number;
+      }[];
     };
 
     return e2eWindow.__sheetMarkerSeekEvents?.some(
@@ -326,10 +450,14 @@ test("sheet practice parent integration opens from library and preserves sheet, 
 
   await page.reload();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
-  await expect(page.getByRole("heading", { name: "Integrated Practice Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Integrated Practice Sheet" })
+  ).toBeVisible();
   await expectIntegratedLayoutAcrossViewports(page, "reload");
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
-  await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Integrated marker");
+  await expect(page.getByTestId("sheet-error-marker-list")).toContainText(
+    "Integrated marker"
+  );
 
   snapshot = await getPracticeSnapshot(page);
   expect(snapshot.errorMarkers).toEqual([
@@ -346,15 +474,26 @@ test("sheet practice parent integration opens from library and preserves sheet, 
   });
 
   await expect(continuePractice).toBeVisible();
-  await expect(continuePractice).toHaveAttribute("href", `/sheet-practice/${sheetId}`);
+  await expect(continuePractice).toHaveAttribute(
+    "href",
+    `/sheet-practice/${sheetId}`
+  );
   await continuePractice.click();
   await expect(page).toHaveURL(new RegExp(`/sheet-practice/${sheetId}$`));
-  await expect(page.getByRole("heading", { name: "Integrated Practice Sheet" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Integrated Practice Sheet" })
+  ).toBeVisible();
   await expect(page.getByTestId("sheet-latest-recording")).toBeVisible();
-  await expect(page.getByTestId("sheet-error-marker-list")).toContainText("Integrated marker");
+  await expect(page.getByTestId("sheet-error-marker-list")).toContainText(
+    "Integrated marker"
+  );
   await expectIntegratedLayoutAcrossViewports(page, "continue practice return");
 
   await expect(page.getByTestId("reference-panel")).toBeVisible();
-  await expect(page.getByText(/automatic|analysis|bar detection|current bar|mistake detection/i)).toHaveCount(0);
+  await expect(
+    page.getByText(
+      /automatic|analysis|bar detection|current bar|mistake detection/i
+    )
+  ).toHaveCount(0);
   expect(consoleErrors).toEqual([]);
 });

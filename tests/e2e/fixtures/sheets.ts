@@ -3,7 +3,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const sheetFixturesDir = path.resolve(currentDir, "../../../test-fixtures/sheets");
+const sheetFixturesDir = path.resolve(
+  currentDir,
+  "../../../test-fixtures/sheets"
+);
 
 export type ImportedTestSheet = {
   sheetId: string;
@@ -25,7 +28,9 @@ export async function importTestSheet(
   }
 ): Promise<ImportedTestSheet> {
   await page.goto("/sheet-library");
-  await page.getByLabel("File").setInputFiles(path.join(sheetFixturesDir, fixture));
+  await page
+    .getByLabel("File")
+    .setInputFiles(path.join(sheetFixturesDir, fixture));
   await expect(page.getByText(/^Ready:/)).toBeVisible();
   await page.getByLabel("Name").fill(name);
   await page.getByLabel("BPM").fill(String(bpm));
@@ -35,7 +40,8 @@ export async function importTestSheet(
 
   const link = page.getByRole("link", { name: "Open Sheet Practice" }).first();
   const href = await link.getAttribute("href");
-  const sheetId = new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
+  const sheetId =
+    new URL(href ?? "", "http://127.0.0.1").pathname.split("/").pop() ?? "";
 
   expect(sheetId).toBeTruthy();
 

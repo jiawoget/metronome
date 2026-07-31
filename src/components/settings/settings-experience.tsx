@@ -1,6 +1,14 @@
 "use client";
 
-import { AlertTriangle, Database, Mic, RotateCcw, Save, Settings2, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Database,
+  Mic,
+  RotateCcw,
+  Save,
+  Settings2,
+  Trash2
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -104,11 +112,16 @@ export function SettingsExperience({
   permissionService = browserMicrophonePermissionService
 }: SettingsExperienceProps) {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_USER_SETTINGS);
-  const [bpmDraft, setBpmDraft] = useState(String(DEFAULT_USER_SETTINGS.defaultBpm));
+  const [bpmDraft, setBpmDraft] = useState(
+    String(DEFAULT_USER_SETTINGS.defaultBpm)
+  );
   const [summary, setSummary] = useState<LocalDataSummary>(emptySummary);
-  const [permissionStatus, setPermissionStatus] = useState<MicrophonePermissionStatus>("unknown");
+  const [permissionStatus, setPermissionStatus] =
+    useState<MicrophonePermissionStatus>("unknown");
   const [loadState, setLoadState] = useState<LoadState>("loading");
-  const [saveMessage, setSaveMessage] = useState("Settings are loaded from local app storage.");
+  const [saveMessage, setSaveMessage] = useState(
+    "Settings are loaded from local app storage."
+  );
   const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
   const [cleanupError, setCleanupError] = useState<string | null>(null);
   const [isConfirmingCleanup, setIsConfirmingCleanup] = useState(false);
@@ -125,11 +138,12 @@ export function SettingsExperience({
 
     async function load() {
       try {
-        const [nextSettings, nextSummary, nextPermissionStatus] = await Promise.all([
-          settingsService.getSettings(),
-          storageSummaryService.getSummary(),
-          permissionService.getMicrophonePermissionStatus()
-        ]);
+        const [nextSettings, nextSummary, nextPermissionStatus] =
+          await Promise.all([
+            settingsService.getSettings(),
+            storageSummaryService.getSummary(),
+            permissionService.getMicrophonePermissionStatus()
+          ]);
 
         if (!isActive) {
           return;
@@ -192,10 +206,14 @@ export function SettingsExperience({
       setSettings(nextSettings);
       setBpmDraft(String(nextSettings.defaultBpm));
       setIsConfirmingCleanup(false);
-      setCleanupMessage("All local data was cleared and settings returned to defaults.");
+      setCleanupMessage(
+        "All local data was cleared and settings returned to defaults."
+      );
       await refreshSummary();
     } catch {
-      setCleanupError("Local data cleanup failed. No completion was recorded; try again before assuming data is cleared.");
+      setCleanupError(
+        "Local data cleanup failed. No completion was recorded; try again before assuming data is cleared."
+      );
     } finally {
       setIsCleaning(false);
     }
@@ -209,7 +227,10 @@ export function SettingsExperience({
             <CardTitle>Settings</CardTitle>
           </CardHeader>
           <CardContent>
-            <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+            <p
+              role="alert"
+              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900"
+            >
               Settings could not load from local app storage.
             </p>
           </CardContent>
@@ -219,18 +240,25 @@ export function SettingsExperience({
   }
 
   return (
-    <section aria-labelledby="settings-title" className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+    <section
+      aria-labelledby="settings-title"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-5"
+    >
       <header className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 shadow-soft md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
             Settings
           </p>
-          <h1 id="settings-title" className="text-2xl font-semibold tracking-normal sm:text-3xl">
+          <h1
+            id="settings-title"
+            className="text-2xl font-semibold tracking-normal sm:text-3xl"
+          >
             Settings
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
-            Defaults and practice data stay in this browser. v0 does not include account controls, cloud sync,
-            themes, import/export, or selective cleanup.
+            Defaults and practice data stay in this browser. v0 does not include
+            account controls, cloud sync, themes, import/export, or selective
+            cleanup.
           </p>
         </div>
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -268,7 +296,12 @@ export function SettingsExperience({
                   <select
                     data-testid="settings-time-signature"
                     value={settings.defaultTimeSignature}
-                    onChange={(event) => void persistSettings({ defaultTimeSignature: event.target.value as UserSettings["defaultTimeSignature"] })}
+                    onChange={(event) =>
+                      void persistSettings({
+                        defaultTimeSignature: event.target
+                          .value as UserSettings["defaultTimeSignature"]
+                      })
+                    }
                     className="h-10 rounded-md border border-border bg-background px-3 text-sm"
                   >
                     {SETTINGS_TIME_SIGNATURES.map((timeSignature) => (
@@ -284,7 +317,12 @@ export function SettingsExperience({
                   <select
                     data-testid="settings-subdivision"
                     value={settings.defaultSubdivision}
-                    onChange={(event) => void persistSettings({ defaultSubdivision: event.target.value as UserSettings["defaultSubdivision"] })}
+                    onChange={(event) =>
+                      void persistSettings({
+                        defaultSubdivision: event.target
+                          .value as UserSettings["defaultSubdivision"]
+                      })
+                    }
                     className="h-10 rounded-md border border-border bg-background px-3 text-sm"
                   >
                     {SETTINGS_SUBDIVISIONS.map((subdivision) => (
@@ -299,7 +337,9 @@ export function SettingsExperience({
               <label className="grid gap-2 text-sm font-medium">
                 <span className="flex items-center justify-between gap-3">
                   <span>Metronome volume</span>
-                  <span data-testid="settings-metronome-volume">{settings.metronomeVolume}</span>
+                  <span data-testid="settings-metronome-volume">
+                    {settings.metronomeVolume}
+                  </span>
                 </span>
                 <input
                   aria-label="Metronome volume"
@@ -308,7 +348,11 @@ export function SettingsExperience({
                   max="100"
                   step="1"
                   value={settings.metronomeVolume}
-                  onChange={(event) => void persistSettings({ metronomeVolume: Number(event.target.value) })}
+                  onChange={(event) =>
+                    void persistSettings({
+                      metronomeVolume: Number(event.target.value)
+                    })
+                  }
                   className="w-full accent-primary"
                 />
               </label>
@@ -316,7 +360,9 @@ export function SettingsExperience({
               <label className="grid gap-2 text-sm font-medium">
                 <span className="flex items-center justify-between gap-3">
                   <span>Reference default volume</span>
-                  <span data-testid="settings-reference-volume">{settings.referenceDefaultVolume}</span>
+                  <span data-testid="settings-reference-volume">
+                    {settings.referenceDefaultVolume}
+                  </span>
                 </span>
                 <input
                   aria-label="Reference default volume"
@@ -325,17 +371,30 @@ export function SettingsExperience({
                   max="100"
                   step="1"
                   value={settings.referenceDefaultVolume}
-                  onChange={(event) => void persistSettings({ referenceDefaultVolume: Number(event.target.value) })}
+                  onChange={(event) =>
+                    void persistSettings({
+                      referenceDefaultVolume: Number(event.target.value)
+                    })
+                  }
                   className="w-full accent-primary"
                 />
               </label>
 
               <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <p role="status" className="flex min-h-10 items-center gap-2 text-sm text-muted-foreground">
+                <p
+                  role="status"
+                  className="flex min-h-10 items-center gap-2 text-sm text-muted-foreground"
+                >
                   <Save className="h-4 w-4" aria-hidden="true" />
-                  {loadState === "loading" ? "Loading settings..." : saveMessage}
+                  {loadState === "loading"
+                    ? "Loading settings..."
+                    : saveMessage}
                 </p>
-                <Button type="button" variant="secondary" onClick={() => void resetSettings()}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void resetSettings()}
+                >
                   <RotateCcw className="h-4 w-4" aria-hidden="true" />
                   Reset defaults
                 </Button>
@@ -352,7 +411,10 @@ export function SettingsExperience({
             <CardContent>
               <div
                 data-testid="settings-microphone-status"
-                className={cn("flex items-start gap-3 rounded-md border px-3 py-3 text-sm", getPermissionTone(permissionStatus))}
+                className={cn(
+                  "flex items-start gap-3 rounded-md border px-3 py-3 text-sm",
+                  getPermissionTone(permissionStatus)
+                )}
               >
                 <Mic className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>{permissionLabels[permissionStatus]}</span>
@@ -365,8 +427,14 @@ export function SettingsExperience({
               <CardTitle>Storage Estimate</CardTitle>
             </CardHeader>
             <CardContent>
-              <p data-testid="settings-storage-estimate" className="flex items-start gap-3 rounded-md border border-border bg-muted px-3 py-3 text-sm text-muted-foreground">
-                <Database className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <p
+                data-testid="settings-storage-estimate"
+                className="flex items-start gap-3 rounded-md border border-border bg-muted px-3 py-3 text-sm text-muted-foreground"
+              >
+                <Database
+                  className="mt-0.5 h-4 w-4 shrink-0"
+                  aria-hidden="true"
+                />
                 {getStorageEstimateLabel(summary)}
               </p>
             </CardContent>
@@ -381,22 +449,47 @@ export function SettingsExperience({
         <CardContent>
           <div className="grid gap-5">
             <p className="max-w-4xl text-sm leading-6 text-muted-foreground">
-              Imported sheets, recordings, references, markers, sessions, history, and settings are stored locally
-              in this browser. Clearing local data removes saved practice data from this device and restores default
-              practice settings.
+              Imported sheets, recordings, references, markers, sessions,
+              history, and settings are stored locally in this browser. Clearing
+              local data removes saved practice data from this device and
+              restores default practice settings.
             </p>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <CountTile label="Sheets" value={summary.counts.sheets} testId="settings-count-sheets" />
-              <CountTile label="Recordings" value={summary.counts.recordings} testId="settings-count-recordings" />
-              <CountTile label="References" value={summary.counts.references} testId="settings-count-references" />
-              <CountTile label="Error markers" value={summary.counts.errorMarkers} testId="settings-count-markers" />
-              <CountTile label="Sessions" value={summary.counts.practiceSessions} testId="settings-count-sessions" />
+              <CountTile
+                label="Sheets"
+                value={summary.counts.sheets}
+                testId="settings-count-sheets"
+              />
+              <CountTile
+                label="Recordings"
+                value={summary.counts.recordings}
+                testId="settings-count-recordings"
+              />
+              <CountTile
+                label="References"
+                value={summary.counts.references}
+                testId="settings-count-references"
+              />
+              <CountTile
+                label="Error markers"
+                value={summary.counts.errorMarkers}
+                testId="settings-count-markers"
+              />
+              <CountTile
+                label="Sessions"
+                value={summary.counts.practiceSessions}
+                testId="settings-count-sessions"
+              />
             </div>
 
             <div className="rounded-md border border-border bg-muted px-3 py-3">
-              <p className="text-sm font-medium">Clear All Local Data removes:</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{cleanupPlan.join(", ")}.</p>
+              <p className="text-sm font-medium">
+                Clear All Local Data removes:
+              </p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {cleanupPlan.join(", ")}.
+              </p>
             </div>
 
             {cleanupError ? (
@@ -405,13 +498,19 @@ export function SettingsExperience({
                 data-testid="settings-cleanup-error"
                 className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900"
               >
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <AlertTriangle
+                  className="mt-0.5 h-4 w-4 shrink-0"
+                  aria-hidden="true"
+                />
                 {cleanupError}
               </p>
             ) : null}
 
             {cleanupMessage ? (
-              <p role="status" className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+              <p
+                role="status"
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground"
+              >
                 {cleanupMessage}
               </p>
             ) : null}
@@ -420,13 +519,23 @@ export function SettingsExperience({
               <div className="grid gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-950">
                 <p className="font-semibold">Confirm local data cleanup</p>
                 <p className="leading-6">
-                  This clears every v0 local data type and resets practice defaults. This action cannot be undone.
+                  This clears every v0 local data type and resets practice
+                  defaults. This action cannot be undone.
                 </p>
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                  <Button type="button" variant="secondary" onClick={cancelCleanup} disabled={isCleaning}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={cancelCleanup}
+                    disabled={isCleaning}
+                  >
                     Cancel
                   </Button>
-                  <Button type="button" onClick={() => void confirmCleanup()} disabled={isCleaning}>
+                  <Button
+                    type="button"
+                    onClick={() => void confirmCleanup()}
+                    disabled={isCleaning}
+                  >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                     {isCleaning ? "Clearing..." : "Confirm clear local data"}
                   </Button>
@@ -434,7 +543,10 @@ export function SettingsExperience({
               </div>
             ) : (
               <div className="flex justify-end">
-                <Button type="button" onClick={() => setIsConfirmingCleanup(true)}>
+                <Button
+                  type="button"
+                  onClick={() => setIsConfirmingCleanup(true)}
+                >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                   Clear All Local Data
                 </Button>
@@ -447,14 +559,24 @@ export function SettingsExperience({
   );
 }
 
-function CountTile({ label, value, testId }: { label: string; value: number; testId: string }) {
+function CountTile({
+  label,
+  value,
+  testId
+}: {
+  label: string;
+  value: number;
+  testId: string;
+}) {
   return (
     <div className="min-h-24 rounded-md border border-border bg-background p-4">
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p data-testid={testId} className="mt-3 text-2xl font-semibold tracking-normal">
+      <p
+        data-testid={testId}
+        className="mt-3 text-2xl font-semibold tracking-normal"
+      >
         {value}
       </p>
     </div>
   );
 }
-

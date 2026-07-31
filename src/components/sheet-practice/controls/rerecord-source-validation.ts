@@ -88,7 +88,10 @@ function areSegmentContextsEqual(
       left.measureGridSnapshot.timeSignature,
       right.measureGridSnapshot.timeSignature
     ],
-    [left.measureGridSnapshot.pickupBeats, right.measureGridSnapshot.pickupBeats],
+    [
+      left.measureGridSnapshot.pickupBeats,
+      right.measureGridSnapshot.pickupBeats
+    ],
     [
       left.measureGridSnapshot.measureOneOffsetMs,
       right.measureGridSnapshot.measureOneOffsetMs
@@ -97,7 +100,9 @@ function areSegmentContextsEqual(
     [left.measureRangeMs.endMs, right.measureRangeMs.endMs]
   ];
 
-  return fieldPairs.every(([leftValue, rightValue]) => leftValue === rightValue);
+  return fieldPairs.every(
+    ([leftValue, rightValue]) => leftValue === rightValue
+  );
 }
 
 function inspectSheetRecording({
@@ -152,7 +157,9 @@ export function inspectPracticeAgainSource({
     return { kind: "missing-context", reason: "no-segment-context" };
   }
 
-  if (!isReturnSegmentSelectionValid(returnSegmentId, sourceContext.segmentId)) {
+  if (
+    !isReturnSegmentSelectionValid(returnSegmentId, sourceContext.segmentId)
+  ) {
     return { kind: "invalid", reason: "selection-changed" };
   }
 
@@ -234,7 +241,9 @@ export function selectReadyRerecordSource({
     return { kind: "invalid", reason: "selection-changed" };
   }
 
-  if (workflowState.activeSegmentId !== selection.value.segmentContext.segmentId) {
+  if (
+    workflowState.activeSegmentId !== selection.value.segmentContext.segmentId
+  ) {
     return { kind: "invalid", reason: "selection-changed" };
   }
 

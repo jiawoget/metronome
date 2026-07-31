@@ -8,9 +8,14 @@ import type {
   PracticeSession,
   SheetRecordingMetadata
 } from "@/domain/practice";
-import { createPracticeGoalService, type PracticeGoalRepository } from "@/services/practice-goals";
+import {
+  createPracticeGoalService,
+  type PracticeGoalRepository
+} from "@/services/practice-goals";
 
-function createGoal(overrides: Partial<LocalPracticeGoal> = {}): LocalPracticeGoal {
+function createGoal(
+  overrides: Partial<LocalPracticeGoal> = {}
+): LocalPracticeGoal {
   return {
     id: "goal-alpha",
     kind: "minutes",
@@ -21,7 +26,9 @@ function createGoal(overrides: Partial<LocalPracticeGoal> = {}): LocalPracticeGo
   };
 }
 
-function createSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
+function createSession(
+  overrides: Partial<PracticeSession> = {}
+): PracticeSession {
   return {
     id: "session-alpha",
     sourceType: "quick",
@@ -75,7 +82,9 @@ function createMemoryGoalRepository(
   saveGoal: ReturnType<typeof vi.fn<PracticeGoalRepository["saveGoal"]>>;
   deleteGoal: ReturnType<typeof vi.fn<PracticeGoalRepository["deleteGoal"]>>;
 } {
-  const goals = new Map(initialGoals.map((goal) => [goal.id, structuredClone(goal)]));
+  const goals = new Map(
+    initialGoals.map((goal) => [goal.id, structuredClone(goal)])
+  );
   const listGoals = vi.fn<PracticeGoalRepository["listGoals"]>(async () =>
     Array.from(goals.values()).map((goal) => structuredClone(goal))
   );
@@ -85,9 +94,11 @@ function createMemoryGoalRepository(
   const saveGoal = vi.fn<PracticeGoalRepository["saveGoal"]>(async (goal) => {
     goals.set(goal.id.trim(), structuredClone(goal));
   });
-  const deleteGoal = vi.fn<PracticeGoalRepository["deleteGoal"]>(async (goalId) => {
-    goals.delete(goalId.trim());
-  });
+  const deleteGoal = vi.fn<PracticeGoalRepository["deleteGoal"]>(
+    async (goalId) => {
+      goals.delete(goalId.trim());
+    }
+  );
 
   return {
     listGoals,
@@ -123,9 +134,13 @@ describe("practice goal service", () => {
     });
 
     await expect(service.listPracticeGoals()).resolves.toEqual([createGoal()]);
-    await expect(service.getPracticeGoal("goal-alpha")).resolves.toEqual(createGoal());
+    await expect(service.getPracticeGoal("goal-alpha")).resolves.toEqual(
+      createGoal()
+    );
     await expect(service.savePracticeGoal(nextGoal)).resolves.toBeUndefined();
-    await expect(service.deletePracticeGoal("goal-alpha")).resolves.toBeUndefined();
+    await expect(
+      service.deletePracticeGoal("goal-alpha")
+    ).resolves.toBeUndefined();
 
     expect(repository.listGoals).toHaveBeenCalledTimes(1);
     expect(repository.getGoal).toHaveBeenCalledWith("goal-alpha");
@@ -380,7 +395,10 @@ describe("practice goal service", () => {
 
   it("wires the browser goal service to the plain persisted session repository", () => {
     const browserGoalServiceSource = readFileSync(
-      resolve(process.cwd(), "src/infrastructure/db/browser-practice-goal-service.ts"),
+      resolve(
+        process.cwd(),
+        "src/infrastructure/db/browser-practice-goal-service.ts"
+      ),
       "utf8"
     );
 
@@ -391,7 +409,7 @@ describe("practice goal service", () => {
       "createGlobalPracticeSessionRepository(practiceSessionRepository)"
     );
     expect(browserGoalServiceSource).not.toContain(
-      "from \"@/infrastructure/db/global-practice-session-repository\""
+      'from "@/infrastructure/db/global-practice-session-repository"'
     );
   });
 });

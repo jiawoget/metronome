@@ -1,12 +1,7 @@
 export type ToneScheduledCallback = (time: number) => void;
 
 export type ToneMetronomeLoopInterval =
-  | "4n"
-  | "8n"
-  | "8t"
-  | "16n"
-  | "16t"
-  | "32n";
+  "4n" | "8n" | "8t" | "16n" | "16t" | "32n";
 
 export type ToneMetronomeLoopHandle = {
   start: (time?: string | number) => ToneMetronomeLoopHandle;
@@ -168,14 +163,20 @@ export async function createToneMetronomeAdapter(): Promise<ToneMetronomeAdapter
       transport.bpm.value = bpm;
     },
     createLoop: (callback, interval) => {
-      const loop = new Tone.Loop(callback, interval).start(TRANSPORT_TIMELINE_START);
+      const loop = new Tone.Loop(callback, interval).start(
+        TRANSPORT_TIMELINE_START
+      );
 
       return createTrackedLoopHandle(loop, activeLoops);
     },
     scheduleOnce: (callback, time) => {
       const eventId = transport.scheduleOnce(callback, time);
 
-      return createTrackedScheduledEventHandle(transport, eventId, activeEvents);
+      return createTrackedScheduledEventHandle(
+        transport,
+        eventId,
+        activeEvents
+      );
     },
     draw: (callback, time) => {
       Tone.getDraw().schedule(callback, time);

@@ -38,21 +38,21 @@ PLAN_READY
 
 ## Inputs Read
 
-| File or source | Why read |
-|---|---|
-| User instruction and active R01 goal | Continue R01, keep decisions with the user, and repair the blocking gate without changing R01 scope |
-| Independent Terra diagnosis of the R01 preflight failure | Confirm the staged-file blind spot and reject unrelated R01 scope expansion |
-| `scripts/run-metronome-semgrep-changed.mjs` | Locate committed-only candidate discovery and the non-baseline Semgrep invocation |
-| `.git/hooks/pre-commit` | Prove the runner executes before the staged production snapshot becomes `HEAD` |
-| `scripts/run-xo-changed.mjs` | Reuse the repository's committed-plus-staged union and unstaged-drift pattern |
-| `scripts/validate-metronome-gates.mjs` | Reuse the existing executable gate-package selftest entrypoint |
-| `.github/workflows/metronome-debt-gates.yml` | Verify the same runner is already used in PR CI and needs no workflow change |
-| `.semgrep/metronome-ui-ownership.yml` | Confirm the seven R01 blockers are active rules and must remain active |
-| `docs/v1/implementation-slices/rules/diagnostics-test-boundary.md` | Confirm some legacy harness surfaces are separately registered and not G-01 implementation scope |
-| `docs/architecture/debt-gate-map.md` | Preserve gate-control evidence and preflight ordering |
-| `package.json` | Reuse `lint:debt:changed` and `validate:debt-gates`; add no script or dependency |
-| Official Semgrep diff-aware CI documentation | Verify baseline scanning is the supported current model |
-| Elevated temporary probe `C:\tmp\semgrep-baseline-probe.mjs` | Prove `semgrep scan --baseline-commit HEAD` sees staged content, suppresses one unchanged legacy match, and blocks one newly staged match |
+| File or source                                                     | Why read                                                                                                                                  |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| User instruction and active R01 goal                               | Continue R01, keep decisions with the user, and repair the blocking gate without changing R01 scope                                       |
+| Independent Terra diagnosis of the R01 preflight failure           | Confirm the staged-file blind spot and reject unrelated R01 scope expansion                                                               |
+| `scripts/run-metronome-semgrep-changed.mjs`                        | Locate committed-only candidate discovery and the non-baseline Semgrep invocation                                                         |
+| `.git/hooks/pre-commit`                                            | Prove the runner executes before the staged production snapshot becomes `HEAD`                                                            |
+| `scripts/run-xo-changed.mjs`                                       | Reuse the repository's committed-plus-staged union and unstaged-drift pattern                                                             |
+| `scripts/validate-metronome-gates.mjs`                             | Reuse the existing executable gate-package selftest entrypoint                                                                            |
+| `.github/workflows/metronome-debt-gates.yml`                       | Verify the same runner is already used in PR CI and needs no workflow change                                                              |
+| `.semgrep/metronome-ui-ownership.yml`                              | Confirm the seven R01 blockers are active rules and must remain active                                                                    |
+| `docs/v1/implementation-slices/rules/diagnostics-test-boundary.md` | Confirm some legacy harness surfaces are separately registered and not G-01 implementation scope                                          |
+| `docs/architecture/debt-gate-map.md`                               | Preserve gate-control evidence and preflight ordering                                                                                     |
+| `package.json`                                                     | Reuse `lint:debt:changed` and `validate:debt-gates`; add no script or dependency                                                          |
+| Official Semgrep diff-aware CI documentation                       | Verify baseline scanning is the supported current model                                                                                   |
+| Elevated temporary probe `C:\tmp\semgrep-baseline-probe.mjs`       | Prove `semgrep scan --baseline-commit HEAD` sees staged content, suppresses one unchanged legacy match, and blocks one newly staged match |
 
 ## Root Cause And Verified Interface
 
@@ -60,56 +60,56 @@ The old runner computes only `git diff <merge-base> HEAD`. During the original R
 
 The elevated probe established the exact supported replacement behavior on this machine:
 
-| Scenario | Command contract | Result |
-|---|---|---|
+| Scenario                                                                    | Command contract                                                                 | Result                                                                                         |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | One legacy `dangerousCall()` remains unchanged while another line is staged | `semgrep scan --config .semgrep --error --baseline-commit <HEAD> src/example.ts` | Exit `0`; current version reports one raw match, final diff-aware summary reports `0 findings` |
-| A second `dangerousCall()` is staged | Same command | Exit `1`; final diff-aware summary reports `1 finding (1 blocking)` at the new line |
+| A second `dangerousCall()` is staged                                        | Same command                                                                     | Exit `1`; final diff-aware summary reports `1 finding (1 blocking)` at the new line            |
 
 No custom fingerprinting, JSON comparison, rule exception, or compatibility path is needed.
 
 ## Repo Map Evidence
 
-| Search | Command or source | Files found | Decision |
-|---|---|---|---|
-| Semgrep runner call sites | `rg -n "run-metronome-semgrep-changed|lint:debt:changed" scripts .github docs package.json` | package script, validator, workflow, PR template, debt-gate map | Keep one runner; no duplicate workflow or command |
-| Existing changed-input implementation | Read `scripts/run-xo-changed.mjs` | committed files, staged files, unstaged drift set | Reuse its Git snapshot pattern, not its XO-specific control-file behavior |
-| Existing executable selftests | `rg -n "selftest" scripts package.json` | PR debt-contract selftest and validator entrypoint | Add one Semgrep runner selftest and invoke it from the same validator |
-| Baseline support | Elevated temporary Git/Semgrep probe | current Semgrep CLI | Use current `scan --baseline-commit` API directly |
-| Legacy blockers | `git grep` on `main` plus `git diff main...R01` | seven controls findings all predate R01 and are outside its changed lines | Do not delete, suppress, or absorb them into R01 |
+| Search                                | Command or source                               | Files found                                                               | Decision                                                                  |
+| ------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Semgrep runner call sites             | `rg -n "run-metronome-semgrep-changed           | lint:debt:changed" scripts .github docs package.json`                     | package script, validator, workflow, PR template, debt-gate map           | Keep one runner; no duplicate workflow or command |
+| Existing changed-input implementation | Read `scripts/run-xo-changed.mjs`               | committed files, staged files, unstaged drift set                         | Reuse its Git snapshot pattern, not its XO-specific control-file behavior |
+| Existing executable selftests         | `rg -n "selftest" scripts package.json`         | PR debt-contract selftest and validator entrypoint                        | Add one Semgrep runner selftest and invoke it from the same validator     |
+| Baseline support                      | Elevated temporary Git/Semgrep probe            | current Semgrep CLI                                                       | Use current `scan --baseline-commit` API directly                         |
+| Legacy blockers                       | `git grep` on `main` plus `git diff main...R01` | seven controls findings all predate R01 and are outside its changed lines | Do not delete, suppress, or absorb them into R01                          |
 
 ## Existing Primitive Search
 
-| Need | Search terms used | Existing primitive/library found | Files read | Decision |
-|---|---|---|---|---|
-| Merge-base resolution | `merge-base`, `BASE_REF`, `GITHUB_BASE_REF` | Existing runner logic | Semgrep and XO runners | Reuse |
-| Committed plus staged candidate union | `diff --cached`, `committedFiles`, `stagedFiles` | XO runner's set union | `scripts/run-xo-changed.mjs` | Reuse |
-| Unstaged snapshot drift rejection | `unstagedFiles`, `rejectUnstagedDrift` | XO runner's fail-closed pattern | `scripts/run-xo-changed.mjs` | Reuse |
-| New-finding comparison | `baseline`, `SEMGREP_BASELINE_REF` | Current Semgrep `scan --baseline-commit` | Official docs and elevated probe | Reuse |
-| Gate-package selftest execution | `spawnSync`, `selftest` | Existing validator process execution | `scripts/validate-metronome-gates.mjs` | Reuse |
-| Custom finding fingerprint/diff | `json`, `fingerprint`, `baseline` | Not needed because Semgrep owns the comparison | runner and probe | No-go, with evidence |
+| Need                                  | Search terms used                                | Existing primitive/library found               | Files read                             | Decision             |
+| ------------------------------------- | ------------------------------------------------ | ---------------------------------------------- | -------------------------------------- | -------------------- |
+| Merge-base resolution                 | `merge-base`, `BASE_REF`, `GITHUB_BASE_REF`      | Existing runner logic                          | Semgrep and XO runners                 | Reuse                |
+| Committed plus staged candidate union | `diff --cached`, `committedFiles`, `stagedFiles` | XO runner's set union                          | `scripts/run-xo-changed.mjs`           | Reuse                |
+| Unstaged snapshot drift rejection     | `unstagedFiles`, `rejectUnstagedDrift`           | XO runner's fail-closed pattern                | `scripts/run-xo-changed.mjs`           | Reuse                |
+| New-finding comparison                | `baseline`, `SEMGREP_BASELINE_REF`               | Current Semgrep `scan --baseline-commit`       | Official docs and elevated probe       | Reuse                |
+| Gate-package selftest execution       | `spawnSync`, `selftest`                          | Existing validator process execution           | `scripts/validate-metronome-gates.mjs` | Reuse                |
+| Custom finding fingerprint/diff       | `json`, `fingerprint`, `baseline`                | Not needed because Semgrep owns the comparison | runner and probe                       | No-go, with evidence |
 
 ## Shared Primitive Call-Site Audit
 
-| Proposed shared surface | Old call sites found repo-wide | Old call sites migrated in this PR | Old implementations deleted/narrowed | Debt-reduction claim |
-|---|---:|---:|---|---|
-| None | 0 | 0 | The committed-only candidate path is narrowed in place | No shared production/tooling primitive is added |
+| Proposed shared surface | Old call sites found repo-wide | Old call sites migrated in this PR | Old implementations deleted/narrowed                   | Debt-reduction claim                            |
+| ----------------------- | -----------------------------: | ---------------------------------: | ------------------------------------------------------ | ----------------------------------------------- |
+| None                    |                              0 |                                  0 | The committed-only candidate path is narrowed in place | No shared production/tooling primitive is added |
 
 ## New Surface Budget
 
-| New surface | Why needed | Existing alternative rejected | Old surface retired in same PR |
-|---|---|---|---|
+| New surface                                          | Why needed                                                                     | Existing alternative rejected                                                     | Old surface retired in same PR                                                     |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `scripts/run-metronome-semgrep-changed.selftest.mjs` | Black-box regression proof must execute real Git and Semgrep snapshot behavior | Narrative evidence and pure helper tests cannot prove staged/baseline integration | Retires untested assumptions that hook success means staged production was scanned |
 
 No new runtime, package, workflow, rule, helper module, compatibility layer, or public API surface is approved.
 
 ## Retired Surface Target
 
-| Surface to remove/narrow | Current callers | Replacement | Behavior-equivalence test |
-|---|---|---|---|
-| Committed-only `merge-base..HEAD` candidate list | Local hook and PR workflow through the runner | Committed-plus-staged candidate union | Selftest proves a staged-only TypeScript change is listed and scanned |
-| Full touched-file finding semantics with no baseline | Local hook and PR workflow through the runner | Semgrep-owned merge-base comparison | Selftest proves unchanged legacy finding passes and newly staged finding blocks |
-| Silent use of a mixed staged/unstaged file snapshot | Runner | Explicit drift rejection before scanning | Selftest proves the runner exits nonzero with the named file |
-| Gate validator that does not exercise the runner | `validate:debt-gates` | Invoke the new selftest before PR-contract validation | Validator command output includes the selftest pass token |
+| Surface to remove/narrow                             | Current callers                               | Replacement                                           | Behavior-equivalence test                                                       |
+| ---------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Committed-only `merge-base..HEAD` candidate list     | Local hook and PR workflow through the runner | Committed-plus-staged candidate union                 | Selftest proves a staged-only TypeScript change is listed and scanned           |
+| Full touched-file finding semantics with no baseline | Local hook and PR workflow through the runner | Semgrep-owned merge-base comparison                   | Selftest proves unchanged legacy finding passes and newly staged finding blocks |
+| Silent use of a mixed staged/unstaged file snapshot  | Runner                                        | Explicit drift rejection before scanning              | Selftest proves the runner exits nonzero with the named file                    |
+| Gate validator that does not exercise the runner     | `validate:debt-gates`                         | Invoke the new selftest before PR-contract validation | Validator command output includes the selftest pass token                       |
 
 ## Boundary Impact
 
@@ -121,14 +121,14 @@ No new runtime, package, workflow, rule, helper module, compatibility layer, or 
 
 ## Tests Required
 
-| Behavior | Test file/type | Why it gates merge |
-|---|---|---|
-| Staged-only `.ts` change is a scan candidate before commit | New black-box selftest in a temporary Git repository | Reproduces the original false pass |
-| Unchanged baseline finding is not reported as new | Same selftest with a minimal local Semgrep rule | Proves R01 can be checked without hiding existing debt |
-| Newly staged finding exits nonzero | Same selftest | Proves hard-fail debt prevention remains active |
-| Candidate file with unstaged drift exits nonzero and names the file | Same selftest | Proves the analyzed snapshot is unambiguous |
-| Validator always runs the new selftest | `npm run validate:debt-gates` | Prevents future removal or disconnect of staged/baseline coverage |
-| Current R01 candidate passes after gate merge | Actual R01 `npm run lint:debt:changed` against updated `main` | Final integration proof on the original failure |
+| Behavior                                                            | Test file/type                                                | Why it gates merge                                                |
+| ------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Staged-only `.ts` change is a scan candidate before commit          | New black-box selftest in a temporary Git repository          | Reproduces the original false pass                                |
+| Unchanged baseline finding is not reported as new                   | Same selftest with a minimal local Semgrep rule               | Proves R01 can be checked without hiding existing debt            |
+| Newly staged finding exits nonzero                                  | Same selftest                                                 | Proves hard-fail debt prevention remains active                   |
+| Candidate file with unstaged drift exits nonzero and names the file | Same selftest                                                 | Proves the analyzed snapshot is unambiguous                       |
+| Validator always runs the new selftest                              | `npm run validate:debt-gates`                                 | Prevents future removal or disconnect of staged/baseline coverage |
+| Current R01 candidate passes after gate merge                       | Actual R01 `npm run lint:debt:changed` against updated `main` | Final integration proof on the original failure                   |
 
 ## Implementation Tasks
 
@@ -227,15 +227,15 @@ Expected before Task 2: nonzero exit with the staged-only candidate assertion.
 
 ## No-Go / Deferrals
 
-| Item | Reason | Follow-up owner |
-|---|---|---|
-| Delete or refactor the seven legacy controls findings | Unrelated R01 recording/harness/read-model scope | Future independently planned source-debt stage |
-| Change `.semgrep/**` or finding severity | Would alter rule policy instead of correcting snapshot coverage | Explicit future user decision only |
-| Add allowlist, `nosemgrep`, suppression, or path exclusion | Would hide evidence and violate the approved hard-gate outcome | Prohibited |
-| Add old/new Semgrep CLI compatibility paths | Current `scan --baseline-commit` interface is verified | Prohibited |
-| Custom JSON fingerprint comparison | Duplicates Semgrep's supported baseline engine | Prohibited |
-| Change XO or GitHub workflow | Existing XO and workflow call sites already provide the required boundary | Out of scope |
-| Modify R01 files or plan | G-01 is a prerequisite gate-control PR | Resume only after G-01 merges |
+| Item                                                       | Reason                                                                    | Follow-up owner                                |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------- |
+| Delete or refactor the seven legacy controls findings      | Unrelated R01 recording/harness/read-model scope                          | Future independently planned source-debt stage |
+| Change `.semgrep/**` or finding severity                   | Would alter rule policy instead of correcting snapshot coverage           | Explicit future user decision only             |
+| Add allowlist, `nosemgrep`, suppression, or path exclusion | Would hide evidence and violate the approved hard-gate outcome            | Prohibited                                     |
+| Add old/new Semgrep CLI compatibility paths                | Current `scan --baseline-commit` interface is verified                    | Prohibited                                     |
+| Custom JSON fingerprint comparison                         | Duplicates Semgrep's supported baseline engine                            | Prohibited                                     |
+| Change XO or GitHub workflow                               | Existing XO and workflow call sites already provide the required boundary | Out of scope                                   |
+| Modify R01 files or plan                                   | G-01 is a prerequisite gate-control PR                                    | Resume only after G-01 merges                  |
 
 ## Acceptance Criteria
 

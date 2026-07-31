@@ -10,13 +10,21 @@ import {
 
 describe("reference domain", () => {
   it("parses supported Bilibili video URLs with URL semantics", () => {
-    expect(parseBilibiliUrl("https://www.bilibili.com/video/BV1ab411c7dE/?spm_id_from=333")).toEqual({
+    expect(
+      parseBilibiliUrl(
+        "https://www.bilibili.com/video/BV1ab411c7dE/?spm_id_from=333"
+      )
+    ).toEqual({
       url: "https://www.bilibili.com/video/BV1ab411c7dE",
       bvid: "BV1ab411c7dE",
       embedUrl: "https://player.bilibili.com/player.html?bvid=BV1ab411c7dE"
     });
-    expect(parseBilibiliUrl("https://example.com/video/BV1ab411c7dE")).toBeNull();
-    expect(parseBilibiliUrl("https://www.bilibili.com/audio/BV1ab411c7dE")).toBeNull();
+    expect(
+      parseBilibiliUrl("https://example.com/video/BV1ab411c7dE")
+    ).toBeNull();
+    expect(
+      parseBilibiliUrl("https://www.bilibili.com/audio/BV1ab411c7dE")
+    ).toBeNull();
     expect(parseBilibiliUrl("not a url")).toBeNull();
   });
 
@@ -35,13 +43,30 @@ describe("reference domain", () => {
       author: "Player",
       durationLabel: "03:12"
     });
-    expect(createBilibiliSearchResult({ title: "Bad", url: "https://www.bilibili.com/" })).toBeNull();
+    expect(
+      createBilibiliSearchResult({
+        title: "Bad",
+        url: "https://www.bilibili.com/"
+      })
+    ).toBeNull();
   });
 
   it("validates local audio type and clamps volume", () => {
-    expect(isSupportedLocalAudioFile(new File(["wav"], "reference.wav", { type: "audio/wav" }))).toBe(true);
-    expect(isSupportedLocalAudioFile(new File(["mp3"], "reference.mp3", { type: "" }))).toBe(true);
-    expect(isSupportedLocalAudioFile(new File(["txt"], "notes.txt", { type: "text/plain" }))).toBe(false);
+    expect(
+      isSupportedLocalAudioFile(
+        new File(["wav"], "reference.wav", { type: "audio/wav" })
+      )
+    ).toBe(true);
+    expect(
+      isSupportedLocalAudioFile(
+        new File(["mp3"], "reference.mp3", { type: "" })
+      )
+    ).toBe(true);
+    expect(
+      isSupportedLocalAudioFile(
+        new File(["txt"], "notes.txt", { type: "text/plain" })
+      )
+    ).toBe(false);
 
     expect(clampReferenceVolume(-1)).toBe(0);
     expect(clampReferenceVolume(0.45)).toBe(0.45);

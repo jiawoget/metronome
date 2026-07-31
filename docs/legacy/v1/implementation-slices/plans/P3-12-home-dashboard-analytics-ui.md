@@ -84,8 +84,8 @@ Keep Home action-oriented:
 Use the existing P3-11 type and service method:
 
 ```ts
-HomeDashboardAnalyticsSource
-PracticeSessionService.getHomeDashboardAnalyticsSource()
+HomeDashboardAnalyticsSource;
+PracticeSessionService.getHomeDashboardAnalyticsSource();
 ```
 
 The Home hook should add fields similar to:

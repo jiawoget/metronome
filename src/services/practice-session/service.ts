@@ -80,7 +80,11 @@ export function createPracticeSessionService({
   }
 
   function canReuseActiveSession(session: PracticeSession | null) {
-    return !!session && session.endedAt === null && isBrowserLocalDay(session.startedAt, now());
+    return (
+      !!session &&
+      session.endedAt === null &&
+      isBrowserLocalDay(session.startedAt, now())
+    );
   }
 
   function normalizeOptionalContextId(value: string | null | undefined) {
@@ -109,7 +113,11 @@ export function createPracticeSessionService({
       }
 
       sheetId = session.sheetId;
-    } else if (requestedSheetId || segmentId || input.kind.startsWith("reference_")) {
+    } else if (
+      requestedSheetId ||
+      segmentId ||
+      input.kind.startsWith("reference_")
+    ) {
       return null;
     }
 
@@ -189,8 +197,13 @@ export function createPracticeSessionService({
     }
   }
 
-  async function resolveSessionHistorySheetTargets(sessions: PracticeSession[]) {
-    const sheetTargets: Record<string, SessionHistoryLookupResult<SessionHistorySheetTarget>> = {};
+  async function resolveSessionHistorySheetTargets(
+    sessions: PracticeSession[]
+  ) {
+    const sheetTargets: Record<
+      string,
+      SessionHistoryLookupResult<SessionHistorySheetTarget>
+    > = {};
     const sheetIds = Array.from(
       new Set(
         sessions
@@ -228,15 +241,24 @@ export function createPracticeSessionService({
 
   async function resolveSessionHistorySegmentTargets(
     sessions: PracticeSession[],
-    sheetTargets: Record<string, SessionHistoryLookupResult<SessionHistorySheetTarget>>
+    sheetTargets: Record<
+      string,
+      SessionHistoryLookupResult<SessionHistorySheetTarget>
+    >
   ) {
-    const segmentTargets: Record<string, SessionHistoryLookupResult<SessionHistorySegmentTarget>> = {};
+    const segmentTargets: Record<
+      string,
+      SessionHistoryLookupResult<SessionHistorySegmentTarget>
+    > = {};
 
     if (!segmentGateway) {
       return segmentTargets;
     }
 
-    const segmentKeys = new Map<string, { sheetId: string; segmentId: string }>();
+    const segmentKeys = new Map<
+      string,
+      { sheetId: string; segmentId: string }
+    >();
 
     for (const session of sessions) {
       if (session.sourceType !== "sheet") {
@@ -244,7 +266,9 @@ export function createPracticeSessionService({
       }
 
       const sheetId = normalizeOptionalContextId(session.sheetId);
-      const segmentId = normalizeOptionalContextId(session.segmentContext?.segmentId);
+      const segmentId = normalizeOptionalContextId(
+        session.segmentContext?.segmentId
+      );
 
       if (!sheetId || !segmentId) {
         continue;
@@ -252,14 +276,20 @@ export function createPracticeSessionService({
 
       const sheetTarget = sheetTargets[sheetId];
 
-      if (sheetTarget?.state === "lookup-failed" || sheetTarget?.state === "missing") {
+      if (
+        sheetTarget?.state === "lookup-failed" ||
+        sheetTarget?.state === "missing"
+      ) {
         continue;
       }
 
-      segmentKeys.set(createSessionHistorySegmentTargetKey(sheetId, segmentId), {
-        sheetId,
-        segmentId
-      });
+      segmentKeys.set(
+        createSessionHistorySegmentTargetKey(sheetId, segmentId),
+        {
+          sheetId,
+          segmentId
+        }
+      );
     }
 
     await Promise.all(
@@ -295,7 +325,10 @@ export function createPracticeSessionService({
     sessions: PracticeSession[]
   ): Promise<SessionComparisonTargetResolution> {
     const sheets = await resolveSessionHistorySheetTargets(sessions);
-    const segments = await resolveSessionHistorySegmentTargets(sessions, sheets);
+    const segments = await resolveSessionHistorySegmentTargets(
+      sessions,
+      sheets
+    );
 
     return {
       sheets,
@@ -325,7 +358,9 @@ export function createPracticeSessionService({
     sessions: PracticeSession[],
     recordings: SheetRecordingMetadata[]
   ) {
-    const sheetTargets: NonNullable<HomeRecentActivityTargetResolution["sheets"]> = {};
+    const sheetTargets: NonNullable<
+      HomeRecentActivityTargetResolution["sheets"]
+    > = {};
     const sheetIds = Array.from(
       new Set(
         getHomeRecentActivityTargetSources(sessions, recordings)
@@ -366,21 +401,31 @@ export function createPracticeSessionService({
     recordings: SheetRecordingMetadata[],
     sheetTargets: NonNullable<HomeRecentActivityTargetResolution["sheets"]>
   ) {
-    const segmentTargets: NonNullable<HomeRecentActivityTargetResolution["segments"]> = {};
+    const segmentTargets: NonNullable<
+      HomeRecentActivityTargetResolution["segments"]
+    > = {};
 
     if (!segmentGateway) {
       return segmentTargets;
     }
 
-    const segmentKeys = new Map<string, { sheetId: string; segmentId: string }>();
+    const segmentKeys = new Map<
+      string,
+      { sheetId: string; segmentId: string }
+    >();
 
-    for (const source of getHomeRecentActivityTargetSources(sessions, recordings)) {
+    for (const source of getHomeRecentActivityTargetSources(
+      sessions,
+      recordings
+    )) {
       if (source.sourceType !== "sheet") {
         continue;
       }
 
       const sheetId = normalizeOptionalContextId(source.sheetId);
-      const segmentId = normalizeOptionalContextId(source.segmentContext?.segmentId);
+      const segmentId = normalizeOptionalContextId(
+        source.segmentContext?.segmentId
+      );
 
       if (!sheetId || !segmentId) {
         continue;
@@ -388,14 +433,20 @@ export function createPracticeSessionService({
 
       const sheetTarget = sheetTargets[sheetId];
 
-      if (sheetTarget?.state === "lookup-failed" || sheetTarget?.state === "missing") {
+      if (
+        sheetTarget?.state === "lookup-failed" ||
+        sheetTarget?.state === "missing"
+      ) {
         continue;
       }
 
-      segmentKeys.set(createSessionHistorySegmentTargetKey(sheetId, segmentId), {
-        sheetId,
-        segmentId
-      });
+      segmentKeys.set(
+        createSessionHistorySegmentTargetKey(sheetId, segmentId),
+        {
+          sheetId,
+          segmentId
+        }
+      );
     }
 
     await Promise.all(
@@ -454,7 +505,9 @@ export function createPracticeSessionService({
     });
   }
 
-  async function readContinuePracticeTargets(options: ContinuePracticeTargetsOptions = {}) {
+  async function readContinuePracticeTargets(
+    options: ContinuePracticeTargetsOptions = {}
+  ) {
     const [sessions, recordings] = await Promise.all([
       repository.listSessions(),
       recordingRepository.listRecordingMetadata()
@@ -484,26 +537,27 @@ export function createPracticeSessionService({
   async function ensureQuickSession(input: QuickPracticeActivityInput) {
     const timestamp = now().toISOString();
     const recentQuickSession =
-      (await repository.listSessions()).find((session) => session.sourceType === "quick") ?? null;
-    const existingSession = input.forceNewSession || !canReuseActiveSession(recentQuickSession)
-      ? null
-      : recentQuickSession;
-    const session: PracticeSession =
-      existingSession ??
-      {
-        id: createId("session"),
-        sourceType: "quick",
-        sheetId: null,
-        startedAt: timestamp,
-        endedAt: null,
-        durationMs: 0,
-        bpm: input.bpm ?? null,
-        timeSignature: input.timeSignature ?? null,
-        recordingCount: 0,
-        latestRecordingId: null,
-        updatedAt: timestamp,
-        segmentContext: null
-      };
+      (await repository.listSessions()).find(
+        (session) => session.sourceType === "quick"
+      ) ?? null;
+    const existingSession =
+      input.forceNewSession || !canReuseActiveSession(recentQuickSession)
+        ? null
+        : recentQuickSession;
+    const session: PracticeSession = existingSession ?? {
+      id: createId("session"),
+      sourceType: "quick",
+      sheetId: null,
+      startedAt: timestamp,
+      endedAt: null,
+      durationMs: 0,
+      bpm: input.bpm ?? null,
+      timeSignature: input.timeSignature ?? null,
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: timestamp,
+      segmentContext: null
+    };
     const nextSession = withUpdatedPracticeSessionDuration(
       {
         ...session,
@@ -532,32 +586,32 @@ export function createPracticeSessionService({
 
     const timestamp = now().toISOString();
     const recentSheetSession = await repository.getRecentSheetSession(sheet.id);
-    const existingSession = input.forceNewSession || !canReuseActiveSession(recentSheetSession)
-      ? null
-      : recentSheetSession;
-    const session: PracticeSession =
-      existingSession ??
-      {
-        id: createId("session"),
-        sourceType: "sheet",
-        sheetId: sheet.id,
-        startedAt: timestamp,
-        endedAt: null,
-        durationMs: 0,
-        bpm: input.bpm ?? sheet.bpm,
-        timeSignature: input.timeSignature ?? sheet.timeSignature,
-        recordingCount: 0,
-        latestRecordingId: null,
-        updatedAt: timestamp,
-        segmentContext: null
-      };
+    const existingSession =
+      input.forceNewSession || !canReuseActiveSession(recentSheetSession)
+        ? null
+        : recentSheetSession;
+    const session: PracticeSession = existingSession ?? {
+      id: createId("session"),
+      sourceType: "sheet",
+      sheetId: sheet.id,
+      startedAt: timestamp,
+      endedAt: null,
+      durationMs: 0,
+      bpm: input.bpm ?? sheet.bpm,
+      timeSignature: input.timeSignature ?? sheet.timeSignature,
+      recordingCount: 0,
+      latestRecordingId: null,
+      updatedAt: timestamp,
+      segmentContext: null
+    };
 
     const nextSession = withUpdatedPracticeSessionDuration(
       {
         ...session,
         endedAt: null,
         bpm: input.bpm ?? session.bpm ?? sheet.bpm,
-        timeSignature: input.timeSignature ?? session.timeSignature ?? sheet.timeSignature,
+        timeSignature:
+          input.timeSignature ?? session.timeSignature ?? sheet.timeSignature,
         segmentContext: session.segmentContext ?? null
       },
       timestamp
@@ -591,7 +645,8 @@ export function createPracticeSessionService({
       {
         ...session,
         bpm: input.bpm ?? session.bpm ?? sheet.bpm,
-        timeSignature: input.timeSignature ?? session.timeSignature ?? sheet.timeSignature
+        timeSignature:
+          input.timeSignature ?? session.timeSignature ?? sheet.timeSignature
       },
       timestamp
     );
@@ -649,11 +704,16 @@ export function createPracticeSessionService({
       metadata.sessionId !== session.id ||
       metadata.sheetId !== session.sheetId
     ) {
-      throw new Error("Prepared sheet recording metadata does not match its session.");
+      throw new Error(
+        "Prepared sheet recording metadata does not match its session."
+      );
     }
 
     await saveSession(session);
-    await sheetGateway.updateLastPracticedAt(metadata.sheetId, metadata.createdAt);
+    await sheetGateway.updateLastPracticedAt(
+      metadata.sheetId,
+      metadata.createdAt
+    );
   }
 
   async function linkRecordingToSession(input: PracticeRecordingLinkInput) {
@@ -743,7 +803,10 @@ export function createPracticeSessionService({
       await saveSession(nextSession);
 
       if (nextSession.sourceType === "sheet" && nextSession.sheetId) {
-        await sheetGateway.updateLastPracticedAt(nextSession.sheetId, timestamp);
+        await sheetGateway.updateLastPracticedAt(
+          nextSession.sheetId,
+          timestamp
+        );
       }
 
       return nextSession;
@@ -790,9 +853,10 @@ export function createPracticeSessionService({
       }
 
       const sheets = await resolveSessionHistorySheetTargets(sessions);
-      const segments = mode === "segment"
-        ? await resolveSessionHistorySegmentTargets(sessions, sheets)
-        : {};
+      const segments =
+        mode === "segment"
+          ? await resolveSessionHistorySegmentTargets(sessions, sheets)
+          : {};
 
       return groupPracticeSessionsByHistory(sessions, mode, {
         sheets,
@@ -904,8 +968,10 @@ export function createPracticeSessionService({
     },
 
     subscribe(listener) {
-      const unsubscribeSession = repository.subscribe?.(listener) ?? (() => undefined);
-      const unsubscribeRecording = recordingRepository.subscribe?.(listener) ?? (() => undefined);
+      const unsubscribeSession =
+        repository.subscribe?.(listener) ?? (() => undefined);
+      const unsubscribeRecording =
+        recordingRepository.subscribe?.(listener) ?? (() => undefined);
 
       return () => {
         unsubscribeSession();

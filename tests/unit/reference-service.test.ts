@@ -21,7 +21,9 @@ function createMemoryRepository(): ReferenceRepository {
   const listReferences = async (sheetId: string) =>
     Array.from(references.values())
       .filter((reference) => reference.sheetId === sheetId)
-      .sort((first, second) => Number(second.isActive) - Number(first.isActive));
+      .sort(
+        (first, second) => Number(second.isActive) - Number(first.isActive)
+      );
 
   return {
     listReferences,
@@ -29,7 +31,11 @@ function createMemoryRepository(): ReferenceRepository {
       return references.size;
     },
     async getActiveReference(sheetId) {
-      return (await listReferences(sheetId)).find((reference) => reference.isActive) ?? null;
+      return (
+        (await listReferences(sheetId)).find(
+          (reference) => reference.isActive
+        ) ?? null
+      );
     },
     async getLocalAudioArtifact(referenceId) {
       return artifacts.get(referenceId) ?? null;
@@ -37,7 +43,10 @@ function createMemoryRepository(): ReferenceRepository {
     async saveReference(reference, artifact) {
       Array.from(references.values()).forEach((existingReference) => {
         if (existingReference.sheetId === reference.sheetId) {
-          references.set(existingReference.id, validateSheetReference({ ...existingReference, isActive: false }));
+          references.set(
+            existingReference.id,
+            validateSheetReference({ ...existingReference, isActive: false })
+          );
         }
       });
       references.set(reference.id, validateSheetReference(reference));
@@ -55,7 +64,9 @@ function createMemoryRepository(): ReferenceRepository {
   };
 }
 
-function createInspectionAdapter(result: Awaited<ReturnType<LocalAudioInspectionAdapter["inspectFile"]>>) {
+function createInspectionAdapter(
+  result: Awaited<ReturnType<LocalAudioInspectionAdapter["inspectFile"]>>
+) {
   return {
     async inspectFile() {
       return result;
@@ -63,7 +74,9 @@ function createInspectionAdapter(result: Awaited<ReturnType<LocalAudioInspection
   } satisfies LocalAudioInspectionAdapter;
 }
 
-function createSearchAdapter(result: Awaited<ReturnType<BilibiliSearchAdapter["search"]>>) {
+function createSearchAdapter(
+  result: Awaited<ReturnType<BilibiliSearchAdapter["search"]>>
+) {
   return {
     async search() {
       return result;
@@ -112,7 +125,9 @@ describe("reference service", () => {
   it("saves local audio metadata and artifact linked to sheetId", async () => {
     const repository = createMemoryRepository();
     const service = createService({ repository });
-    const file = new File(["RIFF"], "practice-reference.wav", { type: "audio/wav" });
+    const file = new File(["RIFF"], "practice-reference.wav", {
+      type: "audio/wav"
+    });
 
     const result = await service.addLocalAudioReference({
       sheetId: "sheet-alpha",
@@ -137,7 +152,9 @@ describe("reference service", () => {
       sheetId: "sheet-alpha",
       mimeType: "audio/wav"
     });
-    expect(await service.getActiveReference("sheet-alpha")).toMatchObject({ id: "reference-1" });
+    expect(await service.getActiveReference("sheet-alpha")).toMatchObject({
+      id: "reference-1"
+    });
   });
 
   it("rejects bad local audio without saving a playable reference", async () => {
@@ -185,7 +202,9 @@ describe("reference service", () => {
         embedUrl: "https://player.bilibili.com/player.html?bvid=BV1ab411c7dE"
       }
     });
-    await expect(service.getActiveReference("sheet-alpha")).resolves.toMatchObject({
+    await expect(
+      service.getActiveReference("sheet-alpha")
+    ).resolves.toMatchObject({
       kind: "bilibili",
       bvid: "BV1ab411c7dE"
     });
@@ -215,7 +234,8 @@ describe("reference service", () => {
       })
     ).resolves.toEqual({
       ok: false,
-      message: "Enter a Bilibili video URL like https://www.bilibili.com/video/BV..."
+      message:
+        "Enter a Bilibili video URL like https://www.bilibili.com/video/BV..."
     });
   });
 

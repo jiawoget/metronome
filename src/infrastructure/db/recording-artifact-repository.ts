@@ -19,7 +19,9 @@ export type RecordingArtifactRepository = {
   getArtifact(artifactId: string): Promise<LocalRecordingArtifact | null>;
   deleteArtifact(artifactId: string): Promise<void>;
   deleteArtifacts(artifactIds: string[]): Promise<void>;
-  listArtifactsForRecordings(recordingIds: string[]): Promise<LocalRecordingArtifact[]>;
+  listArtifactsForRecordings(
+    recordingIds: string[]
+  ): Promise<LocalRecordingArtifact[]>;
   clear(): Promise<void>;
 };
 
@@ -29,7 +31,8 @@ class RecordingArtifactDexieDatabase extends Dexie {
   constructor() {
     super(RECORDING_ARTIFACT_DB_NAME);
     this.version(1).stores({
-      recordingArtifacts: "artifactId, recordingId, recordingType, createdAt, updatedAt"
+      recordingArtifacts:
+        "artifactId, recordingId, recordingType, createdAt, updatedAt"
     });
   }
 }
@@ -38,7 +41,9 @@ let database: RecordingArtifactDexieDatabase | null = null;
 
 function getDatabase() {
   if (typeof indexedDB === "undefined" || typeof Blob === "undefined") {
-    throw new Error("Local recording artifact storage is unavailable in this browser.");
+    throw new Error(
+      "Local recording artifact storage is unavailable in this browser."
+    );
   }
 
   database ??= new RecordingArtifactDexieDatabase();
@@ -56,7 +61,9 @@ function normalizeRequiredString(value: string, label: string) {
   return normalized;
 }
 
-function validateArtifact(input: LocalRecordingArtifact): LocalRecordingArtifact {
+function validateArtifact(
+  input: LocalRecordingArtifact
+): LocalRecordingArtifact {
   const artifactId = normalizeRequiredString(input.artifactId, "artifactId");
   const recordingId = normalizeRequiredString(input.recordingId, "recordingId");
   const mimeType = normalizeRequiredString(input.mimeType, "mimeType");
@@ -102,7 +109,9 @@ export const recordingArtifactRepository: RecordingArtifactRepository = {
       return null;
     }
 
-    return (await getDatabase().recordingArtifacts.get(normalizedArtifactId)) ?? null;
+    return (
+      (await getDatabase().recordingArtifacts.get(normalizedArtifactId)) ?? null
+    );
   },
 
   async deleteArtifact(artifactId) {
@@ -138,7 +147,9 @@ export const recordingArtifactRepository: RecordingArtifactRepository = {
 
     const artifacts = await getDatabase().recordingArtifacts.toArray();
 
-    return artifacts.filter((artifact) => normalizedRecordingIds.has(artifact.recordingId));
+    return artifacts.filter((artifact) =>
+      normalizedRecordingIds.has(artifact.recordingId)
+    );
   },
 
   async clear() {

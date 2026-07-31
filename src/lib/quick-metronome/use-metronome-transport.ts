@@ -17,7 +17,10 @@ import type {
 
 export type MetronomeTransportState = "stopped" | "counting" | "playing";
 
-type MetronomeTransportService = Pick<MetronomeService, "update" | "start" | "stop">;
+type MetronomeTransportService = Pick<
+  MetronomeService,
+  "update" | "start" | "stop"
+>;
 
 export type BarCountInCountdownTick = {
   count: number;
@@ -52,7 +55,10 @@ export type UseMetronomeTransportOptions<StartContext> = {
   onCountdownStarted?: (remainingBeats: number) => void;
   onStartBlocked?: () => void;
   onStarted?: (context: StartContext | null) => void;
-  onStartFailed?: (error: unknown, context: StartContext | null) => Promise<void> | void;
+  onStartFailed?: (
+    error: unknown,
+    context: StartContext | null
+  ) => Promise<void> | void;
   onStopped?: () => Promise<void> | void;
 };
 
@@ -69,7 +75,8 @@ export function useMetronomeTransport<StartContext = null>({
   onStartFailed,
   onStopped
 }: UseMetronomeTransportOptions<StartContext>) {
-  const [transportState, setTransportState] = useState<MetronomeTransportState>("stopped");
+  const [transportState, setTransportState] =
+    useState<MetronomeTransportState>("stopped");
   const [countdownRemaining, setCountdownRemaining] = useState(0);
   const transportStateRef = useRef<MetronomeTransportState>("stopped");
   const countdownCancelRef = useRef<(() => void) | null>(null);
@@ -87,10 +94,13 @@ export function useMetronomeTransport<StartContext = null>({
     onStopped
   });
 
-  const setTransportStateValue = useCallback((state: MetronomeTransportState) => {
-    transportStateRef.current = state;
-    setTransportState(state);
-  }, []);
+  const setTransportStateValue = useCallback(
+    (state: MetronomeTransportState) => {
+      transportStateRef.current = state;
+      setTransportState(state);
+    },
+    []
+  );
 
   useEffect(() => {
     latestOptionsRef.current = {
@@ -148,7 +158,9 @@ export function useMetronomeTransport<StartContext = null>({
     try {
       const latestOptions = latestOptionsRef.current;
 
-      startContext = latestOptions.beforeStart ? await latestOptions.beforeStart() : null;
+      startContext = latestOptions.beforeStart
+        ? await latestOptions.beforeStart()
+        : null;
 
       if (latestOptions.beforeStart && startContext === null) {
         metronomeService.stop();
@@ -198,7 +210,9 @@ export function useMetronomeTransport<StartContext = null>({
       const executor = latestOptions.countdownExecutor;
 
       if (!executor) {
-        throw new Error("Countdown executor is required before starting a countdown.");
+        throw new Error(
+          "Countdown executor is required before starting a countdown."
+        );
       }
 
       const runId = preStartRunIdRef.current + 1;
@@ -221,7 +235,10 @@ export function useMetronomeTransport<StartContext = null>({
             onTick?.(tick);
           },
           onComplete: () => {
-            if (preStartRunIdRef.current !== runId || transportStateRef.current !== "counting") {
+            if (
+              preStartRunIdRef.current !== runId ||
+              transportStateRef.current !== "counting"
+            ) {
               return;
             }
 
@@ -326,12 +343,7 @@ export function useMetronomeTransport<StartContext = null>({
     }
 
     await startPlaybackNow();
-  }, [
-    runBarCountIn,
-    runPreStartCountdown,
-    runCountdownPlan,
-    startPlaybackNow
-  ]);
+  }, [runBarCountIn, runPreStartCountdown, runCountdownPlan, startPlaybackNow]);
 
   const stopMetronome = useCallback(async () => {
     clearPreStartScheduling();

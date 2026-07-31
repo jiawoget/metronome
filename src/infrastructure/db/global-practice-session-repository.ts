@@ -103,7 +103,9 @@ function legacyQuickSessionToPracticeSession(
     bpm: settings?.bpm ?? latestRecording?.settings.bpm ?? null,
     timeSignature:
       settings?.timeSignature ??
-      getLegacyRecordingTimeSignature(latestRecording?.settings.timeSignature) ??
+      getLegacyRecordingTimeSignature(
+        latestRecording?.settings.timeSignature
+      ) ??
       null,
     recordingCount: recordings.filter(
       (recording) => recording.sessionId === value.id

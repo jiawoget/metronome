@@ -55,7 +55,9 @@ describe("sheet metronome preset domain", () => {
     },
     {
       name: "invalid createdAt",
-      preset: buildSheetMetronomePreset({ createdAt: "2026-02-30T00:00:00.000Z" })
+      preset: buildSheetMetronomePreset({
+        createdAt: "2026-02-30T00:00:00.000Z"
+      })
     },
     {
       name: "invalid updatedAt",

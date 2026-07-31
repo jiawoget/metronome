@@ -1,6 +1,7 @@
 import { get as getTonalTimeSignature } from "@tonaljs/time-signature";
 
-export type MusicTimeSignatureType = "simple" | "compound" | "irregular" | "irrational";
+export type MusicTimeSignatureType =
+  "simple" | "compound" | "irregular" | "irrational";
 
 export type MusicTimeSignatureParts = {
   name: string;
@@ -10,7 +11,9 @@ export type MusicTimeSignatureParts = {
   additive: readonly number[];
 };
 
-export function parseMusicTimeSignature(value: unknown): MusicTimeSignatureParts | null {
+export function parseMusicTimeSignature(
+  value: unknown
+): MusicTimeSignatureParts | null {
   if (typeof value !== "string") {
     return null;
   }
@@ -52,10 +55,9 @@ export function parseMusicTimeSignature(value: unknown): MusicTimeSignatureParts
   };
 }
 
-export function getMusicTimeSignatureParts(timeSignature: string): Pick<
-  MusicTimeSignatureParts,
-  "numerator" | "denominator"
-> {
+export function getMusicTimeSignatureParts(
+  timeSignature: string
+): Pick<MusicTimeSignatureParts, "numerator" | "denominator"> {
   const parts = parseMusicTimeSignature(timeSignature);
 
   if (parts === null) {

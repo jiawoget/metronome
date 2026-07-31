@@ -64,14 +64,12 @@ export function createRecordingOrganizationMetadata({
   const normalizedTags = normalizeRecordingTagsForWrite(tags);
 
   if (!normalizedRecordingId || !normalizedUpdatedAt) {
-    throw new Error("Recording organization requires a recording id and updated time.");
+    throw new Error(
+      "Recording organization requires a recording id and updated time."
+    );
   }
 
-  if (
-    normalizedTags.length === 0 &&
-    favorite === false &&
-    archived === false
-  ) {
+  if (normalizedTags.length === 0 && favorite === false && archived === false) {
     return null;
   }
 

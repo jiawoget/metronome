@@ -172,12 +172,12 @@ export function CommandPalette({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="bg-card text-card-foreground shadow-soft border-border mx-auto flex max-h-[min(680px,calc(100vh-7rem))] w-full max-w-xl flex-col overflow-hidden rounded-md border"
+        className="mx-auto flex max-h-[min(680px,calc(100vh-7rem))] w-full max-w-xl flex-col overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-soft"
         onKeyDown={handleDialogKeyDown}
       >
-        <div className="border-border flex items-center gap-2 border-b px-3 py-2.5">
+        <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
           <Search
-            className="text-muted-foreground h-4 w-4 shrink-0"
+            className="h-4 w-4 shrink-0 text-muted-foreground"
             aria-hidden="true"
           />
           <h2 id={titleId} className="sr-only">
@@ -198,7 +198,7 @@ export function CommandPalette({
               setActiveIndex(0);
             }}
             onKeyDown={handleSearchKeyDown}
-            className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm font-medium outline-none"
+            className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground"
             placeholder="Search commands"
           />
           <Button
@@ -233,7 +233,7 @@ export function CommandPalette({
                     aria-selected={isActive}
                     aria-label={command.executionLabel}
                     className={cn(
-                      "focus-visible:ring-ring flex w-full items-center gap-3 rounded-md px-3 py-2 text-left focus-visible:ring-2 focus-visible:outline-none",
+                      "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                       isActive ? "bg-muted" : "hover:bg-muted/70"
                     )}
                     onMouseEnter={() => setActiveIndex(index)}
@@ -244,12 +244,12 @@ export function CommandPalette({
                       <span className="block truncate text-sm font-medium">
                         {command.title}
                       </span>
-                      <span className="text-muted-foreground block truncate text-xs">
+                      <span className="block truncate text-xs text-muted-foreground">
                         {command.subtitle}
                       </span>
                     </span>
                     <CornerDownLeft
-                      className="text-muted-foreground h-3.5 w-3.5 shrink-0"
+                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
                       aria-hidden="true"
                     />
                   </button>
@@ -257,7 +257,7 @@ export function CommandPalette({
               })}
             </div>
           ) : (
-            <p className="text-muted-foreground px-5 py-8 text-center text-sm">
+            <p className="px-5 py-8 text-center text-sm text-muted-foreground">
               No commands found.
             </p>
           )}
@@ -265,7 +265,7 @@ export function CommandPalette({
 
         {continueTargetsStatus === "loading" ||
         continueTargetsStatus === "error" ? (
-          <div className="border-border text-muted-foreground border-t px-4 py-2 text-xs">
+          <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
             {continueTargetsStatus === "loading"
               ? "Loading practice targets..."
               : continueTargetsErrorMessage}
@@ -279,12 +279,18 @@ export function CommandPalette({
 function CommandIcon({ command }: { command: HomeCommandPaletteCommand }) {
   if (command.kind === "route") {
     return (
-      <Route className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
+      <Route
+        className="h-4 w-4 shrink-0 text-muted-foreground"
+        aria-hidden="true"
+      />
     );
   }
 
   return (
-    <Search className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
+    <Search
+      className="h-4 w-4 shrink-0 text-muted-foreground"
+      aria-hidden="true"
+    />
   );
 }
 

@@ -63,8 +63,12 @@ describe("sheet metronome preset service", () => {
     });
 
     await expect(service.listPresets("sheet-alpha")).resolves.toEqual([]);
-    await expect(service.getPreset("sheet-alpha", "preset-1")).resolves.toBeNull();
-    await expect(service.loadPreset("sheet-alpha", "preset-1")).resolves.toEqual({
+    await expect(
+      service.getPreset("sheet-alpha", "preset-1")
+    ).resolves.toBeNull();
+    await expect(
+      service.loadPreset("sheet-alpha", "preset-1")
+    ).resolves.toEqual({
       status: "missing"
     });
   });
@@ -340,7 +344,9 @@ describe("sheet metronome preset service", () => {
       repository
     });
 
-    await expect(service.listPresets("   ")).rejects.toThrow("sheetId is required.");
+    await expect(service.listPresets("   ")).rejects.toThrow(
+      "sheetId is required."
+    );
     await expect(service.getPreset("sheet-alpha", "   ")).rejects.toThrow(
       "presetId is required."
     );
@@ -463,7 +469,9 @@ describe("sheet metronome preset service", () => {
       repository: createMemorySheetMetronomePresetRepository([preset])
     });
 
-    await expect(service.loadPreset("sheet-alpha", "preset-1")).resolves.toEqual({
+    await expect(
+      service.loadPreset("sheet-alpha", "preset-1")
+    ).resolves.toEqual({
       status: "loaded",
       preset,
       settings: preset.settings

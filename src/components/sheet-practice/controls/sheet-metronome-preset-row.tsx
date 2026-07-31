@@ -48,9 +48,7 @@ function formatBarCountIn(barCountIn: { enabled: boolean; bars: 1 | 2 }) {
     return "Bar count-in off";
   }
 
-  return barCountIn.bars === 1
-    ? "Bar count-in 1 bar"
-    : "Bar count-in 2 bars";
+  return barCountIn.bars === 1 ? "Bar count-in 1 bar" : "Bar count-in 2 bars";
 }
 
 function formatPresetSummary(preset: SheetMetronomePreset) {
@@ -85,7 +83,7 @@ export function SheetMetronomePresetRow({
   return (
     <div
       data-testid={`sheet-metronome-preset-${preset.id}`}
-      className="border-border bg-background grid min-w-0 gap-2 rounded-md border p-2"
+      className="grid min-w-0 gap-2 rounded-md border border-border bg-background p-2"
     >
       <div className="grid min-w-0 gap-1">
         {isEditing ? (
@@ -96,20 +94,22 @@ export function SheetMetronomePresetRow({
               value={renameDraft}
               autoFocus
               disabled={actionsDisabled}
-              onChange={(event) => onRenameDraftChange(event.currentTarget.value)}
+              onChange={(event) =>
+                onRenameDraftChange(event.currentTarget.value)
+              }
               onKeyDown={onRenameKeyDown}
-              className="border-border bg-background focus-visible:ring-ring h-9 min-w-0 rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+              className="h-9 min-w-0 rounded-md border border-border bg-background px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             />
           </label>
         ) : (
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{preset.name}</p>
-            <p className="text-muted-foreground text-xs leading-5">
+            <p className="text-xs leading-5 text-muted-foreground">
               {scopeLabel}
             </p>
           </div>
         )}
-        <p className="text-muted-foreground text-xs leading-5">
+        <p className="text-xs leading-5 text-muted-foreground">
           {formatPresetSummary(preset)}
         </p>
       </div>

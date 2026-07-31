@@ -37,4 +37,3 @@ Continue Practice, reference panel coexistence, and responsive layout.
 - Final acceptance fix `904652b` updated stale parent expectations so the
   verified v0 reference panel is allowed.
 - No known unimplemented v0 parent-integration item remains.
-

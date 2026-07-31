@@ -167,29 +167,35 @@ export async function decodeRecordingHistoryAudio(
       let arrayBuffer: ArrayBuffer | null = null;
 
       if (recording.artifactRef?.artifactId) {
-        arrayBuffer = await new Promise<ArrayBuffer | null>((resolve, reject) => {
-          const openRequest = indexedDB.open(artifactDatabaseName);
+        arrayBuffer = await new Promise<ArrayBuffer | null>(
+          (resolve, reject) => {
+            const openRequest = indexedDB.open(artifactDatabaseName);
 
-          openRequest.onerror = () => reject(openRequest.error);
-          openRequest.onsuccess = () => {
-            const database = openRequest.result;
-            const transaction = database.transaction("recordingArtifacts", "readonly");
-            const store = transaction.objectStore("recordingArtifacts");
-            const getRequest = store.get(recording.artifactRef.artifactId);
+            openRequest.onerror = () => reject(openRequest.error);
+            openRequest.onsuccess = () => {
+              const database = openRequest.result;
+              const transaction = database.transaction(
+                "recordingArtifacts",
+                "readonly"
+              );
+              const store = transaction.objectStore("recordingArtifacts");
+              const getRequest = store.get(recording.artifactRef.artifactId);
 
-            getRequest.onerror = () => reject(getRequest.error);
-            getRequest.onsuccess = () => {
-              const artifact = getRequest.result as { blob?: Blob } | undefined;
+              getRequest.onerror = () => reject(getRequest.error);
+              getRequest.onsuccess = () => {
+                const artifact = getRequest.result as
+                  { blob?: Blob } | undefined;
 
-              if (!artifact?.blob) {
-                resolve(null);
-                return;
-              }
+                if (!artifact?.blob) {
+                  resolve(null);
+                  return;
+                }
 
-              artifact.blob.arrayBuffer().then(resolve, reject);
+                artifact.blob.arrayBuffer().then(resolve, reject);
+              };
             };
-          };
-        });
+          }
+        );
       }
 
       if (!arrayBuffer && recording.audioDataUrl) {

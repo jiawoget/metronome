@@ -18,7 +18,9 @@ import { createRecordingsReviewService } from "@/services/recordings-review";
 import { quickRecordingController } from "@/lib/quick-metronome/recording-controller";
 import { recordingHistoryMetadataRepository } from "@/infrastructure/db/recording-history-metadata-repository";
 
-function createRecording(overrides: Partial<ReviewRecording> = {}): ReviewRecording {
+function createRecording(
+  overrides: Partial<ReviewRecording> = {}
+): ReviewRecording {
   return {
     id: "recording-1",
     type: "quick",
@@ -50,7 +52,9 @@ function createMemoryArtifactRepository({
   onSave?: (input: LocalRecordingArtifact) => void;
   onGet?: (artifactId: string) => void;
   onList?: (recordingIds: string[]) => void;
-} = {}): RecordingArtifactRepository & { artifacts: Map<string, LocalRecordingArtifact> } {
+} = {}): RecordingArtifactRepository & {
+  artifacts: Map<string, LocalRecordingArtifact>;
+} {
   const artifacts = new Map<string, LocalRecordingArtifact>();
 
   return {
@@ -90,7 +94,9 @@ function createMemoryArtifactRepository({
       onList?.(recordingIds);
       const ids = new Set(recordingIds);
 
-      return [...artifacts.values()].filter((artifact) => ids.has(artifact.recordingId));
+      return [...artifacts.values()].filter((artifact) =>
+        ids.has(artifact.recordingId)
+      );
     },
     async clear() {
       artifacts.clear();
@@ -131,7 +137,9 @@ describe("recording artifact storage", () => {
 
     await recordingArtifactRepository.deleteArtifact("recording-1");
 
-    await expect(recordingArtifactRepository.getArtifact("recording-1")).resolves.toBeNull();
+    await expect(
+      recordingArtifactRepository.getArtifact("recording-1")
+    ).resolves.toBeNull();
   });
 
   it("rejects artifact id ownership mismatches instead of cross-pointing metadata", async () => {
@@ -246,9 +254,9 @@ describe("recording artifact storage", () => {
       JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}")
         .recordings
     ).toHaveLength(0);
-    await expect(repository.artifacts.get("delete-target")?.blob.text()).resolves.toBe(
-      "audio"
-    );
+    await expect(
+      repository.artifacts.get("delete-target")?.blob.text()
+    ).resolves.toBe("audio");
   });
 
   it("deletes by owned recording id instead of corrupted artifactRef pointers", async () => {
@@ -289,14 +297,16 @@ describe("recording artifact storage", () => {
 
     await service.deleteRecording("delete-target");
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
-
-    expect(persisted.recordings.map((recording: { id: string }) => recording.id)).toEqual([
-      "retained-recording"
-    ]);
-    await expect(repository.artifacts.get("retained-recording")?.blob.text()).resolves.toBe(
-      "retained"
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
     );
+
+    expect(
+      persisted.recordings.map((recording: { id: string }) => recording.id)
+    ).toEqual(["retained-recording"]);
+    await expect(
+      repository.artifacts.get("retained-recording")?.blob.text()
+    ).resolves.toBe("retained");
   });
 
   it("skips post-commit single delete artifact cleanup when the same recording id changes before artifact delete", async () => {
@@ -355,16 +365,18 @@ describe("recording artifact storage", () => {
 
     await expect(service.deleteRecording("same-id")).resolves.toBeUndefined();
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
 
     expect(persisted.recordings).toHaveLength(1);
     expect(persisted.recordings[0]).toMatchObject({
       id: "same-id",
       name: "New row"
     });
-    await expect(repository.artifacts.get("same-id")?.blob.text()).resolves.toBe(
-      "retained"
-    );
+    await expect(
+      repository.artifacts.get("same-id")?.blob.text()
+    ).resolves.toBe("retained");
   });
 
   it("quick clear preserves retained artifacts when a quick ref points at them", async () => {
@@ -402,7 +414,9 @@ describe("recording artifact storage", () => {
 
     await quickRecordingController.clear();
 
-    expect(await recordingArtifactRepository.getArtifact("retained-sheet")).toMatchObject({
+    expect(
+      await recordingArtifactRepository.getArtifact("retained-sheet")
+    ).toMatchObject({
       recordingId: "retained-sheet"
     });
   });
@@ -440,7 +454,9 @@ describe("recording artifact storage", () => {
       "artifact cleanup failed"
     );
     expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
-    await expect(recordingArtifactRepository.getArtifact(quick.id)).resolves.toMatchObject({
+    await expect(
+      recordingArtifactRepository.getArtifact(quick.id)
+    ).resolves.toMatchObject({
       recordingId: quick.id
     });
     deleteSpy.mockRestore();
@@ -507,14 +523,18 @@ describe("recording artifact storage", () => {
 
     await expect(quickRecordingController.clear()).resolves.toBeUndefined();
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
 
     expect(persisted.recordings[0]).toMatchObject({
       id: "same-quick",
       name: "New quick"
     });
     expect(deleteSpy).not.toHaveBeenCalled();
-    expect(await recordingArtifactRepository.getArtifact("same-quick")).toMatchObject({
+    expect(
+      await recordingArtifactRepository.getArtifact("same-quick")
+    ).toMatchObject({
       recordingId: "same-quick"
     });
     listSpy.mockRestore();
@@ -556,7 +576,9 @@ describe("recording artifact storage", () => {
 
     await recordingHistoryMetadataRepository.clear();
 
-    expect(await recordingArtifactRepository.getArtifact("retained-quick")).toMatchObject({
+    expect(
+      await recordingArtifactRepository.getArtifact("retained-quick")
+    ).toMatchObject({
       recordingId: "retained-quick"
     });
   });
@@ -596,7 +618,9 @@ describe("recording artifact storage", () => {
       "artifact cleanup failed"
     );
     expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
-    await expect(recordingArtifactRepository.getArtifact(sheet.id)).resolves.toMatchObject({
+    await expect(
+      recordingArtifactRepository.getArtifact(sheet.id)
+    ).resolves.toMatchObject({
       recordingId: sheet.id
     });
     deleteSpy.mockRestore();
@@ -665,16 +689,22 @@ describe("recording artifact storage", () => {
       })
     );
 
-    await expect(recordingHistoryMetadataRepository.clear()).resolves.toBeUndefined();
+    await expect(
+      recordingHistoryMetadataRepository.clear()
+    ).resolves.toBeUndefined();
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
 
     expect(persisted.recordings[0]).toMatchObject({
       id: "same-sheet",
       name: "New sheet"
     });
     expect(deleteSpy).not.toHaveBeenCalled();
-    expect(await recordingArtifactRepository.getArtifact("same-sheet")).toMatchObject({
+    expect(
+      await recordingArtifactRepository.getArtifact("same-sheet")
+    ).toMatchObject({
       recordingId: "same-sheet"
     });
     listSpy.mockRestore();

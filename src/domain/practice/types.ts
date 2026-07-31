@@ -1,4 +1,8 @@
-import type { MeasureGrid, MeasureRange, MeasureRangeMs } from "@/domain/practice/measure-grid";
+import type {
+  MeasureGrid,
+  MeasureRange,
+  MeasureRangeMs
+} from "@/domain/practice/measure-grid";
 import type { SupportedTimeSignature } from "@/domain/music/meter-policy";
 
 type PracticeSourceType = "quick" | "sheet";

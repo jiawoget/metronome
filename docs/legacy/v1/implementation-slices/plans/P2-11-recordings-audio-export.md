@@ -140,8 +140,19 @@ export type RecordingAudioExportRequest = {
 };
 
 export type RecordingAudioExportResult =
-  | { ok: true; recordingId: string; filename: string; mimeType: string; sizeBytes: number }
-  | { ok: false; recordingId: string; reason: RecordingAudioExportUnavailableReason; message: string };
+  | {
+      ok: true;
+      recordingId: string;
+      filename: string;
+      mimeType: string;
+      sizeBytes: number;
+    }
+  | {
+      ok: false;
+      recordingId: string;
+      reason: RecordingAudioExportUnavailableReason;
+      message: string;
+    };
 
 export type RecordingAudioDownloadAdapter = {
   downloadBlob(input: { blob: Blob; filename: string }): Promise<void> | void;

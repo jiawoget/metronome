@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 import { SUPPORTED_TIME_SIGNATURES } from "@/domain/music/meter-policy";
-import { getMeterMeasureDurationMs, getMeterTimeSignatureParts } from "@/domain/practice/meter-timing";
+import {
+  getMeterMeasureDurationMs,
+  getMeterTimeSignatureParts
+} from "@/domain/practice/meter-timing";
 import type { PracticeTimeSignature } from "@/domain/practice/types";
 
 export type MeasureGrid = {
@@ -47,17 +50,20 @@ const measureGridBaseSchema = z.object({
   measureOneOffsetMs: z.number().finite().int().nonnegative()
 });
 
-export const measureGridSchema = measureGridBaseSchema.superRefine((grid, context) => {
-  const { numerator } = getTimeSignatureParts(grid.timeSignature);
+export const measureGridSchema = measureGridBaseSchema.superRefine(
+  (grid, context) => {
+    const { numerator } = getTimeSignatureParts(grid.timeSignature);
 
-  if (grid.pickupBeats >= numerator) {
-    context.addIssue({
-      code: "custom",
-      path: ["pickupBeats"],
-      message: "pickupBeats must be smaller than the time signature numerator."
-    });
+    if (grid.pickupBeats >= numerator) {
+      context.addIssue({
+        code: "custom",
+        path: ["pickupBeats"],
+        message:
+          "pickupBeats must be smaller than the time signature numerator."
+      });
+    }
   }
-});
+);
 
 export function getTimeSignatureParts(timeSignature: PracticeTimeSignature) {
   return getMeterTimeSignatureParts(timeSignature);
@@ -103,15 +109,24 @@ export function getMeasureDurationMs(grid: MeasureGrid) {
   return getMeasureDurationMsFromValidatedGrid(validatedGrid);
 }
 
-function getMeasureStartMsFromValidatedGrid(validatedGrid: MeasureGrid, measureNumber: number) {
+function getMeasureStartMsFromValidatedGrid(
+  validatedGrid: MeasureGrid,
+  measureNumber: number
+) {
   const validatedMeasureNumber = validateMeasureNumber(measureNumber);
   const measureIndex = validatedMeasureNumber - 1;
 
-  return validatedGrid.measureOneOffsetMs + getMeasureDurationMsFromValidatedGrid(validatedGrid) * measureIndex;
+  return (
+    validatedGrid.measureOneOffsetMs +
+    getMeasureDurationMsFromValidatedGrid(validatedGrid) * measureIndex
+  );
 }
 
 export function getMeasureStartMs(grid: MeasureGrid, measureNumber: number) {
-  return getMeasureStartMsFromValidatedGrid(validateMeasureGrid(grid), measureNumber);
+  return getMeasureStartMsFromValidatedGrid(
+    validateMeasureGrid(grid),
+    measureNumber
+  );
 }
 
 export function getMeasureEndMs(grid: MeasureGrid, measureNumber: number) {
@@ -123,14 +138,22 @@ export function getMeasureEndMs(grid: MeasureGrid, measureNumber: number) {
   );
 }
 
-export function getMeasureRangeMs(grid: MeasureGrid, range: MeasureRange): MeasureRangeMs {
+export function getMeasureRangeMs(
+  grid: MeasureGrid,
+  range: MeasureRange
+): MeasureRangeMs {
   const validatedGrid = validateMeasureGrid(grid);
   const validatedRange = validateMeasureRange(range);
 
   return {
-    startMs: getMeasureStartMsFromValidatedGrid(validatedGrid, validatedRange.startMeasure),
+    startMs: getMeasureStartMsFromValidatedGrid(
+      validatedGrid,
+      validatedRange.startMeasure
+    ),
     endMs:
-      getMeasureStartMsFromValidatedGrid(validatedGrid, validatedRange.endMeasure) +
-      getMeasureDurationMsFromValidatedGrid(validatedGrid)
+      getMeasureStartMsFromValidatedGrid(
+        validatedGrid,
+        validatedRange.endMeasure
+      ) + getMeasureDurationMsFromValidatedGrid(validatedGrid)
   };
 }

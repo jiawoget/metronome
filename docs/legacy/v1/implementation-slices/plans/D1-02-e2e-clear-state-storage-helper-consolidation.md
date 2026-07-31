@@ -49,14 +49,14 @@ Existing shared storage fixture:
 
 Target helper inventory:
 
-| File | Current cleanup behavior | Notes |
-| --- | --- | --- |
-| `tests/e2e/measure-grid-calibration.spec.ts` | `goto("/sheet-library")`; `clearRecordingHistory`; delete sheet library, practice session, measure grid DBs; reload; assert Sheet Library heading | Already uses fixture primitives; local wrapper is repeated shape. |
-| `tests/e2e/practice-segment-selector.spec.ts` | `goto("/sheet-library")`; `clearRecordingHistory`; delete sheet library, practice session, measure grid, practice segment DBs; reload; assert heading | Already uses fixture primitives; local wrapper is repeated shape. |
-| `tests/e2e/sheet-segment-recording.spec.ts` | `goto("/sheet-library")`; `clearRecordingHistory`; delete sheet library, practice session, measure grid, practice segment DBs; reload; assert heading | Already uses fixture primitives; local wrapper is repeated shape and used multiple times. |
-| `tests/e2e/reference-system.spec.ts` | `goto("/sheet-library")`; `clearRecordingHistory`; delete sheet library, reference, practice session DBs; reload; assert heading | Uses alias `clearDatabaseList`; local wrapper is repeated shape. |
-| `tests/e2e/sheet-recording-review.spec.ts` | `goto("/sheet-library")`; `clearRecordingHistory`; delete sheet library and practice session DBs; reload; assert heading | Already uses fixture primitives; local wrapper is repeated shape and used three times. |
-| `tests/e2e/sheet-practice-integration.spec.ts` | `goto("/sheet-library")`; remove recording-history key; local `deleteDatabase` for sheet library and practice session DBs; reload; assert heading | Current main matches the common Sheet Library reset shape except it still owns a local `deleteDatabase(...)` helper. |
+| File                                           | Current cleanup behavior                                                                                                                              | Notes                                                                                                                |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `tests/e2e/measure-grid-calibration.spec.ts`   | `goto("/sheet-library")`; `clearRecordingHistory`; delete sheet library, practice session, measure grid DBs; reload; assert Sheet Library heading     | Already uses fixture primitives; local wrapper is repeated shape.                                                    |
+| `tests/e2e/practice-segment-selector.spec.ts`  | `goto("/sheet-library")`; `clearRecordingHistory`; delete sheet library, practice session, measure grid, practice segment DBs; reload; assert heading | Already uses fixture primitives; local wrapper is repeated shape.                                                    |
+| `tests/e2e/sheet-segment-recording.spec.ts`    | `goto("/sheet-library")`; `clearRecordingHistory`; delete sheet library, practice session, measure grid, practice segment DBs; reload; assert heading | Already uses fixture primitives; local wrapper is repeated shape and used multiple times.                            |
+| `tests/e2e/reference-system.spec.ts`           | `goto("/sheet-library")`; `clearRecordingHistory`; delete sheet library, reference, practice session DBs; reload; assert heading                      | Uses alias `clearDatabaseList`; local wrapper is repeated shape.                                                     |
+| `tests/e2e/sheet-recording-review.spec.ts`     | `goto("/sheet-library")`; `clearRecordingHistory`; delete sheet library and practice session DBs; reload; assert heading                              | Already uses fixture primitives; local wrapper is repeated shape and used three times.                               |
+| `tests/e2e/sheet-practice-integration.spec.ts` | `goto("/sheet-library")`; remove recording-history key; local `deleteDatabase` for sheet library and practice session DBs; reload; assert heading     | Current main matches the common Sheet Library reset shape except it still owns a local `deleteDatabase(...)` helper. |
 
 ## Scope
 
@@ -124,7 +124,9 @@ export async function clearSheetLibraryTestState(
   await clearRecordingHistory(page);
   await clearDatabases(page, databaseNames);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Sheet Library" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sheet Library" })
+  ).toBeVisible();
 }
 ```
 
@@ -184,7 +186,7 @@ rg -n "async function clearState|async function deleteDatabase|clearDatabases|cl
    - `sheet-practice-integration.spec.ts` may use the helper because the
      current implementation matches the common Sheet Library reset shape.
      Preserve its exact DB list: `[SHEET_LIBRARY_DB_NAME,
-     PRACTICE_SESSION_DB_NAME]`.
+PRACTICE_SESSION_DB_NAME]`.
 
 5. Run targeted verification:
 
@@ -246,7 +248,7 @@ Post-implementation evidence:
   - It confirmed current `sheet-practice-integration.spec.ts` uses the same
     Sheet Library reset shape as the other target specs and may adopt
     `clearSheetLibraryTestState(page, [SHEET_LIBRARY_DB_NAME,
-    PRACTICE_SESSION_DB_NAME])`.
+PRACTICE_SESSION_DB_NAME])`.
 - Targeted E2E baseline before implementation:
   - `& .\scripts\npm-local.ps1 --% run test:e2e -- reference-system.spec.ts measure-grid-calibration.spec.ts practice-segment-selector.spec.ts sheet-segment-recording.spec.ts`: `PASS`, 7/7.
   - `& .\scripts\npm-local.ps1 --% run test:e2e -- sheet-recording-review.spec.ts sheet-practice-integration.spec.ts`: `PASS`, 4/4.
@@ -266,14 +268,14 @@ Post-implementation evidence:
 
 Per-target preservation table:
 
-| File | Before DB list | After DB list | Route before/after | localStorage behavior before/after |
-| --- | --- | --- | --- | --- |
-| `tests/e2e/measure-grid-calibration.spec.ts` | sheet library, practice session, measure grid | same | `/sheet-library` / same | recording-history key removed via `clearRecordingHistory` / same via helper |
-| `tests/e2e/practice-segment-selector.spec.ts` | sheet library, practice session, measure grid, practice segment | same | `/sheet-library` / same | recording-history key removed via `clearRecordingHistory` / same via helper |
-| `tests/e2e/sheet-segment-recording.spec.ts` | sheet library, practice session, measure grid, practice segment | same | `/sheet-library` / same | recording-history key removed via `clearRecordingHistory` / same via helper |
-| `tests/e2e/reference-system.spec.ts` | sheet library, reference, practice session | same | `/sheet-library` / same | recording-history key removed via `clearRecordingHistory` / same via helper |
-| `tests/e2e/sheet-recording-review.spec.ts` | sheet library, practice session | same | `/sheet-library` / same | recording-history key removed via `clearRecordingHistory` / same via helper |
-| `tests/e2e/sheet-practice-integration.spec.ts` | sheet library, practice session | same | `/sheet-library` / same | recording-history key removed with local `window.localStorage.removeItem(...)` / same through `clearRecordingHistory` in helper |
+| File                                           | Before DB list                                                  | After DB list | Route before/after      | localStorage behavior before/after                                                                                              |
+| ---------------------------------------------- | --------------------------------------------------------------- | ------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/e2e/measure-grid-calibration.spec.ts`   | sheet library, practice session, measure grid                   | same          | `/sheet-library` / same | recording-history key removed via `clearRecordingHistory` / same via helper                                                     |
+| `tests/e2e/practice-segment-selector.spec.ts`  | sheet library, practice session, measure grid, practice segment | same          | `/sheet-library` / same | recording-history key removed via `clearRecordingHistory` / same via helper                                                     |
+| `tests/e2e/sheet-segment-recording.spec.ts`    | sheet library, practice session, measure grid, practice segment | same          | `/sheet-library` / same | recording-history key removed via `clearRecordingHistory` / same via helper                                                     |
+| `tests/e2e/reference-system.spec.ts`           | sheet library, reference, practice session                      | same          | `/sheet-library` / same | recording-history key removed via `clearRecordingHistory` / same via helper                                                     |
+| `tests/e2e/sheet-recording-review.spec.ts`     | sheet library, practice session                                 | same          | `/sheet-library` / same | recording-history key removed via `clearRecordingHistory` / same via helper                                                     |
+| `tests/e2e/sheet-practice-integration.spec.ts` | sheet library, practice session                                 | same          | `/sheet-library` / same | recording-history key removed with local `window.localStorage.removeItem(...)` / same through `clearRecordingHistory` in helper |
 
 Targeted baseline and verification:
 

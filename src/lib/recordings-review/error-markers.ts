@@ -43,10 +43,25 @@ export type ErrorMarkerSeekResult =
     };
 
 const markerInputSchema = z.object({
-  recordingId: z.string().trim().min(1, "A recording is required before saving an error marker."),
-  timestampMs: z.number().finite("Choose a valid recording timestamp.").min(0, "Marker time must be within the recording."),
-  durationMs: z.number().finite("Recording duration is unavailable.").nonnegative("Recording duration is unavailable."),
-  note: z.string().max(MAX_ERROR_MARKER_NOTE_LENGTH, `Marker note must be ${MAX_ERROR_MARKER_NOTE_LENGTH} characters or less.`).nullable()
+  recordingId: z
+    .string()
+    .trim()
+    .min(1, "A recording is required before saving an error marker."),
+  timestampMs: z
+    .number()
+    .finite("Choose a valid recording timestamp.")
+    .min(0, "Marker time must be within the recording."),
+  durationMs: z
+    .number()
+    .finite("Recording duration is unavailable.")
+    .nonnegative("Recording duration is unavailable."),
+  note: z
+    .string()
+    .max(
+      MAX_ERROR_MARKER_NOTE_LENGTH,
+      `Marker note must be ${MAX_ERROR_MARKER_NOTE_LENGTH} characters or less.`
+    )
+    .nullable()
 });
 
 function createMarkerId() {
@@ -91,7 +106,9 @@ export function validateErrorMarkerInput(input: ErrorMarkerValidationInput) {
   });
 
   if (!result.success) {
-    throw new Error(result.error.issues[0]?.message ?? "Error marker is invalid.");
+    throw new Error(
+      result.error.issues[0]?.message ?? "Error marker is invalid."
+    );
   }
 
   const normalized = result.data;
@@ -99,7 +116,9 @@ export function validateErrorMarkerInput(input: ErrorMarkerValidationInput) {
   return normalized;
 }
 
-export function createErrorMarker(input: CreateErrorMarkerInput): RecordingErrorMarker {
+export function createErrorMarker(
+  input: CreateErrorMarkerInput
+): RecordingErrorMarker {
   const normalized = validateErrorMarkerInput(input);
 
   return {
@@ -110,7 +129,9 @@ export function createErrorMarker(input: CreateErrorMarkerInput): RecordingError
   };
 }
 
-export function normalizePersistedErrorMarker(input: PersistedErrorMarkerInput) {
+export function normalizePersistedErrorMarker(
+  input: PersistedErrorMarkerInput
+) {
   if (!input.id.trim()) {
     throw new Error("Error marker id is required.");
   }
@@ -122,10 +143,14 @@ export function normalizePersistedErrorMarker(input: PersistedErrorMarkerInput) 
 }
 
 export function sortErrorMarkers(markers: RecordingErrorMarker[]) {
-  return [...markers].sort((left, right) => left.timestampMs - right.timestampMs);
+  return [...markers].sort(
+    (left, right) => left.timestampMs - right.timestampMs
+  );
 }
 
-export function getErrorMarkerSeekTarget(marker: Pick<RecordingErrorMarker, "timestampMs">) {
+export function getErrorMarkerSeekTarget(
+  marker: Pick<RecordingErrorMarker, "timestampMs">
+) {
   return marker.timestampMs;
 }
 
@@ -168,7 +193,10 @@ export function seekToErrorMarker({
     return {
       ok: false,
       seekTargetMs,
-      message: error instanceof Error ? error.message : "Playback could not move to this marker."
+      message:
+        error instanceof Error
+          ? error.message
+          : "Playback could not move to this marker."
     };
   }
 }

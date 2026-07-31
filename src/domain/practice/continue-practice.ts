@@ -12,10 +12,7 @@ export const DEFAULT_CONTINUE_PRACTICE_TARGET_LIMIT = 5;
 export type ContinuePracticeTargetKind = "quick" | "sheet" | "segment";
 export type ContinuePracticeTargetActivitySource = "session" | "recording";
 export type ContinuePracticeRejectedTargetReason =
-  | "lookup-failed"
-  | "missing-sheet"
-  | "missing-segment"
-  | "no-target";
+  "lookup-failed" | "missing-sheet" | "missing-segment" | "no-target";
 
 type ContinuePracticeTargetBase = {
   kind: ContinuePracticeTargetKind;
@@ -85,7 +82,10 @@ const TARGET_SPECIFICITY: Record<ContinuePracticeTargetKind, number> = {
   sheet: 1,
   quick: 2
 };
-const ACTIVITY_SOURCE_PRIORITY: Record<ContinuePracticeTargetActivitySource, number> = {
+const ACTIVITY_SOURCE_PRIORITY: Record<
+  ContinuePracticeTargetActivitySource,
+  number
+> = {
   recording: 0,
   session: 1
 };
@@ -153,7 +153,9 @@ export function getHomeCompatibleContinuePracticeTarget(
   return null;
 }
 
-function createTargetCandidate(item: HomeRecentActivityItem): ContinuePracticeTargetIdentity | null {
+function createTargetCandidate(
+  item: HomeRecentActivityItem
+): ContinuePracticeTargetIdentity | null {
   const activitySource = getActivitySource(item);
 
   if (!activitySource) {
@@ -161,7 +163,10 @@ function createTargetCandidate(item: HomeRecentActivityItem): ContinuePracticeTa
   }
 
   if (item.kind === "quick-session") {
-    return item.targetState === "quick" && item.sessionId && !item.sheetId && !item.segmentId
+    return item.targetState === "quick" &&
+      item.sessionId &&
+      !item.sheetId &&
+      !item.segmentId
       ? {
           kind: "quick",
           sourceType: "quick",
@@ -180,7 +185,10 @@ function createTargetCandidate(item: HomeRecentActivityItem): ContinuePracticeTa
     return null;
   }
 
-  if ((item.kind === "sheet-session" || item.kind === "sheet-recording") && item.sheetId) {
+  if (
+    (item.kind === "sheet-session" || item.kind === "sheet-recording") &&
+    item.sheetId
+  ) {
     return {
       kind: "sheet",
       sourceType: "sheet",
@@ -222,7 +230,9 @@ function createTargetCandidate(item: HomeRecentActivityItem): ContinuePracticeTa
   return null;
 }
 
-function createRejectedTarget(item: HomeRecentActivityItem): ContinuePracticeRejectedTarget {
+function createRejectedTarget(
+  item: HomeRecentActivityItem
+): ContinuePracticeRejectedTarget {
   return {
     id: item.id,
     kind: item.kind,
@@ -235,7 +245,9 @@ function createRejectedTarget(item: HomeRecentActivityItem): ContinuePracticeRej
   };
 }
 
-function getRejectedReason(item: HomeRecentActivityItem): ContinuePracticeRejectedTargetReason {
+function getRejectedReason(
+  item: HomeRecentActivityItem
+): ContinuePracticeRejectedTargetReason {
   switch (item.targetState) {
     case "lookup-failed":
       return "lookup-failed";
@@ -250,7 +262,9 @@ function getRejectedReason(item: HomeRecentActivityItem): ContinuePracticeReject
   }
 }
 
-function getActivitySource(item: HomeRecentActivityItem): ContinuePracticeTargetActivitySource | null {
+function getActivitySource(
+  item: HomeRecentActivityItem
+): ContinuePracticeTargetActivitySource | null {
   if (item.kind === "sheet-recording" || item.kind === "segment-recording") {
     return item.recordingId ? "recording" : null;
   }
@@ -259,13 +273,17 @@ function getActivitySource(item: HomeRecentActivityItem): ContinuePracticeTarget
 }
 
 function getSegmentRangeLabel(item: HomeRecentActivityItem) {
-  return item.metadata.find((entry) => /^m\d+(\.\d+)?-\d+(\.\d+)?$/.test(entry)) ?? null;
+  return (
+    item.metadata.find((entry) => /^m\d+(\.\d+)?-\d+(\.\d+)?$/.test(entry)) ??
+    null
+  );
 }
 
 function compareCandidates(left: Candidate, right: Candidate) {
   return (
     compareSortValues(sortValue(left.target), sortValue(right.target)) ||
-    TARGET_SPECIFICITY[left.target.kind] - TARGET_SPECIFICITY[right.target.kind] ||
+    TARGET_SPECIFICITY[left.target.kind] -
+      TARGET_SPECIFICITY[right.target.kind] ||
     ACTIVITY_SOURCE_PRIORITY[left.target.activitySource] -
       ACTIVITY_SOURCE_PRIORITY[right.target.activitySource] ||
     left.target.targetKey.localeCompare(right.target.targetKey) ||

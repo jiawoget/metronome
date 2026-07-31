@@ -46,7 +46,9 @@ export function useBoundedRecordingSelection({
         }
 
         if (currentVisibleIds.length >= maxSelected) {
-          if (currentVisibleIds.length === currentSelection.recordingIds.length) {
+          if (
+            currentVisibleIds.length === currentSelection.recordingIds.length
+          ) {
             return currentSelection;
           }
 

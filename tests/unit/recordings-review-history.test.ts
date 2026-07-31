@@ -7,7 +7,10 @@ import {
 } from "@/lib/recordings-review/artifact-details";
 import { derivePeaksFromSamples } from "@/services/audio-analysis";
 import { createRecordingArtifactRef } from "@/lib/recordings-review/artifact-storage";
-import { formatDuration, formatTimestamp } from "@/lib/recordings-review/format";
+import {
+  formatDuration,
+  formatTimestamp
+} from "@/lib/recordings-review/format";
 import {
   filterRecordings,
   getErrorMarkerSeekTarget,
@@ -17,7 +20,10 @@ import {
   sortErrorMarkers,
   sortRecordingsByNewest
 } from "@/lib/recordings-review/history";
-import { getRecordingsReviewBySheetHref, getSheetPracticeQueryHref } from "@/domain/sheet/routes";
+import {
+  getRecordingsReviewBySheetHref,
+  getSheetPracticeQueryHref
+} from "@/domain/sheet/routes";
 import { groupRecordingsByTake } from "@/lib/recordings-review/take-groups";
 import {
   createErrorMarker,
@@ -26,7 +32,10 @@ import {
   seekToErrorMarker,
   validateErrorMarkerInput
 } from "@/lib/recordings-review/error-markers";
-import type { RecordingErrorMarker, ReviewRecording } from "@/lib/recordings-review/types";
+import type {
+  RecordingErrorMarker,
+  ReviewRecording
+} from "@/lib/recordings-review/types";
 import {
   makeQuickReviewRecording,
   makeSheetRecordingSegmentContext,
@@ -104,16 +113,34 @@ const segmentSheetRecording: ReviewRecording = makeSheetReviewRecording(
 
 describe("recordings review history helpers", () => {
   it("filters by visible metadata, type, and combined search", () => {
-    expect(filterRecordings({ recordings: [quickRecording, sheetRecording], query: "moonlight", type: "all" })).toEqual([
-      sheetRecording
-    ]);
-    expect(filterRecordings({ recordings: [quickRecording, sheetRecording], query: "", type: "quick" })).toEqual([
-      quickRecording
-    ]);
-    expect(filterRecordings({ recordings: [quickRecording, sheetRecording], query: "96 bpm", type: "sheet" })).toEqual([
-      sheetRecording
-    ]);
-    expect(filterRecordings({ recordings: [quickRecording, sheetRecording], query: "moonlight", type: "quick" })).toEqual([]);
+    expect(
+      filterRecordings({
+        recordings: [quickRecording, sheetRecording],
+        query: "moonlight",
+        type: "all"
+      })
+    ).toEqual([sheetRecording]);
+    expect(
+      filterRecordings({
+        recordings: [quickRecording, sheetRecording],
+        query: "",
+        type: "quick"
+      })
+    ).toEqual([quickRecording]);
+    expect(
+      filterRecordings({
+        recordings: [quickRecording, sheetRecording],
+        query: "96 bpm",
+        type: "sheet"
+      })
+    ).toEqual([sheetRecording]);
+    expect(
+      filterRecordings({
+        recordings: [quickRecording, sheetRecording],
+        query: "moonlight",
+        type: "quick"
+      })
+    ).toEqual([]);
   });
 
   it("filters sheet recordings by saved segment metadata", () => {
@@ -310,7 +337,9 @@ describe("recordings review history helpers", () => {
   });
 
   it("calculates practice again targets", () => {
-    expect(getContinuePracticeHref(quickRecording)).toBe("/quick-metronome?recordingId=quick-1");
+    expect(getContinuePracticeHref(quickRecording)).toBe(
+      "/quick-metronome?recordingId=quick-1"
+    );
     expect(getContinuePracticeHref(sheetRecording)).toBe(
       "/sheet-practice?recordingId=sheet-1&sheetId=sheet-42"
     );
@@ -382,7 +411,10 @@ describe("recordings review history helpers", () => {
       { id: "early", recordingId: "sheet-1", timestampMs: 1_000, note: "Early" }
     ];
 
-    expect(sortErrorMarkers(markers).map((marker) => marker.id)).toEqual(["early", "late"]);
+    expect(sortErrorMarkers(markers).map((marker) => marker.id)).toEqual([
+      "early",
+      "late"
+    ]);
   });
 
   it("validates marker recordingId, timestamp duration range, and note trimming", () => {
@@ -557,7 +589,10 @@ describe("recordings review artifact helpers", () => {
   });
 
   it("derives normalized peaks from decoded samples", () => {
-    const peaks = derivePeaksFromSamples(new Float32Array([0, 0.5, -1, 0.25]), 2);
+    const peaks = derivePeaksFromSamples(
+      new Float32Array([0, 0.5, -1, 0.25]),
+      2
+    );
 
     expect(peaks).toEqual([0.5, 1]);
   });
@@ -647,7 +682,9 @@ describe("recordings review artifact helpers", () => {
   it("rejects trusted peaks when the audio cannot be decoded", async () => {
     installAudioContextMock({ reject: true });
 
-    await expect(loadTestArtifactDetails(sheetRecording)).rejects.toThrow("cannot be decoded");
+    await expect(loadTestArtifactDetails(sheetRecording)).rejects.toThrow(
+      "cannot be decoded"
+    );
   });
 
   it("rejects missing audio without trusted peaks", async () => {
@@ -675,10 +712,18 @@ describe("recordings review artifact helpers", () => {
   });
 
   it("does not warn when decoded and metadata duration are within tolerance", () => {
-    expect(getDurationWarning({ decodedDurationMs: 1_200, metadataDurationMs: 1_000 })).toBeNull();
-    expect(getDurationWarning({ decodedDurationMs: 1_400, metadataDurationMs: 1_000 })).toContain(
-      "differs from saved metadata"
-    );
+    expect(
+      getDurationWarning({
+        decodedDurationMs: 1_200,
+        metadataDurationMs: 1_000
+      })
+    ).toBeNull();
+    expect(
+      getDurationWarning({
+        decodedDurationMs: 1_400,
+        metadataDurationMs: 1_000
+      })
+    ).toContain("differs from saved metadata");
   });
 });
 

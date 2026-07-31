@@ -53,17 +53,12 @@ loadRecordingArtifactDetailsFromBody(input: {
 
 An equivalent narrow signature is acceptable, but it must stay in
 `artifact-details.ts`, must not call `resolveRecordingArtifactBody(...)`, and
-must not introduce a new artifact facade or model layer.
-2. Keep `loadRecordingArtifactDetails(recording)` behavior by having it resolve
-   the body and delegate to the direct-body decode helper.
-3. Update `BrowserSheetRecordingService.stopAndSave(...)` to decode from the
-   captured artifact Blob/body instead of constructing a draft
-   `ReviewRecording` with `audioDataUrl`.
-4. Remove `createDraftSheetReviewRecording(...)` if it becomes unused.
-5. Keep final persisted sheet `ReviewRecording` artifactRef-backed and
-   `audioDataUrl: null`.
-6. Add a focused regression test proving sheet save no longer depends on
-   `artifact.dataUrl` being a valid data URL.
+must not introduce a new artifact facade or model layer. 2. Keep `loadRecordingArtifactDetails(recording)` behavior by having it resolve
+the body and delegate to the direct-body decode helper. 3. Update `BrowserSheetRecordingService.stopAndSave(...)` to decode from the
+captured artifact Blob/body instead of constructing a draft
+`ReviewRecording` with `audioDataUrl`. 4. Remove `createDraftSheetReviewRecording(...)` if it becomes unused. 5. Keep final persisted sheet `ReviewRecording` artifactRef-backed and
+`audioDataUrl: null`. 6. Add a focused regression test proving sheet save no longer depends on
+`artifact.dataUrl` being a valid data URL.
 
 ## Explicit Non-Scope For C2-03
 

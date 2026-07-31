@@ -158,7 +158,9 @@ describe("useBrowserSheetViewerPageThumbnails", () => {
 
     viewerMocks.loadPageThumbnails.mockReturnValueOnce(load.promise);
 
-    const { unmount } = renderHook(() => useBrowserSheetViewerPageThumbnails("sheet-1"));
+    const { unmount } = renderHook(() =>
+      useBrowserSheetViewerPageThumbnails("sheet-1")
+    );
 
     unmount();
     load.resolve(stale);
@@ -194,7 +196,9 @@ describe("useBrowserSheetViewerPageThumbnails", () => {
   it("renders active thumbnail errors without artifact URL cleanup", async () => {
     viewerMocks.loadPageThumbnails.mockResolvedValueOnce(errorSet());
 
-    const { result } = renderHook(() => useBrowserSheetViewerPageThumbnails("sheet-1"));
+    const { result } = renderHook(() =>
+      useBrowserSheetViewerPageThumbnails("sheet-1")
+    );
 
     await waitFor(() => {
       expect(result.current).toMatchObject({
@@ -211,7 +215,9 @@ describe("useBrowserSheetViewerPageThumbnails", () => {
       new Error("thumbnail load failed")
     );
 
-    const { result } = renderHook(() => useBrowserSheetViewerPageThumbnails("sheet-1"));
+    const { result } = renderHook(() =>
+      useBrowserSheetViewerPageThumbnails("sheet-1")
+    );
 
     await waitFor(() => {
       expect(result.current).toMatchObject({
@@ -258,10 +264,34 @@ describe("SheetPageThumbnails", () => {
           sheetId: "sheet-1",
           pageCount: 4,
           thumbnails: [
-            { sheetId: "sheet-1", pageNumber: 0, width: 80, height: 100, url: "blob:bad-0" },
-            { sheetId: "sheet-1", pageNumber: 1, width: 80, height: 100, url: "blob:page-1" },
-            { sheetId: "sheet-1", pageNumber: 2, width: 80, height: 100, url: "blob:page-2" },
-            { sheetId: "sheet-1", pageNumber: 3, width: 80, height: 100, url: "blob:bad-3" }
+            {
+              sheetId: "sheet-1",
+              pageNumber: 0,
+              width: 80,
+              height: 100,
+              url: "blob:bad-0"
+            },
+            {
+              sheetId: "sheet-1",
+              pageNumber: 1,
+              width: 80,
+              height: 100,
+              url: "blob:page-1"
+            },
+            {
+              sheetId: "sheet-1",
+              pageNumber: 2,
+              width: 80,
+              height: 100,
+              url: "blob:page-2"
+            },
+            {
+              sheetId: "sheet-1",
+              pageNumber: 3,
+              width: 80,
+              height: 100,
+              url: "blob:bad-3"
+            }
           ]
         }}
         sheetName="Autumn Etude"
@@ -271,10 +301,18 @@ describe("SheetPageThumbnails", () => {
       />
     );
 
-    expect(screen.queryByRole("button", { name: "Go to page 0" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Go to page 3" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Go to page 2" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("img", { name: "Autumn Etude page 2 thumbnail" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Go to page 0" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Go to page 3" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Go to page 2" })
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      screen.getByRole("img", { name: "Autumn Etude page 2 thumbnail" })
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Go to page 1" }));
 
@@ -292,7 +330,9 @@ describe("SheetPageThumbnails", () => {
       />
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("Loading thumbnails...");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Loading thumbnails..."
+    );
 
     rerender(
       <SheetPageThumbnails
@@ -304,11 +344,18 @@ describe("SheetPageThumbnails", () => {
       />
     );
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Thumbnails unavailable");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Thumbnails unavailable"
+    );
 
     rerender(
       <SheetPageThumbnails
-        state={{ status: "ready", sheetId: "sheet-1", pageCount: 0, thumbnails: [] }}
+        state={{
+          status: "ready",
+          sheetId: "sheet-1",
+          pageCount: 0,
+          thumbnails: []
+        }}
         sheetName="Autumn Etude"
         currentPage={1}
         totalPages={2}
@@ -316,6 +363,8 @@ describe("SheetPageThumbnails", () => {
       />
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("No thumbnails available");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "No thumbnails available"
+    );
   });
 });

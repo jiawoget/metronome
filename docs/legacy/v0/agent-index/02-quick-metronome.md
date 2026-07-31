@@ -45,4 +45,3 @@ session integration.
   every keystroke.
 - Pre-run meter/countdown controls lock while running; BPM remains adjustable.
 - No known unimplemented v0 quick-metronome item remains.
-

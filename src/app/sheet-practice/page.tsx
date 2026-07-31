@@ -8,14 +8,22 @@ type SheetPracticePageProps = {
   }>;
 };
 
-export default async function SheetPracticePage({ searchParams }: SheetPracticePageProps) {
+export default async function SheetPracticePage({
+  searchParams
+}: SheetPracticePageProps) {
   const params = await searchParams;
   const rawSheetId = params?.sheetId;
   const rawRecordingId = params?.recordingId;
   const rawSegmentId = params?.segmentId;
-  const sheetId = Array.isArray(rawSheetId) ? rawSheetId[0] : rawSheetId ?? null;
-  const sourceRecordingId = Array.isArray(rawRecordingId) ? rawRecordingId[0] : rawRecordingId ?? null;
-  const returnSegmentId = Array.isArray(rawSegmentId) ? rawSegmentId[0] : rawSegmentId ?? null;
+  const sheetId = Array.isArray(rawSheetId)
+    ? rawSheetId[0]
+    : (rawSheetId ?? null);
+  const sourceRecordingId = Array.isArray(rawRecordingId)
+    ? rawRecordingId[0]
+    : (rawRecordingId ?? null);
+  const returnSegmentId = Array.isArray(rawSegmentId)
+    ? rawSegmentId[0]
+    : (rawSegmentId ?? null);
 
   return (
     <SheetViewerExperience
