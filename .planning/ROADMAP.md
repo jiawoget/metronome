@@ -12,7 +12,7 @@ Milestone v1.1 establishes one deterministic repository-wide Prettier and LF bas
 
 **Phase Numbering:** This fresh milestone resets numbering to Phase 1 by owner decision.
 
-- [ ] **Phase 1: Repository Formatting Baseline** - Maintainers can format and validate every allowed repository text file through one deterministic, cross-platform policy without changing product behavior.
+- [x] **Phase 1: Repository Formatting Baseline** - Maintainers can format and validate every allowed repository text file through one deterministic, cross-platform policy without changing product behavior. (completed 2026-08-01)
 
 ## Phase Details
 
@@ -45,4 +45,4 @@ Phase 1 completion does not prove release. After native verification, the separa
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repository Formatting Baseline | 1/1 | In Progress|  |
+| 1. Repository Formatting Baseline | 1/1 | Complete    | 2026-08-01 |
