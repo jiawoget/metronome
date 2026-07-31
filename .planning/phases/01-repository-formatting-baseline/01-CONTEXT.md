@@ -39,7 +39,7 @@ Establish one deterministic LF and Prettier baseline for every allowed, tracked,
 ### Enforcement and evidence
 - **D-15:** A repository-tracked pre-commit hook must fail fast with `git diff --cached --check` and, after the formatting policy exists in `HEAD`, `npm run format:check`. Lint, typecheck, the full unit suite, and build run once for the frozen final local candidate and in Ubuntu CI instead of on every commit.
 - **D-16:** Ubuntu CI must run the same `format:check` before lint, typecheck, unit tests, and build.
-- **D-17:** Final phase evidence covers allowed formatting scope, quarantine protection, a no-diff second format, direct Windows runtime resolution, all existing non-browser quality gates, and clean Git rollback/reviewability. Playwright, browser, visual, microphone, and product UAT are out of scope.
+- **D-17:** Final phase evidence covers allowed formatting scope, quarantine protection, a no-diff second format, supported direct-or-existing-wrapper Windows runtime resolution, all existing non-browser quality gates, and clean Git rollback/reviewability. Playwright, browser, visual, microphone, and product UAT are out of scope.
 
 ### Release boundary
 - **D-18:** Phase verification does not prove release. Native shipping, exact-final-PR-head CI, a read-only `@codex` review of that same frozen head with no unresolved actionable findings, merge, and clean synchronized `main` are separate conjunctive release-exit facts.
