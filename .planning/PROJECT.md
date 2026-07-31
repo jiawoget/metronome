@@ -27,14 +27,11 @@ Musicians can move from a score and practice target to a repeatable local practi
 ### Validated
 
 - ✓ 32 evidence-backed product capabilities are retained in the shipped [`v1.0 requirements archive`](milestones/v1.0-REQUIREMENTS.md).
+- ✓ Milestone v1.1 Phase 1 validated all 14 formatting requirements: one LF/Prettier policy, an idempotent 341-file mechanical baseline, Windows runtime fallback, fast local enforcement, Ubuntu CI enforcement, and frozen-revision quality evidence.
 
 ### Active
 
-- Establish one explicit LF and Prettier policy for allowed tracked repository text while preserving binary, generated, and all `.planning/**` lifecycle bytes.
-- Produce one idempotent repository-wide mechanical formatting baseline with no product-semantic edits.
-- Make formatting drift fail locally and in Ubuntu CI before the repository's existing quality gates.
-- Make repository commands and hooks use either an already available supported Node/npm toolchain or the existing repository-local wrapper, without global environment mutation.
-- Preserve an isolated mechanical baseline and complete the separate native release exit on the actual final pull-request head.
+- Complete the separate native release exit on the actual final pull-request head: ship, freeze the head, pass applicable CI, obtain a read-only `@codex` review with no unresolved actionable findings, merge, and synchronize a clean local `main`.
 
 ### Deferred
 
@@ -93,7 +90,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ## Evolution
 
-The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is no longer an active lifecycle input. Milestone v1.1 now establishes the repository formatting baseline; after it ships and `main` is synchronized, a separately approved fresh R01 may begin from that new baseline.
+The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is no longer an active lifecycle input. Milestone v1.1 Phase 1 has now validated the repository formatting baseline; release remains pending until the exact final pull-request head passes CI and read-only review, merges, and local `main` is synchronized. A separately approved fresh R01 may begin only from that merged baseline.
 
 ---
-*Last updated: 2026-07-31 for the Repository Formatting Baseline workflow correction*
+*Last updated: 2026-08-01 after Phase 1 verification passed*
