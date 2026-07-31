@@ -26,7 +26,10 @@ Milestone v1.1 establishes one deterministic repository-wide Prettier and LF bas
   3. Repository commands and the tracked hook work with direct supported Node/npm when available and with `scripts/npm-local.ps1` otherwise, without changing user or system `PATH`.
   4. The tracked pre-commit hook fails fast on staged whitespace and formatting drift; the frozen local candidate and Ubuntu CI run formatting, lint, typecheck, full unit, and build gates once per candidate head.
   5. Maintainers can inspect an immutable implementation revision whose mechanical formatter output is isolated from policy, enforcement, semantic, and lifecycle edits, with complete gate evidence and no product behavior change; an exact plan/task/commit count and Playwright are not required.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 01-01-PLAN.md — Establish the canonical policy/enforcement tracer, commit the isolated fixed-point baseline, and prove the frozen candidate.
 
 ## Milestone Release Exit
 
@@ -38,4 +41,4 @@ Phase 1 completion does not prove release. After native verification, the separa
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repository Formatting Baseline | 0/TBD | Not started | - |
+| 1. Repository Formatting Baseline | 0/1 | Not started | - |
