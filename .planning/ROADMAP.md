@@ -17,19 +17,23 @@ Milestone v1.1 establishes one deterministic repository-wide Prettier and LF bas
 ## Phase Details
 
 ### Phase 1: Repository Formatting Baseline
+
 **Goal**: Maintainers have one deterministic repository-wide formatting baseline that is safe to apply, reproducible on Windows and Ubuntu, and enforced without repeating the full quality suite on every lifecycle commit or changing product behavior.
 **Depends on**: Nothing (first phase)
 **Requirements**: POLICY-01, TOOL-01, TOOL-02, EVID-01, BASE-01, BASE-02, BASE-03, WIN-01, WIN-02, ENF-01, ENF-02, QUAL-01, HIST-01, DELIV-01
 **Success Criteria** (what must be TRUE):
+
   1. Maintainers can inspect one native research decision and one root formatting policy comprising `.gitattributes`, `prettier.config.mjs`, `.prettierignore`, exact formatter/plugin packages, and only `npm run format` plus `npm run format:check`; binary/generated paths and all `.planning/**` lifecycle bytes remain outside the formatting surface, with `.planning/deprecated/**` never consumed.
   2. One isolated committed mechanical baseline covers every other allowed tracked Prettier-supported file and contains formatter output only; diagnosis continues until a second `npm run format` creates no tracked diff and `npm run format:check` passes.
   3. Repository commands and the tracked hook work with direct supported Node/npm when available and with `scripts/npm-local.ps1` otherwise, without changing user or system `PATH`.
   4. The tracked pre-commit hook fails fast on staged whitespace and formatting drift; the frozen local candidate and Ubuntu CI run formatting, lint, typecheck, full unit, and build gates once per candidate head.
   5. Maintainers can inspect an immutable implementation revision whose mechanical formatter output is isolated from policy, enforcement, semantic, and lifecycle edits, with complete gate evidence and no product behavior change; an exact plan/task/commit count and Playwright are not required.
-**Plans**: 1 plan
+
+**Plans**: 1/1 plans executed
 
 Plans:
-- [ ] 01-01-PLAN.md — Establish the canonical policy/enforcement tracer, commit the isolated fixed-point baseline, and prove the frozen candidate.
+
+- [x] 01-01-PLAN.md — Establish the canonical policy/enforcement tracer, commit the isolated fixed-point baseline, and prove the frozen candidate.
 
 ## Milestone Release Exit
 
@@ -41,4 +45,4 @@ Phase 1 completion does not prove release. After native verification, the separa
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repository Formatting Baseline | 0/1 | Not started | - |
+| 1. Repository Formatting Baseline | 1/1 | In Progress|  |
