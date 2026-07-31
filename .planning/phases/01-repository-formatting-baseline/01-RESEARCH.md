@@ -2,7 +2,7 @@
 
 **Researched:** 2026-07-31
 **Domain:** Repository-wide Prettier/LF policy, Windows runtime fallback, Git hook, and CI enforcement
-**Confidence:** MEDIUM
+**Confidence:** HIGH
 
 <user_constraints>
 ## User Constraints (from CONTEXT.md)
@@ -61,8 +61,8 @@
 |----|-------------|------------------|
 | POLICY-01 | Maintainers have one root `.gitattributes` policy that normalizes allowed repository text to LF while explicitly preserving binary assets, generated outputs, and `.planning/**`; `.planning/deprecated/**` remains protected without reading or transforming quarantined contents. | Use `* text=auto eol=lf`, explicit `binary` patterns, generated-path `-text` rules, and separate comments/rules for lifecycle exclusion versus absolute quarantine. `[CITED: https://git-scm.com/docs/gitattributes]` |
 | TOOL-01 | Maintainers have one root `prettier.config.mjs` and one `.prettierignore` that preserve the repository's established style, configure the supported Tailwind v4 stylesheet integration, and exclude `.planning/**`, binary, dependency, generated, and build-output paths. | Keep the current style owner, add `endOfLine: "lf"` and `tailwindStylesheet: "./src/app/globals.css"`, and make `.prettierignore` the traversal boundary. `[VERIFIED: live repository]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]` |
-| TOOL-02 | The project pins exact compatible versions of Prettier and the Tailwind Prettier plugin from their official packages, exposes only `npm run format` and `npm run format:check` as public formatting commands, and introduces no second formatter, new formatter wrapper, custom validator, receipt, ledger, or lifecycle script. | Pin Prettier 3.9.6 and `prettier-plugin-tailwindcss` 0.8.1 after the required freshness checkpoint; use direct `prettier --write . --ignore-unknown` and `prettier --check . --ignore-unknown`. `[CITED: https://prettier.io/docs/install]` `[CITED: https://www.npmjs.com/package/prettier-plugin-tailwindcss]` |
-| EVID-01 | Before implementation, current native phase research verifies the selected formatter and plugin against official release/package identity, integrity, configuration, Tailwind v4 compatibility, and repository constraints; in-scope conflicts are diagnosed and repaired in this phase, while only a material boundary change or unavailable external authority stops for owner direction. | Official docs, registry metadata, installed metadata/README, package legitimacy results, and two disposable full-surface probes are recorded below. `[VERIFIED: live repository]` `[VERIFIED: GSD package-legitimacy seam]` |
+| TOOL-02 | The project pins exact compatible versions of Prettier and the Tailwind Prettier plugin from their official packages, exposes only `npm run format` and `npm run format:check` as public formatting commands, and introduces no second formatter, new formatter wrapper, custom validator, receipt, ledger, or lifecycle script. | Replace only the root manifest ranges with exact Prettier 3.9.5 and `prettier-plugin-tailwindcss` 0.8.0, retaining the versions already installed and resolved with integrity in the lockfile; run no package acquisition or upgrade. Use `prettier --write . --ignore-unknown` and `prettier --check . --ignore-unknown`. `[VERIFIED: package.json, package-lock.json, and installed package metadata]` `[CITED: https://prettier.io/docs/install]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]` |
+| EVID-01 | Before implementation, current native phase research verifies the selected formatter and plugin against official release/package identity, integrity, configuration, Tailwind v4 compatibility, and repository constraints; in-scope conflicts are diagnosed and repaired in this phase, while only a material boundary change or unavailable external authority stops for owner direction. | Official documentation, official package identity, installed metadata/README, existing lockfile integrity, and disposable full-surface probes are recorded below; no new package is acquired. `[VERIFIED: live repository]` `[CITED: https://prettier.io/docs/install]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]` |
 | BASE-01 | One committed mechanical Prettier baseline formats every allowed tracked Prettier-supported text file across source, tests, configuration, scripts, current documentation, and legacy documentation, while `.planning/**`, excluded, and quarantined paths remain byte-untouched. | Invoke the root directory rather than a hand-picked glob; use `.prettierignore` plus `--ignore-unknown`. The live path-only inventory found 532 tracked paths outside `.planning/**`, 518 of which the installed Prettier support API recognized before generated-file exclusions. `[VERIFIED: live repository]` |
 | BASE-02 | The mechanical baseline commit contains formatter output only, with no product-semantic edit, dependency-policy change, enforcement edit, generated artifact, or manual cleanup mixed into it. | Commit policy/tooling/enforcement before the format write, begin the baseline from an otherwise clean allowed surface, and stage only tracked formatter output outside `.planning/**`. `[VERIFIED: CONTEXT.md]` |
 | BASE-03 | Before the baseline is committed, formatter/configuration diagnosis continues until a fixed point is reached; immediately after the committed baseline, a second `npm run format` produces no tracked diff and `npm run format:check` passes over the complete configured surface. | Use the index as the comparison point between writes; the exact stage/rerun procedure below resolves the reproduced E2E second-pass delta without a custom ledger. `[VERIFIED: live repository]` |
@@ -72,7 +72,7 @@
 | ENF-02 | Ubuntu CI runs the same `npm run format:check` before lint, typecheck, unit tests, and build, so the canonical formatting contract is enforced consistently across Windows development and CI. | Insert one format-check step after `npm ci` and before the existing lint step; retain the current remaining order. `[VERIFIED: .github/workflows/ci.yml]` |
 | QUAL-01 | The frozen final implementation revision passes one complete local sequence of `format:check`, a second-format no-diff check, lint, typecheck, the full unit suite, and build; Playwright/browser testing is not required because no product or UI behavior changes. | Run the complete non-browser sequence once after the candidate is frozen; earlier commits use only the fast hook and targeted formatting checks. `[VERIFIED: package.json]` `[VERIFIED: CONTEXT.md]` |
 | HIST-01 | The implementation history keeps the repository-wide mechanical formatter output isolated from policy/tooling, enforcement, semantic edits, and lifecycle metadata, without treating an exact plan, task, or commit count as a correctness gate. | The plan must identify the mechanical baseline commit by content and parent cleanliness, not by imposing a fixed total commit count. `[VERIFIED: CONTEXT.md]` |
-| DELIV-01 | The immutable reviewed implementation revision has complete evidence for allowed formatting scope, quarantine protection, Windows toolchain resolution, gate success, and clean version-control rollback, and is ready to enter native verification and shipping without any product migration or user repair. | Record command outcomes against one frozen implementation revision; keep PR creation, merge, final-head review, and synchronized `main` in the separate release exit. `[VERIFIED: REQUIREMENTS.md]` |
+| DELIV-01 | The immutable reviewed implementation revision has complete evidence for allowed formatting scope, quarantine protection, Windows toolchain resolution, gate success, and clean version-control rollback, and is ready to enter native verification and shipping without any product migration or user repair. | Record command outcomes against one frozen implementation revision, including supported direct-or-existing-wrapper runtime resolution; keep PR creation, merge, final-head review, and synchronized `main` in the separate release exit. `[VERIFIED: REQUIREMENTS.md]` `[VERIFIED: live environment]` |
 </phase_requirements>
 
 ## Project Constraints (from AGENTS.md)
@@ -92,9 +92,9 @@
 
 ## Summary
 
-Use the current stable exact pair Prettier 3.9.6 and `prettier-plugin-tailwindcss` 0.8.1, with the existing style settings, explicit `endOfLine: "lf"`, and `tailwindStylesheet: "./src/app/globals.css"`. Prettier's official guidance supports exact local pinning, `prettier --write .`, `prettier --check .`, a root ignore file, and `--ignore-unknown`; the Tailwind plugin's official README requires Prettier 3+, ESM loading, and the stylesheet option for Tailwind v4. `[CITED: https://prettier.io/docs/install]` `[CITED: https://prettier.io/docs/cli]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]`
+Retain and exact-pin the live installed/locked pair Prettier 3.9.5 and `prettier-plugin-tailwindcss` 0.8.0, with the existing style settings, explicit `endOfLine: "lf"`, and `tailwindStylesheet: "./src/app/globals.css"`. Change only the root manifest range specifiers; do not acquire or upgrade packages. Prettier's official guidance supports exact local pinning, `prettier --write .`, `prettier --check .`, a root ignore file, and `--ignore-unknown`; the Tailwind plugin's official README requires Prettier 3+, ESM loading, and the stylesheet option for Tailwind v4. `[VERIFIED: package.json, package-lock.json, and installed package metadata]` `[CITED: https://prettier.io/docs/install]` `[CITED: https://prettier.io/docs/cli]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]`
 
-The repository-wide probe reproduced the known instability under both the installed pair (3.9.5/0.8.0) and the selected current pair (3.9.6/0.8.1): after pass 1, pass 2 only reflowed one chained locator in `tests/e2e/sheet-practice-integration.spec.ts`; the next check passed. The implementation must therefore reach a fixed point before the single baseline commit by staging the current formatter result, running the same formatter again, and treating any unstaged delta as additional formatter output to inspect and stage before repeating. This uses Git's index as the comparison point and introduces no custom hash, ledger, validator, loop script, or manual code edit. `[VERIFIED: live repository disposable probes]`
+The repository-wide probe reproduced the known instability under the selected installed pair (3.9.5/0.8.0): after pass 1, pass 2 only reflowed one chained locator in `tests/e2e/sheet-practice-integration.spec.ts`; the next check passed. A separate out-of-scope comparison with newer 3.9.6/0.8.1 behaved identically, so upgrading would not improve fixed-point behavior. The implementation must therefore reach a fixed point before the single baseline commit by staging the current formatter result, running the same formatter again, and treating any unstaged delta as additional formatter output to inspect and stage before repeating. This uses Git's index as the comparison point and introduces no custom hash, ledger, validator, loop script, or manual code edit. `[VERIFIED: live repository disposable probes]`
 
 The planning lifecycle and deprecated quarantine are different controls. `.planning/**` is excluded because native lifecycle files legitimately change throughout the phase; `.planning/deprecated/**` is an absolute no-consume boundary that research, formatting, mapping, hashing, and evidence collection must never enter. Ignore and attribute rules should document both reasons even though the broader lifecycle rule already excludes the nested path. `[VERIFIED: CONTEXT.md]`
 
@@ -118,8 +118,8 @@ The planning lifecycle and deprecated quarantine are different controls. `.plann
 
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
-| `prettier` [WARNING: flagged as suspicious — verify before using.] | 3.9.6 exact; published 2026-07-21 | Sole general-purpose formatter and check CLI | Official current `latest`, exact pinning is recommended because patch versions may change output, and 3.9.6 was verified in a disposable repository probe. `[CITED: https://www.npmjs.com/package/prettier]` `[CITED: https://prettier.io/docs/install]` |
-| `prettier-plugin-tailwindcss` [WARNING: flagged as suspicious — verify before using.] | 0.8.1 exact; published 2026-07-15 | Sort Tailwind v4 classes using the live stylesheet | Official Tailwind Labs package; 0.8.1 is current `latest`, supports Prettier `^3.0`, requires Node `>=20.19`, and fixes escape preservation in JavaScript string literals. `[CITED: https://www.npmjs.com/package/prettier-plugin-tailwindcss]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss/releases/tag/v0.8.1]` |
+| `prettier` | 3.9.5 exact; already installed and locked | Sole general-purpose formatter and check CLI | Retaining the existing official package artifact avoids acquisition and output drift while exact-pinning removes manifest range drift. `[VERIFIED: installed package metadata and package-lock.json]` `[CITED: https://prettier.io/docs/install]` |
+| `prettier-plugin-tailwindcss` | 0.8.0 exact; already installed and locked | Sort Tailwind v4 classes using the live stylesheet | Retaining the existing official Tailwind Labs package artifact provides the verified Prettier 3/Tailwind v4 integration without an upgrade. `[VERIFIED: installed package metadata, installed README, and package-lock.json]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]` |
 | Git | 2.55.0.windows.3 available | LF attributes, index comparison, tracked hook activation | Git officially owns EOL normalization, binary attributes, executable hook discovery, and `core.hooksPath`. `[VERIFIED: live environment]` `[CITED: https://git-scm.com/docs/gitattributes]` |
 
 ### Supporting
@@ -135,37 +135,28 @@ The planning lifecycle and deprecated quarantine are different controls. `.plann
 
 | Instead of | Could Use | Tradeoff |
 |------------|-----------|----------|
-| Prettier 3.9.6 exact | Existing lock resolution 3.9.5 | 3.9.5 is stable but no longer current; 3.9.6 is the official current patch and passed the same compatibility probe. `[CITED: https://github.com/prettier/prettier/releases]` |
-| Plugin 0.8.1 exact | Existing lock resolution 0.8.0 | 0.8.1 is a narrow patch that preserves JavaScript escape sequences and Svelte v4 sorting; the repository needs no Svelte behavior, but the escape fix reduces formatter semantic risk. `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss/releases/tag/v0.8.1]` |
+| Prettier 3.9.5 exact | Newer 3.9.6 | 3.9.6 is an out-of-scope upgrade; the disposable comparison reproduced the same second-pass reflow and supplied no phase-relevant benefit. `[VERIFIED: live repository disposable probes]` `[CITED: https://github.com/prettier/prettier/releases]` |
+| Plugin 0.8.0 exact | Newer 0.8.1 | 0.8.1 is an out-of-scope upgrade; its release fixes are unrelated to the selected repository integration, and the comparison pair did not improve fixed-point behavior. `[VERIFIED: live repository disposable probes]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss/releases/tag/v0.8.1]` |
 | `prettier ... . --ignore-unknown` | Extension-specific globs | Root-directory inference covers newly added supported file types and avoids Windows/Ubuntu shell-glob divergence; `.prettierignore` owns exclusions. `[CITED: https://prettier.io/docs/cli]` |
 | Documented `git config core.hooksPath .githooks` | A hook-manager dependency or `prepare` script | Explicit local activation adds no package, implicit lifecycle script, or public formatter command. `[CITED: https://git-scm.com/docs/git-config#Documentation/git-config.txt-corehooksPath]` |
 
-**Installation:** The planner must place a `checkpoint:human-verify` immediately before this package change because both packages received a freshness-only `[SUS]` verdict. `[VERIFIED: GSD package-legitimacy seam]`
+**Pinning (no acquisition):** Update only the two root manifest specifiers; do not run an install or upgrade command. Preserve the existing lock resolutions, tarball URLs, integrity values, and installed package artifacts. `[VERIFIED: package.json, package-lock.json, and installed package metadata]`
 
-```bash
-npm install --save-dev --save-exact prettier@3.9.6 prettier-plugin-tailwindcss@0.8.1
+```json
+"prettier": "3.9.5",
+"prettier-plugin-tailwindcss": "0.8.0"
 ```
 
-On this Windows shell, use the existing fallback rather than changing PATH: `[VERIFIED: live environment]`
-
-```powershell
-& .\scripts\npm-local.ps1 --% install --save-dev --save-exact prettier@3.9.6 prettier-plugin-tailwindcss@0.8.1
-```
-
-**Version verification:** Official registry metadata reports Prettier 3.9.6 with integrity `sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==` and plugin 0.8.1 with integrity `sha512-iaFMYqDsE4ffdDkn5qup0j5f2aCEBFZrdrZnvu9QKTlWx/iGPeQ4HHu7b7fCPMxeo9nwQBiOAh2nSypdFYWJkw==`; the implementation must confirm the regenerated lockfile contains those exact resolutions. `[CITED: https://registry.npmjs.org/prettier]` `[CITED: https://registry.npmjs.org/prettier-plugin-tailwindcss]`
+**Version verification:** The existing lockfile resolves Prettier 3.9.5 with integrity `sha512-/FVl766LpUfB5vXgCYOYa0MeV/441Ia99AeICQIQFTY/Nw0roZwULcXpku5i1/m5kt/baz+s4Zogspd839HSMg==` and plugin 0.8.0 with integrity `sha512-V8ITGH87yuBDF6JpEZTOVlUz/saAwqb8f3HRgUj8Lh+tGCcrmorhsLpYqzygwFwK0PE2Ib6Mv3M7T/uE2tZV1g==`; the installed metadata matches those versions. Implementation must confirm those lock entries remain unchanged after the manifest-only exact pin. `[VERIFIED: package-lock.json and installed package metadata]`
 
 ## Package Legitimacy Audit
 
-| Package | Registry | Age | Downloads | Source Repo | Verdict | Disposition |
-|---------|----------|-----|-----------|-------------|---------|-------------|
-| `prettier` | npm | Package created 2017-01-10 | 117,403,209/week | `github.com/prettier/prettier` | SUS — latest publish is below the seam's age threshold; no postinstall | Flagged — planner must add `checkpoint:human-verify` before exact pin install. `[VERIFIED: GSD package-legitimacy seam]` |
-| `prettier-plugin-tailwindcss` | npm | Package created 2022-01-18 | 8,610,967/week | `github.com/tailwindlabs/prettier-plugin-tailwindcss` | SUS — latest publish is below the seam's age threshold; no postinstall | Flagged — planner must add `checkpoint:human-verify` before exact pin install. `[VERIFIED: GSD package-legitimacy seam]` |
+No external package acquisition occurs in this phase. The phase retains the already installed and locked official packages and only removes range drift in the root manifest, so the package-acquisition legitimacy gate is not applicable. `[VERIFIED: package.json, package-lock.json, and installed package metadata]` `[CITED: https://prettier.io/docs/install]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]`
 
-**Packages removed due to [SLOP] verdict:** none. `[VERIFIED: GSD package-legitimacy seam]`
-
-**Packages flagged as suspicious [SUS]:** `prettier`, `prettier-plugin-tailwindcss`; both were flagged only for recent latest-version publication, while official docs, official repositories, high download counts, registry integrity, and absent postinstall scripts independently match. `[VERIFIED: GSD package-legitimacy seam]` `[CITED: https://prettier.io/docs/install]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]`
-
-No package in this recommendation is based only on training or non-authoritative search. Because the seam verdict is not `OK`, package identity is cited to official documentation rather than tagged `[VERIFIED: npm registry]`. `[VERIFIED: research protocol]`
+| Package | Installed/Locked | Integrity Evidence | Official Identity | Disposition |
+|---------|------------------|--------------------|-------------------|-------------|
+| `prettier` | 3.9.5 | Existing lockfile SHA-512 entry matches the retained resolution. `[VERIFIED: package-lock.json]` | Official Prettier package and documentation. `[CITED: https://prettier.io/docs/install]` | Retain artifact; exact-pin the existing version in `package.json`; no install or upgrade. |
+| `prettier-plugin-tailwindcss` | 0.8.0 | Existing lockfile SHA-512 entry matches the retained resolution. `[VERIFIED: package-lock.json]` | Official Tailwind Labs plugin repository and installed README. `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]` `[VERIFIED: installed package metadata]` | Retain artifact; exact-pin the existing version in `package.json`; no install or upgrade. |
 
 ## Architecture Patterns
 
@@ -424,8 +415,8 @@ The plan should reuse the existing tracked hook and preserve its executable bit.
 
 | Problem | Don't Build | Use Instead | Why |
 |---------|-------------|-------------|-----|
-| Repository formatting | A second formatter or custom parser/printer | Exact local Prettier 3.9.6 | File inference, parsing, comments, embedded languages, and stable CLI behavior already exist. `[CITED: https://prettier.io/docs/cli]` |
-| Tailwind class order | A class sorter or regex rewrite | `prettier-plugin-tailwindcss` 0.8.1 with `tailwindStylesheet` | The official plugin derives order from the v4 stylesheet and integrates with Prettier's AST. `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]` |
+| Repository formatting | A second formatter or custom parser/printer | Exact local Prettier 3.9.5 | File inference, parsing, comments, embedded languages, and stable CLI behavior already exist. `[VERIFIED: installed package metadata]` `[CITED: https://prettier.io/docs/cli]` |
+| Tailwind class order | A class sorter or regex rewrite | `prettier-plugin-tailwindcss` 0.8.0 with `tailwindStylesheet` | The official plugin derives order from the v4 stylesheet and integrates with Prettier's AST. `[VERIFIED: installed package metadata]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]` |
 | LF enforcement | A newline conversion script | `.gitattributes` plus Prettier `endOfLine: "lf"` | Git owns index/worktree normalization and binary classification. `[CITED: https://git-scm.com/docs/gitattributes]` |
 | Fixed-point proof | A hash manifest, loop script, receipt, or validator | Staged pass N + ordinary unstaged `git diff` for pass N+1 | Git already provides the comparison boundary and reviewable delta. `[VERIFIED: live repository disposable probes]` |
 | Hook management | Husky or a custom installer | Tracked executable `.githooks/pre-commit` + documented `core.hooksPath` | The hook already exists and Git officially supports an alternate hook directory. `[VERIFIED: live repository]` `[CITED: https://git-scm.com/docs/githooks]` |
@@ -440,7 +431,7 @@ The plan should reuse the existing tracked hook and preserve its executable bit.
 
 **What goes wrong:** The next `npm run format` changes `tests/e2e/sheet-practice-integration.spec.ts`, so the committed baseline fails BASE-03. `[VERIFIED: live repository disposable probes]`
 
-**Why it happens:** Prettier 3.9.5/3.9.6 reaches a different line-breaking decision for one chained locator after its first whole-file reprint; the Tailwind v4 option does not remove the effect. `[VERIFIED: live repository disposable probes]`
+**Why it happens:** The selected Prettier 3.9.5 reaches a different line-breaking decision for one chained locator after its first whole-file reprint; the Tailwind v4 option does not remove the effect. `[VERIFIED: live repository disposable probes]`
 
 **How to avoid:** Stage each diagnostic pass, rerun, and use the unstaged diff as the pass-to-pass comparison until it is empty; then commit once and repeat the format/no-diff/check proof. `[VERIFIED: live repository disposable probes]`
 
@@ -472,7 +463,7 @@ The plan should reuse the existing tracked hook and preserve its executable bit.
 
 **Why it happens:** The live manifest uses `^3.8.4`/`^0.8.0`, while the lock currently resolves 3.9.5/0.8.0. `[VERIFIED: package.json and package-lock.json]`
 
-**How to avoid:** Save exact 3.9.6/0.8.1, regenerate lockfile through npm 11.17.0, and verify resolved versions/integrity before formatting. `[CITED: https://registry.npmjs.org/prettier]` `[CITED: https://registry.npmjs.org/prettier-plugin-tailwindcss]`
+**How to avoid:** Replace only the root ranges with exact 3.9.5/0.8.0 and verify the existing lockfile resolutions and integrity entries remain unchanged; run no acquisition or upgrade command. `[VERIFIED: package.json and package-lock.json]`
 
 **Warning signs:** A caret/tilde in either formatter dependency or a lock resolution different from the selected exact version. `[VERIFIED: live repository]`
 
@@ -551,8 +542,8 @@ CI should mirror the canonical order after `npm ci`: `[VERIFIED: .github/workflo
 
 | Old/Current Repository State | Recommended Current State | When Changed | Impact |
 |------------------------------|---------------------------|--------------|--------|
-| `prettier` range `^3.8.4`, lock 3.9.5 | Exact 3.9.6 | Published 2026-07-21 | Deterministic current stable patch across machines. `[CITED: https://github.com/prettier/prettier/releases]` |
-| Plugin range/lock 0.8.0 | Exact 0.8.1 | Published 2026-07-15 | Includes JavaScript escape preservation and Svelte v4 integration fixes while retaining Prettier 3/Tailwind v4 support. `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss/releases/tag/v0.8.1]` |
+| `prettier` range `^3.8.4`, lock/install 3.9.5 | Exact 3.9.5 with the same retained lock/install artifact | Phase baseline decision | Deterministic resolution across machines without acquiring a new formatter artifact. `[VERIFIED: package.json, package-lock.json, and installed package metadata]` |
+| Plugin range `^0.8.0`, lock/install 0.8.0 | Exact 0.8.0 with the same retained lock/install artifact | Phase baseline decision | Deterministic Tailwind integration without acquiring or upgrading a package. `[VERIFIED: package.json, package-lock.json, and installed package metadata]` |
 | Plugin registration without v4 stylesheet | `tailwindStylesheet: "./src/app/globals.css"` | Tailwind v4 integration | Plugin loads the project's actual v4 stylesheet context. `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]` |
 | Implicit/default EOL | Explicit `endOfLine: "lf"` plus `.gitattributes` | Prettier default changed to LF in v2.0 | Makes the cross-platform contract visible and Git-enforced. `[CITED: https://prettier.io/docs/options]` |
 | Local heavy `.git/hooks/pre-commit` | Tracked fast `.githooks/pre-commit` | Already present on active branch | Repository policy is reviewable; local activation uses `core.hooksPath`. `[VERIFIED: live repository]` |
@@ -561,6 +552,7 @@ CI should mirror the canonical order after `npm ci`: `[VERIFIED: .github/workflo
 
 - `tailwindConfig` is the v3 JavaScript-config integration and must not replace `tailwindStylesheet` for this v4 repository. `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]`
 - Prettier 4.0.0 alpha is not the registry `latest` stable tag and is out of scope. `[CITED: https://www.npmjs.com/package/prettier]`
+- Prettier 3.9.6 and `prettier-plugin-tailwindcss` 0.8.1 are newer out-of-scope alternatives; their disposable comparison did not improve the repository's fixed-point behavior. `[VERIFIED: live repository disposable probes]` `[CITED: https://github.com/prettier/prettier/releases]` `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss/releases/tag/v0.8.1]`
 - The plugin's pre-0.5 CommonJS loading model is obsolete; current releases require Prettier 3 and ESM. `[CITED: https://github.com/tailwindlabs/prettier-plugin-tailwindcss]`
 - The local-only heavy `.git/hooks/pre-commit` is not tracked enforcement and must not be copied into the repository. `[VERIFIED: live repository]`
 
@@ -573,10 +565,7 @@ All implementation-relevant claims were verified against live repository/environ
 
 ## Open Questions
 
-1. **Fresh-release supply-chain approval**
-   - What we know: Both selected packages have authoritative official identities, mature histories, high download counts, matching official source repositories, registry integrity, no postinstall script, and successful disposable execution; the GSD legitimacy seam still returns `[SUS]` because the latest versions are recent. `[VERIFIED: GSD package-legitimacy seam]`
-   - What's unclear: The seam requires human verification before install despite the owner's general bounded-phase authorization. `[VERIFIED: package legitimacy protocol]`
-   - Recommendation: Planner inserts one `checkpoint:human-verify` immediately before the exact pin install, presents the freshness-only reason plus official release/integrity evidence, then continues without further routine stage confirmations. `[VERIFIED: package legitimacy protocol]` `[VERIFIED: AGENTS.md]`
+None. The selected versions, configuration shape, fixed-point procedure, supported direct-or-existing-wrapper runtime resolution, and no-acquisition boundary are resolved for planning. `[VERIFIED: live repository and environment]`
 
 ## Environment Availability
 
@@ -589,8 +578,8 @@ All implementation-relevant claims were verified against live repository/environ
 | Git | Attributes, index, hook activation | ✓ | 2.55.0.windows.3 | — `[VERIFIED: live environment]` |
 | Windows PowerShell | Wrapper/hook fallback | ✓ | 5.1.26100.8875 | PowerShell 7 is also installed. `[VERIFIED: live environment]` |
 | PowerShell 7 (`pwsh`) | Secondary hook fallback | ✓ | Available | Windows PowerShell 5.1. `[VERIFIED: live environment]` |
-| Installed Prettier | Current baseline probe | ✓ | 3.9.5 | Exact-pin 3.9.6 after checkpoint. `[VERIFIED: installed package metadata]` |
-| Installed Tailwind plugin | Current baseline probe | ✓ | 0.8.0 | Exact-pin 0.8.1 after checkpoint. `[VERIFIED: installed package metadata]` |
+| Installed Prettier | Baseline and checks | ✓ | 3.9.5 | Retain artifact and exact-pin the existing version; no acquisition. `[VERIFIED: installed package metadata and package-lock.json]` |
+| Installed Tailwind plugin | Tailwind class sorting | ✓ | 0.8.0 | Retain artifact and exact-pin the existing version; no acquisition. `[VERIFIED: installed package metadata and package-lock.json]` |
 
 **Missing dependencies with no fallback:** none. `[VERIFIED: live environment]`
 
@@ -614,8 +603,8 @@ Security enforcement is enabled because `.planning/config.json` does not set `se
 
 | Pattern | STRIDE | Standard Mitigation |
 |---------|--------|---------------------|
-| Typosquat/dependency confusion | Spoofing/Tampering | Official package identity/source, exact versions, lockfile integrity, legitimacy checkpoint, and no `npx --yes` download. `[CITED: https://prettier.io/docs/install]` `[VERIFIED: package legitimacy audit]` |
-| Malicious install script | Elevation of privilege | Registry metadata shows no postinstall for either selected package; retain lockfile review. `[VERIFIED: official registry metadata]` |
+| Typosquat/dependency confusion | Spoofing/Tampering | Retain official installed packages, exact-pin their existing versions, preserve reviewed lockfile integrity, and perform no package acquisition or `npx --yes` download. `[VERIFIED: package-lock.json and installed package metadata]` `[CITED: https://prettier.io/docs/install]` |
+| Malicious install script | Elevation of privilege | No install or upgrade runs in this phase; retain and review the existing lockfile entries. `[VERIFIED: recommended no-acquisition boundary]` |
 | Unreviewed hook execution | Tampering/Elevation of privilege | Track the executable hook, keep it small, activate explicitly through local `core.hooksPath`, and review its diff. `[CITED: https://git-scm.com/docs/githooks]` |
 | Quarantine traversal | Information disclosure | Exclude `.planning/**` before formatter traversal and forbid all content inspection/hash/search of the nested deprecated path. `[VERIFIED: CONTEXT.md]` |
 | Shell argument injection | Elevation of privilege | Fixed literal commands/paths; do not construct commands from file contents or external search results. `[VERIFIED: recommended architecture]` |
@@ -627,8 +616,7 @@ Security enforcement is enabled because `.planning/config.json` does not set `se
 
 - Live repository files: `AGENTS.md`, phase `CONTEXT.md`, `REQUIREMENTS.md`, `STATE.md`, `ROADMAP.md`, `.planning/config.json`, `package.json`, `package-lock.json`, `prettier.config.mjs`, `.gitignore`, `.githooks/pre-commit`, `.github/workflows/ci.yml`, `scripts/npm-local.ps1`, `src/app/globals.css`. Material project facts were confirmed directly. `[VERIFIED: live repository]`
 - Installed metadata/README for Prettier 3.9.5 and `prettier-plugin-tailwindcss` 0.8.0. `[VERIFIED: installed packages]`
-- Disposable full allowed-surface probes for installed 3.9.5/0.8.0 and current 3.9.6/0.8.1, both with the Tailwind v4 stylesheet option. `[VERIFIED: live repository probes]`
-- GSD package-legitimacy and confidence seams. `[VERIFIED: GSD tools]`
+- Disposable full allowed-surface probes for selected installed 3.9.5/0.8.0 and the out-of-scope newer comparator 3.9.6/0.8.1, both with the Tailwind v4 stylesheet option. `[VERIFIED: live repository probes]`
 
 ### Secondary (MEDIUM confidence)
 
@@ -638,9 +626,9 @@ Security enforcement is enabled because `.planning/config.json` does not set `se
 - [Prettier options](https://prettier.io/docs/options) — explicit LF and `.gitattributes` pairing.
 - [Prettier plugins](https://prettier.io/docs/plugins) — ESM plugin loading through config.
 - [Official Tailwind Prettier plugin README](https://github.com/tailwindlabs/prettier-plugin-tailwindcss) — package identity, v4 stylesheet, ESM/Prettier compatibility, plugin ordering.
-- [Tailwind plugin v0.8.1 release](https://github.com/tailwindlabs/prettier-plugin-tailwindcss/releases/tag/v0.8.1) — signed release and fixes.
-- [Prettier releases](https://github.com/prettier/prettier/releases) — current stable 3.9.6 release.
-- [npm Prettier package](https://www.npmjs.com/package/prettier) and [npm Tailwind plugin package](https://www.npmjs.com/package/prettier-plugin-tailwindcss) — current tags/publication and official repositories.
+- [Tailwind plugin v0.8.1 release](https://github.com/tailwindlabs/prettier-plugin-tailwindcss/releases/tag/v0.8.1) — official identity for the newer out-of-scope alternative.
+- [Prettier releases](https://github.com/prettier/prettier/releases) — official identity for the newer out-of-scope alternative.
+- [npm Prettier package](https://www.npmjs.com/package/prettier) and [npm Tailwind plugin package](https://www.npmjs.com/package/prettier-plugin-tailwindcss) — official package identities.
 - [Git attributes](https://git-scm.com/docs/gitattributes), [Git hooks](https://git-scm.com/docs/githooks), and [Git core.hooksPath](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corehooksPath) — LF/binary semantics and tracked hook activation.
 
 ### Tertiary (LOW confidence)
@@ -650,10 +638,10 @@ Security enforcement is enabled because `.planning/config.json` does not set `se
 ## Metadata
 
 **Confidence breakdown:**
-- Standard stack: MEDIUM — official current identities/versions and successful probes, reduced from HIGH because the mandatory legitimacy seam flags the latest releases as too new. `[VERIFIED: package legitimacy audit]`
+- Standard stack: HIGH — the phase retains the official installed/locked artifacts, exact-pins their existing versions, and performs no package acquisition or upgrade. `[VERIFIED: package.json, package-lock.json, installed package metadata, and package legitimacy audit]`
 - Architecture: HIGH — derived from locked decisions, official CLI/Git behavior, and current live repository owners. `[VERIFIED: live repository]`
 - Pitfalls: HIGH — the critical fixed-point failure was reproduced twice across both installed and selected version pairs. `[VERIFIED: live repository disposable probes]`
 
 **Research date:** 2026-07-31
 
-**Valid until:** 2026-08-07 — formatter/plugin releases are currently fast-moving, so recheck registry tags and the package-legitimacy seam if planning or execution begins after this date. `[VERIFIED: official registry publication cadence]`
+**Valid until:** 2026-08-30 — the recommendation is tied to the repository's existing installed/locked artifacts rather than the moving registry latest tag. `[VERIFIED: package-lock.json and installed package metadata]`
