@@ -6,6 +6,9 @@
     "commit_docs": true,
     "search_gitignored": false
   },
+  "git": {
+    "create_tag": false
+  },
   "workflow": {
     "research": true,
     "plan_check": true,

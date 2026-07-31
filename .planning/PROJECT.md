@@ -87,6 +87,8 @@ Musicians can move from a score and practice target to a repeatable local practi
 | Use bounded owner authorization and fast commit gates | Native research/check/verify remain, while routine confirmations and repeated full-suite runs no longer block each lifecycle commit | ✓ Approved 2026-07-31 |
 | Disable product-domain capabilities for this tooling milestone | AI, UI, API, schema, security, post-plan gap, and pre-ship review layers add no evidence here; the next milestone must opt back in only where its scope needs them | ✓ Approved 2026-07-31 |
 | Reuse exact-revision gate evidence | A single sequential plan has no merge-integration risk; repeating the same full suite immediately adds latency without new evidence unless the head, inputs, or execution topology changed | ✓ Approved 2026-07-31 |
+| Keep milestone archival and release proof on one PR head | Generic lifecycle routing labels a milestone shipped before GitHub merge, while a second closeout PR would duplicate CI and review; capture phase evidence first, archive on the same branch, then freeze one final head | ✓ Approved 2026-08-01 |
+| Do not treat preserved dormant product seeds as formatting-milestone gaps | The 32 seeds predate v1.1, are explicitly out of scope, and remain subject to separate owner authorization; re-acknowledging them at every tooling closeout adds no evidence | ✓ Approved 2026-08-01 |
 
 ## Evolution
 
