@@ -8,9 +8,9 @@ Metronome is a local-first web application for musicians to run metronome practi
 
 Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
 
-## Current Milestone: v1.1 Repository Formatting Baseline
+## Current State: v1.1 Repository Formatting Baseline
 
-**Goal:** Establish one deterministic repository-wide Prettier and LF baseline across supported text files without changing product behavior, then enforce that baseline consistently in Windows development and Ubuntu CI.
+**Validated milestone:** One deterministic repository-wide Prettier and LF baseline now covers supported text files without changing product behavior and is enforced consistently in Windows development and Ubuntu CI. Native phase verification passed; the release exit still governs final-head CI/review, merge, and local-main synchronization.
 
 **Target outcomes:**
 
@@ -95,4 +95,4 @@ Musicians can move from a score and practice target to a repeatable local practi
 The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is no longer an active lifecycle input. Milestone v1.1 Phase 1 has now validated the repository formatting baseline; release remains pending until the exact final pull-request head passes CI and read-only review, merges, and local `main` is synchronized. A separately approved fresh R01 may begin only from that merged baseline.
 
 ---
-*Last updated: 2026-08-01 after Phase 1 verification passed*
+*Last updated: 2026-08-01 after v1.1 milestone archival*

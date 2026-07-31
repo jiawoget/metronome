@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Repository Formatting Baseline
-current_phase: 1
-status: completed
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-07-31T16:00:37.244Z"
+status: Awaiting next milestone
+stopped_at: v1.1 archived; release exit in progress
+last_updated: "2026-07-31T16:08:02.449Z"
 last_activity: 2026-08-01
-last_activity_desc: Phase 1 complete
+last_activity_desc: Milestone v1.1 completed and archived
 progress:
   total_phases: 1
   completed_phases: 1
   total_plans: 1
   completed_plans: 1
   percent: 100
+current_phase: 1
 current_phase_name: repository-formatting-baseline
 ---
 
@@ -21,19 +21,17 @@ current_phase_name: repository-formatting-baseline
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-30)
+See: .planning/PROJECT.md (updated 2026-08-01)
 
 **Core value:** Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
-**Current focus:** Phase 1 — repository-formatting-baseline
+**Current focus:** v1.1 release exit — final PR head, CI/review, merge, and clean local-main synchronization
 
 ## Current Position
 
-Phase: 1
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-08-01 — Phase 1 complete
-
-Progress: [██████████] 100%
+Phase: Milestone v1.1 complete
+Plan: —
+Status: Milestone archived; release exit in progress; next milestone blocked until merge and synchronization
+Last activity: 2026-08-01 — Milestone v1.1 completed and archived
 
 ## Performance Metrics
 
@@ -47,7 +45,6 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Repository Formatting Baseline | 0 | - | - |
 | 1 | 1 | - | - |
 
 **Recent Trend:**
@@ -80,6 +77,8 @@ Recent decisions affecting current work:
 - [Release Exit]: Shipping, exact-final-head proof, merge, synchronized clean `main`, and any fresh R01 remain outside Phase 1.
 - [Phase 01]: Retain exact Prettier 3.9.5 and Tailwind plugin 0.8.0 artifacts with no package acquisition or PATH mutation.
 - [Phase 01]: Normalize next-env.d.ts through the root LF policy so production builds preserve a clean frozen candidate.
+- [Workflow]: Capture ship evidence before archival, include archival on the same PR branch, and freeze one final head so closeout does not create a second CI/review cycle.
+- [Workflow]: Preserved dormant product seeds are explicit future scope, not formatting-milestone gaps to re-acknowledge at every closeout.
 
 ### Pending Todos
 
@@ -101,3 +100,8 @@ None yet.
 Last session: 2026-07-31T15:43:56.606Z
 Stopped at: Completed 01-01-PLAN.md
 Resume file: None
+
+## Operator Next Steps
+
+- Complete the v1.1 release exit on the frozen pull-request head.
+- Do not start a new milestone or fresh R01 until the pull request is merged and local `main` is clean and synchronized with `origin/main`.
