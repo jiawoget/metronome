@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+unset POSIXLY_CORRECT
+# Git for Windows omits its Unix utility directories when Bash inherits POSIXLY_CORRECT.
+PATH="${PATH:+$PATH:}/usr/bin:/bin"
+export PATH
 
 repo_root="$(git rev-parse --show-toplevel)"
 git_dir="$(git rev-parse --absolute-git-dir)"
@@ -457,8 +461,10 @@ normalize_stable_version() {
   local version="$2"
   local stable_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
 
-  version="${version//$'\r'/}"
-  version="${version//$'\n'/}"
+  if [[ "$version" == *$'\r'* ]] || [[ "$version" == *$'\n'* ]]; then
+    return 1
+  fi
+
   if [ "$command_kind" = "node" ]; then
     version="${version#v}"
   fi
@@ -468,6 +474,41 @@ normalize_stable_version() {
   fi
 
   printf '%s\n' "${version%%+*}"
+}
+
+probe_stable_version() {
+  local command_kind="$1"
+  local version=""
+  shift
+
+  if ! version="$(
+    "$@" 2>/dev/null |
+      LC_ALL=C.UTF-8 awk -v BINMODE=3 '
+        {
+          records++
+          value = $0
+          terminal_cr = sub(/\r$/, "", value)
+          if (terminal_cr && RT != "\n") {
+            invalid = 1
+          }
+          if (value ~ /[[:cntrl:]]/) {
+            invalid = 1
+          }
+          captured = value
+        }
+
+        END {
+          if (invalid || records != 1) {
+            exit 2
+          }
+          print captured
+        }
+      ' 2>&1
+  )"; then
+    return 1
+  fi
+
+  normalize_stable_version "$command_kind" "$version"
 }
 
 numeric_component_greater_than() {
@@ -595,15 +636,13 @@ if engine_minima="$(extract_engine_minima)"; then
   esac
 
   if [ -n "$node_cmd" ] &&
-    node_version_output="$("$node_cmd" --version 2>/dev/null)" &&
-    node_version="$(normalize_stable_version node "$node_version_output")"; then
+    node_version="$(probe_stable_version node "$node_cmd" --version)"; then
     node_probe_succeeded=true
   fi
 
   if [ -n "$node_cmd" ] &&
     [ -n "$npm_cli" ] &&
-    npm_version_output="$(PATH="${node_cmd%/*}:$PATH" "$node_cmd" "$npm_cli" --version 2>/dev/null)" &&
-    npm_version="$(normalize_stable_version npm "$npm_version_output")"; then
+    npm_version="$(PATH="${node_cmd%/*}:$PATH" probe_stable_version npm "$node_cmd" "$npm_cli" --version)"; then
     npm_probe_succeeded=true
   fi
 
