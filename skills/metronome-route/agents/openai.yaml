@@ -1,0 +1,6 @@
+interface:
+  display_name: "Metronome Router"
+  short_description: "Choose the smallest safe Metronome workflow"
+  default_prompt: "Use $metronome-route to choose the smallest safe workflow for this Metronome task."
+policy:
+  allow_implicit_invocation: true
