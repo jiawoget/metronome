@@ -5,7 +5,7 @@ milestone_name: Release Assurance & Workflow Closure
 current_phase: 02
 status: completed
 stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-08-01T06:11:57.310Z"
+last_updated: "2026-08-01T06:15:47.512Z"
 last_activity: 2026-08-01
 last_activity_desc: Phase 02 complete
 progress:
@@ -24,12 +24,12 @@ current_phase_name: Release Assurance & Workflow Closure
 See: .planning/PROJECT.md (updated 2026-08-01)
 
 **Core value:** Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
-**Current focus:** Phase 02 — Release Assurance & Workflow Closure
+**Current focus:** v1.2 Phase 02 verified — release exit unstarted and outside current authorization
 
 ## Current Position
 
 Phase: 02
-Plan: Not started
+Plan: 1 of 1 complete
 Status: All phases complete
 Last activity: 2026-08-01 — Phase 02 complete
 
@@ -47,8 +47,6 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Repository Formatting Baseline | 1/1 | - | - |
-| 2. Release Assurance & Workflow Closure | 0/1 | - | - |
 | 02 | 1 | - | - |
 
 **Recent Trend:**
@@ -98,3 +96,12 @@ None yet.
 Last session: 2026-08-01T05:55:17.107Z
 Stopped at: Completed 02-01-PLAN.md
 Resume file: None
+
+## Rebuild Log
+
+- timestamp: 2026-08-01T06:13:53.354Z
+  kind: by-phase-table-reconciled
+  section: ## Performance Metrics
+  before: | Phase | Plans | Total | Avg/Plan | \n |-------|-------|-------|----------| \n | 1. Repository Formatting Baseline | 1/1 | - | - | \n | 2. Release Assurance & Workflow Closure | 0/1 | - | - | \n | 02 | 1 | - | - |
+  after: | Phase | Plans | Total | Avg/Plan | \n |-------|-------|-------|----------| \n | 02 | 1 | - | - |
+  reason: phase dirs on disk are canonical; rows for missing phases dropped, missing phases added

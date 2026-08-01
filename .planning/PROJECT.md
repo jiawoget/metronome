@@ -8,9 +8,11 @@ Metronome is a local-first web application for musicians to run metronome practi
 
 Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
 
-## Current Milestone: v1.2 Release Assurance & Workflow Closure
+## Current Milestone: v1.2 Release Assurance & Workflow Closure (Verified)
 
 **Goal:** Bring the actual merged v1.1 tree back under Native OpenGSD authority, retain the approved secure quick-recording ID behavior, correct the pre-commit runtime selection defect, reconcile stale lifecycle narratives, and verify the resulting implementation without adding a parallel workflow layer.
+
+**Status:** Phase 2 passed ordinary Native OpenGSD verification on 2026-08-01. The milestone has not been archived or shipped, and all release actions remain outside the current authorization.
 
 **Target outcomes:**
 
@@ -27,12 +29,11 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 - ✓ 32 evidence-backed product capabilities are retained in the shipped [`v1.0 requirements archive`](milestones/v1.0-REQUIREMENTS.md).
 - ✓ Milestone v1.1 Phase 1 validated all 14 formatting requirements: one LF/Prettier policy, an idempotent 341-file mechanical baseline, Windows runtime fallback, fast local enforcement, Ubuntu CI enforcement, and frozen-revision quality evidence.
+- ✓ Milestone v1.2 Phase 2 validated all 10 assurance requirements: retained secure recording-ID behavior, engine-aware exact-candidate hook routing with conservative fallback, byte-identical PDF fixtures, coherent Native lifecycle authority, and bounded negative scope.
 
 ### Active
 
-- Retain and verify the secure quick-recording ID behavior already present in the merged tree.
-- Correct and verify the pre-commit hook's Node/npm engine-aware fallback selection.
-- Reconcile stale lifecycle authority and verify the actual resulting tree through Native OpenGSD.
+- No implementation requirement remains active in v1.2. Its verified result is awaiting a separately authorized milestone-release decision; product and R01 work remain dormant.
 
 ### Deferred
 
@@ -99,7 +100,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ## Evolution
 
-The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is not an active lifecycle input. Milestone v1.1 shipped on 2026-08-01 with final-head CI/review, merge, and clean local-main synchronization complete. Milestone v1.2 now reconciles the actual merged tree with Native OpenGSD authority and verifies the bounded assurance fixes approved by the owner; it does not activate a new product or R01 direction.
+The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is not an active lifecycle input. Milestone v1.1 shipped on 2026-08-01 with final-head CI/review, merge, and clean local-main synchronization complete. Milestone v1.2 has reconciled the actual merged tree with Native OpenGSD authority and passed ordinary verification for the bounded assurance fixes approved by the owner; it remains unarchived and unshipped and does not activate a new product or R01 direction.
 
 ---
-*Last updated: 2026-08-01 for v1.2 milestone start*
+*Last updated: 2026-08-01 after v1.2 Native verification*

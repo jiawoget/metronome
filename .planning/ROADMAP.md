@@ -6,15 +6,17 @@ Milestone v1.2 brings the shipped v1.1 tree under coherent Native OpenGSD author
 
 ## Milestones
 
-- 🚧 **v1.2 Release Assurance & Workflow Closure** — Phase 2, 1 plan, 10 requirements in progress
+- 🚧 **v1.2 Release Assurance & Workflow Closure** — Phase 2 complete, 1/1 plan and 10/10 requirements verified; release exit not authorized
 - ✅ **v1.1 Repository Formatting Baseline** — Phase 1, 1 plan, 14/14 requirements validated and shipped 2026-08-01 ([roadmap archive](milestones/v1.1-ROADMAP.md), [requirements archive](milestones/v1.1-REQUIREMENTS.md))
 - ✅ **v1.0 Legacy Delivered Baseline** — 8 phases, 8 plans, 32 delivered capabilities archived 2026-07-20 ([roadmap archive](milestones/v1.0-ROADMAP.md), [requirements archive](milestones/v1.0-REQUIREMENTS.md))
 
 ## Phases
 
-### 🚧 v1.2 Release Assurance & Workflow Closure (In Progress)
+### 🚧 v1.2 Release Assurance & Workflow Closure (Verified; Release Exit Not Authorized)
 
 - [x] **Phase 2: Release Assurance & Workflow Closure** - Preserve secure recording identity, repair engine-aware hook routing, prove repository integrity, and close at Native verification. (completed 2026-08-01)
+
+**Verification:** Passed ordinary Native OpenGSD verification on 2026-08-01. Milestone archival, shipping, and release-exit actions require fresh owner authorization.
 
 ## Milestone v1.2 Release Assurance & Workflow Closure (Phase Details)
 
