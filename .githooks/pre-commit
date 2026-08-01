@@ -1,6 +1,6 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
-set -eu
+set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
 npm_local_script="$repo_root/scripts/npm-local.ps1"
@@ -38,6 +38,25 @@ run_npm() {
     "$power_shell" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$npm_local_script" "$@"
   fi
 }
+
+echo "Running: staged Prettier snapshot checks"
+git diff --cached --name-only --diff-filter=ACMR -z |
+  while IFS= read -r -d '' staged_path; do
+    file_info="$(
+      run_npm exec --offline -- prettier --file-info "$staged_path"
+    )"
+
+    if printf '%s\n' "$file_info" |
+      grep -Eq '"ignored"[[:space:]]*:[[:space:]]*true|"inferredParser"[[:space:]]*:[[:space:]]*null'; then
+      continue
+    fi
+
+    if ! git show ":$staged_path" |
+      run_npm exec --offline -- prettier --check --stdin-filepath "$staged_path"; then
+      printf 'Staged file is not formatted: %s\n' "$staged_path" >&2
+      exit 1
+    fi
+  done
 
 echo "Running: npm run format:check"
 run_npm run format:check

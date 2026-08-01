@@ -7,6 +7,7 @@ Preflight initializes the v0 engineering foundation for the local-first guitar p
 ```bash
 nvm use
 npm install
+git config --local core.hooksPath .githooks
 npm run dev
 ```
 
