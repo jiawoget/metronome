@@ -49,17 +49,19 @@ This section corrects the report's provenance boundary after final pull-request 
 
 | Evidence | Result |
 |---|---|
-| Final-review repair implementation | Direct-route repair commit `54468ef253bf0fbfa8750f73d9c8d3f730ac90ac`; fallback-host repair commit `3020fd5191de8062527cf2e4ceab7a9e3a80b549`; final hook blob `8a8bd2991200bd7f4d9d2f23e533e42809157d59` |
-| Current authority boundary | At `3020fd5...`, `AGENTS.md` (`5e2ace2...`), PROJECT (`2eab2d2...`), ROADMAP (`4b7af5d...`), and STATE (`f763b34...`) record archived v1.2 verification/audit with only PR #136 release exit pending |
-| Focused route/interpreter evidence | A recreated 15-case real-hook matrix passed 15/15 against that exact hook content, covering standard/custom `npm` and `npm.cmd`, compatible/old/missing runtimes, env-node shadowing, fixed and argument-bearing shebangs, Bash-function candidates, distinct `node`/`node.exe` identities, and a repository-local PowerShell shadow; exact arguments passed and snapshot residue was 0 |
-| Real direct route | Node 24.17.0 + npm 11.17.0 in a standard installation layout passed the staged-index hook with PowerShell/pwsh absent from `PATH`; snapshot residue was 0 |
-| Real fallback route | Node 24.17.0 + incompatible npm 11.13.0 selected the captured absolute Windows PowerShell host and passed the staged-index hook; the focused shadow case proved a later `node_modules/.bin/powershell` prepend cannot replace that host |
-| Local candidate gates | On `3020fd5...`: `format:check`, lint, typecheck, 66 unit files / 848 tests, and production build all passed; worktree/index were clean |
-| GitHub exact-head gates | Repository CI and CodeQL passed on prior frozen head `9a0c928...`; CodeScene separately failed its LOC quality gate on one advisory test-file rule (`quick-metronome-session.test.ts`: 1015 LOC versus the 1000 threshold). Per `AGENTS.md`, the replacement final head still requires a fresh exact-head CI/review pass. |
+| Final-review repair implementation | Direct-route repair commit `54468ef253bf0fbfa8750f73d9c8d3f730ac90ac`; fallback-host repair commit `3020fd5191de8062527cf2e4ceab7a9e3a80b549`; staged-engine repair commit `ba412eb165e51a4dee54c52846d189f7f008acb6`; final hook blob `931d14bf6f4d2de073172981437f0f47ebabbad0` |
+| Current authority boundary | At `ba412eb...`, `AGENTS.md` (`5e2ace2...`), PROJECT (`2eab2d2...`), ROADMAP (`4b7af5d...`), and STATE (`f763b34...`) record archived v1.2 verification/audit with only PR #136 release exit pending |
+| Focused route/interpreter evidence | A recreated 32-case real-hook matrix passed 32/32 against that exact hook content: 9 direct and 23 fallback cases cover all prior launcher/interpreter routes plus root-versus-nested engine provenance, compact/malformed/duplicate JSON, invalid UTF-8, canonical minima, and arbitrary-length version components; exact arguments passed and snapshot residue was 0 in every case |
+| Real direct route | On `ba412eb...`, Node 24.17.0 + npm 11.17.0 in a standard installation layout passed the staged-index hook with PowerShell/pwsh absent from `PATH`; snapshot residue was 0 |
+| Real fallback route | On `ba412eb...`, Node 24.17.0 + incompatible npm 11.13.0 selected the captured absolute Windows PowerShell host and passed the staged-index hook; the focused shadow case proved a later `node_modules/.bin/powershell` prepend cannot replace that host; snapshot residue was 0 |
+| Local candidate gates | On `ba412eb...`: `format:check`, lint, typecheck, 66 unit files / 848 tests, and production build all passed; worktree/index were clean |
+| GitHub exact-head gates | Repository CI and CodeQL passed on prior frozen head `af7ab4c...`; CodeScene separately failed its LOC quality gate on one advisory test-file rule (`quick-metronome-session.test.ts`: 1015 LOC versus the 1000 threshold). Per `AGENTS.md`, the replacement final head still requires a fresh exact-head CI/review pass. |
 | Final-review provenance finding | The exact-head `@codex` review correctly found that the earlier `d693c73... equals HEAD` statement had become stale. This documentation-only correction removes that claim; per `AGENTS.md`, its replacement PR head still requires one fresh exact-head CI/review pass. |
 | Final-review fallback-host finding | The exact-head `@codex` review correctly found that a bare captured `powershell`/`pwsh` name could be shadowed after `node_modules/.bin` was prepended. Commit `3020fd5...` captures and invokes the absolute probed host; the RED→GREEN shadow regression and expanded matrix bind the repair to hook blob `8a8bd29...`. |
+| Final-review root-engine finding | The exact-head `@codex` review on `af7ab4c...` correctly found that a nested non-root `engines` object could authorize direct execution. Commit `ba412eb...` parses one staged `package.json` byte stream as a complete root JSON object, extracts direct root `engines.node` and `engines.npm` atomically, and rejects nested, duplicate, malformed, escaped, invalid-UTF-8, or incomplete declarations before route selection. |
+| Adversarial hardening of the same finding | The first RED proved nested-only engines selected direct on the prior hook. Independent read-only review then found invalid-UTF-8 warnings, split manifest reads, unbounded Bash integer arithmetic, and non-canonical leading-zero minima; the same commit folded parser warnings into validation, returned both minima from one read, required canonical components, and replaced component arithmetic with arbitrary-length digit-string comparison. Three final independent reviews returned CLEAN. |
 
-#### Focused Matrix Aggregate for Hook Blob `8a8bd29...`
+#### Focused Matrix Aggregate for Hook Blob `931d14b...`
 
 The release-exit runner failed the command on any non-zero hook exit, route-count mismatch, unexpected argument count/order, unexpected snapshot prefix, fallback flag/script mismatch, Node- or PowerShell-shadow execution, or snapshot residue. Every direct case asserted exactly `--prefix <snapshot> run format:check`; every fallback case additionally asserted `-NoProfile -NonInteractive -ExecutionPolicy Bypass -File <scripts/npm-local.ps1>` before that exact npm tuple.
 
@@ -80,8 +82,25 @@ The release-exit runner failed the command on any non-zero hook exit, route-coun
 | `npm-function-fallback` | fallback | 0 | 1 | 0 | 0 |
 | `distinct-node-shim` | direct | 1 | 0 | 0 | 0 |
 | `powershell-shadow-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `nested-engines-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `nested-engine-members-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `array-root-engines-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `duplicate-root-engines-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `string-braces-compatible-sibling` | direct | 1 | 0 | 0 | 0 |
+| `compact-compatible-sibling` | direct | 1 | 0 | 0 | 0 |
+| `nested-before-root-compatible-sibling` | direct | 1 | 0 | 0 | 0 |
+| `duplicate-target-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `missing-comma-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `trailing-comma-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `escaped-root-key-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `invalid-utf8-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `huge-major-minimum-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `huge-minor-minimum-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `huge-patch-minimum-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `leading-zero-node-minimum-fallback` | fallback | 0 | 1 | 0 | 0 |
+| `leading-zero-npm-minimum-fallback` | fallback | 0 | 1 | 0 | 0 |
 
-Aggregate result: 15/15 passed against the content committed as Git blob `8a8bd2991200bd7f4d9d2f23e533e42809157d59`; all per-case error lists were empty.
+Aggregate result: 32/32 passed against the content committed as Git blob `931d14bf6f4d2de073172981437f0f47ebabbad0` (9 direct, 23 fallback); all per-case error lists were empty and every case left zero snapshot residue.
 
 ## Required Artifacts
 
@@ -164,7 +183,7 @@ Four `return null` matches in the large test owner are pre-existing test doubles
 ### Adversarial Disconfirmation Checks
 
 - A green full repository gate does not prove route selection, so it was not used as sole HOOK evidence; selector structure, helper behavior, exact blob binding, real fallback execution, no-route failure, and cleanup were checked separately.
-- The route matrix is not retained as a durable tracked test. That is intentional and required by SCOPE-01; behavior remains revision-bound, and a later hook/input change must recreate equivalent focused evidence rather than reuse the Native result. Final-review repair did recreate that focused evidence for hook blob `8a8bd29...`, as recorded in the non-Native release-exit section above.
+- The route matrix is not retained as a durable tracked test. That is intentional and required by SCOPE-01; behavior remains revision-bound, and a later hook/input change must recreate equivalent focused evidence rather than reuse the Native result. Final-review repair recreated and expanded that focused evidence to 32/32 cases for hook blob `931d14b...`, as recorded in the non-Native release-exit section above.
 - General compound SemVer support is intentionally absent. Unsupported declarations conservatively fall back and the generalized grammar is explicitly deferred, so this is not a Phase 2 gap.
 
 ## Human Verification Required
