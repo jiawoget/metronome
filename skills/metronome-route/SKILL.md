@@ -42,7 +42,9 @@ Use Native OpenGSD when any of these are true:
 - The user explicitly requests Native OpenGSD lifecycle work.
 - A read-only review covers a diff with any Native trigger above.
 
-Then read `.planning/STATE.md` and `.planning/ROADMAP.md`. Use only the surfaced Native entrypoint that matches the state, normally `$gsd-next` or `$gsd-new-milestone`. Let Native OpenGSD own its research, planning, execution, verification, and lifecycle mutations. Apply `skills/metronome-policy/SKILL.md` when its reuse trigger is met.
+For authorized lifecycle work, read `.planning/STATE.md` and `.planning/ROADMAP.md`, then use only the surfaced Native entrypoint that matches the state, normally `$gsd-next` or `$gsd-new-milestone`. Let Native OpenGSD own its research, planning, execution, verification, and lifecycle mutations. Apply `skills/metronome-policy/SKILL.md` when its reuse trigger is met.
+
+For a read-only review of a Native-scoped diff, do not invoke a lifecycle entrypoint. Read `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`, and the active requirements or milestone archive; inspect the real diff against them and report findings without mutating files or state.
 
 ## Guard the boundary
 
