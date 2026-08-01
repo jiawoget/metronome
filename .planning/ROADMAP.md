@@ -31,7 +31,7 @@ Milestone v1.2 brings the shipped v1.1 tree under coherent Native OpenGSD author
 **Plans**: 1 plan
 
 Plans:
-- [ ] 02-01: Reconcile authority, characterize secure recording identity, correct existing hook routing, prove fixture and scope integrity, and reach Native verification.
+- [ ] 02-01-PLAN.md — Reconcile authority, characterize secure recording identity, correct existing hook routing, prove fixture and scope integrity, and reach Native verification.
 
 ## Progress
 
