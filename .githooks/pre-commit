@@ -222,7 +222,7 @@ fi
 
 run_npm() {
   if [ -n "$npm_cmd" ]; then
-    "$npm_cmd" "$@"
+    PATH="${node_cmd%/*}:$PATH" "$npm_cmd" "$@"
   else
     "$power_shell" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$npm_local_script" "$@"
   fi
