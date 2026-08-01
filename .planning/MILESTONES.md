@@ -1,5 +1,17 @@
 # Milestones
 
+## v1.2 Release Assurance & Workflow Closure (Archived: 2026-08-01; release via PR #136)
+
+**Release condition:** This archive is the PR #136 release candidate. v1.2 is shipped on `main` only when that frozen head passes CI/review, PR #136 merges, and local `main` is synchronized.
+
+**Phases completed:** 1 phases, 1 plans, 3 tasks
+
+**Key accomplishments:**
+
+- Staged-engine-aware hook routing, deterministic secure-ID precedence, immutable PDF evidence, and coherent Native Phase 2 authority on one frozen revision.
+
+---
+
 ## v1.1 Repository Formatting Baseline (Shipped: 2026-08-01)
 
 **Phases completed:** 1 phases, 1 plans, 3 tasks

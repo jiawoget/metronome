@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+unset POSIXLY_CORRECT
+# Git for Windows omits its Unix utility directories when Bash inherits POSIXLY_CORRECT.
+PATH="${PATH:+$PATH:}/usr/bin:/bin"
+export PATH
 
 repo_root="$(git rev-parse --show-toplevel)"
 git_dir="$(git rev-parse --absolute-git-dir)"
 npm_local_script="$repo_root/scripts/npm-local.ps1"
+node_cmd=""
 npm_cmd=""
+npm_cli=""
 power_shell=""
 snapshot_dir=""
 
@@ -68,23 +74,607 @@ if ! git cat-file -e HEAD:.prettierignore 2>/dev/null; then
   exit 0
 fi
 
-if command -v npm >/dev/null 2>&1; then
-  npm_cmd="npm"
-elif command -v npm.cmd >/dev/null 2>&1; then
-  npm_cmd="npm.cmd"
-elif [ -f "$npm_local_script" ] && command -v powershell >/dev/null 2>&1; then
-  power_shell="powershell"
-elif [ -f "$npm_local_script" ] && command -v pwsh >/dev/null 2>&1; then
-  power_shell="pwsh"
-else
-  echo "Could not find a supported npm route for the pre-commit hook."
-  echo "Install npm on PATH or restore scripts/npm-local.ps1 with powershell/pwsh available."
-  exit 1
+extract_engine_minima() {
+  local values=""
+  local node_value=""
+  local npm_value=""
+  local minimum_pattern='^>=(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+
+  if ! values="$(
+    git show :package.json 2>/dev/null |
+      LC_ALL=C.UTF-8 awk '
+        function invalid() {
+          parse_failed = 1
+          return 0
+        }
+
+        function current_char() {
+          return substr(source, cursor, 1)
+        }
+
+        function is_space(c) {
+          return c == " " || c == "\t" || c == "\r" || c == "\n"
+        }
+
+        function skip_space() {
+          while (cursor <= source_len && is_space(current_char())) {
+            cursor++
+          }
+        }
+
+        function read_string(    c, escape, hex) {
+          if (current_char() != "\"") {
+            return invalid()
+          }
+
+          cursor++
+          string_value = ""
+          string_had_escape = 0
+
+          while (cursor <= source_len) {
+            c = current_char()
+            cursor++
+
+            if (c == "\"") {
+              return 1
+            }
+
+            if (c == "\\") {
+              string_had_escape = 1
+              if (cursor > source_len) {
+                return invalid()
+              }
+
+              escape = current_char()
+              cursor++
+
+              if (escape == "u") {
+                hex = substr(source, cursor, 4)
+                if (length(hex) != 4 || hex ~ /[^0-9A-Fa-f]/) {
+                  return invalid()
+                }
+                cursor += 4
+              } else if (escape != "\"" &&
+                escape != "\\" &&
+                escape != "/" &&
+                escape != "b" &&
+                escape != "f" &&
+                escape != "n" &&
+                escape != "r" &&
+                escape != "t") {
+                return invalid()
+              }
+
+              continue
+            }
+
+            if (c ~ /[[:cntrl:]]/) {
+              return invalid()
+            }
+
+            string_value = string_value c
+          }
+
+          return invalid()
+        }
+
+        function parse_scalar(    start, value) {
+          start = cursor
+
+          while (cursor <= source_len &&
+            !is_space(current_char()) &&
+            current_char() != "," &&
+            current_char() != "]" &&
+            current_char() != "}") {
+            cursor++
+          }
+
+          value = substr(source, start, cursor - start)
+          if (value == "true" || value == "false" || value == "null") {
+            return 1
+          }
+          if (value ~ /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$/) {
+            return 1
+          }
+
+          return invalid()
+        }
+
+        function parse_array(    c) {
+          if (current_char() != "[") {
+            return invalid()
+          }
+
+          cursor++
+          skip_space()
+          if (current_char() == "]") {
+            cursor++
+            return 1
+          }
+
+          while (!parse_failed) {
+            if (!parse_value()) {
+              return 0
+            }
+
+            skip_space()
+            c = current_char()
+            if (c == ",") {
+              cursor++
+              skip_space()
+              continue
+            }
+            if (c == "]") {
+              cursor++
+              return 1
+            }
+
+            return invalid()
+          }
+
+          return 0
+        }
+
+        function parse_object(    key, key_escaped, c) {
+          if (current_char() != "{") {
+            return invalid()
+          }
+
+          cursor++
+          skip_space()
+          if (current_char() == "}") {
+            cursor++
+            return 1
+          }
+
+          while (!parse_failed) {
+            if (!read_string()) {
+              return 0
+            }
+
+            key = string_value
+            key_escaped = string_had_escape
+            if (key_escaped) {
+              return invalid()
+            }
+
+            skip_space()
+            if (current_char() != ":") {
+              return invalid()
+            }
+            cursor++
+
+            if (!parse_value()) {
+              return 0
+            }
+
+            skip_space()
+            c = current_char()
+            if (c == ",") {
+              cursor++
+              skip_space()
+              continue
+            }
+            if (c == "}") {
+              cursor++
+              return 1
+            }
+
+            return invalid()
+          }
+
+          return 0
+        }
+
+        function parse_value(    c) {
+          skip_space()
+          c = current_char()
+
+          if (c == "\"") {
+            return read_string()
+          }
+          if (c == "{") {
+            return parse_object()
+          }
+          if (c == "[") {
+            return parse_array()
+          }
+
+          return parse_scalar()
+        }
+
+        function parse_engines(    key, key_escaped, c, seen_node, seen_npm) {
+          if (current_char() != "{") {
+            return invalid()
+          }
+
+          cursor++
+          skip_space()
+          if (current_char() == "}") {
+            return invalid()
+          }
+
+          while (!parse_failed) {
+            if (!read_string()) {
+              return 0
+            }
+
+            key = string_value
+            key_escaped = string_had_escape
+            if (key_escaped) {
+              return invalid()
+            }
+
+            skip_space()
+            if (current_char() != ":") {
+              return invalid()
+            }
+            cursor++
+            skip_space()
+
+            if (key == "node") {
+              seen_node++
+              if (seen_node != 1 ||
+                !read_string() ||
+                string_had_escape) {
+                return invalid()
+              }
+              node_engine_value = string_value
+            } else if (key == "npm") {
+              seen_npm++
+              if (seen_npm != 1 ||
+                !read_string() ||
+                string_had_escape) {
+                return invalid()
+              }
+              npm_engine_value = string_value
+            } else if (!parse_value()) {
+              return 0
+            }
+
+            skip_space()
+            c = current_char()
+            if (c == ",") {
+              cursor++
+              skip_space()
+              continue
+            }
+            if (c == "}") {
+              cursor++
+              break
+            }
+
+            return invalid()
+          }
+
+          if (seen_node != 1 || seen_npm != 1) {
+            return invalid()
+          }
+
+          return 1
+        }
+
+        function parse_root(    key, key_escaped, c, seen_engines) {
+          skip_space()
+          if (current_char() != "{") {
+            return invalid()
+          }
+
+          cursor++
+          skip_space()
+          if (current_char() == "}") {
+            return invalid()
+          }
+
+          while (!parse_failed) {
+            if (!read_string()) {
+              return 0
+            }
+
+            key = string_value
+            key_escaped = string_had_escape
+            if (key_escaped) {
+              return invalid()
+            }
+
+            skip_space()
+            if (current_char() != ":") {
+              return invalid()
+            }
+            cursor++
+            skip_space()
+
+            if (key == "engines") {
+              seen_engines++
+              if (seen_engines != 1 || !parse_engines()) {
+                return invalid()
+              }
+            } else if (!parse_value()) {
+              return 0
+            }
+
+            skip_space()
+            c = current_char()
+            if (c == ",") {
+              cursor++
+              skip_space()
+              continue
+            }
+            if (c == "}") {
+              cursor++
+              break
+            }
+
+            return invalid()
+          }
+
+          if (seen_engines != 1) {
+            return invalid()
+          }
+
+          skip_space()
+          if (cursor <= source_len) {
+            return invalid()
+          }
+
+          return 1
+        }
+
+        {
+          source = source $0 ORS
+        }
+
+        END {
+          source_len = length(source)
+          cursor = 1
+
+          if (!parse_root() || parse_failed) {
+            exit 2
+          }
+
+          print node_engine_value "\t" npm_engine_value
+        }
+      ' 2>&1
+  )"; then
+    return 1
+  fi
+
+  if [ -z "$values" ] || [[ "$values" == *$'\n'* ]] || [[ "$values" != *$'\t'* ]]; then
+    return 1
+  fi
+
+  node_value="${values%%$'\t'*}"
+  npm_value="${values#*$'\t'}"
+  if [ -z "$node_value" ] ||
+    [ -z "$npm_value" ] ||
+    [[ "$npm_value" == *$'\t'* ]] ||
+    [[ ! "$node_value" =~ $minimum_pattern ]] ||
+    [[ ! "$npm_value" =~ $minimum_pattern ]]; then
+    return 1
+  fi
+
+  printf '%s\t%s\n' "${node_value#>=}" "${npm_value#>=}"
+}
+
+normalize_stable_version() {
+  local command_kind="$1"
+  local version="$2"
+  local stable_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+
+  if [[ "$version" == *$'\r'* ]] || [[ "$version" == *$'\n'* ]]; then
+    return 1
+  fi
+
+  if [ "$command_kind" = "node" ]; then
+    version="${version#v}"
+  fi
+
+  if [[ ! "$version" =~ $stable_pattern ]]; then
+    return 1
+  fi
+
+  printf '%s\n' "${version%%+*}"
+}
+
+probe_stable_version() {
+  local command_kind="$1"
+  local version=""
+  shift
+
+  if ! version="$(
+    "$@" 2>/dev/null |
+      LC_ALL=C.UTF-8 awk -v BINMODE=3 '
+        {
+          records++
+          value = $0
+          terminal_cr = sub(/\r$/, "", value)
+          if (terminal_cr && RT != "\n") {
+            invalid = 1
+          }
+          if (value ~ /[[:cntrl:]]/) {
+            invalid = 1
+          }
+          captured = value
+        }
+
+        END {
+          if (invalid || records != 1) {
+            exit 2
+          }
+          print captured
+        }
+      ' 2>&1
+  )"; then
+    return 1
+  fi
+
+  normalize_stable_version "$command_kind" "$version"
+}
+
+numeric_component_greater_than() {
+  local candidate="$1"
+  local minimum="$2"
+  local LC_ALL=C
+
+  if [ "${#candidate}" -ne "${#minimum}" ]; then
+    [ "${#candidate}" -gt "${#minimum}" ]
+  else
+    [[ "$candidate" > "$minimum" ]]
+  fi
+}
+
+version_at_least() {
+  local candidate="$1"
+  local minimum="$2"
+  local candidate_major candidate_minor candidate_patch
+  local minimum_major minimum_minor minimum_patch
+
+  IFS=. read -r candidate_major candidate_minor candidate_patch <<<"$candidate"
+  IFS=. read -r minimum_major minimum_minor minimum_patch <<<"$minimum"
+
+  if [ "$candidate_major" != "$minimum_major" ]; then
+    numeric_component_greater_than "$candidate_major" "$minimum_major"
+  elif [ "$candidate_minor" != "$minimum_minor" ]; then
+    numeric_component_greater_than "$candidate_minor" "$minimum_minor"
+  else
+    [ "$candidate_patch" = "$minimum_patch" ] ||
+      numeric_component_greater_than "$candidate_patch" "$minimum_patch"
+  fi
+}
+
+file_has_exactly_one_line() {
+  local file="$1"
+  local expected="$2"
+  local matches
+
+  matches="$(tr -d '\r' <"$file" | grep -Fxc -- "$expected" || true)"
+  [ "$matches" = "1" ]
+}
+
+is_standard_npm_cli() {
+  local file="$1"
+  local normalized
+
+  normalized="$(tr -d '\r' <"$file")" || return 1
+  [ "$normalized" = $'#!/usr/bin/env node\nrequire(\'../lib/cli.js\')(process)' ]
+}
+
+node_minimum=""
+npm_minimum=""
+engine_minima=""
+npm_candidate=""
+npm_shebang=""
+npm_launcher_line=""
+node_version=""
+npm_version=""
+node_probe_succeeded=false
+npm_probe_succeeded=false
+
+if engine_minima="$(extract_engine_minima)"; then
+  node_minimum="${engine_minima%%$'\t'*}"
+  npm_minimum="${engine_minima#*$'\t'}"
+
+  if node_candidate="$(command -v node 2>/dev/null)" && [ -n "$node_candidate" ]; then
+    node_cmd="$(cd "$(dirname "$node_candidate")" && pwd -P)/$(basename "$node_candidate")"
+    if node_exe_candidate="$(command -v node.exe 2>/dev/null)" && [ -n "$node_exe_candidate" ]; then
+      node_exe_cmd="$(cd "$(dirname "$node_exe_candidate")" && pwd -P)/$(basename "$node_exe_candidate")"
+      if [ "${node_cmd%/*}" = "${node_exe_cmd%/*}" ] &&
+        [[ "${node_cmd##*/}" =~ ^[Nn][Oo][Dd][Ee]$ ]] &&
+        [ "$node_cmd" -ef "$node_exe_cmd" ]; then
+        node_cmd="$node_exe_cmd"
+      fi
+    fi
+  fi
+
+  if npm_candidate="$(command -v npm 2>/dev/null)" && [ -n "$npm_candidate" ]; then
+    npm_candidate="$(cd "$(dirname "$npm_candidate")" && pwd -P)/$(basename "$npm_candidate")"
+  elif npm_candidate="$(command -v npm.cmd 2>/dev/null)" && [ -n "$npm_candidate" ]; then
+    npm_candidate="$(cd "$(dirname "$npm_candidate")" && pwd -P)/$(basename "$npm_candidate")"
+  else
+    npm_candidate=""
+  fi
+
+  npm_adjacent_cli="${npm_candidate%/*}/node_modules/npm/bin/npm-cli.js"
+  case "${npm_candidate##*/}" in
+    [Nn][Pp][Mm].[Cc][Mm][Dd])
+      if [ -r "$npm_candidate" ] && IFS= read -r npm_launcher_line <"$npm_candidate"; then
+        npm_launcher_line="${npm_launcher_line%$'\r'}"
+      fi
+
+      if [ -n "$node_cmd" ] &&
+        [ "${node_cmd%/*}" = "${npm_candidate%/*}" ] &&
+        [ "$npm_launcher_line" = ":: Created by npm, please don't edit manually." ] &&
+        file_has_exactly_one_line "$npm_candidate" 'SET "NODE_EXE=%~dp0\node.exe"' &&
+        file_has_exactly_one_line "$npm_candidate" 'SET "NPM_CLI_JS=%~dp0\node_modules\npm\bin\npm-cli.js"' &&
+        file_has_exactly_one_line "$npm_candidate" '"%NODE_EXE%" "%NPM_CLI_JS%" %*' &&
+        [ -f "$npm_adjacent_cli" ] &&
+        is_standard_npm_cli "$npm_adjacent_cli"; then
+        npm_cli="$(cd "$(dirname "$npm_adjacent_cli")" && pwd -P)/$(basename "$npm_adjacent_cli")"
+      fi
+      ;;
+    [Nn][Pp][Mm])
+      if [ -r "$npm_candidate" ] && IFS= read -r npm_shebang <"$npm_candidate"; then
+        npm_shebang="${npm_shebang%$'\r'}"
+      fi
+
+      if { [[ "$npm_shebang" =~ ^\#![^[:space:]]*/[Nn][Oo][Dd][Ee](\.exe)?$ ]] ||
+          [[ "$npm_shebang" =~ ^\#![^[:space:]]*/env[[:space:]]+(-S[[:space:]]+)?[Nn][Oo][Dd][Ee](\.exe)?$ ]]; } &&
+        npm_cli_source="$(tr -d '\r' <"$npm_candidate" 2>/dev/null)" &&
+        [ "$npm_cli_source" = "$npm_shebang"$'\n'"require('../lib/cli.js')(process)" ]; then
+        npm_cli="$npm_candidate"
+      elif [ -n "$node_cmd" ] &&
+        [ "${node_cmd%/*}" = "${npm_candidate%/*}" ] &&
+        [ "$npm_shebang" = "#!/usr/bin/env bash" ] &&
+        file_has_exactly_one_line "$npm_candidate" 'NODE_EXE="$basedir/node.exe"' &&
+        file_has_exactly_one_line "$npm_candidate" 'NPM_CLI_JS="$CLI_BASEDIR/node_modules/npm/bin/npm-cli.js"' &&
+        file_has_exactly_one_line "$npm_candidate" '"$NODE_EXE" "$NPM_CLI_JS" "$@"' &&
+        [ -f "$npm_adjacent_cli" ] &&
+        is_standard_npm_cli "$npm_adjacent_cli"; then
+        npm_cli="$(cd "$(dirname "$npm_adjacent_cli")" && pwd -P)/$(basename "$npm_adjacent_cli")"
+      fi
+      ;;
+  esac
+
+  if [ -n "$node_cmd" ] &&
+    node_version="$(probe_stable_version node "$node_cmd" --version)"; then
+    node_probe_succeeded=true
+  fi
+
+  if [ -n "$node_cmd" ] &&
+    [ -n "$npm_cli" ] &&
+    npm_version="$(PATH="${node_cmd%/*}:$PATH" probe_stable_version npm "$node_cmd" "$npm_cli" --version)"; then
+    npm_probe_succeeded=true
+  fi
+
+  if $node_probe_succeeded &&
+    $npm_probe_succeeded &&
+    version_at_least "$node_version" "$node_minimum" &&
+    version_at_least "$npm_version" "$npm_minimum"; then
+    npm_cmd="$npm_cli"
+  fi
+fi
+
+if [ -z "$npm_cmd" ]; then
+  if [ -f "$npm_local_script" ] &&
+    power_shell_candidate="$(command -v powershell 2>/dev/null)" &&
+    [[ "$power_shell_candidate" == */* ]] &&
+    power_shell="$(cd "$(dirname "$power_shell_candidate")" && pwd -P)/$(basename "$power_shell_candidate")"; then
+    :
+  elif [ -f "$npm_local_script" ] &&
+    power_shell_candidate="$(command -v pwsh 2>/dev/null)" &&
+    [[ "$power_shell_candidate" == */* ]] &&
+    power_shell="$(cd "$(dirname "$power_shell_candidate")" && pwd -P)/$(basename "$power_shell_candidate")"; then
+    :
+  else
+    echo "Could not find a supported npm route for the pre-commit hook."
+    echo "Install npm on PATH or restore scripts/npm-local.ps1 with powershell/pwsh available."
+    exit 1
+  fi
 fi
 
 run_npm() {
   if [ -n "$npm_cmd" ]; then
-    "$npm_cmd" "$@"
+    PATH="${node_cmd%/*}:$PATH" "$node_cmd" "$npm_cmd" "$@"
   else
     "$power_shell" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$npm_local_script" "$@"
   fi

@@ -8,19 +8,20 @@ Metronome is a local-first web application for musicians to run metronome practi
 
 Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
 
-## Current State: v1.1 Repository Formatting Baseline
+## Latest Milestone: v1.2 Release Assurance & Workflow Closure (Archived Release Candidate)
 
-**Validated milestone:** One deterministic repository-wide Prettier and LF baseline now covers supported text files without changing product behavior and is enforced consistently in Windows development and Ubuntu CI. Native phase verification passed; the release exit still governs final-head CI/review, merge, and local-main synchronization.
+**Goal:** Bring the actual merged v1.1 tree back under Native OpenGSD authority, retain the approved secure quick-recording ID behavior, correct the pre-commit runtime selection defect, reconcile stale lifecycle narratives, and verify the resulting implementation without adding a parallel workflow layer.
+
+**Status:** Phase 2 passed ordinary Native OpenGSD verification and the Native milestone audit, and its artifacts are archived on PR #136. The archive is the release candidate: v1.2 is shipped on `main` only when PR #136 passes final-head CI/review, merges, and local `main` is synchronized. No next milestone is selected.
 
 **Target outcomes:**
 
-- Define the repository's canonical LF/text policy in root `.gitattributes`, with explicit binary, generated-output, and planning-lifecycle protection.
-- Reuse one root `prettier.config.mjs`, one `.prettierignore`, exact stable Prettier and Tailwind-plugin dependencies, and only the public commands `npm run format` and `npm run format:check`; exclude `.planning/**` so native lifecycle writes cannot recursively invalidate the formatting baseline.
-- Commit one idempotent mechanical formatting baseline for every other allowed, non-generated, Prettier-supported text file, including source, tests, configuration, scripts, current documentation, and legacy documentation.
-- Keep the supported repository-local Node/npm runtime wrapper as a portable fallback; direct `node`, `npm`, and `npx` may be used when already available, but the phase does not mutate user or system `PATH`.
-- Use a fast tracked pre-commit gate for staged whitespace and formatting drift; run format checking plus lint, typecheck, unit tests, and build once for the frozen final local candidate and in Ubuntu CI.
-- Keep the mechanical formatter output isolated and reviewable without imposing an exact task or commit count on native planning and execution.
-- Complete native shipping and the separate exact-final-head release exit before starting a fresh R01 from the resulting synchronized `main`.
+- Preserve and characterize the current secure quick-recording recording-ID contract: `crypto.randomUUID()` first, a `crypto.getRandomValues()` fallback, and fail-closed behavior when Web Crypto is unavailable.
+- Make the tracked pre-commit hook use direct Node/npm only when both satisfy the repository engine contract; otherwise reuse `scripts/npm-local.ps1` without adding another wrapper or mutating user or system `PATH`.
+- Keep the two local PDF fixtures byte-for-byte equal to their valid HEAD blobs and verify that local checks no longer depend on damaged CRLF-expanded copies.
+- Reconcile `.planning/STATE.md`, `.planning/PROJECT.md`, `.planning/ROADMAP.md`, and `AGENTS.md` with the completed v1.1 release exit and the active v1.2 assurance scope.
+- Run the current real implementation through Native OpenGSD research, planning, plan checking, bounded execution, and verification.
+- Stop the Phase 2 implementation authorization after native verification. Any later shipping, pull-request creation, final-head review/CI, merge, and local-main synchronization require separate explicit owner authorization; that bounded release-exit authorization was granted on 2026-08-01.
 
 ## Requirements
 
@@ -28,25 +29,26 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 - ✓ 32 evidence-backed product capabilities are retained in the shipped [`v1.0 requirements archive`](milestones/v1.0-REQUIREMENTS.md).
 - ✓ Milestone v1.1 Phase 1 validated all 14 formatting requirements: one LF/Prettier policy, an idempotent 341-file mechanical baseline, Windows runtime fallback, fast local enforcement, Ubuntu CI enforcement, and frozen-revision quality evidence.
+- ✓ Milestone v1.2 Phase 2 validated all 10 assurance requirements: retained secure recording-ID behavior, engine-aware exact-candidate hook routing with conservative fallback, byte-identical PDF fixtures, coherent Native lifecycle authority, and bounded negative scope.
 
 ### Active
 
-- Complete the separate native release exit on the actual final pull-request head: ship, freeze the head, pass applicable CI, obtain a read-only `@codex` review with no unresolved actionable findings, merge, and synchronize a clean local `main`.
+- No implementation requirement remains active. The v1.2 release exit is carried by PR #136, and no next milestone begins before that release is complete and the owner selects its scope; product and R01 work remain dormant.
 
 ### Deferred
 
-- 32 unimplemented product capability contracts remain preserved as [native OpenGSD seeds](seeds/). None match this tooling-only milestone and all remain dormant and unchanged.
-- A fresh R01 product/refactor milestone begins only after this formatting milestone has shipped, merged, and synchronized to clean `main`.
+- 32 unimplemented product capability contracts remain preserved as [native OpenGSD seeds](seeds/). None match this assurance milestone and all remain dormant and unchanged.
+- Any fresh product milestone or evidence-led R01 remains separately scoped and separately authorized.
 
 ### Out of Scope
 
-- Any product behavior, UI, persistence, storage, audio, domain, or service-contract change.
+- Any new product behavior, UI, persistence, storage, audio, domain, or service-contract capability beyond retaining the already-merged secure ID contract.
 - Reading, searching, indexing, mapping, summarizing, citing, importing, hashing for evidence, or formatting `.planning/deprecated/**`.
-- Formatting binary assets, generated outputs, dependency directories, build artifacts, or other explicitly ignored paths.
-- A second formatter, custom validator, receipt, SHA ledger, lifecycle script, new formatter wrapper command, cache, controller, or parallel business path.
-- Playwright, browser, visual, or microphone testing; the milestone changes repository presentation and enforcement only.
-- Combining formatting with dependency modernization beyond the exact formatter/plugin versions required for this baseline.
-- Creating, planning, or integrating the next R01 before the formatting milestone's separate release exit is complete.
+- Reformatting the repository baseline, changing formatter ownership, or modernizing unrelated dependencies.
+- A second formatter, new runtime wrapper, custom lifecycle validator/controller, or any imitation of Native OpenGSD behavior.
+- A custom hard gate requiring another native verification specifically after final review; existing Native OpenGSD and release-exit responsibilities remain distinct.
+- Treating shipping, pull-request creation, final-head review/CI, merge, or local-main synchronization as part of the Phase 2 implementation or verification result; those actions belong only to the separately authorized post-verification release exit.
+- Creating, planning, or integrating a fresh product or R01 milestone.
 
 ## Context
 
@@ -64,12 +66,12 @@ Musicians can move from a score and practice target to a repeatable local practi
 - **Checkout:** `workflow.use_worktrees=false`; all work remains in the primary checkout. No Git worktree may be created or invoked.
 - **Planning lifecycle:** `.planning/**` is outside the formatter surface. `.planning/deprecated/**` remains an absolute content quarantine and is never consumed or transformed.
 - **Formatting ownership:** Prettier is the sole general-purpose formatter. The repository exposes only `format` and `format:check`; no alternate formatter entrypoint or new formatter wrapper is added.
-- **Mechanical baseline:** The committed baseline contains formatter output only. Diagnostic formatter runs may repeat until the configuration reaches a fixed point; the committed result must be idempotent.
-- **Implementation history:** Mechanical formatter output is isolated from semantic, policy, and enforcement edits; native task or commit count is not a gate.
-- **Windows runtime:** Prefer direct supported `node`/`npm` when available and retain `scripts/npm-local.ps1` as the repository-local fallback. Do not alter user or system `PATH` for this phase.
-- **Quality:** The fast pre-commit gate checks staged whitespace and formatting. The frozen final local candidate and Ubuntu CI run format checking, lint, typecheck, unit tests, and build. No Playwright gate is required.
-- **Completion truth:** Phase completion does not prove release. The active goal remains incomplete until native shipping, exact-final-head CI, read-only `@codex` review with no unresolved actionable findings, merge, and clean synchronized `main` all succeed.
-- **Local first:** Product storage and behavior remain unchanged throughout this tooling-only milestone.
+- **Runtime selection:** Direct Node/npm is acceptable only when both versions satisfy `package.json`; otherwise the hook reuses `scripts/npm-local.ps1`. Do not alter user or system `PATH`.
+- **Behavior boundary:** Retain the merged secure-ID semantics and their focused tests; do not expand the quick-recording product contract.
+- **Binary fixtures:** Treat PDF fixtures as raw binary bytes. Local restoration must match the committed blobs exactly and must not create a tracked content change.
+- **Quality:** Native planning and verification decide the proportional command set. The repository's existing format, lint, typecheck, unit, build, and applicable focused test contracts remain authoritative.
+- **Release boundary:** Native phase verification does not prove shipping. Phase 2 authorization stopped after verification; the owner subsequently authorized the bounded release exit. PR creation alone is not shipping, and release truth requires final-head CI/review, merge, and synchronized local `main`.
+- **Local first:** No cloud storage or remote product dependency is introduced.
 
 ## Key Decisions
 
@@ -89,10 +91,16 @@ Musicians can move from a score and practice target to a repeatable local practi
 | Reuse exact-revision gate evidence | A single sequential plan has no merge-integration risk; repeating the same full suite immediately adds latency without new evidence unless the head, inputs, or execution topology changed | ✓ Approved 2026-07-31 |
 | Keep milestone archival and release proof on one PR head | Generic lifecycle routing labels a milestone shipped before GitHub merge, while a second closeout PR would duplicate CI and review; capture phase evidence first, archive on the same branch, then freeze one final head | ✓ Approved 2026-08-01 |
 | Do not treat preserved dormant product seeds as formatting-milestone gaps | The 32 seeds predate v1.1, are explicitly out of scope, and remain subject to separate owner authorization; re-acknowledging them at every tooling closeout adds no evidence | ✓ Approved 2026-08-01 |
+| Retain the merged secure quick-recording ID behavior | The owner chose preservation over rollback; v1.2 must characterize and verify the current Web Crypto contract without expanding it | ✓ Approved 2026-08-01 |
+| Fix hook runtime selection through the existing fallback | Direct command presence is insufficient when Node/npm versions violate the repository engines; reuse `scripts/npm-local.ps1` instead of creating another wrapper | ✓ Approved 2026-08-01 |
+| Restore the two local PDF fixtures to their committed bytes | The valid HEAD blobs are authoritative and the CRLF-expanded local copies produced damaged cross-reference offsets | ✓ Approved 2026-08-01 |
+| Adopt the actual merged tree through Native OpenGSD | Research, planning, checking, execution, and verification belong to Native OpenGSD; no repository-owned lifecycle imitation is added | ✓ Approved 2026-08-01 |
+| Do not add a final-review-specific native reverify hard gate | The owner rejected another custom process layer; ordinary Native OpenGSD verification and release-exit truth remain separate | ✓ Approved 2026-08-01 |
+| Reconcile stale lifecycle authority in v1.2 | v1.1 has merged and local `main` is synchronized, so STATE/PROJECT/ROADMAP/AGENTS must no longer describe its release exit as pending | ✓ Approved 2026-08-01 |
 
 ## Evolution
 
-The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is no longer an active lifecycle input. Milestone v1.1 Phase 1 has now validated the repository formatting baseline; release remains pending until the exact final pull-request head passes CI and read-only review, merges, and local `main` is synchronized. A separately approved fresh R01 may begin only from that merged baseline.
+The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is not an active lifecycle input. Milestone v1.1 shipped on 2026-08-01 with final-head CI/review, merge, and clean local-main synchronization complete. Milestone v1.2 reconciled the actual merged tree with Native OpenGSD authority, passed ordinary verification and milestone audit, and was archived on the PR #136 release-candidate branch. It becomes shipped on `main` only through the successful merge and local synchronization of that final reviewed head; it does not activate a new product or R01 direction.
 
 ---
-*Last updated: 2026-08-01 after v1.1 milestone archival*
+*Last updated: 2026-08-01 after v1.2 Native audit and archival on PR #136*

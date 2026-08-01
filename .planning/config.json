@@ -29,7 +29,8 @@
     "plan_drift_precheck": false,
     "post_planning_gaps": false,
     "code_review": false,
-    "use_worktrees": false
+    "use_worktrees": false,
+    "_auto_chain_active": false
   },
   "ship": {
     "pr_body_sections": [

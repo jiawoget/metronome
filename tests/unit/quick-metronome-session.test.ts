@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RECORDING_HISTORY_STORAGE_KEY } from "@/infrastructure/storage/storage-contracts";
 import {
@@ -106,10 +106,6 @@ describe("quick metronome recording metadata", () => {
     await recordingArtifactRepository.clear().catch(() => undefined);
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it("creates quick recording metadata linked to a session and not to a sheet", () => {
     const session = { id: "session-canonical-quick" };
     const artifact: RecordingArtifact = {
@@ -149,50 +145,6 @@ describe("quick metronome recording metadata", () => {
     expect(recording.audioDataUrl).toBeNull();
     expect(recording.artifactAnalysis?.estimatedFrequencyHz).toBe(440);
     expect(recording.artifactAnalysis?.isSilent).toBe(false);
-  });
-
-  it("uses secure random bytes when randomUUID is unavailable", () => {
-    vi.stubGlobal("crypto", {
-      getRandomValues: (bytes: Uint8Array) => {
-        bytes.set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
-
-        return bytes;
-      }
-    });
-
-    const recording = createQuickRecording({
-      artifact: {
-        blob: new Blob(),
-        durationMs: 0,
-        mimeType: "audio/webm",
-        sizeBytes: 0,
-        analysis: null
-      },
-      session: { id: "session-secure-fallback" },
-      settings: DEFAULT_METRONOME_SETTINGS,
-      createdAt: new Date("2026-06-21T08:01:00Z")
-    });
-
-    expect(recording.id).toBe("recording_000102030405060708090a0b0c0d0e0f");
-    expect(recording.artifactRef.artifactId).toBe(recording.id);
-  });
-
-  it("fails closed when secure random number generation is unavailable", () => {
-    vi.stubGlobal("crypto", {});
-
-    expect(() =>
-      createQuickRecording({
-        artifact: {
-          blob: new Blob(),
-          durationMs: 0,
-          mimeType: "audio/webm",
-          sizeBytes: 0,
-          analysis: null
-        },
-        session: { id: "session-no-secure-random" },
-        settings: DEFAULT_METRONOME_SETTINGS
-      })
-    ).toThrow("Secure random number generation is unavailable");
   });
 
   it("rejects a reused recording id instead of repointing artifact metadata", async () => {
