@@ -279,10 +279,16 @@ if staged_package_json="$(git show :package.json 2>/dev/null)" &&
 fi
 
 if [ -z "$npm_cmd" ]; then
-  if [ -f "$npm_local_script" ] && command -v powershell >/dev/null 2>&1; then
-    power_shell="powershell"
-  elif [ -f "$npm_local_script" ] && command -v pwsh >/dev/null 2>&1; then
-    power_shell="pwsh"
+  if [ -f "$npm_local_script" ] &&
+    power_shell_candidate="$(command -v powershell 2>/dev/null)" &&
+    [[ "$power_shell_candidate" == */* ]] &&
+    power_shell="$(cd "$(dirname "$power_shell_candidate")" && pwd -P)/$(basename "$power_shell_candidate")"; then
+    :
+  elif [ -f "$npm_local_script" ] &&
+    power_shell_candidate="$(command -v pwsh 2>/dev/null)" &&
+    [[ "$power_shell_candidate" == */* ]] &&
+    power_shell="$(cd "$(dirname "$power_shell_candidate")" && pwd -P)/$(basename "$power_shell_candidate")"; then
+    :
   else
     echo "Could not find a supported npm route for the pre-commit hook."
     echo "Install npm on PATH or restore scripts/npm-local.ps1 with powershell/pwsh available."
