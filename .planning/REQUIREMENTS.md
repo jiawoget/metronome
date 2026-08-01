@@ -7,28 +7,28 @@
 
 ### Secure Recording Identity
 
-- [ ] **ID-01**: When both Web Crypto ID APIs are available, quick-recording creation uses `crypto.randomUUID()` with the existing `recording_` prefix, proven by a deterministic focused test without changing production semantics.
-- [ ] **ID-02**: When `crypto.randomUUID()` is unavailable, quick-recording creation converts exactly 16 `crypto.getRandomValues()` bytes into 32 lowercase hexadecimal characters and keeps `artifactRef.artifactId` identical to the recording ID.
-- [ ] **ID-03**: When neither secure Web Crypto path is available, quick-recording creation throws the existing secure-random error and produces no recording.
+- [x] **ID-01**: When both Web Crypto ID APIs are available, quick-recording creation uses `crypto.randomUUID()` with the existing `recording_` prefix, proven by a deterministic focused test without changing production semantics.
+- [x] **ID-02**: When `crypto.randomUUID()` is unavailable, quick-recording creation converts exactly 16 `crypto.getRandomValues()` bytes into 32 lowercase hexadecimal characters and keeps `artifactRef.artifactId` identical to the recording ID.
+- [x] **ID-03**: When neither secure Web Crypto path is available, quick-recording creation throws the existing secure-random error and produces no recording.
 
 ### Pre-commit Runtime Selection
 
-- [ ] **HOOK-01**: The tracked pre-commit hook uses a direct Node/npm pair only when the exact candidates both have stable versions satisfying the engine lower bounds read from the staged root `package.json`.
-- [ ] **HOOK-02**: Every missing, malformed, prerelease, unsupported-range, or engine-incompatible direct pair routes to the existing `scripts/npm-local.ps1` when an existing PowerShell host is available and otherwise fails non-zero.
-- [ ] **HOOK-03**: Engine-aware selection preserves the existing staged-index snapshot, bootstrap, `.planning/**` exclusion, cleanup, exit propagation, whitespace check, and fast `format:check` boundary.
+- [x] **HOOK-01**: The tracked pre-commit hook uses a direct Node/npm pair only when the exact candidates both have stable versions satisfying the engine lower bounds read from the staged root `package.json`.
+- [x] **HOOK-02**: Every missing, malformed, prerelease, unsupported-range, or engine-incompatible direct pair routes to the existing `scripts/npm-local.ps1` when an existing PowerShell host is available and otherwise fails non-zero.
+- [x] **HOOK-03**: Engine-aware selection preserves the existing staged-index snapshot, bootstrap, `.planning/**` exclusion, cleanup, exit propagation, whitespace check, and fast `format:check` boundary.
 
 ### Binary Fixture Integrity
 
-- [ ] **PDF-01**: The raw working-tree blob IDs for `real-sheet.pdf` and `two-page-sheet.pdf` equal their respective `HEAD` blob IDs, both files retain their valid committed sizes and offsets, and neither path has a tracked diff.
+- [x] **PDF-01**: The raw working-tree blob IDs for `real-sheet.pdf` and `two-page-sheet.pdf` equal their respective `HEAD` blob IDs, both files retain their valid committed sizes and offsets, and neither path has a tracked diff.
 
 ### Lifecycle Authority
 
-- [ ] **AUTH-01**: Active sections of PROJECT, STATE, ROADMAP, and AGENTS consistently state that v1.1 shipped, v1.2 assurance is active, product/R01 scope remains dormant, Native OpenGSD is the sole lifecycle authority, and the current authorization stops after native verification.
-- [ ] **FLOW-01**: Native OpenGSD owns and completes v1.2 research, requirements and roadmap creation, checker-approved planning, bounded execution, and verification for the resulting revision.
+- [x] **AUTH-01**: Active sections of PROJECT, STATE, ROADMAP, and AGENTS consistently state that v1.1 shipped, v1.2 assurance is active, product/R01 scope remains dormant, Native OpenGSD is the sole lifecycle authority, and the current authorization stops after native verification.
+- [x] **FLOW-01**: Native OpenGSD owns and completes v1.2 research, requirements and roadmap creation, checker-approved planning, bounded execution, and verification for the resulting revision.
 
 ### Scope Integrity
 
-- [ ] **SCOPE-01**: The resulting milestone contains no product expansion, dormant-seed activation, secure-ID production redesign, new dependency/runtime wrapper/lifecycle controller, PDF content change, final-review-specific reverify gate, or shipping action.
+- [x] **SCOPE-01**: The resulting milestone contains no product expansion, dormant-seed activation, secure-ID production redesign, new dependency/runtime wrapper/lifecycle controller, PDF content change, final-review-specific reverify gate, or shipping action.
 
 ## Future Requirements
 
@@ -56,18 +56,19 @@ Roadmap mapping is populated by the Native OpenGSD roadmapper.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ID-01 | Phase 2 | Pending |
-| ID-02 | Phase 2 | Pending |
-| ID-03 | Phase 2 | Pending |
-| HOOK-01 | Phase 2 | Pending |
-| HOOK-02 | Phase 2 | Pending |
-| HOOK-03 | Phase 2 | Pending |
-| PDF-01 | Phase 2 | Pending |
-| AUTH-01 | Phase 2 | Pending |
-| FLOW-01 | Phase 2 | Pending |
-| SCOPE-01 | Phase 2 | Pending |
+| ID-01 | Phase 2 | Complete |
+| ID-02 | Phase 2 | Complete |
+| ID-03 | Phase 2 | Complete |
+| HOOK-01 | Phase 2 | Complete |
+| HOOK-02 | Phase 2 | Complete |
+| HOOK-03 | Phase 2 | Complete |
+| PDF-01 | Phase 2 | Complete |
+| AUTH-01 | Phase 2 | Complete |
+| FLOW-01 | Phase 2 | Complete |
+| SCOPE-01 | Phase 2 | Complete |
 
 **Coverage:**
+
 - v1.2 requirements: 10 total
 - Mapped to phases: 10
 - Unmapped: 0
