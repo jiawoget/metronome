@@ -7,6 +7,7 @@ git_dir="$(git rev-parse --absolute-git-dir)"
 npm_local_script="$repo_root/scripts/npm-local.ps1"
 node_cmd=""
 npm_cmd=""
+npm_cli=""
 power_shell=""
 snapshot_dir=""
 
@@ -164,10 +165,29 @@ version_at_least() {
   fi
 }
 
+file_has_exactly_one_line() {
+  local file="$1"
+  local expected="$2"
+  local matches
+
+  matches="$(tr -d '\r' <"$file" | grep -Fxc -- "$expected" || true)"
+  [ "$matches" = "1" ]
+}
+
+is_standard_npm_cli() {
+  local file="$1"
+  local normalized
+
+  normalized="$(tr -d '\r' <"$file")" || return 1
+  [ "$normalized" = $'#!/usr/bin/env node\nrequire(\'../lib/cli.js\')(process)' ]
+}
+
 staged_package_json=""
 node_minimum=""
 npm_minimum=""
 npm_candidate=""
+npm_shebang=""
+npm_launcher_line=""
 node_version=""
 npm_version=""
 node_probe_succeeded=false
@@ -178,6 +198,14 @@ if staged_package_json="$(git show :package.json 2>/dev/null)" &&
   npm_minimum="$(extract_engine_minimum npm "$staged_package_json")"; then
   if node_candidate="$(command -v node 2>/dev/null)" && [ -n "$node_candidate" ]; then
     node_cmd="$(cd "$(dirname "$node_candidate")" && pwd -P)/$(basename "$node_candidate")"
+    if node_exe_candidate="$(command -v node.exe 2>/dev/null)" && [ -n "$node_exe_candidate" ]; then
+      node_exe_cmd="$(cd "$(dirname "$node_exe_candidate")" && pwd -P)/$(basename "$node_exe_candidate")"
+      if [ "${node_cmd%/*}" = "${node_exe_cmd%/*}" ] &&
+        [[ "${node_cmd##*/}" =~ ^[Nn][Oo][Dd][Ee]$ ]] &&
+        [ "$node_cmd" -ef "$node_exe_cmd" ]; then
+        node_cmd="$node_exe_cmd"
+      fi
+    fi
   fi
 
   if npm_candidate="$(command -v npm 2>/dev/null)" && [ -n "$npm_candidate" ]; then
@@ -188,22 +216,43 @@ if staged_package_json="$(git show :package.json 2>/dev/null)" &&
     npm_candidate=""
   fi
 
+  npm_adjacent_cli="${npm_candidate%/*}/node_modules/npm/bin/npm-cli.js"
   case "${npm_candidate##*/}" in
     [Nn][Pp][Mm].[Cc][Mm][Dd])
-      npm_sibling_node="${npm_candidate%/*}/node.exe"
-      if [ -f "$npm_sibling_node" ]; then
-        node_cmd="$(cd "$(dirname "$npm_sibling_node")" && pwd -P)/$(basename "$npm_sibling_node")"
-      else
-        node_cmd=""
+      if [ -r "$npm_candidate" ] && IFS= read -r npm_launcher_line <"$npm_candidate"; then
+        npm_launcher_line="${npm_launcher_line%$'\r'}"
+      fi
+
+      if [ -n "$node_cmd" ] &&
+        [ "${node_cmd%/*}" = "${npm_candidate%/*}" ] &&
+        [ "$npm_launcher_line" = ":: Created by npm, please don't edit manually." ] &&
+        file_has_exactly_one_line "$npm_candidate" 'SET "NODE_EXE=%~dp0\node.exe"' &&
+        file_has_exactly_one_line "$npm_candidate" 'SET "NPM_CLI_JS=%~dp0\node_modules\npm\bin\npm-cli.js"' &&
+        file_has_exactly_one_line "$npm_candidate" '"%NODE_EXE%" "%NPM_CLI_JS%" %*' &&
+        [ -f "$npm_adjacent_cli" ] &&
+        is_standard_npm_cli "$npm_adjacent_cli"; then
+        npm_cli="$(cd "$(dirname "$npm_adjacent_cli")" && pwd -P)/$(basename "$npm_adjacent_cli")"
       fi
       ;;
     [Nn][Pp][Mm])
-      npm_sibling_node_exe="${npm_candidate%/*}/node.exe"
-      npm_sibling_node="${npm_candidate%/*}/node"
-      if [ -x "$npm_sibling_node_exe" ]; then
-        node_cmd="$(cd "$(dirname "$npm_sibling_node_exe")" && pwd -P)/$(basename "$npm_sibling_node_exe")"
-      elif [ -x "$npm_sibling_node" ]; then
-        node_cmd="$(cd "$(dirname "$npm_sibling_node")" && pwd -P)/$(basename "$npm_sibling_node")"
+      if [ -r "$npm_candidate" ] && IFS= read -r npm_shebang <"$npm_candidate"; then
+        npm_shebang="${npm_shebang%$'\r'}"
+      fi
+
+      if { [[ "$npm_shebang" =~ ^\#![^[:space:]]*/[Nn][Oo][Dd][Ee](\.exe)?$ ]] ||
+          [[ "$npm_shebang" =~ ^\#![^[:space:]]*/env[[:space:]]+(-S[[:space:]]+)?[Nn][Oo][Dd][Ee](\.exe)?$ ]]; } &&
+        npm_cli_source="$(tr -d '\r' <"$npm_candidate" 2>/dev/null)" &&
+        [ "$npm_cli_source" = "$npm_shebang"$'\n'"require('../lib/cli.js')(process)" ]; then
+        npm_cli="$npm_candidate"
+      elif [ -n "$node_cmd" ] &&
+        [ "${node_cmd%/*}" = "${npm_candidate%/*}" ] &&
+        [ "$npm_shebang" = "#!/usr/bin/env bash" ] &&
+        file_has_exactly_one_line "$npm_candidate" 'NODE_EXE="$basedir/node.exe"' &&
+        file_has_exactly_one_line "$npm_candidate" 'NPM_CLI_JS="$CLI_BASEDIR/node_modules/npm/bin/npm-cli.js"' &&
+        file_has_exactly_one_line "$npm_candidate" '"$NODE_EXE" "$NPM_CLI_JS" "$@"' &&
+        [ -f "$npm_adjacent_cli" ] &&
+        is_standard_npm_cli "$npm_adjacent_cli"; then
+        npm_cli="$(cd "$(dirname "$npm_adjacent_cli")" && pwd -P)/$(basename "$npm_adjacent_cli")"
       fi
       ;;
   esac
@@ -215,8 +264,8 @@ if staged_package_json="$(git show :package.json 2>/dev/null)" &&
   fi
 
   if [ -n "$node_cmd" ] &&
-    [ -n "$npm_candidate" ] &&
-    npm_version_output="$(PATH="${node_cmd%/*}:$PATH" "$npm_candidate" --version 2>/dev/null)" &&
+    [ -n "$npm_cli" ] &&
+    npm_version_output="$(PATH="${node_cmd%/*}:$PATH" "$node_cmd" "$npm_cli" --version 2>/dev/null)" &&
     npm_version="$(normalize_stable_version npm "$npm_version_output")"; then
     npm_probe_succeeded=true
   fi
@@ -225,7 +274,7 @@ if staged_package_json="$(git show :package.json 2>/dev/null)" &&
     $npm_probe_succeeded &&
     version_at_least "$node_version" "$node_minimum" &&
     version_at_least "$npm_version" "$npm_minimum"; then
-    npm_cmd="$npm_candidate"
+    npm_cmd="$npm_cli"
   fi
 fi
 
@@ -243,7 +292,7 @@ fi
 
 run_npm() {
   if [ -n "$npm_cmd" ]; then
-    PATH="${node_cmd%/*}:$PATH" "$npm_cmd" "$@"
+    PATH="${node_cmd%/*}:$PATH" "$node_cmd" "$npm_cmd" "$@"
   else
     "$power_shell" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$npm_local_script" "$@"
   fi
