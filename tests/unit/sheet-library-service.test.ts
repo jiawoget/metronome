@@ -454,11 +454,14 @@ describe("sheet library service", () => {
         id: "sheet-projection-get-fail",
         artifactStatus: {
           readable: false,
-          label: "Artifact status could not be inspected after the sheet was saved."
+          label:
+            "Artifact status could not be inspected after the sheet was saved."
         }
       }
     });
-    await expect(repository.getSheet("sheet-projection-get-fail")).resolves.toMatchObject({
+    await expect(
+      repository.getSheet("sheet-projection-get-fail")
+    ).resolves.toMatchObject({
       name: "Projection Failure"
     });
   });
@@ -494,11 +497,14 @@ describe("sheet library service", () => {
         id: "sheet-projection-inspect-fail",
         artifactStatus: {
           readable: false,
-          label: "Artifact status could not be inspected after the sheet was saved."
+          label:
+            "Artifact status could not be inspected after the sheet was saved."
         }
       }
     });
-    await expect(repository.getArtifact("sheet-projection-inspect-fail")).resolves.toMatchObject({
+    await expect(
+      repository.getArtifact("sheet-projection-inspect-fail")
+    ).resolves.toMatchObject({
       sheetId: "sheet-projection-inspect-fail"
     });
   });
@@ -671,7 +677,9 @@ describe("sheet library service", () => {
     await expect(service.getArtifact("sheet-mixed-2")).resolves.toMatchObject({
       sheetId: "sheet-mixed-2"
     });
-    await expect(service.getArtifact("unsupported-sheet.txt")).resolves.toBeNull();
+    await expect(
+      service.getArtifact("unsupported-sheet.txt")
+    ).resolves.toBeNull();
   });
 
   it("batch import records per-file repository throws without dropping neighboring successes", async () => {
@@ -765,7 +773,8 @@ describe("sheet library service", () => {
             id: "sheet-batch-projection-1",
             artifactStatus: {
               readable: false,
-              label: "Artifact status could not be inspected after the sheet was saved."
+              label:
+                "Artifact status could not be inspected after the sheet was saved."
             }
           }
         },
@@ -776,16 +785,21 @@ describe("sheet library service", () => {
             id: "sheet-batch-projection-2",
             artifactStatus: {
               readable: false,
-              label: "Artifact status could not be inspected after the sheet was saved."
+              label:
+                "Artifact status could not be inspected after the sheet was saved."
             }
           }
         }
       ]
     });
-    await expect(repository.getSheet("sheet-batch-projection-1")).resolves.toMatchObject({
+    await expect(
+      repository.getSheet("sheet-batch-projection-1")
+    ).resolves.toMatchObject({
       name: "real-sheet"
     });
-    await expect(repository.getSheet("sheet-batch-projection-2")).resolves.toMatchObject({
+    await expect(
+      repository.getSheet("sheet-batch-projection-2")
+    ).resolves.toMatchObject({
       name: "real-sheet"
     });
   });
@@ -991,11 +1005,14 @@ describe("sheet library service", () => {
         name: "Edited",
         artifactStatus: {
           readable: false,
-          label: "Artifact status could not be inspected after the sheet was saved."
+          label:
+            "Artifact status could not be inspected after the sheet was saved."
         }
       }
     });
-    await expect(repository.getSheet("sheet-update-projection")).resolves.toMatchObject({
+    await expect(
+      repository.getSheet("sheet-update-projection")
+    ).resolves.toMatchObject({
       name: "Edited",
       category: "scale"
     });
@@ -1012,11 +1029,14 @@ describe("sheet library service", () => {
         favorite: true,
         artifactStatus: {
           readable: false,
-          label: "Artifact status could not be inspected after the sheet was saved."
+          label:
+            "Artifact status could not be inspected after the sheet was saved."
         }
       }
     });
-    await expect(repository.getSheet("sheet-update-projection")).resolves.toMatchObject({
+    await expect(
+      repository.getSheet("sheet-update-projection")
+    ).resolves.toMatchObject({
       favorite: true
     });
 
@@ -1032,11 +1052,14 @@ describe("sheet library service", () => {
         tags: ["Focus"],
         artifactStatus: {
           readable: false,
-          label: "Artifact status could not be inspected after the sheet was saved."
+          label:
+            "Artifact status could not be inspected after the sheet was saved."
         }
       }
     });
-    await expect(repository.getSheet("sheet-update-projection")).resolves.toMatchObject({
+    await expect(
+      repository.getSheet("sheet-update-projection")
+    ).resolves.toMatchObject({
       tags: ["Focus"]
     });
   });
@@ -1312,7 +1335,8 @@ describe("sheet library service", () => {
       })
     ).resolves.toEqual({
       ok: false,
-      message: "Sheet organization could not be updated because the sheet was not found."
+      message:
+        "Sheet organization could not be updated because the sheet was not found."
     });
   });
 

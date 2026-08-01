@@ -39,11 +39,11 @@ logic.
 Keep the public quick API stable:
 
 ```ts
-quickRecordingRepository.getSnapshot()
-quickRecordingRepository.getLatestQuickRecording()
-quickRecordingRepository.saveQuickRecording(recording)
-quickRecordingRepository.clear()
-quickRecordingRepository.subscribe(listener)
+quickRecordingRepository.getSnapshot();
+quickRecordingRepository.getLatestQuickRecording();
+quickRecordingRepository.saveQuickRecording(recording);
+quickRecordingRepository.clear();
+quickRecordingRepository.subscribe(listener);
 ```
 
 The implementation should:

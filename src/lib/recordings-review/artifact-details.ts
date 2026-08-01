@@ -25,7 +25,10 @@ export function getDurationWarning({
   metadataDurationMs: number;
 }) {
   const durationDifferenceMs = Math.abs(decodedDurationMs - metadataDurationMs);
-  const toleranceMs = Math.max(MIN_DURATION_TOLERANCE_MS, metadataDurationMs * DURATION_TOLERANCE_RATIO);
+  const toleranceMs = Math.max(
+    MIN_DURATION_TOLERANCE_MS,
+    metadataDurationMs * DURATION_TOLERANCE_RATIO
+  );
 
   if (durationDifferenceMs <= toleranceMs) {
     return null;
@@ -88,7 +91,9 @@ export async function loadRecordingArtifactDetailsFromBody({
     );
   }
 
-  const normalizedTrustedPeaks = useTrustedPeaks ? normalizePeaks(trustedPeaks) : [];
+  const normalizedTrustedPeaks = useTrustedPeaks
+    ? normalizePeaks(trustedPeaks)
+    : [];
 
   if (useTrustedPeaks && !hasUsablePeaks(normalizedTrustedPeaks)) {
     throw new RecordingArtifactError(

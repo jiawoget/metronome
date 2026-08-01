@@ -50,16 +50,10 @@ vi.mock("@/components/sheet-practice/reference/reference-panel", () => ({
     onPlaybackTimestampChange?: (timestampMs: number | null) => void;
   }) => (
     <div>
-      <button
-        type="button"
-        onClick={() => onPlaybackTimestampChange?.(2_468)}
-      >
+      <button type="button" onClick={() => onPlaybackTimestampChange?.(2_468)}>
         Report reference timestamp
       </button>
-      <button
-        type="button"
-        onClick={() => onPlaybackTimestampChange?.(null)}
-      >
+      <button type="button" onClick={() => onPlaybackTimestampChange?.(null)}>
         Clear reference timestamp
       </button>
     </div>
@@ -142,7 +136,9 @@ describe("SheetViewerExperience measure-grid timestamp wiring", () => {
     viewerMocks.revokePageThumbnails.mockReset();
     viewerMocks.createArtifactObjectUrls.mockReset();
     viewerMocks.createArtifactObjectUrls.mockImplementation(
-      (artifact: Extract<SheetViewerLoadState, { status: "ready" }>["artifact"]) => ({
+      (
+        artifact: Extract<SheetViewerLoadState, { status: "ready" }>["artifact"]
+      ) => ({
         sheetId: artifact.sheetId,
         urls: ["blob:sheet-alpha-page-1"]
       })
@@ -156,15 +152,23 @@ describe("SheetViewerExperience measure-grid timestamp wiring", () => {
     render(<SheetViewerExperience sheetId="sheet-alpha" />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("mock-sheet-practice-controls")).toHaveTextContent("null");
+      expect(
+        screen.getByTestId("mock-sheet-practice-controls")
+      ).toHaveTextContent("null");
     });
 
-    await user.click(screen.getByRole("button", { name: "Report reference timestamp" }));
+    await user.click(
+      screen.getByRole("button", { name: "Report reference timestamp" })
+    );
 
     await waitFor(() => {
-      expect(screen.getByTestId("mock-sheet-practice-controls")).toHaveTextContent("2468");
+      expect(
+        screen.getByTestId("mock-sheet-practice-controls")
+      ).toHaveTextContent("2468");
     });
-    expect(viewerMocks.controlsProps.at(-1)?.currentMeasureGridTimestampMs).toBe(2_468);
+    expect(
+      viewerMocks.controlsProps.at(-1)?.currentMeasureGridTimestampMs
+    ).toBe(2_468);
   });
 
   it("passes a cleared reference playback timestamp through as null", async () => {
@@ -173,20 +177,32 @@ describe("SheetViewerExperience measure-grid timestamp wiring", () => {
     render(<SheetViewerExperience sheetId="sheet-alpha" />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("mock-sheet-practice-controls")).toHaveTextContent("null");
+      expect(
+        screen.getByTestId("mock-sheet-practice-controls")
+      ).toHaveTextContent("null");
     });
 
-    await user.click(screen.getByRole("button", { name: "Report reference timestamp" }));
+    await user.click(
+      screen.getByRole("button", { name: "Report reference timestamp" })
+    );
 
     await waitFor(() => {
-      expect(screen.getByTestId("mock-sheet-practice-controls")).toHaveTextContent("2468");
+      expect(
+        screen.getByTestId("mock-sheet-practice-controls")
+      ).toHaveTextContent("2468");
     });
 
-    await user.click(screen.getByRole("button", { name: "Clear reference timestamp" }));
+    await user.click(
+      screen.getByRole("button", { name: "Clear reference timestamp" })
+    );
 
     await waitFor(() => {
-      expect(screen.getByTestId("mock-sheet-practice-controls")).toHaveTextContent("null");
+      expect(
+        screen.getByTestId("mock-sheet-practice-controls")
+      ).toHaveTextContent("null");
     });
-    expect(viewerMocks.controlsProps.at(-1)?.currentMeasureGridTimestampMs).toBeNull();
+    expect(
+      viewerMocks.controlsProps.at(-1)?.currentMeasureGridTimestampMs
+    ).toBeNull();
   });
 });

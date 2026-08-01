@@ -20,17 +20,13 @@ function millisecondsToSeconds(milliseconds: number) {
 export class BrowserCountdownExecutor implements CountdownExecutor {
   private readonly createAdapter: ToneMetronomeAdapterFactory;
 
-  constructor(createAdapter: ToneMetronomeAdapterFactory = createToneMetronomeAdapter) {
+  constructor(
+    createAdapter: ToneMetronomeAdapterFactory = createToneMetronomeAdapter
+  ) {
     this.createAdapter = createAdapter;
   }
 
-  run({
-    plan,
-    bpm,
-    onTick,
-    onComplete,
-    onError
-  }: CountdownExecutorOptions) {
+  run({ plan, bpm, onTick, onComplete, onError }: CountdownExecutorOptions) {
     assertSchedulableCountdownPlan(plan);
 
     let adapter: ToneMetronomeAdapter | null = null;
@@ -111,7 +107,9 @@ export class BrowserCountdownExecutor implements CountdownExecutor {
     eventHandles: ToneMetronomeScheduledEventHandle[];
   }) {
     if (typeof window === "undefined") {
-      throw new Error("Countdown playback is not available outside the browser.");
+      throw new Error(
+        "Countdown playback is not available outside the browser."
+      );
     }
 
     const adapter = await this.createAdapter();

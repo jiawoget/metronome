@@ -128,5 +128,3 @@ Open a sheet
 - Later Pack 1 slices should be promoted to `ready_for_coding` only after dependency slices are verified.
 - Pack 2-9 slice files are backlog-level. Before any later pack starts, refine that pack to Pack 1 detail level and assign model tiers.
 - Do not start Pack 2 until Pack 1 is accepted unless the user explicitly reprioritizes.
-
-

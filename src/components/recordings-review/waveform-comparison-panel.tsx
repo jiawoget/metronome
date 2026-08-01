@@ -38,7 +38,7 @@ export function WaveformComparisonEvidence({
         <p
           role="status"
           data-testid={loadingTestId}
-          className="text-muted-foreground text-sm font-medium"
+          className="text-sm font-medium text-muted-foreground"
         >
           {loadingText}
         </p>
@@ -48,7 +48,7 @@ export function WaveformComparisonEvidence({
         <p
           role="alert"
           data-testid={errorTestId}
-          className="text-destructive text-sm font-medium"
+          className="text-sm font-medium text-destructive"
         >
           {errorMessage}
         </p>
@@ -108,14 +108,14 @@ export function WaveformComparisonPanel({
     <div
       data-testid={`waveform-comparison-${group.groupId}`}
       aria-labelledby={titleId}
-      className="border-border bg-background border-b px-3 py-3"
+      className="border-b border-border bg-background px-3 py-3"
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h4 id={titleId} className="text-sm font-semibold break-words">
             Waveform comparison for {groupLabel}
           </h4>
-          <p className="text-muted-foreground mt-1 text-xs break-words">
+          <p className="mt-1 text-xs break-words text-muted-foreground">
             {statusText}
           </p>
         </div>
@@ -126,7 +126,7 @@ export function WaveformComparisonPanel({
         <p
           role="status"
           data-testid="waveform-comparison-limit"
-          className="text-muted-foreground mt-3 text-xs font-medium"
+          className="mt-3 text-xs font-medium text-muted-foreground"
         >
           {limitText}
         </p>
@@ -163,11 +163,11 @@ function WaveformComparisonRow({
         data-testid={`waveform-comparison-row-${source.recordingId}`}
         data-waveform-state="unavailable"
         data-unavailable-reason={source.reason}
-        className="border-border bg-muted/50 rounded-md border px-3 py-3"
+        className="rounded-md border border-border bg-muted/50 px-3 py-3"
       >
         <div className="flex flex-col gap-1 text-sm">
           <span className="font-semibold break-words">{displayName}</span>
-          <span className="text-muted-foreground break-words">
+          <span className="break-words text-muted-foreground">
             {source.message}
           </span>
         </div>
@@ -183,13 +183,13 @@ function WaveformComparisonRow({
     <div
       data-testid={`waveform-comparison-row-${source.recordingId}`}
       data-waveform-state="ready"
-      className="border-border bg-muted/50 rounded-md border px-3 py-3"
+      className="rounded-md border border-border bg-muted/50 px-3 py-3"
     >
       <div className="grid gap-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-semibold break-words">{displayName}</p>
-            <p className="text-muted-foreground mt-1 text-xs break-words">
+            <p className="mt-1 text-xs break-words text-muted-foreground">
               {sourceLabel} · Duration {durationLabel}
             </p>
           </div>
@@ -207,7 +207,7 @@ function WaveformComparisonRow({
         {source.durationWarning ? (
           <p
             data-testid={`waveform-comparison-duration-warning-${source.recordingId}`}
-            className="text-muted-foreground text-xs font-medium break-words"
+            className="text-xs font-medium break-words text-muted-foreground"
           >
             {source.durationWarning}
           </p>
@@ -228,7 +228,9 @@ function PeakWaveform({
   source: string;
   recordingId: string;
 }) {
-  const usablePeaks = peaks.filter((peak) => Number.isFinite(peak) && peak >= 0);
+  const usablePeaks = peaks.filter(
+    (peak) => Number.isFinite(peak) && peak >= 0
+  );
   const maxPeak = Math.max(...usablePeaks, 0);
 
   return (
@@ -240,7 +242,7 @@ function PeakWaveform({
       data-testid={`comparison-waveform-${recordingId}`}
       data-waveform-source={source}
       data-peak-count={String(usablePeaks.length)}
-      className="border-border bg-background flex h-14 w-full min-w-0 items-center gap-1 overflow-hidden rounded-md border px-2"
+      className="flex h-14 w-full min-w-0 items-center gap-1 overflow-hidden rounded-md border border-border bg-background px-2"
     >
       {usablePeaks.map((peak, index) => {
         const normalizedPeak = maxPeak > 0 ? peak / maxPeak : 0;
@@ -250,7 +252,7 @@ function PeakWaveform({
           <span
             key={`${recordingId}-peak-${index}`}
             aria-hidden="true"
-            className="bg-accent min-w-1 flex-1 rounded-full"
+            className="min-w-1 flex-1 rounded-full bg-accent"
             style={{ height: `${heightPercent}%` }}
           />
         );

@@ -162,7 +162,7 @@ type PersistedSheetMetronomePresetRecord = {
 Recommended Dexie schema:
 
 ```ts
-presets: "...implementation detail..."
+presets: "...implementation detail...";
 ```
 
 The exact Dexie schema is an implementation detail. The repository may use a compound key, an internal primary key, or equivalent IndexedDB shape, but it must expose the repository contract without making index order or key encoding part of the domain/service API. Required lookup capabilities are:
@@ -186,7 +186,10 @@ Repository interface:
 ```ts
 type SheetMetronomePresetRepository = {
   listPresets: (sheetId: string) => Promise<SheetMetronomePreset[]>;
-  getPreset: (sheetId: string, presetId: string) => Promise<SheetMetronomePreset | null>;
+  getPreset: (
+    sheetId: string,
+    presetId: string
+  ) => Promise<SheetMetronomePreset | null>;
   savePreset: (preset: SheetMetronomePreset) => Promise<void>;
   deletePreset: (sheetId: string, presetId: string) => Promise<void>;
 };
@@ -217,7 +220,11 @@ type RenameSheetMetronomePresetInput = {
 };
 
 type SheetMetronomePresetLoadResult =
-  | { status: "loaded"; preset: SheetMetronomePreset; settings: SheetMetronomePresetSettings }
+  | {
+      status: "loaded";
+      preset: SheetMetronomePreset;
+      settings: SheetMetronomePresetSettings;
+    }
   | { status: "missing" };
 ```
 

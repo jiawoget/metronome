@@ -6,7 +6,9 @@ import {
 
 export const TEST_ISO_DATE = "2026-06-23T10:00:00.000Z";
 
-export function buildMeasureGrid(overrides: Partial<MeasureGrid> = {}): MeasureGrid {
+export function buildMeasureGrid(
+  overrides: Partial<MeasureGrid> = {}
+): MeasureGrid {
   return {
     bpm: 96,
     timeSignature: "4/4",
@@ -16,7 +18,9 @@ export function buildMeasureGrid(overrides: Partial<MeasureGrid> = {}): MeasureG
   };
 }
 
-export function buildPracticeSegment(overrides: Partial<PracticeSegment> = {}): PracticeSegment {
+export function buildPracticeSegment(
+  overrides: Partial<PracticeSegment> = {}
+): PracticeSegment {
   const baseGrid = buildMeasureGrid();
 
   return {

@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PracticeSession, SheetRecordingMetadata, SheetRecordingSegmentContext } from "@/domain/practice";
+import type {
+  PracticeSession,
+  SheetRecordingMetadata,
+  SheetRecordingSegmentContext
+} from "@/domain/practice";
 import {
   recordingHistoryRepository,
   RECORDINGS_STORAGE_KEY,
@@ -23,14 +27,7 @@ const settings = {
 } as const;
 
 const sheetRecordingAudioSamples = new Float32Array([
-  0,
-  0.25,
-  -0.5,
-  0.75,
-  -0.35,
-  0.2,
-  -0.1,
-  0.4
+  0, 0.25, -0.5, 0.75, -0.35, 0.2, -0.1, 0.4
 ]);
 
 const metadata: SheetRecordingMetadata = {
@@ -76,7 +73,9 @@ const previousSession: PracticeSession = {
   segmentContext: null
 };
 
-function createArtifact(overrides: Partial<RecordingArtifact> = {}): RecordingArtifact {
+function createArtifact(
+  overrides: Partial<RecordingArtifact> = {}
+): RecordingArtifact {
   return {
     blob: new Blob(["audio"], { type: "audio/webm" }),
     durationMs: 812,
@@ -94,7 +93,9 @@ function createArtifact(overrides: Partial<RecordingArtifact> = {}): RecordingAr
   };
 }
 
-function createSegmentContext(overrides: Partial<SheetRecordingSegmentContext> = {}): SheetRecordingSegmentContext {
+function createSegmentContext(
+  overrides: Partial<SheetRecordingSegmentContext> = {}
+): SheetRecordingSegmentContext {
   return {
     segmentId: "segment-alpha",
     segmentName: "Bridge",
@@ -103,7 +104,8 @@ function createSegmentContext(overrides: Partial<SheetRecordingSegmentContext> =
       endMeasure: 12
     },
     targetBpm: 88,
-    measureGridVersion: "bpm:88|timeSignature:3/4|pickupBeats:0|measureOneOffsetMs:1000",
+    measureGridVersion:
+      "bpm:88|timeSignature:3/4|pickupBeats:0|measureOneOffsetMs:1000",
     measureGridSnapshot: {
       bpm: 88,
       timeSignature: "3/4",
@@ -173,7 +175,9 @@ function createPreparedSessionService({
     deletePracticeSessionSnapshot: vi.fn(async (sessionId: string) => {
       void sessionId;
     }),
-    restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session)
+    restorePracticeSessionSnapshot: vi.fn(
+      async (session: PracticeSession) => session
+    )
   };
 }
 
@@ -251,7 +255,9 @@ describe("sheet practice recording service", () => {
       segmentContext: null,
       forceNewSession: false
     });
-    expect(sessionService.commitPreparedSheetRecordingSession).toHaveBeenCalledOnce();
+    expect(
+      sessionService.commitPreparedSheetRecordingSession
+    ).toHaveBeenCalledOnce();
     expect(sessionService.captureSessionEvent).toHaveBeenCalledWith({
       sessionId: "session-new",
       kind: "recording_stopped",
@@ -259,15 +265,19 @@ describe("sheet practice recording service", () => {
       segmentId: null,
       recordingId: "recording-sheet-1"
     });
-    expect(sessionService.captureSessionEvent.mock.invocationCallOrder[0]).toBeGreaterThan(
-      sessionService.commitPreparedSheetRecordingSession.mock.invocationCallOrder[0]
+    expect(
+      sessionService.captureSessionEvent.mock.invocationCallOrder[0]
+    ).toBeGreaterThan(
+      sessionService.commitPreparedSheetRecordingSession.mock
+        .invocationCallOrder[0]
     );
     expect(result.artifactDetails.peaks.length).toBeGreaterThan(0);
     expect(result.artifactDetails.peaks.some((peak) => peak > 0)).toBe(true);
     expect(result.recording.durationMs).toBe(800);
     expect(result.recording.trustedPeaks).toEqual(result.artifactDetails.peaks);
 
-    const persisted = recordingHistoryRepository.getRecording("recording-sheet-1");
+    const persisted =
+      recordingHistoryRepository.getRecording("recording-sheet-1");
 
     expect(persisted).toMatchObject({
       id: "recording-sheet-1",
@@ -300,7 +310,8 @@ describe("sheet practice recording service", () => {
       forceNewSession: false,
       sessionService
     });
-    const persisted = recordingHistoryRepository.getRecording("recording-sheet-1");
+    const persisted =
+      recordingHistoryRepository.getRecording("recording-sheet-1");
 
     expect(result.artifactDetails.recordingId).toBe("recording-sheet-1");
     expect(result.artifactDetails.peaks.some((peak) => peak > 0)).toBe(true);
@@ -331,9 +342,13 @@ describe("sheet practice recording service", () => {
     });
 
     expect(result.metadata.id).toBe("recording-sheet-1");
-    expect(sessionService.commitPreparedSheetRecordingSession).toHaveBeenCalledOnce();
+    expect(
+      sessionService.commitPreparedSheetRecordingSession
+    ).toHaveBeenCalledOnce();
     expect(sessionService.captureSessionEvent).toHaveBeenCalledOnce();
-    expect(recordingHistoryRepository.getRecording("recording-sheet-1")).toMatchObject({
+    expect(
+      recordingHistoryRepository.getRecording("recording-sheet-1")
+    ).toMatchObject({
       id: "recording-sheet-1",
       sessionId: "session-new"
     });
@@ -369,7 +384,9 @@ describe("sheet practice recording service", () => {
       segmentContext,
       forceNewSession: false
     });
-    expect(sessionService.commitPreparedSheetRecordingSession).toHaveBeenCalledWith({
+    expect(
+      sessionService.commitPreparedSheetRecordingSession
+    ).toHaveBeenCalledWith({
       metadata: metadataWithSegment,
       session: expect.objectContaining({
         id: "session-new",
@@ -387,7 +404,10 @@ describe("sheet practice recording service", () => {
       segmentId: "segment-alpha",
       recordingId: "recording-sheet-1"
     });
-    expect(recordingHistoryRepository.getRecording("recording-sheet-1")?.segmentContext).toEqual(segmentContext);
+    expect(
+      recordingHistoryRepository.getRecording("recording-sheet-1")
+        ?.segmentContext
+    ).toEqual(segmentContext);
   });
 
   it("preserves review organization and take selection metadata when saving a new sheet recording", async () => {
@@ -480,10 +500,11 @@ describe("sheet practice recording service", () => {
       sessionService
     });
 
-    expect(recordingHistoryRepository.getSnapshot().recordings.map((recording) => recording.id)).toEqual([
-      "recording-sheet-1",
-      "recording-sheet-concurrent"
-    ]);
+    expect(
+      recordingHistoryRepository
+        .getSnapshot()
+        .recordings.map((recording) => recording.id)
+    ).toEqual(["recording-sheet-1", "recording-sheet-concurrent"]);
   });
 
   it("rejects silent captures before creating sheet metadata", async () => {
@@ -512,7 +533,10 @@ describe("sheet practice recording service", () => {
       })
     ).rejects.toThrow("audible input");
     expect(sessionService.prepareSheetRecordingMetadata).not.toHaveBeenCalled();
-    expectNoCaptureKind(sessionService.captureSessionEvent, "recording_stopped");
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
   });
 
   it("does not persist sheet metadata or recording history when post-capture decode fails", async () => {
@@ -537,7 +561,10 @@ describe("sheet practice recording service", () => {
     ).rejects.toThrow("cannot be decoded");
 
     expect(sessionService.prepareSheetRecordingMetadata).not.toHaveBeenCalled();
-    expectNoCaptureKind(sessionService.captureSessionEvent, "recording_stopped");
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
     expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
   });
 
@@ -560,8 +587,13 @@ describe("sheet practice recording service", () => {
     ).rejects.toThrow("unavailable");
 
     expect(sessionService.prepareSheetRecordingMetadata).toHaveBeenCalledOnce();
-    expect(sessionService.commitPreparedSheetRecordingSession).not.toHaveBeenCalled();
-    expectNoCaptureKind(sessionService.captureSessionEvent, "recording_stopped");
+    expect(
+      sessionService.commitPreparedSheetRecordingSession
+    ).not.toHaveBeenCalled();
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
     expect(recordingHistoryRepository.getRecording(metadata.id)).toBeNull();
     expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
     saveArtifactSpy.mockRestore();
@@ -592,16 +624,23 @@ describe("sheet practice recording service", () => {
         };
       }
     });
-    sessionService.getRecentSheetSession.mockImplementation(async () => storedSession);
-    sessionService.restorePracticeSessionSnapshot.mockImplementation(async (session: PracticeSession) => {
+    sessionService.getRecentSheetSession.mockImplementation(
+      async () => storedSession
+    );
+    sessionService.restorePracticeSessionSnapshot.mockImplementation(
+      async (session: PracticeSession) => {
         storedSession = session;
 
         return session;
-      });
+      }
+    );
     const originalSaveSheetRecordingMetadataWithSession =
       recordingHistoryRepository.saveSheetRecordingMetadataWithSession;
     const saveSheetRecordingMetadataWithSessionSpy = vi
-      .spyOn(recordingHistoryRepository, "saveSheetRecordingMetadataWithSession")
+      .spyOn(
+        recordingHistoryRepository,
+        "saveSheetRecordingMetadataWithSession"
+      )
       .mockImplementation((input) => {
         saveCallCount += 1;
 
@@ -624,12 +663,21 @@ describe("sheet practice recording service", () => {
     ).rejects.toThrow("localStorage setItem failed");
 
     expect(sessionService.prepareSheetRecordingMetadata).toHaveBeenCalledOnce();
-    expect(sessionService.commitPreparedSheetRecordingSession).not.toHaveBeenCalled();
-    expectNoCaptureKind(sessionService.captureSessionEvent, "recording_stopped");
-    expect(sessionService.restorePracticeSessionSnapshot).toHaveBeenCalledWith(previousSession);
+    expect(
+      sessionService.commitPreparedSheetRecordingSession
+    ).not.toHaveBeenCalled();
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
+    expect(sessionService.restorePracticeSessionSnapshot).toHaveBeenCalledWith(
+      previousSession
+    );
     expect(sessionService.deletePracticeSessionSnapshot).not.toHaveBeenCalled();
     expect(recordingHistoryRepository.getRecording(metadata.id)).toBeNull();
-    expect(recordingHistoryRepository.getSnapshot().sessions).toEqual([previousSession]);
+    expect(recordingHistoryRepository.getSnapshot().sessions).toEqual([
+      previousSession
+    ]);
     await expect(
       recordingArtifactRepository.getArtifact(metadata.id)
     ).resolves.toBeNull();
@@ -654,16 +702,23 @@ describe("sheet practice recording service", () => {
         storedSession = createdSession;
       }
     });
-    sessionService.getRecentSheetSession.mockImplementation(async () => storedSession);
-    sessionService.deletePracticeSessionSnapshot.mockImplementation(async (sessionId: string) => {
+    sessionService.getRecentSheetSession.mockImplementation(
+      async () => storedSession
+    );
+    sessionService.deletePracticeSessionSnapshot.mockImplementation(
+      async (sessionId: string) => {
         if (storedSession?.id === sessionId) {
           storedSession = null;
         }
-      });
+      }
+    );
     const originalSaveSheetRecordingMetadataWithSession =
       recordingHistoryRepository.saveSheetRecordingMetadataWithSession;
     const saveSheetRecordingMetadataWithSessionSpy = vi
-      .spyOn(recordingHistoryRepository, "saveSheetRecordingMetadataWithSession")
+      .spyOn(
+        recordingHistoryRepository,
+        "saveSheetRecordingMetadataWithSession"
+      )
       .mockImplementation((input) => {
         saveCallCount += 1;
 
@@ -685,9 +740,16 @@ describe("sheet practice recording service", () => {
       })
     ).rejects.toThrow("repository save failed");
 
-    expect(sessionService.restorePracticeSessionSnapshot).not.toHaveBeenCalled();
-    expect(sessionService.deletePracticeSessionSnapshot).toHaveBeenCalledWith(metadata.sessionId);
-    expectNoCaptureKind(sessionService.captureSessionEvent, "recording_stopped");
+    expect(
+      sessionService.restorePracticeSessionSnapshot
+    ).not.toHaveBeenCalled();
+    expect(sessionService.deletePracticeSessionSnapshot).toHaveBeenCalledWith(
+      metadata.sessionId
+    );
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
     expect(recordingHistoryRepository.getSnapshot()).toEqual({
       sessions: [],
       recordings: [],
@@ -720,11 +782,16 @@ describe("sheet practice recording service", () => {
     ).rejects.toThrow("session commit failed");
 
     expect(recordingHistoryRepository.getRecording(metadata.id)).toBeNull();
-    expectNoCaptureKind(sessionService.captureSessionEvent, "recording_stopped");
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
     await expect(
       recordingArtifactRepository.getArtifact(metadata.id)
     ).resolves.toBeNull();
-    expect(sessionService.restorePracticeSessionSnapshot).toHaveBeenCalledWith(previousSession);
+    expect(sessionService.restorePracticeSessionSnapshot).toHaveBeenCalledWith(
+      previousSession
+    );
   });
 
   it("restores the previous session segmentContext when a no-segment prepared commit fails", async () => {
@@ -766,7 +833,10 @@ describe("sheet practice recording service", () => {
       previousSessionWithSegment
     );
     expect(recordingHistoryRepository.getRecording(metadata.id)).toBeNull();
-    expectNoCaptureKind(sessionService.captureSessionEvent, "recording_stopped");
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
   });
 
   it("restores the previous session segmentContext when a new segment overwrite commit fails", async () => {
@@ -813,6 +883,9 @@ describe("sheet practice recording service", () => {
       previousSessionWithSegment
     );
     expect(recordingHistoryRepository.getRecording(metadata.id)).toBeNull();
-    expectNoCaptureKind(sessionService.captureSessionEvent, "recording_stopped");
+    expectNoCaptureKind(
+      sessionService.captureSessionEvent,
+      "recording_stopped"
+    );
   });
 });

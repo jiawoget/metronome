@@ -8,7 +8,10 @@ import type { BarCountInReadyPlan } from "@/domain/practice/bar-count-in";
 import type { PracticeSegment } from "@/domain/practice";
 import type { BarCountInCountdownTick } from "@/lib/quick-metronome/use-metronome-transport";
 
-type SheetPracticeMetronomeService = Pick<MetronomeService, "onTick" | "update" | "start" | "stop">;
+type SheetPracticeMetronomeService = Pick<
+  MetronomeService,
+  "onTick" | "update" | "start" | "stop"
+>;
 
 type SheetPracticeSessionService = Pick<
   PracticeSessionService,
@@ -39,9 +42,7 @@ export type SheetPracticeRecordingService = Pick<
 >;
 
 export type SheetPracticeBarCountInBlockReason =
-  | "no-measure-grid"
-  | "segment-grid-stale"
-  | "invalid-plan";
+  "no-measure-grid" | "segment-grid-stale" | "invalid-plan";
 
 export type SheetPracticeBarCountInBlock = {
   reason: SheetPracticeBarCountInBlockReason;

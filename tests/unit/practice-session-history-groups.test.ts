@@ -36,7 +36,9 @@ function createSegmentContext(
   };
 }
 
-function createSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
+function createSession(
+  overrides: Partial<PracticeSession> = {}
+): PracticeSession {
   return {
     id: "session-alpha",
     sourceType: "quick",
@@ -174,7 +176,9 @@ describe("practice session history grouping", () => {
 
     const groups = groupPracticeSessionsByHistory(sessions, "sheet", targets);
 
-    expect(groups.map((group) => [group.id, group.targetState, group.label])).toEqual([
+    expect(
+      groups.map((group) => [group.id, group.targetState, group.label])
+    ).toEqual([
       ["sheet:quick", "quick", "Quick Practice"],
       ["sheet:id:sheet-alpha", "valid", "Alpha Etude"],
       ["sheet:id:sheet-deleted", "missing-sheet", "Deleted sheet"],
@@ -244,19 +248,24 @@ describe("practice session history grouping", () => {
         }
       },
       segments: {
-        [createSessionHistorySegmentTargetKey("sheet-alpha", "segment-shared")]: {
-          state: "valid",
-          value: {
-            name: "Live Renamed Bridge"
-          }
-        },
-        [createSessionHistorySegmentTargetKey("sheet-beta", "segment-shared")]: {
-          state: "valid",
-          value: {
-            name: "Live Beta Bridge"
-          }
-        },
-        [createSessionHistorySegmentTargetKey("sheet-alpha", "segment-missing")]: {
+        [createSessionHistorySegmentTargetKey("sheet-alpha", "segment-shared")]:
+          {
+            state: "valid",
+            value: {
+              name: "Live Renamed Bridge"
+            }
+          },
+        [createSessionHistorySegmentTargetKey("sheet-beta", "segment-shared")]:
+          {
+            state: "valid",
+            value: {
+              name: "Live Beta Bridge"
+            }
+          },
+        [createSessionHistorySegmentTargetKey(
+          "sheet-alpha",
+          "segment-missing"
+        )]: {
           state: "missing"
         }
       }
@@ -264,12 +273,26 @@ describe("practice session history grouping", () => {
 
     const groups = groupPracticeSessionsByHistory(sessions, "segment", targets);
 
-    expect(groups.map((group) => [group.id, group.targetState, group.label])).toEqual([
+    expect(
+      groups.map((group) => [group.id, group.targetState, group.label])
+    ).toEqual([
       ["segment:quick", "quick", "Quick Practice"],
-      ["segment:sheet:sheet-alpha:none", "no-segment", "Alpha Etude - No segment"],
-      ["segment:sheet:sheet-alpha:id:segment-shared", "valid", "Historical Bridge"],
+      [
+        "segment:sheet:sheet-alpha:none",
+        "no-segment",
+        "Alpha Etude - No segment"
+      ],
+      [
+        "segment:sheet:sheet-alpha:id:segment-shared",
+        "valid",
+        "Historical Bridge"
+      ],
       ["segment:sheet:sheet-beta:id:segment-shared", "valid", "Beta Bridge"],
-      ["segment:sheet:sheet-alpha:id:segment-missing", "missing-segment", "Deleted Snapshot"]
+      [
+        "segment:sheet:sheet-alpha:id:segment-missing",
+        "missing-segment",
+        "Deleted Snapshot"
+      ]
     ]);
     expect(groups[2]).toMatchObject({
       sheetId: "sheet-alpha",

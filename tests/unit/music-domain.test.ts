@@ -14,8 +14,19 @@ import {
 
 describe("music domain facade", () => {
   it("keeps the repo-owned product meter policy exact", () => {
-    expect(SUPPORTED_TIME_SIGNATURES).toEqual(["2/4", "3/4", "4/4", "6/8", "12/8"]);
-    expect(SUPPORTED_SUBDIVISIONS).toEqual(["quarter", "eighth", "triplet", "sixteenth"]);
+    expect(SUPPORTED_TIME_SIGNATURES).toEqual([
+      "2/4",
+      "3/4",
+      "4/4",
+      "6/8",
+      "12/8"
+    ]);
+    expect(SUPPORTED_SUBDIVISIONS).toEqual([
+      "quarter",
+      "eighth",
+      "triplet",
+      "sixteenth"
+    ]);
 
     for (const timeSignature of SUPPORTED_TIME_SIGNATURES) {
       expect(isSupportedTimeSignature(timeSignature)).toBe(true);
@@ -26,11 +37,26 @@ describe("music domain facade", () => {
   });
 
   it("parses current supported signatures through TonalJS", () => {
-    expect(getMusicTimeSignatureParts("2/4")).toEqual({ numerator: 2, denominator: 4 });
-    expect(getMusicTimeSignatureParts("3/4")).toEqual({ numerator: 3, denominator: 4 });
-    expect(getMusicTimeSignatureParts("4/4")).toEqual({ numerator: 4, denominator: 4 });
-    expect(getMusicTimeSignatureParts("6/8")).toEqual({ numerator: 6, denominator: 8 });
-    expect(getMusicTimeSignatureParts("12/8")).toEqual({ numerator: 12, denominator: 8 });
+    expect(getMusicTimeSignatureParts("2/4")).toEqual({
+      numerator: 2,
+      denominator: 4
+    });
+    expect(getMusicTimeSignatureParts("3/4")).toEqual({
+      numerator: 3,
+      denominator: 4
+    });
+    expect(getMusicTimeSignatureParts("4/4")).toEqual({
+      numerator: 4,
+      denominator: 4
+    });
+    expect(getMusicTimeSignatureParts("6/8")).toEqual({
+      numerator: 6,
+      denominator: 8
+    });
+    expect(getMusicTimeSignatureParts("12/8")).toEqual({
+      numerator: 12,
+      denominator: 8
+    });
     expect(parseMusicTimeSignature("6/8")).toMatchObject({
       name: "6/8",
       numerator: 6,
@@ -58,7 +84,15 @@ describe("music domain facade", () => {
       type: "irrational"
     });
 
-    for (const unsupported of ["5/4", "3+2+3/8", "12/10", "bad", "", null, 42]) {
+    for (const unsupported of [
+      "5/4",
+      "3+2+3/8",
+      "12/10",
+      "bad",
+      "",
+      null,
+      42
+    ]) {
       expect(isSupportedTimeSignature(unsupported)).toBe(false);
     }
     expect(parseMusicTimeSignature("bad")).toBeNull();

@@ -10,13 +10,19 @@ import {
 } from "@/services/audio-analysis";
 
 function getPreferredMimeType() {
-  if (typeof MediaRecorder === "undefined" || !("isTypeSupported" in MediaRecorder)) {
+  if (
+    typeof MediaRecorder === "undefined" ||
+    !("isTypeSupported" in MediaRecorder)
+  ) {
     return "";
   }
 
   const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
 
-  return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? "";
+  return (
+    candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ??
+    ""
+  );
 }
 
 export class BrowserRecordingService implements RecordingCaptureService {
@@ -44,7 +50,9 @@ export class BrowserRecordingService implements RecordingCaptureService {
       !navigator.mediaDevices.getUserMedia ||
       typeof MediaRecorder === "undefined"
     ) {
-      throw new RecordingPermissionError("Recording is not available in this browser.");
+      throw new RecordingPermissionError(
+        "Recording is not available in this browser."
+      );
     }
 
     try {
@@ -62,7 +70,9 @@ export class BrowserRecordingService implements RecordingCaptureService {
     const mimeType = getPreferredMimeType();
     this.chunks = [];
     this.startedAt = performance.now();
-    this.mediaRecorder = mimeType ? new MediaRecorder(this.stream, { mimeType }) : new MediaRecorder(this.stream);
+    this.mediaRecorder = mimeType
+      ? new MediaRecorder(this.stream, { mimeType })
+      : new MediaRecorder(this.stream);
 
     this.mediaRecorder.addEventListener("dataavailable", (event) => {
       if (event.data.size > 0) {
@@ -79,7 +89,8 @@ export class BrowserRecordingService implements RecordingCaptureService {
     }
 
     const recorder = this.mediaRecorder;
-    const mimeType = recorder.mimeType || getPreferredMimeType() || "audio/webm";
+    const mimeType =
+      recorder.mimeType || getPreferredMimeType() || "audio/webm";
     const durationMs = performance.now() - this.startedAt;
 
     const stopped = new Promise<void>((resolve) => {

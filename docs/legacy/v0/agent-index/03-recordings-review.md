@@ -42,4 +42,3 @@ states, and duration mismatch warnings.
   alone.
 - Post-audit fix `dde1474` validates raw marker timestamps before rounding.
 - No known unimplemented v0 recordings-review item remains.
-

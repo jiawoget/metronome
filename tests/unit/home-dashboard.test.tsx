@@ -1,8 +1,17 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HomeDashboard, type HomeDashboardData } from "@/components/home/home-dashboard";
+import {
+  HomeDashboard,
+  type HomeDashboardData
+} from "@/components/home/home-dashboard";
 import type {
   ContinuePracticeTargetIdentity,
   ContinuePracticeTargetsResult,
@@ -47,7 +56,9 @@ vi.mock("@/infrastructure/db/browser-practice-goal-service", () => ({
   browserPracticeGoalService: goalServiceMocks
 }));
 
-function createActivityItem(overrides: Partial<HomeRecentActivityItem> = {}): HomeRecentActivityItem {
+function createActivityItem(
+  overrides: Partial<HomeRecentActivityItem> = {}
+): HomeRecentActivityItem {
   return {
     id: "session:quick-session",
     kind: "quick-session",
@@ -70,7 +81,9 @@ function createActivityItem(overrides: Partial<HomeRecentActivityItem> = {}): Ho
   };
 }
 
-function createActivityResult(items: HomeRecentActivityItem[] = []): HomeRecentActivityResult {
+function createActivityResult(
+  items: HomeRecentActivityItem[] = []
+): HomeRecentActivityResult {
   return {
     items,
     generatedAt: "2026-06-21T12:10:00.000Z",
@@ -87,7 +100,9 @@ type AnalyticsSourceOverrides = Omit<
   emptyState?: Partial<HomeDashboardAnalyticsSource["emptyState"]>;
 };
 
-function createAnalyticsSource(overrides: AnalyticsSourceOverrides = {}): HomeDashboardAnalyticsSource {
+function createAnalyticsSource(
+  overrides: AnalyticsSourceOverrides = {}
+): HomeDashboardAnalyticsSource {
   const base: HomeDashboardAnalyticsSource = {
     generatedAt: "2026-06-21T12:10:00.000Z",
     summary: {
@@ -130,7 +145,9 @@ function createAnalyticsSource(overrides: AnalyticsSourceOverrides = {}): HomeDa
   };
 }
 
-function createPracticeStreaks(overrides: Partial<HomePracticeStreaks> = {}): HomePracticeStreaks {
+function createPracticeStreaks(
+  overrides: Partial<HomePracticeStreaks> = {}
+): HomePracticeStreaks {
   const base: HomePracticeStreaks = {
     generatedAt: "2026-06-21T12:10:00.000Z",
     currentStreakDays: 0,
@@ -199,7 +216,8 @@ function createSessionComparisonCandidate(
     recordingsText: "0 recordings",
     sheetText: "Quick metronome",
     segmentText: "Quick metronome",
-    goalContributionText: "Counts as 1 session; adds 1 min; 0 sheet takes linked",
+    goalContributionText:
+      "Counts as 1 session; adds 1 min; 0 sheet takes linked",
     eventText: "Event details not available yet",
     ...overrides
   };
@@ -229,7 +247,8 @@ function createServiceSessionComparisonResult(
       {
         key: "events",
         label: "Events",
-        reason: "Event details are unavailable because no durable session event read source is exposed."
+        reason:
+          "Event details are unavailable because no durable session event read source is exposed."
       }
     ],
     limit: 8,
@@ -238,7 +257,9 @@ function createServiceSessionComparisonResult(
   };
 }
 
-function createDashboardData(overrides: Partial<HomeDashboardData> = {}): HomeDashboardData {
+function createDashboardData(
+  overrides: Partial<HomeDashboardData> = {}
+): HomeDashboardData {
   return {
     summary: {
       durationMs: 0,
@@ -269,7 +290,9 @@ function createDashboardData(overrides: Partial<HomeDashboardData> = {}): HomeDa
   };
 }
 
-function createGoal(overrides: Partial<LocalPracticeGoal> = {}): LocalPracticeGoal {
+function createGoal(
+  overrides: Partial<LocalPracticeGoal> = {}
+): LocalPracticeGoal {
   return {
     id: "goal-minutes",
     kind: "minutes",
@@ -347,17 +370,27 @@ describe("HomeDashboard", () => {
     goalServiceMocks.subscribe.mockReset();
     serviceMocks.getRecentSession.mockResolvedValue(null);
     serviceMocks.getContinuePracticeTarget.mockResolvedValue(null);
-    serviceMocks.getContinuePracticeTargets.mockResolvedValue(createContinueTargetsResult());
+    serviceMocks.getContinuePracticeTargets.mockResolvedValue(
+      createContinueTargetsResult()
+    );
     serviceMocks.getTodaySummary.mockResolvedValue({
       durationMs: 0,
       minutesToday: 0,
       sessionsToday: 0,
       recordingsToday: 0
     });
-    serviceMocks.getHomeRecentActivity.mockResolvedValue(createActivityResult());
-    serviceMocks.getHomeDashboardAnalyticsSource.mockResolvedValue(createAnalyticsSource());
-    serviceMocks.getHomePracticeStreaks.mockResolvedValue(createPracticeStreaks());
-    serviceMocks.getSessionComparison.mockResolvedValue(createServiceSessionComparisonResult());
+    serviceMocks.getHomeRecentActivity.mockResolvedValue(
+      createActivityResult()
+    );
+    serviceMocks.getHomeDashboardAnalyticsSource.mockResolvedValue(
+      createAnalyticsSource()
+    );
+    serviceMocks.getHomePracticeStreaks.mockResolvedValue(
+      createPracticeStreaks()
+    );
+    serviceMocks.getSessionComparison.mockResolvedValue(
+      createServiceSessionComparisonResult()
+    );
     serviceMocks.subscribe.mockReturnValue(() => undefined);
     goalServiceMocks.listPracticeGoals.mockResolvedValue([]);
     goalServiceMocks.getPracticeGoal.mockResolvedValue(null);
@@ -377,47 +410,83 @@ describe("HomeDashboard", () => {
     expect(screen.getByText("Recordings")).toBeVisible();
     expect(screen.getByTestId("today-summary-minutes")).toHaveTextContent("0");
     expect(screen.getByTestId("today-summary-sessions")).toHaveTextContent("0");
-    expect(screen.getByTestId("today-summary-recordings")).toHaveTextContent("0");
-    expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
-    expect(screen.getByText("No local practice analytics yet.")).toBeVisible();
-    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("0 min");
-    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent("0");
-    expect(screen.getByTestId("home-analytics-sheet-takes")).toHaveTextContent("0");
-    expect(screen.getByTestId("home-analytics-practiced-sheets")).toHaveTextContent("0");
-    expect(screen.getByTestId("home-analytics-segment-sessions")).toHaveTextContent("0");
-    expect(screen.getByRole("region", { name: "Practice Streaks" })).toBeVisible();
-    expect(screen.getByText("No local practice streak yet.")).toBeVisible();
-    expect(screen.getByTestId("home-streak-current")).toHaveTextContent("0 days");
-    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent("0 days");
-    expect(screen.getByTestId("home-streak-today-status")).toHaveTextContent("No practice logged yet.");
-    expect(screen.getByRole("region", { name: "Session Comparison" })).toBeVisible();
-    expect(screen.getByText("No local sessions yet.")).toBeVisible();
-    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
-    expect(screen.getByText("No recent practice targets yet.")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Start Quick Metronome" })).toHaveAttribute(
-      "href",
-      "/quick-metronome"
+    expect(screen.getByTestId("today-summary-recordings")).toHaveTextContent(
+      "0"
     );
+    expect(
+      screen.getByRole("region", { name: "Practice Analytics" })
+    ).toBeVisible();
+    expect(screen.getByText("No local practice analytics yet.")).toBeVisible();
+    expect(
+      screen.getByTestId("home-analytics-total-practice")
+    ).toHaveTextContent("0 min");
+    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent(
+      "0"
+    );
+    expect(screen.getByTestId("home-analytics-sheet-takes")).toHaveTextContent(
+      "0"
+    );
+    expect(
+      screen.getByTestId("home-analytics-practiced-sheets")
+    ).toHaveTextContent("0");
+    expect(
+      screen.getByTestId("home-analytics-segment-sessions")
+    ).toHaveTextContent("0");
+    expect(
+      screen.getByRole("region", { name: "Practice Streaks" })
+    ).toBeVisible();
+    expect(screen.getByText("No local practice streak yet.")).toBeVisible();
+    expect(screen.getByTestId("home-streak-current")).toHaveTextContent(
+      "0 days"
+    );
+    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent(
+      "0 days"
+    );
+    expect(screen.getByTestId("home-streak-today-status")).toHaveTextContent(
+      "No practice logged yet."
+    );
+    expect(
+      screen.getByRole("region", { name: "Session Comparison" })
+    ).toBeVisible();
+    expect(screen.getByText("No local sessions yet.")).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Continue Practice" })
+    ).toBeVisible();
+    expect(screen.getByText("No recent practice targets yet.")).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Start Quick Metronome" })
+    ).toHaveAttribute("href", "/quick-metronome");
     expect(screen.getByText(/No sheets imported yet/i)).toBeVisible();
-    expect(screen.getByText(/Opens the Sheet Library import flow/i)).toBeVisible();
-    expect(screen.getByText(/Quick takes appear after recording/i)).toBeVisible();
-    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+    expect(
+      screen.getByText(/Opens the Sheet Library import flow/i)
+    ).toBeVisible();
+    expect(
+      screen.getByText(/Quick takes appear after recording/i)
+    ).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Recent Activity" })
+    ).toBeVisible();
     expect(screen.getByText("No local practice activity yet.")).toBeVisible();
     expect(screen.getByText(/No recording or playback active/i)).toBeVisible();
   });
 
   it("shows the Continue Practice loading row on initial live mount before targets resolve", () => {
     vi.stubGlobal("indexedDB", {});
-    serviceMocks.getContinuePracticeTargets.mockReturnValue(new Promise(() => undefined));
+    serviceMocks.getContinuePracticeTargets.mockReturnValue(
+      new Promise(() => undefined)
+    );
 
     render(<HomeDashboard />);
 
-    expect(screen.getByText("Loading Continue Practice targets.")).toBeVisible();
-    expect(screen.queryByText("No recent practice targets yet.")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
-      "href",
-      "/quick-metronome"
-    );
+    expect(
+      screen.getByText("Loading Continue Practice targets.")
+    ).toBeVisible();
+    expect(
+      screen.queryByText("No recent practice targets yet.")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Open Quick Metronome" })
+    ).toHaveAttribute("href", "/quick-metronome");
   });
 
   it("compares two or three selected sessions without score or recommendation copy", async () => {
@@ -444,7 +513,8 @@ describe("HomeDashboard", () => {
         recordingsText: "1 recording",
         sheetText: "Alpha Etude",
         segmentText: "Whole sheet / no segment",
-        goalContributionText: "Counts as 1 session; adds 2 min; 1 sheet take linked"
+        goalContributionText:
+          "Counts as 1 session; adds 2 min; 1 sheet take linked"
       }),
       createSessionComparisonCandidate({
         sessionId: "segment-session",
@@ -454,7 +524,8 @@ describe("HomeDashboard", () => {
         recordingsText: "2 recordings",
         sheetText: "Alpha Etude",
         segmentText: "Bridge (m5-12)",
-        goalContributionText: "Counts as 1 session; adds 3 min; 2 sheet takes linked"
+        goalContributionText:
+          "Counts as 1 session; adds 3 min; 2 sheet takes linked"
       }),
       createSessionComparisonCandidate({
         sessionId: "fourth-session",
@@ -474,36 +545,70 @@ describe("HomeDashboard", () => {
     const panel = screen.getByRole("region", { name: "Session Comparison" });
 
     expect(within(panel).getByText("Select sessions to compare")).toBeVisible();
-    expect(within(panel).getByText("Up to 3 sessions can be compared.")).toBeVisible();
-    expect(within(panel).getByText("Select sessions to compare.")).toBeVisible();
+    expect(
+      within(panel).getByText("Up to 3 sessions can be compared.")
+    ).toBeVisible();
+    expect(
+      within(panel).getByText("Select sessions to compare.")
+    ).toBeVisible();
 
-    await user.click(within(panel).getByRole("checkbox", { name: /Compare Quick practice .*12:01/ }));
-    expect(within(panel).getByText("Select another session to compare.")).toBeVisible();
+    await user.click(
+      within(panel).getByRole("checkbox", {
+        name: /Compare Quick practice .*12:01/
+      })
+    );
+    expect(
+      within(panel).getByText("Select another session to compare.")
+    ).toBeVisible();
 
-    await user.click(within(panel).getByRole("checkbox", { name: /Compare Sheet practice .*12:04/ }));
+    await user.click(
+      within(panel).getByRole("checkbox", {
+        name: /Compare Sheet practice .*12:04/
+      })
+    );
     expect(within(panel).getByText("Selected sessions")).toBeVisible();
-    expect(within(panel).getByRole("heading", {
-      level: 3,
-      name: "Quick practice · 2026-06-21 12:01 UTC"
-    })).toBeVisible();
-    expect(within(panel).getByRole("heading", {
-      level: 3,
-      name: "Sheet practice · 2026-06-21 12:04 UTC"
-    })).toBeVisible();
+    expect(
+      within(panel).getByRole("heading", {
+        level: 3,
+        name: "Quick practice · 2026-06-21 12:01 UTC"
+      })
+    ).toBeVisible();
+    expect(
+      within(panel).getByRole("heading", {
+        level: 3,
+        name: "Sheet practice · 2026-06-21 12:04 UTC"
+      })
+    ).toBeVisible();
     expect(within(panel).getByText("Session type")).toBeVisible();
-    expect(within(panel).getAllByText("Quick metronome").length).toBeGreaterThanOrEqual(2);
+    expect(
+      within(panel).getAllByText("Quick metronome").length
+    ).toBeGreaterThanOrEqual(2);
     expect(within(panel).getByText("Alpha Etude")).toBeVisible();
     expect(within(panel).getByText("Whole sheet / no segment")).toBeVisible();
-    expect(within(panel).getAllByText("Event details not available yet")).toHaveLength(2);
-    expect(within(panel).getByText("Counts as 1 session; adds 2 min; 1 sheet take linked")).toBeVisible();
+    expect(
+      within(panel).getAllByText("Event details not available yet")
+    ).toHaveLength(2);
+    expect(
+      within(panel).getByText(
+        "Counts as 1 session; adds 2 min; 1 sheet take linked"
+      )
+    ).toBeVisible();
 
-    await user.click(within(panel).getByRole("checkbox", { name: /Compare Sheet practice .*12:08/ }));
-    expect(within(panel).getByRole("heading", {
-      level: 3,
-      name: "Sheet practice · 2026-06-21 12:08 UTC"
-    })).toBeVisible();
+    await user.click(
+      within(panel).getByRole("checkbox", {
+        name: /Compare Sheet practice .*12:08/
+      })
+    );
+    expect(
+      within(panel).getByRole("heading", {
+        level: 3,
+        name: "Sheet practice · 2026-06-21 12:08 UTC"
+      })
+    ).toBeVisible();
     expect(within(panel).getByText("Bridge (m5-12)")).toBeVisible();
-    expect(within(panel).getByRole("checkbox", { name: /fourth-session|12:09/i })).toBeDisabled();
+    expect(
+      within(panel).getByRole("checkbox", { name: /fourth-session|12:09/i })
+    ).toBeDisabled();
     expect(panel).not.toHaveTextContent(/score|rank|improv|recommend/i);
   });
 
@@ -518,24 +623,30 @@ describe("HomeDashboard", () => {
     );
 
     expect(screen.getByText("Loading session comparison.")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
-      "href",
-      "/quick-metronome"
-    );
+    expect(
+      screen.getByRole("link", { name: "Open Quick Metronome" })
+    ).toHaveAttribute("href", "/quick-metronome");
 
     rerender(
       <HomeDashboard
         data={createDashboardData({
           sessionComparisonStatus: "error",
-          sessionComparisonErrorMessage: "Session comparison could not be loaded."
+          sessionComparisonErrorMessage:
+            "Session comparison could not be loaded."
         })}
       />
     );
 
-    expect(screen.getByText("Session comparison could not be loaded.")).toBeVisible();
+    expect(
+      screen.getByText("Session comparison could not be loaded.")
+    ).toBeVisible();
     expect(screen.getByText("Today Practice Summary")).toBeVisible();
-    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Continue Practice" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Recent Activity" })
+    ).toBeVisible();
   });
 
   it("renders populated practice analytics from injected source data", () => {
@@ -563,14 +674,30 @@ describe("HomeDashboard", () => {
 
     const panel = screen.getByRole("region", { name: "Practice Analytics" });
 
-    expect(within(panel).queryByText("No local practice analytics yet.")).not.toBeInTheDocument();
+    expect(
+      within(panel).queryByText("No local practice analytics yet.")
+    ).not.toBeInTheDocument();
     expect(within(panel).getByText("Total practice")).toBeVisible();
-    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("1 hr 5 min");
-    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent("4");
-    expect(screen.getByTestId("home-analytics-sheet-takes")).toHaveTextContent("2");
-    expect(screen.getByTestId("home-analytics-practiced-sheets")).toHaveTextContent("2");
-    expect(screen.getByTestId("home-analytics-segment-sessions")).toHaveTextContent("1");
-    expect(within(panel).getByText("Local history totals · Updated 2026-06-21 12:10 UTC")).toBeVisible();
+    expect(
+      screen.getByTestId("home-analytics-total-practice")
+    ).toHaveTextContent("1 hr 5 min");
+    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent(
+      "4"
+    );
+    expect(screen.getByTestId("home-analytics-sheet-takes")).toHaveTextContent(
+      "2"
+    );
+    expect(
+      screen.getByTestId("home-analytics-practiced-sheets")
+    ).toHaveTextContent("2");
+    expect(
+      screen.getByTestId("home-analytics-segment-sessions")
+    ).toHaveTextContent("1");
+    expect(
+      within(panel).getByText(
+        "Local history totals · Updated 2026-06-21 12:10 UTC"
+      )
+    ).toBeVisible();
   });
 
   it("renders populated practice streaks from injected source data", () => {
@@ -592,10 +719,18 @@ describe("HomeDashboard", () => {
 
     const panel = screen.getByRole("region", { name: "Practice Streaks" });
 
-    expect(within(panel).queryByText("No local practice streak yet.")).not.toBeInTheDocument();
-    expect(screen.getByTestId("home-streak-current")).toHaveTextContent("4 days");
-    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent("9 days");
-    expect(screen.getByTestId("home-streak-today-status")).toHaveTextContent("Practiced today.");
+    expect(
+      within(panel).queryByText("No local practice streak yet.")
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("home-streak-current")).toHaveTextContent(
+      "4 days"
+    );
+    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent(
+      "9 days"
+    );
+    expect(screen.getByTestId("home-streak-today-status")).toHaveTextContent(
+      "Practiced today."
+    );
     expect(within(panel).getByText("Last practiced 2026-06-21")).toBeVisible();
   });
 
@@ -616,7 +751,9 @@ describe("HomeDashboard", () => {
       />
     );
 
-    expect(screen.getByTestId("home-streak-current")).toHaveTextContent("3 days");
+    expect(screen.getByTestId("home-streak-current")).toHaveTextContent(
+      "3 days"
+    );
     expect(screen.getByTestId("home-streak-today-status")).toHaveTextContent(
       "Streak is waiting on today's practice."
     );
@@ -634,7 +771,9 @@ describe("HomeDashboard", () => {
       />
     );
 
-    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("<1 min");
+    expect(
+      screen.getByTestId("home-analytics-total-practice")
+    ).toHaveTextContent("<1 min");
 
     rerender(
       <HomeDashboard
@@ -647,7 +786,9 @@ describe("HomeDashboard", () => {
       />
     );
 
-    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("59 min");
+    expect(
+      screen.getByTestId("home-analytics-total-practice")
+    ).toHaveTextContent("59 min");
 
     rerender(
       <HomeDashboard
@@ -660,7 +801,9 @@ describe("HomeDashboard", () => {
       />
     );
 
-    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("2 hr");
+    expect(
+      screen.getByTestId("home-analytics-total-practice")
+    ).toHaveTextContent("2 hr");
   });
 
   it("shows contained loading and error states for practice analytics", () => {
@@ -674,10 +817,9 @@ describe("HomeDashboard", () => {
     );
 
     expect(screen.getByText("Loading practice analytics.")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
-      "href",
-      "/quick-metronome"
-    );
+    expect(
+      screen.getByRole("link", { name: "Open Quick Metronome" })
+    ).toHaveAttribute("href", "/quick-metronome");
 
     rerender(
       <HomeDashboard
@@ -688,10 +830,16 @@ describe("HomeDashboard", () => {
       />
     );
 
-    expect(screen.getByText("Practice analytics could not be loaded.")).toBeVisible();
+    expect(
+      screen.getByText("Practice analytics could not be loaded.")
+    ).toBeVisible();
     expect(screen.getByText("Today Practice Summary")).toBeVisible();
-    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Continue Practice" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Recent Activity" })
+    ).toBeVisible();
   });
 
   it("shows contained loading and first-load error states for practice streaks", () => {
@@ -707,12 +855,15 @@ describe("HomeDashboard", () => {
     expect(screen.getByText("Loading practice streaks.")).toBeVisible();
     expect(screen.queryByTestId("home-streak-current")).not.toBeInTheDocument();
     expect(screen.queryByTestId("home-streak-longest")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("home-streak-today-status")).not.toBeInTheDocument();
-    expect(screen.queryByText("No practice logged yet.")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
-      "href",
-      "/quick-metronome"
-    );
+    expect(
+      screen.queryByTestId("home-streak-today-status")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("No practice logged yet.")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Open Quick Metronome" })
+    ).toHaveAttribute("href", "/quick-metronome");
 
     rerender(
       <HomeDashboard
@@ -726,29 +877,56 @@ describe("HomeDashboard", () => {
 
     const panel = screen.getByRole("region", { name: "Practice Streaks" });
 
-    expect(within(panel).getByText("Practice streaks could not be loaded.")).toBeVisible();
-    expect(within(panel).queryByText("No local practice streak yet.")).not.toBeInTheDocument();
-    expect(within(panel).queryByTestId("home-streak-current")).not.toBeInTheDocument();
-    expect(within(panel).queryByTestId("home-streak-longest")).not.toBeInTheDocument();
-    expect(within(panel).queryByTestId("home-streak-today-status")).not.toBeInTheDocument();
-    expect(within(panel).queryByText("No practice logged yet.")).not.toBeInTheDocument();
+    expect(
+      within(panel).getByText("Practice streaks could not be loaded.")
+    ).toBeVisible();
+    expect(
+      within(panel).queryByText("No local practice streak yet.")
+    ).not.toBeInTheDocument();
+    expect(
+      within(panel).queryByTestId("home-streak-current")
+    ).not.toBeInTheDocument();
+    expect(
+      within(panel).queryByTestId("home-streak-longest")
+    ).not.toBeInTheDocument();
+    expect(
+      within(panel).queryByTestId("home-streak-today-status")
+    ).not.toBeInTheDocument();
+    expect(
+      within(panel).queryByText("No practice logged yet.")
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Today Practice Summary")).toBeVisible();
-    expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Practice Analytics" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Continue Practice" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Recent Activity" })
+    ).toBeVisible();
   });
 
   it("links primary and utility entries to route shells", () => {
     render(<HomeDashboard />);
 
-    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
+    expect(
+      screen.getByRole("link", { name: "Open Quick Metronome" })
+    ).toHaveAttribute("href", "/quick-metronome");
+    expect(
+      screen.getByRole("link", { name: "Open Sheet Library" })
+    ).toHaveAttribute("href", "/sheet-library");
+    expect(screen.getByRole("link", { name: "Import Sheet" })).toHaveAttribute(
       "href",
-      "/quick-metronome"
+      "/sheet-library"
     );
-    expect(screen.getByRole("link", { name: "Open Sheet Library" })).toHaveAttribute("href", "/sheet-library");
-    expect(screen.getByRole("link", { name: "Import Sheet" })).toHaveAttribute("href", "/sheet-library");
-    expect(screen.getByRole("link", { name: "Open Recordings" })).toHaveAttribute("href", "/recordings");
-    expect(screen.getByRole("link", { name: "Open Settings" })).toHaveAttribute("href", "/settings");
+    expect(
+      screen.getByRole("link", { name: "Open Recordings" })
+    ).toHaveAttribute("href", "/recordings");
+    expect(screen.getByRole("link", { name: "Open Settings" })).toHaveAttribute(
+      "href",
+      "/settings"
+    );
   });
 
   it("renders compact Continue Practice target rows for quick, sheet, and segment navigation", () => {
@@ -787,20 +965,30 @@ describe("HomeDashboard", () => {
 
     const panel = screen.getByRole("region", { name: "Continue Practice" });
 
-    expect(within(panel).getByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
-      "href",
-      "/quick-metronome"
-    );
     expect(
-      within(panel).getByRole("link", { name: "Continue sheet practice Alpha Sheet" })
+      within(panel).getByRole("link", { name: "Continue quick practice" })
+    ).toHaveAttribute("href", "/quick-metronome");
+    expect(
+      within(panel).getByRole("link", {
+        name: "Continue sheet practice Alpha Sheet"
+      })
     ).toHaveAttribute("href", "/sheet-practice/sheet-alpha");
     expect(
-      within(panel).getByRole("link", { name: "Continue segment Bridge m5-12 Alpha Sheet" })
-    ).toHaveAttribute("href", "/sheet-practice?sheetId=sheet-alpha&segmentId=segment-alpha");
-    expect(within(panel).getByText("Recent quick practice: 2026-06-21 12:00 UTC")).toBeVisible();
+      within(panel).getByRole("link", {
+        name: "Continue segment Bridge m5-12 Alpha Sheet"
+      })
+    ).toHaveAttribute(
+      "href",
+      "/sheet-practice?sheetId=sheet-alpha&segmentId=segment-alpha"
+    );
+    expect(
+      within(panel).getByText("Recent quick practice: 2026-06-21 12:00 UTC")
+    ).toBeVisible();
     expect(within(panel).getByText("Sheet: Alpha Sheet")).toBeVisible();
     expect(within(panel).getByText("m5-12 · Alpha Sheet")).toBeVisible();
-    expect(within(panel).queryByRole("link", { name: "Continue Practice" })).not.toBeInTheDocument();
+    expect(
+      within(panel).queryByRole("link", { name: "Continue Practice" })
+    ).not.toBeInTheDocument();
   });
 
   it("limits Continue Practice rows and renders malformed targets as static unavailable rows", () => {
@@ -860,14 +1048,20 @@ describe("HomeDashboard", () => {
 
     const panel = screen.getByRole("region", { name: "Continue Practice" });
 
-    expect(within(panel).getAllByTestId("continue-practice-row-link")).toHaveLength(4);
-    expect(within(panel).getByTestId("continue-practice-row-disabled")).toBeVisible();
+    expect(
+      within(panel).getAllByTestId("continue-practice-row-link")
+    ).toHaveLength(4);
+    expect(
+      within(panel).getByTestId("continue-practice-row-disabled")
+    ).toBeVisible();
     expect(within(panel).getByText("Target unavailable.")).toBeVisible();
     expect(
       within(panel).queryByRole("link", { name: /Missing segment id/i })
     ).not.toBeInTheDocument();
     expect(
-      within(panel).queryByRole("link", { name: "Continue sheet practice Delta Sheet" })
+      within(panel).queryByRole("link", {
+        name: "Continue sheet practice Delta Sheet"
+      })
     ).not.toBeInTheDocument();
   });
 
@@ -897,12 +1091,17 @@ describe("HomeDashboard", () => {
 
     const panel = screen.getByRole("region", { name: "Continue Practice" });
 
-    expect(within(panel).getByRole("link", { name: "Continue sheet practice Alpha Sheet" })).toHaveAttribute(
-      "href",
-      "/sheet-practice/sheet-alpha"
-    );
-    expect(screen.queryByRole("link", { name: "Continue Practice" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Continue Sheet Practice" })).not.toBeInTheDocument();
+    expect(
+      within(panel).getByRole("link", {
+        name: "Continue sheet practice Alpha Sheet"
+      })
+    ).toHaveAttribute("href", "/sheet-practice/sheet-alpha");
+    expect(
+      screen.queryByRole("link", { name: "Continue Practice" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Continue Sheet Practice" })
+    ).not.toBeInTheDocument();
   });
 
   it("shows Continue Practice loading and error states without hiding Quick Metronome", () => {
@@ -915,31 +1114,36 @@ describe("HomeDashboard", () => {
       />
     );
 
-    expect(screen.getByText("Loading Continue Practice targets.")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
-      "href",
-      "/quick-metronome"
-    );
+    expect(
+      screen.getByText("Loading Continue Practice targets.")
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Open Quick Metronome" })
+    ).toHaveAttribute("href", "/quick-metronome");
 
     rerender(
       <HomeDashboard
         data={createDashboardData({
           continueTargetsStatus: "error",
-          continueTargetsErrorMessage: "Continue Practice targets could not be loaded."
+          continueTargetsErrorMessage:
+            "Continue Practice targets could not be loaded."
         })}
       />
     );
 
-    expect(screen.getByText("Continue Practice targets could not be loaded.")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
-      "href",
-      "/quick-metronome"
-    );
+    expect(
+      screen.getByText("Continue Practice targets could not be loaded.")
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Open Quick Metronome" })
+    ).toHaveAttribute("href", "/quick-metronome");
   });
 
   it("renders compact recent activity rows for quick, sheet, recording, and segment activity", () => {
-    const longLabel = "Very Long Segment Name That Wraps Across The Recent Activity Row Without Title Disclosure";
-    const longMetadata = "Very long metadata note that remains readable inline without a title attribute";
+    const longLabel =
+      "Very Long Segment Name That Wraps Across The Recent Activity Row Without Title Disclosure";
+    const longMetadata =
+      "Very long metadata note that remains readable inline without a title attribute";
     const data = createDashboardData({
       recentActivity: createActivityResult([
         createActivityItem({
@@ -999,16 +1203,22 @@ describe("HomeDashboard", () => {
     const panel = screen.getByRole("region", { name: "Recent Activity" });
 
     expect(within(panel).getByText("Quick Practice")).toBeVisible();
-    expect(within(panel).getByText("Quick practice · 2026-06-21 12:00 UTC")).toBeVisible();
+    expect(
+      within(panel).getByText("Quick practice · 2026-06-21 12:00 UTC")
+    ).toBeVisible();
     expect(within(panel).getAllByText("Alpha Sheet")).toHaveLength(2);
-    expect(within(panel).getByText("Sheet recording · 2026-06-21 12:00 UTC")).toBeVisible();
+    expect(
+      within(panel).getByText("Sheet recording · 2026-06-21 12:00 UTC")
+    ).toBeVisible();
     expect(within(panel).getByText("Bridge take")).toBeVisible();
     expect(within(panel).getByText(longLabel)).toBeVisible();
     expect(within(panel).getByText(longMetadata)).toBeVisible();
     expect(within(panel).getAllByText("Status: Ready")).toHaveLength(4);
     expect(within(panel).getByText("Status: Quick practice")).toBeVisible();
 
-    const longRow = within(panel).getByText(longLabel).closest("[data-testid='recent-activity-row']");
+    const longRow = within(panel)
+      .getByText(longLabel)
+      .closest("[data-testid='recent-activity-row']");
 
     expect(longRow).not.toBeNull();
     expect(longRow).not.toHaveAttribute("title");
@@ -1065,11 +1275,23 @@ describe("HomeDashboard", () => {
     expect(within(panel).getByText("Status: Lookup failed")).toBeVisible();
     expect(within(panel).getByText("Status: Missing sheet")).toBeVisible();
     expect(within(panel).getByText("Status: Missing segment")).toBeVisible();
-    expect(within(panel).getByText("Stale: No target is available for this local activity.")).toBeVisible();
-    expect(within(panel).getByText("Stale: Target lookup failed.")).toBeVisible();
-    expect(within(panel).getByText("Stale: Sheet no longer exists.")).toBeVisible();
-    expect(within(panel).getByText("Stale: Segment no longer exists.")).toBeVisible();
-    expect(within(panel).getByText("Sheet practice · Unknown time")).toBeVisible();
+    expect(
+      within(panel).getByText(
+        "Stale: No target is available for this local activity."
+      )
+    ).toBeVisible();
+    expect(
+      within(panel).getByText("Stale: Target lookup failed.")
+    ).toBeVisible();
+    expect(
+      within(panel).getByText("Stale: Sheet no longer exists.")
+    ).toBeVisible();
+    expect(
+      within(panel).getByText("Stale: Segment no longer exists.")
+    ).toBeVisible();
+    expect(
+      within(panel).getByText("Sheet practice · Unknown time")
+    ).toBeVisible();
     expect(within(panel).queryByText("Invalid Date")).not.toBeInTheDocument();
 
     for (const row of rows) {
@@ -1101,12 +1323,13 @@ describe("HomeDashboard", () => {
       />
     );
 
-    expect(screen.getByText("Recent activity could not be loaded.")).toBeVisible();
+    expect(
+      screen.getByText("Recent activity could not be loaded.")
+    ).toBeVisible();
     expect(screen.getByText("Today Practice Summary")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
-      "href",
-      "/quick-metronome"
-    );
+    expect(
+      screen.getByRole("link", { name: "Open Quick Metronome" })
+    ).toHaveAttribute("href", "/quick-metronome");
   });
 
   it("loads recent activity through the browser practice-session service and contains read failures", async () => {
@@ -1186,68 +1409,132 @@ describe("HomeDashboard", () => {
     const { unmount } = render(<HomeDashboard />);
 
     await waitFor(() =>
-      expect(serviceMocks.getContinuePracticeTargets).toHaveBeenCalledWith({ limit: 5 })
+      expect(serviceMocks.getContinuePracticeTargets).toHaveBeenCalledWith({
+        limit: 5
+      })
     );
-    await waitFor(() => expect(serviceMocks.getHomeRecentActivity).toHaveBeenCalled());
-    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalled());
-    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalled());
     await waitFor(() =>
-      expect(serviceMocks.getSessionComparison).toHaveBeenCalledWith({ limit: 8 })
+      expect(serviceMocks.getHomeRecentActivity).toHaveBeenCalled()
     );
-    expect(await screen.findByRole("link", { name: "Continue quick practice" })).toHaveAttribute(
-      "href",
-      "/quick-metronome"
+    await waitFor(() =>
+      expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalled()
     );
+    await waitFor(() =>
+      expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalled()
+    );
+    await waitFor(() =>
+      expect(serviceMocks.getSessionComparison).toHaveBeenCalledWith({
+        limit: 8
+      })
+    );
+    expect(
+      await screen.findByRole("link", { name: "Continue quick practice" })
+    ).toHaveAttribute("href", "/quick-metronome");
     expect(await screen.findByText("Service Activity")).toBeVisible();
     expect(screen.getByTestId("today-summary-sessions")).toHaveTextContent("1");
-    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("2 min");
-    expect(screen.getByTestId("home-streak-current")).toHaveTextContent("2 days");
-    expect(screen.getByText("Alpha Etude · 2026-06-21 12:04 UTC")).toBeVisible();
+    expect(
+      screen.getByTestId("home-analytics-total-practice")
+    ).toHaveTextContent("2 min");
+    expect(screen.getByTestId("home-streak-current")).toHaveTextContent(
+      "2 days"
+    );
+    expect(
+      screen.getByText("Alpha Etude · 2026-06-21 12:04 UTC")
+    ).toBeVisible();
     expect(screen.getByText("2 min · 1 recording")).toBeVisible();
-    expect(screen.getByText("Streak is waiting on today's practice.")).toBeVisible();
+    expect(
+      screen.getByText("Streak is waiting on today's practice.")
+    ).toBeVisible();
     unmount();
 
-    serviceMocks.getContinuePracticeTargets.mockRejectedValue(new Error("IndexedDB unavailable"));
-    serviceMocks.getHomeRecentActivity.mockRejectedValue(new Error("IndexedDB unavailable"));
-    serviceMocks.getHomeDashboardAnalyticsSource.mockRejectedValue(new Error("IndexedDB unavailable"));
-    serviceMocks.getHomePracticeStreaks.mockRejectedValue(new Error("IndexedDB unavailable"));
-    serviceMocks.getSessionComparison.mockRejectedValue(new Error("IndexedDB unavailable"));
+    serviceMocks.getContinuePracticeTargets.mockRejectedValue(
+      new Error("IndexedDB unavailable")
+    );
+    serviceMocks.getHomeRecentActivity.mockRejectedValue(
+      new Error("IndexedDB unavailable")
+    );
+    serviceMocks.getHomeDashboardAnalyticsSource.mockRejectedValue(
+      new Error("IndexedDB unavailable")
+    );
+    serviceMocks.getHomePracticeStreaks.mockRejectedValue(
+      new Error("IndexedDB unavailable")
+    );
+    serviceMocks.getSessionComparison.mockRejectedValue(
+      new Error("IndexedDB unavailable")
+    );
     render(<HomeDashboard />);
 
-    expect(await screen.findByText("Continue Practice targets could not be loaded.")).toBeVisible();
-    expect(await screen.findByText("Recent activity could not be loaded.")).toBeVisible();
-    expect(await screen.findByText("Practice analytics could not be loaded.")).toBeVisible();
-    expect(await screen.findByText("Practice streaks could not be loaded.")).toBeVisible();
-    expect(await screen.findByText("Session comparison could not be loaded.")).toBeVisible();
+    expect(
+      await screen.findByText("Continue Practice targets could not be loaded.")
+    ).toBeVisible();
+    expect(
+      await screen.findByText("Recent activity could not be loaded.")
+    ).toBeVisible();
+    expect(
+      await screen.findByText("Practice analytics could not be loaded.")
+    ).toBeVisible();
+    expect(
+      await screen.findByText("Practice streaks could not be loaded.")
+    ).toBeVisible();
+    expect(
+      await screen.findByText("Session comparison could not be loaded.")
+    ).toBeVisible();
     expect(screen.queryByTestId("home-streak-current")).not.toBeInTheDocument();
     expect(screen.queryByTestId("home-streak-longest")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("home-streak-today-status")).not.toBeInTheDocument();
-    expect(screen.queryByText("No practice logged yet.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("home-streak-today-status")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("No practice logged yet.")
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("today-summary-sessions")).toHaveTextContent("1");
   });
 
   it("does not read practice analytics or streaks when IndexedDB is unavailable", async () => {
     render(<HomeDashboard />);
 
-    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).not.toHaveBeenCalled());
-    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).not.toHaveBeenCalled());
-    await waitFor(() => expect(serviceMocks.getSessionComparison).not.toHaveBeenCalled());
-    expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
+    await waitFor(() =>
+      expect(
+        serviceMocks.getHomeDashboardAnalyticsSource
+      ).not.toHaveBeenCalled()
+    );
+    await waitFor(() =>
+      expect(serviceMocks.getHomePracticeStreaks).not.toHaveBeenCalled()
+    );
+    await waitFor(() =>
+      expect(serviceMocks.getSessionComparison).not.toHaveBeenCalled()
+    );
+    expect(
+      screen.getByRole("region", { name: "Practice Analytics" })
+    ).toBeVisible();
     expect(screen.getByText("No local practice analytics yet.")).toBeVisible();
-    expect(screen.getByRole("region", { name: "Practice Streaks" })).toBeVisible();
-    expect(screen.getByText("Practice streaks are unavailable in this browser.")).toBeVisible();
-    expect(screen.queryByText("No local practice streak yet.")).not.toBeInTheDocument();
-    expect(screen.queryByText("No practice logged yet.")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Practice Streaks" })
+    ).toBeVisible();
+    expect(
+      screen.getByText("Practice streaks are unavailable in this browser.")
+    ).toBeVisible();
+    expect(
+      screen.queryByText("No local practice streak yet.")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("No practice logged yet.")
+    ).not.toBeInTheDocument();
     expect(screen.queryByTestId("home-streak-current")).not.toBeInTheDocument();
     expect(screen.queryByTestId("home-streak-longest")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("home-streak-today-status")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
-      "href",
-      "/quick-metronome"
-    );
+    expect(
+      screen.queryByTestId("home-streak-today-status")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Open Quick Metronome" })
+    ).toHaveAttribute("href", "/quick-metronome");
     expect(screen.getByText("Today Practice Summary")).toBeVisible();
-    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Continue Practice" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Recent Activity" })
+    ).toBeVisible();
   });
 
   it("keeps previous analytics visible when a subscription refresh analytics read fails", async () => {
@@ -1279,7 +1566,9 @@ describe("HomeDashboard", () => {
 
     render(<HomeDashboard />);
 
-    expect(await screen.findByTestId("home-analytics-total-practice")).toHaveTextContent("1 hr 5 min");
+    expect(
+      await screen.findByTestId("home-analytics-total-practice")
+    ).toHaveTextContent("1 hr 5 min");
 
     const refresh = subscription.refresh;
 
@@ -1292,11 +1581,21 @@ describe("HomeDashboard", () => {
     );
     refresh();
 
-    expect(await screen.findByText("Practice analytics could not be loaded.")).toBeVisible();
-    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("1 hr 5 min");
-    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent("4");
-    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+    expect(
+      await screen.findByText("Practice analytics could not be loaded.")
+    ).toBeVisible();
+    expect(
+      screen.getByTestId("home-analytics-total-practice")
+    ).toHaveTextContent("1 hr 5 min");
+    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent(
+      "4"
+    );
+    expect(
+      screen.getByRole("region", { name: "Continue Practice" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Recent Activity" })
+    ).toBeVisible();
   });
 
   it("keeps previous streaks visible when a subscription refresh streak read fails", async () => {
@@ -1322,7 +1621,9 @@ describe("HomeDashboard", () => {
 
     render(<HomeDashboard />);
 
-    expect(await screen.findByTestId("home-streak-current")).toHaveTextContent("4 days");
+    expect(await screen.findByTestId("home-streak-current")).toHaveTextContent(
+      "4 days"
+    );
 
     const refresh = subscription.refresh;
 
@@ -1335,12 +1636,24 @@ describe("HomeDashboard", () => {
     );
     refresh();
 
-    expect(await screen.findByText("Practice streaks could not be loaded.")).toBeVisible();
-    expect(screen.getByTestId("home-streak-current")).toHaveTextContent("4 days");
-    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent("8 days");
-    expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+    expect(
+      await screen.findByText("Practice streaks could not be loaded.")
+    ).toBeVisible();
+    expect(screen.getByTestId("home-streak-current")).toHaveTextContent(
+      "4 days"
+    );
+    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent(
+      "8 days"
+    );
+    expect(
+      screen.getByRole("region", { name: "Practice Analytics" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Continue Practice" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Recent Activity" })
+    ).toBeVisible();
   });
 
   it("ignores older overlapping refreshes that resolve after newer analytics", async () => {
@@ -1397,7 +1710,11 @@ describe("HomeDashboard", () => {
 
     render(<HomeDashboard />);
 
-    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(
+        serviceMocks.getHomeDashboardAnalyticsSource
+      ).toHaveBeenCalledTimes(1)
+    );
 
     const refresh = subscription.refresh;
 
@@ -1406,20 +1723,40 @@ describe("HomeDashboard", () => {
     }
 
     refresh();
-    await waitFor(() => expect(serviceMocks.getHomeDashboardAnalyticsSource).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(
+        serviceMocks.getHomeDashboardAnalyticsSource
+      ).toHaveBeenCalledTimes(2)
+    );
 
     newerAnalyticsRead.resolve(newerAnalytics);
 
-    expect(await screen.findByTestId("home-analytics-total-practice")).toHaveTextContent("2 hr");
-    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent("6");
-    expect(screen.queryByText("Loading practice analytics.")).not.toBeInTheDocument();
+    expect(
+      await screen.findByTestId("home-analytics-total-practice")
+    ).toHaveTextContent("2 hr");
+    expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent(
+      "6"
+    );
+    expect(
+      screen.queryByText("Loading practice analytics.")
+    ).not.toBeInTheDocument();
 
     olderAnalyticsRead.resolve(olderAnalytics);
 
-    await waitFor(() => expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent("6"));
-    expect(screen.getByTestId("home-analytics-total-practice")).toHaveTextContent("2 hr");
-    expect(screen.getByText("Local history totals · Updated 2026-06-21 12:10 UTC")).toBeVisible();
-    expect(screen.queryByText("Local history totals · Updated 2026-06-21 12:00 UTC")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("home-analytics-sessions")).toHaveTextContent(
+        "6"
+      )
+    );
+    expect(
+      screen.getByTestId("home-analytics-total-practice")
+    ).toHaveTextContent("2 hr");
+    expect(
+      screen.getByText("Local history totals · Updated 2026-06-21 12:10 UTC")
+    ).toBeVisible();
+    expect(
+      screen.queryByText("Local history totals · Updated 2026-06-21 12:00 UTC")
+    ).not.toBeInTheDocument();
   });
 
   it("ignores older overlapping refreshes that resolve after newer streaks", async () => {
@@ -1468,7 +1805,9 @@ describe("HomeDashboard", () => {
 
     render(<HomeDashboard />);
 
-    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(1)
+    );
 
     const refresh = subscription.refresh;
 
@@ -1477,18 +1816,32 @@ describe("HomeDashboard", () => {
     }
 
     refresh();
-    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(2)
+    );
 
     newerStreakRead.resolve(newerStreaks);
 
-    expect(await screen.findByTestId("home-streak-current")).toHaveTextContent("5 days");
-    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent("7 days");
-    expect(screen.queryByText("Loading practice streaks.")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("home-streak-current")).toHaveTextContent(
+      "5 days"
+    );
+    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent(
+      "7 days"
+    );
+    expect(
+      screen.queryByText("Loading practice streaks.")
+    ).not.toBeInTheDocument();
 
     olderStreakRead.resolve(olderStreaks);
 
-    await waitFor(() => expect(screen.getByTestId("home-streak-current")).toHaveTextContent("5 days"));
-    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent("7 days");
+    await waitFor(() =>
+      expect(screen.getByTestId("home-streak-current")).toHaveTextContent(
+        "5 days"
+      )
+    );
+    expect(screen.getByTestId("home-streak-longest")).toHaveTextContent(
+      "7 days"
+    );
     expect(screen.queryByText("1 day")).not.toBeInTheDocument();
   });
 
@@ -1536,7 +1889,9 @@ describe("HomeDashboard", () => {
 
     render(<HomeDashboard />);
 
-    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(1)
+    );
 
     const refresh = subscription.refresh;
 
@@ -1545,16 +1900,26 @@ describe("HomeDashboard", () => {
     }
 
     refresh();
-    await waitFor(() => expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(serviceMocks.getHomePracticeStreaks).toHaveBeenCalledTimes(2)
+    );
 
     newerStreakRead.resolve(newerStreaks);
 
-    expect(await screen.findByTestId("home-streak-current")).toHaveTextContent("6 days");
+    expect(await screen.findByTestId("home-streak-current")).toHaveTextContent(
+      "6 days"
+    );
 
     olderStreakRead.reject(new Error("older streak read failed"));
 
-    await waitFor(() => expect(screen.getByTestId("home-streak-current")).toHaveTextContent("6 days"));
-    expect(screen.queryByText("Practice streaks could not be loaded.")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("home-streak-current")).toHaveTextContent(
+        "6 days"
+      )
+    );
+    expect(
+      screen.queryByText("Practice streaks could not be loaded.")
+    ).not.toBeInTheDocument();
   });
 
   describe("P3-15 Practice Goals", () => {
@@ -1641,9 +2006,13 @@ describe("HomeDashboard", () => {
 
       const panel = screen.getByRole("region", { name: "Practice Goals" });
       const rows = within(panel).getAllByTestId("practice-goal-row");
-      const progressRows = within(panel).getAllByTestId("practice-goal-progress");
+      const progressRows = within(panel).getAllByTestId(
+        "practice-goal-progress"
+      );
 
-      expect(within(panel).queryByText("No local goals yet.")).not.toBeInTheDocument();
+      expect(
+        within(panel).queryByText("No local goals yet.")
+      ).not.toBeInTheDocument();
       expect(rows).toHaveLength(3);
       expect(rows[0]).toHaveTextContent("Today practice minutes");
       expect(rows[0]).toHaveTextContent("In progress");
@@ -1655,8 +2024,12 @@ describe("HomeDashboard", () => {
       expect(rows[2]).toHaveTextContent("Not started");
       expect(progressRows[2]).toHaveTextContent("0 / 3 sheet takes");
       expect(screen.getByText("Today Practice Summary")).toBeVisible();
-      expect(screen.getByRole("region", { name: "Continue Practice" })).toBeVisible();
-      expect(screen.getByRole("region", { name: "Recent Activity" })).toBeVisible();
+      expect(
+        screen.getByRole("region", { name: "Continue Practice" })
+      ).toBeVisible();
+      expect(
+        screen.getByRole("region", { name: "Recent Activity" })
+      ).toBeVisible();
     });
 
     it("renders invalid, missing-evaluation, and cleared completed-goal states from evaluations", () => {
@@ -1712,7 +2085,9 @@ describe("HomeDashboard", () => {
 
       const panel = screen.getByRole("region", { name: "Practice Goals" });
       const rows = within(panel).getAllByTestId("practice-goal-row");
-      const progressRows = within(panel).getAllByTestId("practice-goal-progress");
+      const progressRows = within(panel).getAllByTestId(
+        "practice-goal-progress"
+      );
 
       expect(rows[0]).toHaveTextContent("Not started");
       expect(rows[0]).not.toHaveTextContent("Completed");
@@ -1725,7 +2100,9 @@ describe("HomeDashboard", () => {
 
     it("validates create targets and keeps failed saves contained in the form", async () => {
       const user = userEvent.setup();
-      const savePracticeGoal = vi.fn().mockRejectedValue(new Error("save failed"));
+      const savePracticeGoal = vi
+        .fn()
+        .mockRejectedValue(new Error("save failed"));
 
       render(
         <HomeDashboard
@@ -1779,10 +2156,16 @@ describe("HomeDashboard", () => {
         })
       );
       expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("status");
-      expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("completedAt");
+      expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty(
+        "completedAt"
+      );
       expect(screen.getByText("Goal could not be saved.")).toBeVisible();
-      expect(screen.getByRole("form", { name: "Create practice goal" })).toBeVisible();
-      expect(within(panel).queryByText("All-time sessions")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("form", { name: "Create practice goal" })
+      ).toBeVisible();
+      expect(
+        within(panel).queryByText("All-time sessions")
+      ).not.toBeInTheDocument();
     });
 
     it("edits goals with preserved identity and confirms deletes before service mutation", async () => {
@@ -1818,7 +2201,9 @@ describe("HomeDashboard", () => {
       );
 
       const panel = screen.getByRole("region", { name: "Practice Goals" });
-      await user.click(within(panel).getByRole("button", { name: "Edit goal" }));
+      await user.click(
+        within(panel).getByRole("button", { name: "Edit goal" })
+      );
       await chooseGoalOption(user, "Goal kind", "takes", /takes/i);
       await chooseGoalOption(user, "Period", "all-time", /all-time/i);
       await user.clear(screen.getByLabelText("Target"));
@@ -1835,11 +2220,17 @@ describe("HomeDashboard", () => {
         })
       );
       expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("status");
-      expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty("completedAt");
+      expect(savePracticeGoal.mock.calls[0]?.[0]).not.toHaveProperty(
+        "completedAt"
+      );
 
-      await user.click(within(panel).getByRole("button", { name: "Delete goal" }));
+      await user.click(
+        within(panel).getByRole("button", { name: "Delete goal" })
+      );
       expect(deletePracticeGoal).not.toHaveBeenCalled();
-      await user.click(screen.getByTestId("practice-goal-delete-confirm-button"));
+      await user.click(
+        screen.getByTestId("practice-goal-delete-confirm-button")
+      );
 
       await waitFor(() =>
         expect(deletePracticeGoal).toHaveBeenCalledWith("goal-edit")
@@ -1883,7 +2274,9 @@ describe("HomeDashboard", () => {
 
       const panel = screen.getByRole("region", { name: "Practice Goals" });
 
-      await user.click(within(panel).getByRole("button", { name: "Edit goal" }));
+      await user.click(
+        within(panel).getByRole("button", { name: "Edit goal" })
+      );
       await chooseGoalOption(user, "Goal kind", "sessions", /sessions/i);
       await chooseGoalOption(user, "Period", "all-time", /all-time/i);
       await user.clear(screen.getByLabelText("Target"));
@@ -1892,7 +2285,8 @@ describe("HomeDashboard", () => {
 
       await waitFor(() => expect(savePracticeGoal).toHaveBeenCalledTimes(1));
 
-      const savedGoal = savePracticeGoal.mock.calls[0]?.[0] as LocalPracticeGoal;
+      const savedGoal = savePracticeGoal.mock
+        .calls[0]?.[0] as LocalPracticeGoal;
 
       expect(savedGoal).toEqual({
         id: "goal-completed-edit",
@@ -1908,7 +2302,9 @@ describe("HomeDashboard", () => {
     it("contains goal read, progress read, and mutation failures without hiding Home panels", async () => {
       const user = userEvent.setup();
       const existingGoal = createGoal({ id: "goal-progress-error" });
-      const deletePracticeGoal = vi.fn().mockRejectedValue(new Error("delete failed"));
+      const deletePracticeGoal = vi
+        .fn()
+        .mockRejectedValue(new Error("delete failed"));
 
       const { rerender } = render(
         <HomeDashboard
@@ -1923,12 +2319,15 @@ describe("HomeDashboard", () => {
         />
       );
 
-      expect(screen.getByText("Practice goals could not be loaded.")).toBeVisible();
-      expect(screen.getByRole("link", { name: "Open Quick Metronome" })).toHaveAttribute(
-        "href",
-        "/quick-metronome"
-      );
-      expect(screen.getByRole("region", { name: "Practice Analytics" })).toBeVisible();
+      expect(
+        screen.getByText("Practice goals could not be loaded.")
+      ).toBeVisible();
+      expect(
+        screen.getByRole("link", { name: "Open Quick Metronome" })
+      ).toHaveAttribute("href", "/quick-metronome");
+      expect(
+        screen.getByRole("region", { name: "Practice Analytics" })
+      ).toBeVisible();
 
       rerender(
         <HomeDashboard
@@ -1937,7 +2336,8 @@ describe("HomeDashboard", () => {
             practiceGoalEvaluations: [],
             practiceGoalsStatus: "loaded",
             practiceGoalProgressStatus: "error",
-            practiceGoalProgressErrorMessage: "Goal progress could not be loaded.",
+            practiceGoalProgressErrorMessage:
+              "Goal progress could not be loaded.",
             onSavePracticeGoal: vi.fn(),
             onDeletePracticeGoal: deletePracticeGoal
           })}
@@ -1947,12 +2347,20 @@ describe("HomeDashboard", () => {
       const panel = screen.getByRole("region", { name: "Practice Goals" });
 
       expect(within(panel).getByTestId("practice-goal-row")).toBeVisible();
-      expect(within(panel).getByText("Goal progress could not be loaded.")).toBeVisible();
+      expect(
+        within(panel).getByText("Goal progress could not be loaded.")
+      ).toBeVisible();
 
-      await user.click(within(panel).getByRole("button", { name: "Delete goal" }));
-      await user.click(screen.getByTestId("practice-goal-delete-confirm-button"));
+      await user.click(
+        within(panel).getByRole("button", { name: "Delete goal" })
+      );
+      await user.click(
+        screen.getByTestId("practice-goal-delete-confirm-button")
+      );
 
-      expect(await screen.findByText("Goal could not be deleted.")).toBeVisible();
+      expect(
+        await screen.findByText("Goal could not be deleted.")
+      ).toBeVisible();
       expect(within(panel).getByTestId("practice-goal-row")).toBeVisible();
     });
 
@@ -1995,7 +2403,9 @@ describe("HomeDashboard", () => {
 
       render(<HomeDashboard />);
 
-      const panel = await screen.findByRole("region", { name: "Practice Goals" });
+      const panel = await screen.findByRole("region", {
+        name: "Practice Goals"
+      });
       const refresh = subscription.refresh;
 
       if (!refresh) {
@@ -2003,18 +2413,30 @@ describe("HomeDashboard", () => {
       }
 
       await waitFor(() =>
-        expect(goalServiceMocks.getPracticeGoalEvaluations).toHaveBeenCalledTimes(1)
+        expect(
+          goalServiceMocks.getPracticeGoalEvaluations
+        ).toHaveBeenCalledTimes(1)
       );
-      expect(within(panel).getByTestId("practice-goal-row")).toHaveTextContent("In progress");
-      expect(within(panel).getByTestId("practice-goal-progress")).toHaveTextContent("12 / 20 min");
+      expect(within(panel).getByTestId("practice-goal-row")).toHaveTextContent(
+        "In progress"
+      );
+      expect(
+        within(panel).getByTestId("practice-goal-progress")
+      ).toHaveTextContent("12 / 20 min");
 
       refresh();
 
       await waitFor(() =>
-        expect(goalServiceMocks.getPracticeGoalEvaluations).toHaveBeenCalledTimes(2)
+        expect(
+          goalServiceMocks.getPracticeGoalEvaluations
+        ).toHaveBeenCalledTimes(2)
       );
-      expect(within(panel).getByTestId("practice-goal-row")).toHaveTextContent("Completed");
-      expect(within(panel).getByTestId("practice-goal-progress")).toHaveTextContent("20 / 20 min");
+      expect(within(panel).getByTestId("practice-goal-row")).toHaveTextContent(
+        "Completed"
+      );
+      expect(
+        within(panel).getByTestId("practice-goal-progress")
+      ).toHaveTextContent("20 / 20 min");
     });
 
     it("subscribes once, unsubscribes on unmount, and ignores stale goal refreshes", async () => {
@@ -2036,7 +2458,9 @@ describe("HomeDashboard", () => {
 
       const { unmount } = render(<HomeDashboard />);
 
-      await waitFor(() => expect(goalServiceMocks.subscribe).toHaveBeenCalledTimes(1));
+      await waitFor(() =>
+        expect(goalServiceMocks.subscribe).toHaveBeenCalledTimes(1)
+      );
 
       const refresh = subscription.refresh;
 
@@ -2045,7 +2469,9 @@ describe("HomeDashboard", () => {
       }
 
       refresh();
-      await waitFor(() => expect(goalServiceMocks.listPracticeGoals).toHaveBeenCalledTimes(2));
+      await waitFor(() =>
+        expect(goalServiceMocks.listPracticeGoals).toHaveBeenCalledTimes(2)
+      );
 
       newerRead.resolve([
         createGoal({
@@ -2056,7 +2482,9 @@ describe("HomeDashboard", () => {
         })
       ]);
 
-      const panel = await screen.findByRole("region", { name: "Practice Goals" });
+      const panel = await screen.findByRole("region", {
+        name: "Practice Goals"
+      });
 
       expect(within(panel).getByText("Today sessions")).toBeVisible();
 
@@ -2070,7 +2498,9 @@ describe("HomeDashboard", () => {
       ]);
 
       await waitFor(() =>
-        expect(within(panel).queryByText("Today sheet takes")).not.toBeInTheDocument()
+        expect(
+          within(panel).queryByText("Today sheet takes")
+        ).not.toBeInTheDocument()
       );
       expect(within(panel).getByText("Today sessions")).toBeVisible();
 

@@ -2,7 +2,10 @@ import {
   createBilibiliSearchResult,
   type BilibiliSearchResult
 } from "@/domain/reference";
-import type { BilibiliSearchAdapter, ReferenceResult } from "@/services/reference";
+import type {
+  BilibiliSearchAdapter,
+  ReferenceResult
+} from "@/services/reference";
 
 const fixtureRows = [
   {
@@ -33,7 +36,9 @@ const fixtureResults = fixtureRows
   .filter((result): result is BilibiliSearchResult => result !== null);
 
 export class DeterministicBilibiliSearchAdapter implements BilibiliSearchAdapter {
-  async search(query: string): Promise<ReferenceResult<BilibiliSearchResult[]>> {
+  async search(
+    query: string
+  ): Promise<ReferenceResult<BilibiliSearchResult[]>> {
     const normalizedQuery = query.trim().toLowerCase();
 
     if (normalizedQuery.includes("fail") || normalizedQuery.includes("error")) {
@@ -44,7 +49,9 @@ export class DeterministicBilibiliSearchAdapter implements BilibiliSearchAdapter
     }
 
     const matches = fixtureResults.filter((result) =>
-      [result.title, result.author ?? "", result.bvid].some((value) => value.toLowerCase().includes(normalizedQuery))
+      [result.title, result.author ?? "", result.bvid].some((value) =>
+        value.toLowerCase().includes(normalizedQuery)
+      )
     );
 
     return {

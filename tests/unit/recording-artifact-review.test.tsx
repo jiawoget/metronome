@@ -121,7 +121,9 @@ describe("RecordingArtifactReview", () => {
       })
     );
 
-    expect(screen.getByRole("button", { name: "Play recording" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Play recording" })
+    ).toBeDisabled();
     expect(screen.getByText("Preparing waveform playback.")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Play recording" }));
@@ -160,10 +162,12 @@ describe("RecordingArtifactReview", () => {
       "data-waveform-source",
       "trusted-peaks"
     );
-    expect(artifactReviewMocks.resolveRecordingArtifactBody).toHaveBeenCalledTimes(1);
-    expect(artifactReviewMocks.resolveRecordingArtifactBody).toHaveBeenCalledWith(
-      recording
-    );
+    expect(
+      artifactReviewMocks.resolveRecordingArtifactBody
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      artifactReviewMocks.resolveRecordingArtifactBody
+    ).toHaveBeenCalledWith(recording);
     expect(artifactReviewMocks.adapterLoad).toHaveBeenCalledWith(
       expect.any(HTMLDivElement),
       recording,
@@ -173,7 +177,9 @@ describe("RecordingArtifactReview", () => {
     rerender(createDefaultReviewElement(recording));
 
     await waitFor(() => {
-      expect(artifactReviewMocks.resolveRecordingArtifactBody).toHaveBeenCalledTimes(1);
+      expect(
+        artifactReviewMocks.resolveRecordingArtifactBody
+      ).toHaveBeenCalledTimes(1);
     });
   });
 });
@@ -261,7 +267,9 @@ function setSeekSurfaceBounds(seekSurface: HTMLElement) {
     }) as DOMRect;
 }
 
-function createRecording(overrides: Partial<ReviewRecording> = {}): ReviewRecording {
+function createRecording(
+  overrides: Partial<ReviewRecording> = {}
+): ReviewRecording {
   return {
     id: "recording-alpha",
     type: "sheet",

@@ -1,6 +1,12 @@
 import type { MetronomeSettings } from "@/lib/quick-metronome/types";
-import type { SheetRecordingMetadata, SheetRecordingSegmentContext } from "@/domain/practice";
-import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
+import type {
+  SheetRecordingMetadata,
+  SheetRecordingSegmentContext
+} from "@/domain/practice";
+import type {
+  RecordingArtifactDetails,
+  ReviewRecording
+} from "@/lib/recordings-review/types";
 import type { PracticeSessionService } from "@/services/practice-session";
 import type { RecordingArtifactAnalysis } from "@/services/audio-analysis";
 
@@ -21,7 +27,9 @@ export type RecordingCaptureService = {
 };
 
 export class RecordingPermissionError extends Error {
-  constructor(message = "Microphone access was denied. Enable microphone permission to record a take.") {
+  constructor(
+    message = "Microphone access was denied. Enable microphone permission to record a take."
+  ) {
     super(message);
     this.name = "RecordingPermissionError";
   }
@@ -59,5 +67,7 @@ export type SheetRecordingService = {
   subscribe: (listener: () => void) => () => void;
   startCapture: () => Promise<void>;
   discardCapture: () => Promise<void>;
-  stopAndSave: (input: SaveSheetRecordingInput) => Promise<SaveSheetRecordingResult>;
+  stopAndSave: (
+    input: SaveSheetRecordingInput
+  ) => Promise<SaveSheetRecordingResult>;
 };

@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+git_dir="$(git rev-parse --absolute-git-dir)"
+npm_local_script="$repo_root/scripts/npm-local.ps1"
+npm_cmd=""
+power_shell=""
+snapshot_dir=""
+
+cd "$repo_root"
+
+if command -v cygpath >/dev/null 2>&1; then
+  git_dir="$(cygpath -u "$git_dir")"
+fi
+git_dir="$(cd "$git_dir" && pwd -P)"
+
+cleanup_snapshot() {
+  cleanup_status=$?
+  trap - EXIT HUP INT TERM
+
+  if [ -n "$snapshot_dir" ]; then
+    snapshot_relative="${snapshot_dir#"$git_dir"/}"
+
+    case "$snapshot_dir" in
+      /*) ;;
+      *)
+        printf 'Refusing to clean non-absolute snapshot path: %s\n' "$snapshot_dir" >&2
+        exit 1
+        ;;
+    esac
+
+    case "$snapshot_relative" in
+      pre-commit-index.?*) ;;
+      *)
+        printf 'Refusing to clean snapshot outside the Git directory prefix: %s\n' "$snapshot_dir" >&2
+        exit 1
+        ;;
+    esac
+
+    case "$snapshot_relative" in
+      */*)
+        printf 'Refusing to clean non-child snapshot path: %s\n' "$snapshot_dir" >&2
+        exit 1
+        ;;
+    esac
+
+    if ! rm -rf -- "$snapshot_dir"; then
+      printf 'Failed to clean staged-index snapshot: %s\n' "$snapshot_dir" >&2
+      exit 1
+    fi
+  fi
+
+  exit "$cleanup_status"
+}
+
+trap cleanup_snapshot EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+echo "Running: git diff --cached --check"
+git diff --cached --check
+
+if ! git cat-file -e HEAD:.prettierignore 2>/dev/null; then
+  echo "Formatting baseline is not yet present in HEAD; skipping format:check for the bootstrap commit."
+  exit 0
+fi
+
+if command -v npm >/dev/null 2>&1; then
+  npm_cmd="npm"
+elif command -v npm.cmd >/dev/null 2>&1; then
+  npm_cmd="npm.cmd"
+elif [ -f "$npm_local_script" ] && command -v powershell >/dev/null 2>&1; then
+  power_shell="powershell"
+elif [ -f "$npm_local_script" ] && command -v pwsh >/dev/null 2>&1; then
+  power_shell="pwsh"
+else
+  echo "Could not find a supported npm route for the pre-commit hook."
+  echo "Install npm on PATH or restore scripts/npm-local.ps1 with powershell/pwsh available."
+  exit 1
+fi
+
+run_npm() {
+  if [ -n "$npm_cmd" ]; then
+    "$npm_cmd" "$@"
+  else
+    "$power_shell" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$npm_local_script" "$@"
+  fi
+}
+
+node_bin="$repo_root/node_modules/.bin"
+if command -v cygpath >/dev/null 2>&1; then
+  node_bin="$(cygpath -u "$node_bin")"
+fi
+PATH="$node_bin:$PATH"
+export PATH
+
+snapshot_dir="$(mktemp -d "$git_dir/pre-commit-index.XXXXXX")"
+snapshot_dir="$(cd "$snapshot_dir" && pwd -P)"
+
+echo "Running: staged-index npm run format:check"
+git ls-files -z --cached -- . ':(exclude).planning/**' |
+  git checkout-index --stdin -z --force --prefix="$snapshot_dir/"
+run_npm --prefix "$snapshot_dir" run format:check

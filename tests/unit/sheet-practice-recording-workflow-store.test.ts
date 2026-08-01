@@ -186,7 +186,9 @@ describe("sheet practice recording workflow store", () => {
       segmentContext
     });
 
-    expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+    expect(
+      useSheetPracticeRecordingWorkflowStore.getState().rerecord
+    ).toMatchObject({
       status: "invalid",
       source: null,
       unavailableReason: "source-not-sheet"
@@ -199,7 +201,9 @@ describe("sheet practice recording workflow store", () => {
       segmentContext
     });
 
-    expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+    expect(
+      useSheetPracticeRecordingWorkflowStore.getState().rerecord
+    ).toMatchObject({
       status: "invalid",
       source: null,
       unavailableReason: "sheet-mismatch"
@@ -228,7 +232,9 @@ describe("sheet practice recording workflow store", () => {
       }
     });
 
-    useSheetPracticeRecordingWorkflowStore.getState().cancelRecording("sheet-alpha");
+    useSheetPracticeRecordingWorkflowStore
+      .getState()
+      .cancelRecording("sheet-alpha");
 
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       activeSegmentId: "segment-alpha",
@@ -312,7 +318,9 @@ describe("sheet practice recording workflow store", () => {
     });
     store.setActiveSegment("sheet-alpha", "segment-alpha");
 
-    expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+    expect(
+      useSheetPracticeRecordingWorkflowStore.getState().rerecord
+    ).toMatchObject({
       status: "ready",
       source: {
         recordingId: "recording-alpha",
@@ -365,7 +373,9 @@ describe("sheet practice recording workflow store", () => {
     });
 
     store.invalidateRerecordSource("sheet-alpha", "source-segment-missing");
-    expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+    expect(
+      useSheetPracticeRecordingWorkflowStore.getState().rerecord
+    ).toMatchObject({
       status: "invalid",
       unavailableReason: "source-segment-missing"
     });

@@ -8,7 +8,10 @@ import {
   resetMeasureGridDatabaseConnectionForTests,
   seedMeasureGridRecordForTests
 } from "@/infrastructure/db/browser-measure-grid-service";
-import { createMeasureGridService, type MeasureGridRepository } from "@/services/measure-grid";
+import {
+  createMeasureGridService,
+  type MeasureGridRepository
+} from "@/services/measure-grid";
 import { buildMeasureGrid, TEST_ISO_DATE } from "./factories/practice";
 
 const baseGrid: MeasureGrid = buildMeasureGrid({
@@ -16,7 +19,9 @@ const baseGrid: MeasureGrid = buildMeasureGrid({
   measureOneOffsetMs: 0
 });
 
-function createMemoryMeasureGridRepository(initialEntries: Array<[string, MeasureGrid]> = []): MeasureGridRepository {
+function createMemoryMeasureGridRepository(
+  initialEntries: Array<[string, MeasureGrid]> = []
+): MeasureGridRepository {
   const grids = new Map(initialEntries);
 
   return {
@@ -34,7 +39,9 @@ function createMemoryMeasureGridRepository(initialEntries: Array<[string, Measur
 
 describe("measure grid service", () => {
   it("returns null when a valid sheet has no persisted grid", async () => {
-    const service = createMeasureGridService(createMemoryMeasureGridRepository());
+    const service = createMeasureGridService(
+      createMemoryMeasureGridRepository()
+    );
 
     await expect(service.getGrid("sheet-alpha")).resolves.toBeNull();
   });
@@ -47,13 +54,17 @@ describe("measure grid service", () => {
     };
     const service = createMeasureGridService(repository);
 
-    await expect(service.saveGrid("  sheet-alpha  ", baseGrid)).resolves.toEqual(baseGrid);
+    await expect(
+      service.saveGrid("  sheet-alpha  ", baseGrid)
+    ).resolves.toEqual(baseGrid);
 
     expect(repository.saveGrid).toHaveBeenCalledWith("sheet-alpha", baseGrid);
   });
 
   it("updates one active grid by replacing the previous grid for the same sheet and isolates other sheets", async () => {
-    const service = createMeasureGridService(createMemoryMeasureGridRepository());
+    const service = createMeasureGridService(
+      createMemoryMeasureGridRepository()
+    );
     const updatedGrid: MeasureGrid = {
       bpm: 96,
       timeSignature: "3/4",
@@ -67,12 +78,20 @@ describe("measure grid service", () => {
       measureOneOffsetMs: 120
     };
 
-    await expect(service.saveGrid("sheet-alpha", baseGrid)).resolves.toEqual(baseGrid);
-    await expect(service.saveGrid("sheet-bravo", otherSheetGrid)).resolves.toEqual(otherSheetGrid);
-    await expect(service.saveGrid(" sheet-alpha ", updatedGrid)).resolves.toEqual(updatedGrid);
+    await expect(service.saveGrid("sheet-alpha", baseGrid)).resolves.toEqual(
+      baseGrid
+    );
+    await expect(
+      service.saveGrid("sheet-bravo", otherSheetGrid)
+    ).resolves.toEqual(otherSheetGrid);
+    await expect(
+      service.saveGrid(" sheet-alpha ", updatedGrid)
+    ).resolves.toEqual(updatedGrid);
 
     await expect(service.getGrid("sheet-alpha")).resolves.toEqual(updatedGrid);
-    await expect(service.getGrid(" sheet-bravo ")).resolves.toEqual(otherSheetGrid);
+    await expect(service.getGrid(" sheet-bravo ")).resolves.toEqual(
+      otherSheetGrid
+    );
   });
 
   it("clears only the requested sheet grid and stays idempotent for a missing grid", async () => {
@@ -123,7 +142,9 @@ describe("measure grid service", () => {
     };
     const service = createMeasureGridService(repository);
 
-    await expect(service.saveGrid("   ", baseGrid)).rejects.toThrow("sheetId is required");
+    await expect(service.saveGrid("   ", baseGrid)).rejects.toThrow(
+      "sheetId is required"
+    );
     expect(repository.saveGrid).not.toHaveBeenCalled();
   });
 
@@ -135,7 +156,9 @@ describe("measure grid service", () => {
     };
     const service = createMeasureGridService(repository);
 
-    await expect(service.clearGrid("   ")).rejects.toThrow("sheetId is required");
+    await expect(service.clearGrid("   ")).rejects.toThrow(
+      "sheetId is required"
+    );
     expect(repository.clearGrid).not.toHaveBeenCalled();
   });
 
@@ -164,16 +187,19 @@ describe("measure grid service", () => {
       name: "NaN offset",
       grid: { ...baseGrid, measureOneOffsetMs: Number.NaN }
     }
-  ])("rejects $name saves and preserves the prior valid grid", async ({ grid }) => {
-    const service = createMeasureGridService(
-      createMemoryMeasureGridRepository([
-        ["sheet-alpha", baseGrid]
-      ])
-    );
+  ])(
+    "rejects $name saves and preserves the prior valid grid",
+    async ({ grid }) => {
+      const service = createMeasureGridService(
+        createMemoryMeasureGridRepository([["sheet-alpha", baseGrid]])
+      );
 
-    await expect(service.saveGrid("sheet-alpha", grid as MeasureGrid)).rejects.toThrow();
-    await expect(service.getGrid("sheet-alpha")).resolves.toEqual(baseGrid);
-  });
+      await expect(
+        service.saveGrid("sheet-alpha", grid as MeasureGrid)
+      ).rejects.toThrow();
+      await expect(service.getGrid("sheet-alpha")).resolves.toEqual(baseGrid);
+    }
+  );
 
   it("propagates repository storage failures from saveGrid", async () => {
     const repository: MeasureGridRepository = {
@@ -185,7 +211,9 @@ describe("measure grid service", () => {
     };
     const service = createMeasureGridService(repository);
 
-    await expect(service.saveGrid("sheet-alpha", baseGrid)).rejects.toThrow("write failed");
+    await expect(service.saveGrid("sheet-alpha", baseGrid)).rejects.toThrow(
+      "write failed"
+    );
   });
 });
 
@@ -224,13 +252,17 @@ describe("measure grid browser repository", () => {
   });
 
   it("returns null when a valid sheet has no grid", async () => {
-    await expect(browserMeasureGridRepository.getGrid("sheet-alpha")).resolves.toBeNull();
+    await expect(
+      browserMeasureGridRepository.getGrid("sheet-alpha")
+    ).resolves.toBeNull();
   });
 
   it("persists a grid by trimmed sheet id", async () => {
     await browserMeasureGridRepository.saveGrid("  sheet-alpha  ", savedGrid);
 
-    await expect(browserMeasureGridRepository.getGrid("sheet-alpha")).resolves.toEqual(savedGrid);
+    await expect(
+      browserMeasureGridRepository.getGrid("sheet-alpha")
+    ).resolves.toEqual(savedGrid);
   });
 
   it("updates and replaces the same sheet row without affecting another sheet", async () => {
@@ -248,13 +280,17 @@ describe("measure grid browser repository", () => {
       measureOneOffsetMs: 10
     });
 
-    await expect(browserMeasureGridRepository.getGrid("sheet-alpha")).resolves.toEqual({
+    await expect(
+      browserMeasureGridRepository.getGrid("sheet-alpha")
+    ).resolves.toEqual({
       bpm: 95,
       timeSignature: "6/8",
       pickupBeats: 2,
       measureOneOffsetMs: 10
     });
-    await expect(browserMeasureGridRepository.getGrid("sheet-bravo")).resolves.toEqual({
+    await expect(
+      browserMeasureGridRepository.getGrid("sheet-bravo")
+    ).resolves.toEqual({
       bpm: 88,
       timeSignature: "3/4",
       pickupBeats: 1,
@@ -271,11 +307,19 @@ describe("measure grid browser repository", () => {
       measureOneOffsetMs: 640
     });
 
-    await expect(browserMeasureGridRepository.clearGrid("sheet-alpha")).resolves.toBeUndefined();
-    await expect(browserMeasureGridRepository.clearGrid("sheet-missing")).resolves.toBeUndefined();
+    await expect(
+      browserMeasureGridRepository.clearGrid("sheet-alpha")
+    ).resolves.toBeUndefined();
+    await expect(
+      browserMeasureGridRepository.clearGrid("sheet-missing")
+    ).resolves.toBeUndefined();
 
-    await expect(browserMeasureGridRepository.getGrid("sheet-alpha")).resolves.toBeNull();
-    await expect(browserMeasureGridRepository.getGrid("sheet-bravo")).resolves.toEqual({
+    await expect(
+      browserMeasureGridRepository.getGrid("sheet-alpha")
+    ).resolves.toBeNull();
+    await expect(
+      browserMeasureGridRepository.getGrid("sheet-bravo")
+    ).resolves.toEqual({
       bpm: 88,
       timeSignature: "3/4",
       pickupBeats: 1,
@@ -294,8 +338,12 @@ describe("measure grid browser repository", () => {
 
     resetMeasureGridDatabaseConnectionForTests();
 
-    await expect(browserMeasureGridRepository.getGrid("sheet-alpha")).resolves.toEqual(savedGrid);
-    await expect(browserMeasureGridRepository.getGrid("sheet-bravo")).resolves.toEqual({
+    await expect(
+      browserMeasureGridRepository.getGrid("sheet-alpha")
+    ).resolves.toEqual(savedGrid);
+    await expect(
+      browserMeasureGridRepository.getGrid("sheet-bravo")
+    ).resolves.toEqual({
       bpm: 88,
       timeSignature: "3/4",
       pickupBeats: 1,
@@ -304,9 +352,15 @@ describe("measure grid browser repository", () => {
   });
 
   it("rejects invalid sheet ids for get, save, and clear", async () => {
-    await expect(browserMeasureGridRepository.getGrid("   ")).rejects.toThrow("sheetId is required");
-    await expect(browserMeasureGridRepository.saveGrid("   ", savedGrid)).rejects.toThrow("sheetId is required");
-    await expect(browserMeasureGridRepository.clearGrid("   ")).rejects.toThrow("sheetId is required");
+    await expect(browserMeasureGridRepository.getGrid("   ")).rejects.toThrow(
+      "sheetId is required"
+    );
+    await expect(
+      browserMeasureGridRepository.saveGrid("   ", savedGrid)
+    ).rejects.toThrow("sheetId is required");
+    await expect(browserMeasureGridRepository.clearGrid("   ")).rejects.toThrow(
+      "sheetId is required"
+    );
   });
 
   it("validates before write and preserves the prior valid row when validation fails", async () => {
@@ -319,7 +373,9 @@ describe("measure grid browser repository", () => {
       })
     ).rejects.toThrow();
 
-    await expect(browserMeasureGridRepository.getGrid("sheet-alpha")).resolves.toEqual(savedGrid);
+    await expect(
+      browserMeasureGridRepository.getGrid("sheet-alpha")
+    ).resolves.toEqual(savedGrid);
   });
 
   it("returns safe absence for a true non-object persisted row", async () => {
@@ -331,7 +387,10 @@ describe("measure grid browser repository", () => {
     const originalGet = IDBObjectStore.prototype.get;
     const getSpy = vi
       .spyOn(IDBObjectStore.prototype, "get")
-      .mockImplementation(function (this: IDBObjectStore, query: IDBValidKey | IDBKeyRange) {
+      .mockImplementation(function (
+        this: IDBObjectStore,
+        query: IDBValidKey | IDBKeyRange
+      ) {
         const request = originalGet.call(this, query);
 
         if (query === "sheet-non-object") {
@@ -351,7 +410,9 @@ describe("measure grid browser repository", () => {
       });
 
     try {
-      await expect(browserMeasureGridRepository.getGrid("sheet-non-object")).resolves.toBeNull();
+      await expect(
+        browserMeasureGridRepository.getGrid("sheet-non-object")
+      ).resolves.toBeNull();
     } finally {
       getSpy.mockRestore();
     }
@@ -394,9 +455,14 @@ describe("measure grid browser repository", () => {
         updatedAt: TEST_ISO_DATE
       }
     }
-  ])("returns safe absence for malformed persisted row $sheetId", async ({ sheetId, value }) => {
-    await seedMeasureGridRecordForTests(sheetId, value);
+  ])(
+    "returns safe absence for malformed persisted row $sheetId",
+    async ({ sheetId, value }) => {
+      await seedMeasureGridRecordForTests(sheetId, value);
 
-    await expect(browserMeasureGridRepository.getGrid(sheetId)).resolves.toBeNull();
-  });
+      await expect(
+        browserMeasureGridRepository.getGrid(sheetId)
+      ).resolves.toBeNull();
+    }
+  );
 });

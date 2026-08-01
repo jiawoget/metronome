@@ -59,10 +59,7 @@ describe("waveform comparison source boundary", () => {
 
     await saveArtifactForRecording(recording);
 
-    const result = await loadWaveformComparisonSources([
-      recording,
-      recording
-    ]);
+    const result = await loadWaveformComparisonSources([recording, recording]);
 
     expect(result).toMatchObject({
       allReady: true,
@@ -155,20 +152,23 @@ describe("waveform comparison source boundary", () => {
     { trustedPeaks: [0, 0], label: "all-zero" },
     { trustedPeaks: [Number.NaN, 0.5], label: "NaN" },
     { trustedPeaks: [Number.POSITIVE_INFINITY, 0.5], label: "infinite" }
-  ])("returns invalid-peaks for $label trusted peak data", async ({ trustedPeaks }) => {
-    installAudioContextMock({
-      durationSeconds: 12,
-      samples: new Float32Array([0, 0.25, 0.5])
-    });
-    const recording = createSheetRecording({ trustedPeaks });
+  ])(
+    "returns invalid-peaks for $label trusted peak data",
+    async ({ trustedPeaks }) => {
+      installAudioContextMock({
+        durationSeconds: 12,
+        samples: new Float32Array([0, 0.25, 0.5])
+      });
+      const recording = createSheetRecording({ trustedPeaks });
 
-    await saveArtifactForRecording(recording);
+      await saveArtifactForRecording(recording);
 
-    await expectUnavailableReason(
-      loadWaveformComparisonSource(recording),
-      "invalid-peaks"
-    );
-  });
+      await expectUnavailableReason(
+        loadWaveformComparisonSource(recording),
+        "invalid-peaks"
+      );
+    }
+  );
 
   it("falls back to decoded audio when trusted peaks are empty", async () => {
     installAudioContextMock({
@@ -263,7 +263,9 @@ describe("waveform comparison source boundary", () => {
       "invalid-duration"
     );
     await expectUnavailableReason(
-      loadWaveformComparisonSource(createSheetRecording({ durationMs: Number.NaN })),
+      loadWaveformComparisonSource(
+        createSheetRecording({ durationMs: Number.NaN })
+      ),
       "invalid-duration"
     );
   });
@@ -340,7 +342,9 @@ describe("waveform comparison source boundary", () => {
       readyCount: 0,
       requestedCount: 4
     });
-    expect(result.sources.map((source) => [source.recordingId, source.status])).toEqual([
+    expect(
+      result.sources.map((source) => [source.recordingId, source.status])
+    ).toEqual([
       ["sheet-ready", "unavailable"],
       ["sheet-missing-artifact", "unavailable"],
       ["quick-take", "unavailable"],
@@ -377,7 +381,9 @@ describe("waveform comparison source boundary", () => {
       readyCount: 2,
       requestedCount: 4
     });
-    expect(result.sources.map((source) => [source.recordingId, source.status])).toEqual([
+    expect(
+      result.sources.map((source) => [source.recordingId, source.status])
+    ).toEqual([
       ["sheet-ready", "ready"],
       ["sheet-ready", "ready"],
       ["unknown-recording", "unavailable"],
@@ -396,7 +402,8 @@ describe("waveform comparison source boundary", () => {
     await saveArtifactsForRecordings(groupedSnapshot.recordings);
     seedRecordingHistoryForTests(groupedSnapshot);
 
-    const [segmentGroup, noSegmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+    const [segmentGroup, noSegmentGroup] =
+      recordingHistoryRepository.getTakeGroups().takeGroups;
 
     expect(segmentGroup.kind).toBe("sheet-segment");
     expect(noSegmentGroup.kind).toBe("sheet-no-segment");
@@ -427,7 +434,11 @@ describe("waveform comparison source boundary", () => {
 
     const noSegmentResult = await loadWaveformComparisonSourcesForGroup({
       group: noSegmentGroup,
-      recordingIds: ["sheet-whole-null", "sheet-whole-null", "sheet-whole-legacy"]
+      recordingIds: [
+        "sheet-whole-null",
+        "sheet-whole-null",
+        "sheet-whole-legacy"
+      ]
     });
 
     expect(noSegmentResult).toMatchObject({
@@ -438,11 +449,9 @@ describe("waveform comparison source boundary", () => {
       readyCount: 3,
       requestedCount: 3
     });
-    expect(noSegmentResult.sources.map((source) => source.recordingId)).toEqual([
-      "sheet-whole-null",
-      "sheet-whole-null",
-      "sheet-whole-legacy"
-    ]);
+    expect(noSegmentResult.sources.map((source) => source.recordingId)).toEqual(
+      ["sheet-whole-null", "sheet-whole-null", "sheet-whole-legacy"]
+    );
   });
 
   it("does not serve stale group recordings after local review history changes", async () => {
@@ -452,7 +461,8 @@ describe("waveform comparison source boundary", () => {
     await saveArtifactsForRecordings(groupedSnapshot.recordings);
     seedRecordingHistoryForTests(groupedSnapshot);
 
-    const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+    const [segmentGroup] =
+      recordingHistoryRepository.getTakeGroups().takeGroups;
 
     recordingHistoryRepository.deleteRecording("sheet-segment-old");
 
@@ -461,7 +471,9 @@ describe("waveform comparison source boundary", () => {
       recordingIds: ["sheet-segment-old", "sheet-segment-new"]
     });
 
-    expect(result.sources.map((source) => [source.recordingId, source.status])).toEqual([
+    expect(
+      result.sources.map((source) => [source.recordingId, source.status])
+    ).toEqual([
       ["sheet-segment-old", "unavailable"],
       ["sheet-segment-new", "ready"]
     ]);
@@ -469,7 +481,9 @@ describe("waveform comparison source boundary", () => {
       reason: "missing-recording",
       recording: null
     });
-    expect(recordingHistoryRepository.getRecording("sheet-segment-old")).toBeNull();
+    expect(
+      recordingHistoryRepository.getRecording("sheet-segment-old")
+    ).toBeNull();
   });
 });
 
@@ -527,7 +541,9 @@ function createGroupedSnapshot(): RecordingReviewSnapshot {
   };
 }
 
-function createSheetRecording(overrides: MakeSheetReviewRecordingOverrides = {}) {
+function createSheetRecording(
+  overrides: MakeSheetReviewRecordingOverrides = {}
+) {
   return makeSheetReviewRecording(overrides, {
     defaults: waveformSheetDefaults
   });

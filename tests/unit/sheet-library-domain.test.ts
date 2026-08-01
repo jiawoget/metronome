@@ -82,13 +82,7 @@ describe("sheet library domain helpers", () => {
     expect(normalizeSheetTag("bad\u2028tag")).toBeNull();
     expect(normalizeSheetTag("bad\u2029tag")).toBeNull();
     expect(
-      normalizeSheetTags([
-        " Warm   Up ",
-        "focus",
-        "Focus",
-        "bad,tag",
-        42
-      ])
+      normalizeSheetTags([" Warm   Up ", "focus", "Focus", "bad,tag", 42])
     ).toEqual(["Warm Up", "focus"]);
   });
 
@@ -122,7 +116,9 @@ describe("sheet library domain helpers", () => {
       })
     ).toEqual({
       ok: false,
-      errors: ["Tags cannot contain commas, line breaks, or control characters."]
+      errors: [
+        "Tags cannot contain commas, line breaks, or control characters."
+      ]
     });
     expect(
       validateSheetOrganizationInput({
@@ -131,7 +127,9 @@ describe("sheet library domain helpers", () => {
       })
     ).toEqual({
       ok: false,
-      errors: ["Tags cannot contain commas, line breaks, or control characters."]
+      errors: [
+        "Tags cannot contain commas, line breaks, or control characters."
+      ]
     });
     expect(
       validateSheetOrganizationInput({
@@ -176,10 +174,16 @@ describe("sheet library domain helpers", () => {
     };
 
     expect(
-      filterSheets([baseSheet, song, scale], { query: "warm up", category: "all" })
+      filterSheets([baseSheet, song, scale], {
+        query: "warm up",
+        category: "all"
+      })
     ).toEqual([baseSheet]);
     expect(
-      filterSheets([baseSheet, song, scale], { query: "song", category: "song" })
+      filterSheets([baseSheet, song, scale], {
+        query: "song",
+        category: "song"
+      })
     ).toEqual([song]);
     expect(
       filterSheets([baseSheet, song, scale], {
@@ -187,9 +191,7 @@ describe("sheet library domain helpers", () => {
         category: "exercise",
         favorite: "all"
       })
-    ).toEqual([
-      baseSheet
-    ]);
+    ).toEqual([baseSheet]);
     expect(
       filterSheets([baseSheet, song, scale], {
         query: "",
@@ -217,9 +219,16 @@ describe("sheet library domain helpers", () => {
   it("builds Sheet Practice route targets and page count labels", () => {
     expect(getSheetPracticeHref("sheet 1")).toBe("/sheet-practice/sheet%201");
     expect(formatPageCount(baseSheet)).toBe("1 page");
-    expect(formatPageCount({ ...baseSheet, pageCount: null })).toBe("Unknown pages");
-    expect(formatPageCount({ ...baseSheet, kind: "image", pageCount: 2, imageCount: 2 })).toBe(
-      "2 images"
+    expect(formatPageCount({ ...baseSheet, pageCount: null })).toBe(
+      "Unknown pages"
     );
+    expect(
+      formatPageCount({
+        ...baseSheet,
+        kind: "image",
+        pageCount: 2,
+        imageCount: 2
+      })
+    ).toBe("2 images");
   });
 });

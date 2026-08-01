@@ -300,11 +300,11 @@ After implementation, report:
 
 ## Deferred Work Register
 
-| Deferred item | Owner |
-|---|---|
-| Home analytics visual rendering, responsive layout, empty/populated/stale-target browser E2E | P3-12 |
-| Practice streak source and UI | P3-13 |
-| Goal repository, defaults, create/edit/delete, persistence, and goal UI | P3-14/P3-15 |
-| Command palette navigation over implemented routes/targets | P3-16 |
-| Session comparison or richer trend analytics | P3-17 or later explicit slice |
-| Weekly/monthly charts, predictions, scoring, mistake detection, cloud analytics | Future reviewed feature, not Pack 3 P3-11 |
+| Deferred item                                                                                | Owner                                     |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Home analytics visual rendering, responsive layout, empty/populated/stale-target browser E2E | P3-12                                     |
+| Practice streak source and UI                                                                | P3-13                                     |
+| Goal repository, defaults, create/edit/delete, persistence, and goal UI                      | P3-14/P3-15                               |
+| Command palette navigation over implemented routes/targets                                   | P3-16                                     |
+| Session comparison or richer trend analytics                                                 | P3-17 or later explicit slice             |
+| Weekly/monthly charts, predictions, scoring, mistake detection, cloud analytics              | Future reviewed feature, not Pack 3 P3-11 |

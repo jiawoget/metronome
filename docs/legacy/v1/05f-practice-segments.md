@@ -1808,4 +1808,3 @@ This feature must not create:
 ## Done Definition
 
 This feature is complete only when the full contract is written, all acceptance criteria pass, segment persistence is verified after reload, and a separate verification pass reports PASS.
-

@@ -140,11 +140,15 @@ function createSegment(): PracticeSegment {
 }
 
 function selectAssistedSegment() {
-  fireEvent.click(screen.getByRole("button", { name: "Select assisted segment" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Select assisted segment" })
+  );
 }
 
 function enableManualSegmentPageTurn() {
-  fireEvent.click(screen.getByRole("checkbox", { name: "Manual segment page turn" }));
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: "Manual segment page turn" })
+  );
 }
 
 describe("SheetViewerExperience manual segment page turn", () => {
@@ -161,7 +165,9 @@ describe("SheetViewerExperience manual segment page turn", () => {
     viewerMocks.revokePageThumbnails.mockReset();
     viewerMocks.createArtifactObjectUrls.mockReset();
     viewerMocks.createArtifactObjectUrls.mockImplementation(
-      (artifact: Extract<SheetViewerLoadState, { status: "ready" }>["artifact"]) => ({
+      (
+        artifact: Extract<SheetViewerLoadState, { status: "ready" }>["artifact"]
+      ) => ({
         sheetId: artifact.sheetId,
         urls: artifact.files.map((file) => `blob:${file.name}`)
       })
@@ -182,24 +188,36 @@ describe("SheetViewerExperience manual segment page turn", () => {
     expect(
       await screen.findByRole("heading", { name: "Sheet viewer unavailable" })
     ).toBeVisible();
-    expect(screen.queryByText("Loading selected sheet...")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Loading selected sheet...")
+    ).not.toBeInTheDocument();
   });
 
   it("is disabled by default and advances one page after a manually armed segment timer", async () => {
     render(<SheetViewerExperience sheetId="sheet-alpha" />);
 
     await screen.findByText("Page 1 of 3");
-    expect(screen.getByRole("checkbox", { name: "Manual segment page turn" })).not.toBeChecked();
-    expect(screen.getByRole("button", { name: "Arm manual page turn" })).toBeDisabled();
+    expect(
+      screen.getByRole("checkbox", { name: "Manual segment page turn" })
+    ).not.toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Arm manual page turn" })
+    ).toBeDisabled();
 
     enableManualSegmentPageTurn();
-    expect(screen.getByText("Select a segment to arm a timed page turn.")).toBeVisible();
+    expect(
+      screen.getByText("Select a segment to arm a timed page turn.")
+    ).toBeVisible();
     selectAssistedSegment();
     expect(screen.getByText("Ready: 1s.")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Arm manual page turn" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Arm manual page turn" })
+    ).toBeEnabled();
 
     vi.useFakeTimers();
-    fireEvent.click(screen.getByRole("button", { name: "Arm manual page turn" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Arm manual page turn" })
+    );
     expect(screen.getByText("Manual page turn armed.")).toBeVisible();
 
     await act(async () => {
@@ -211,7 +229,9 @@ describe("SheetViewerExperience manual segment page turn", () => {
       await vi.advanceTimersByTimeAsync(1);
     });
     expect(screen.getByText("Page 2 of 3")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Arm manual page turn" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Arm manual page turn" })
+    ).toBeVisible();
   });
 
   it("cancels a pending turn on manual page jump", async () => {
@@ -222,13 +242,17 @@ describe("SheetViewerExperience manual segment page turn", () => {
     selectAssistedSegment();
 
     vi.useFakeTimers();
-    fireEvent.click(screen.getByRole("button", { name: "Arm manual page turn" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Arm manual page turn" })
+    );
     fireEvent.change(screen.getByRole("textbox", { name: "Page number" }), {
       target: { value: "3" }
     });
     fireEvent.click(screen.getByRole("button", { name: /^Go$/ }));
     expect(screen.getByText("Page 3 of 3")).toBeVisible();
-    expect(screen.queryByText("Manual page turn armed.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Manual page turn armed.")
+    ).not.toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1_000);
@@ -244,8 +268,12 @@ describe("SheetViewerExperience manual segment page turn", () => {
     selectAssistedSegment();
 
     vi.useFakeTimers();
-    fireEvent.click(screen.getByRole("button", { name: "Arm manual page turn" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Manual segment page turn" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Arm manual page turn" })
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Manual segment page turn" })
+    );
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1_000);
     });
@@ -253,14 +281,20 @@ describe("SheetViewerExperience manual segment page turn", () => {
 
     enableManualSegmentPageTurn();
     selectAssistedSegment();
-    fireEvent.click(screen.getByRole("button", { name: "Arm manual page turn" }));
-    fireEvent.click(screen.getByRole("button", { name: "Clear assisted segment" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Arm manual page turn" })
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Clear assisted segment" })
+    );
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1_000);
     });
 
     expect(screen.getByText("Page 1 of 3")).toBeVisible();
-    expect(screen.getByText("Select a segment to arm a timed page turn.")).toBeVisible();
+    expect(
+      screen.getByText("Select a segment to arm a timed page turn.")
+    ).toBeVisible();
   });
 
   it("does not arm when the selected segment has unusable timing", async () => {
@@ -281,6 +315,8 @@ describe("SheetViewerExperience manual segment page turn", () => {
     expect(
       screen.getByText("Selected segment needs timing before manual turning.")
     ).toBeVisible();
-    expect(screen.getByRole("button", { name: "Arm manual page turn" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Arm manual page turn" })
+    ).toBeDisabled();
   });
 });

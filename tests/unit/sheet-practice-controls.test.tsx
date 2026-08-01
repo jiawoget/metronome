@@ -1,4 +1,12 @@
-import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement } from "react";
@@ -56,29 +64,37 @@ import type {
 
 const practiceSegmentSelectorPanelMock = vi.hoisted(() => ({
   implementation: null as
-    | ((props: PracticeSegmentSelectorPanelProps) => ReactElement)
-    | null
+    ((props: PracticeSegmentSelectorPanelProps) => ReactElement) | null
 }));
 
-vi.mock("@/components/sheet-practice/segments/practice-segment-selector-panel", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/components/sheet-practice/segments/practice-segment-selector-panel")>();
+vi.mock(
+  "@/components/sheet-practice/segments/practice-segment-selector-panel",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("@/components/sheet-practice/segments/practice-segment-selector-panel")
+      >();
 
-  return {
-    ...actual,
-    PracticeSegmentSelectorPanel: (props: PracticeSegmentSelectorPanelProps) => {
-      const MockImplementation = practiceSegmentSelectorPanelMock.implementation;
+    return {
+      ...actual,
+      PracticeSegmentSelectorPanel: (
+        props: PracticeSegmentSelectorPanelProps
+      ) => {
+        const MockImplementation =
+          practiceSegmentSelectorPanelMock.implementation;
 
-      if (MockImplementation) {
-        return <MockImplementation {...props} />;
+        if (MockImplementation) {
+          return <MockImplementation {...props} />;
+        }
+
+        const ActualPracticeSegmentSelectorPanel =
+          actual.PracticeSegmentSelectorPanel;
+
+        return <ActualPracticeSegmentSelectorPanel {...props} />;
       }
-
-      const ActualPracticeSegmentSelectorPanel = actual.PracticeSegmentSelectorPanel;
-
-      return <ActualPracticeSegmentSelectorPanel {...props} />;
-    }
-  };
-});
+    };
+  }
+);
 
 function expectNoCaptureKind(
   captureSessionEvent: { mock: { calls: unknown[][] } },
@@ -105,7 +121,9 @@ function createIdleSessionService() {
       }
     ),
     ensureSheetSession: vi.fn(async () => null),
-    restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session),
+    restorePracticeSessionSnapshot: vi.fn(
+      async (session: PracticeSession) => session
+    ),
     deletePracticeSessionSnapshot: vi.fn(async () => undefined),
     updateSheetSessionDuration: vi.fn(async () => null),
     endPracticeSession: vi.fn(async () => null),
@@ -134,7 +152,9 @@ function createIdleSessionService() {
   >;
 }
 
-function createSheetSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
+function createSheetSession(
+  overrides: Partial<PracticeSession> = {}
+): PracticeSession {
   const session: PracticeSession = {
     id: "session-alpha",
     sourceType: "sheet",
@@ -157,7 +177,9 @@ function createSheetSession(overrides: Partial<PracticeSession> = {}): PracticeS
 function createMeasureGridService(grid: MeasureGrid | null = null) {
   return {
     getGrid: vi.fn(async () => grid),
-    saveGrid: vi.fn(async (_sheetId: string, nextGrid: MeasureGrid) => nextGrid),
+    saveGrid: vi.fn(
+      async (_sheetId: string, nextGrid: MeasureGrid) => nextGrid
+    ),
     clearGrid: vi.fn(async () => undefined)
   } satisfies MeasureGridService;
 }
@@ -182,7 +204,9 @@ function createTestGrid(overrides: Partial<MeasureGrid> = {}): MeasureGrid {
 }
 
 function createTestSegment(
-  overrides: Partial<Omit<PracticeSegment, "grid">> & { grid?: PracticeSegment["grid"] } = {}
+  overrides: Partial<Omit<PracticeSegment, "grid">> & {
+    grid?: PracticeSegment["grid"];
+  } = {}
 ): PracticeSegment {
   const grid = createTestGrid();
 
@@ -252,7 +276,10 @@ function createFakeSheetMetronomePresetService(
     return trimmedSegmentId.length > 0 ? trimmedSegmentId : null;
   };
   const hasDuplicateName = (
-    candidate: Pick<SheetMetronomePreset, "id" | "sheetId" | "segmentId" | "name">
+    candidate: Pick<
+      SheetMetronomePreset,
+      "id" | "sheetId" | "segmentId" | "name"
+    >
   ) =>
     presets.some(
       (preset) =>
@@ -294,7 +321,8 @@ function createFakeSheetMetronomePresetService(
       preset,
       ...presets.filter(
         (currentPreset) =>
-          currentPreset.sheetId !== preset.sheetId || currentPreset.id !== preset.id
+          currentPreset.sheetId !== preset.sheetId ||
+          currentPreset.id !== preset.id
       )
     ];
 
@@ -313,13 +341,17 @@ function createFakeSheetMetronomePresetService(
 
       return [...nextPresets];
     }),
-    getPreset: vi.fn(async (sheetId, presetId) =>
-      presets.find((preset) => preset.sheetId === sheetId && preset.id === presetId) ?? null
+    getPreset: vi.fn(
+      async (sheetId, presetId) =>
+        presets.find(
+          (preset) => preset.sheetId === sheetId && preset.id === presetId
+        ) ?? null
     ),
     savePreset: vi.fn(async (input) => createStoredPreset(input)),
     renamePreset: vi.fn(async (input: RenameSheetMetronomePresetInput) => {
       const existingPreset = presets.find(
-        (preset) => preset.sheetId === input.sheetId && preset.id === input.presetId
+        (preset) =>
+          preset.sheetId === input.sheetId && preset.id === input.presetId
       );
 
       if (!existingPreset) {
@@ -342,7 +374,8 @@ function createFakeSheetMetronomePresetService(
 
       sequence += 1;
       presets = presets.map((preset) =>
-        preset.sheetId === renamedPreset.sheetId && preset.id === renamedPreset.id
+        preset.sheetId === renamedPreset.sheetId &&
+        preset.id === renamedPreset.id
           ? renamedPreset
           : preset
       );
@@ -356,7 +389,9 @@ function createFakeSheetMetronomePresetService(
     }),
     loadPreset: vi.fn(async (sheetId, presetId) => {
       const preset =
-        presets.find((item) => item.sheetId === sheetId && item.id === presetId) ?? null;
+        presets.find(
+          (item) => item.sheetId === sheetId && item.id === presetId
+        ) ?? null;
 
       return preset
         ? { status: "loaded" as const, preset, settings: preset.settings }
@@ -377,16 +412,25 @@ function createPracticeSegmentService(segments: PracticeSegment[] = []) {
   const segmentsBySheet = new Map<string, Map<string, PracticeSegment>>();
 
   for (const segment of segments) {
-    const sheetSegments = segmentsBySheet.get(segment.sheetId) ?? new Map<string, PracticeSegment>();
+    const sheetSegments =
+      segmentsBySheet.get(segment.sheetId) ??
+      new Map<string, PracticeSegment>();
     sheetSegments.set(segment.id, segment);
     segmentsBySheet.set(segment.sheetId, sheetSegments);
   }
 
   return {
-    listSegments: vi.fn(async (sheetId) => Array.from(segmentsBySheet.get(sheetId)?.values() ?? [])),
-    getSegment: vi.fn(async (sheetId, segmentId) => segmentsBySheet.get(sheetId)?.get(segmentId) ?? null),
+    listSegments: vi.fn(async (sheetId) =>
+      Array.from(segmentsBySheet.get(sheetId)?.values() ?? [])
+    ),
+    getSegment: vi.fn(
+      async (sheetId, segmentId) =>
+        segmentsBySheet.get(sheetId)?.get(segmentId) ?? null
+    ),
     saveSegment: vi.fn(async (segment: PracticeSegment) => {
-      const sheetSegments = segmentsBySheet.get(segment.sheetId) ?? new Map<string, PracticeSegment>();
+      const sheetSegments =
+        segmentsBySheet.get(segment.sheetId) ??
+        new Map<string, PracticeSegment>();
       sheetSegments.set(segment.id, segment);
       segmentsBySheet.set(segment.sheetId, sheetSegments);
 
@@ -420,12 +464,18 @@ function createBarCountInHarnessCollector() {
   };
 
   harnessWindow.__sheetPracticeControlsTestHarness = true;
-  window.addEventListener("sheet-practice-controls:bar-count-in-plan", handlePlan);
+  window.addEventListener(
+    "sheet-practice-controls:bar-count-in-plan",
+    handlePlan
+  );
 
   return {
     plans,
     cleanup: () => {
-      window.removeEventListener("sheet-practice-controls:bar-count-in-plan", handlePlan);
+      window.removeEventListener(
+        "sheet-practice-controls:bar-count-in-plan",
+        handlePlan
+      );
       harnessWindow.__sheetPracticeControlsTestHarness = previousHarnessValue;
     }
   };
@@ -479,7 +529,9 @@ function createTimerCountdownExecutor(): CountdownExecutor {
         }, beat.offsetMs - firstBeat.offsetMs);
       });
 
-      timerIds.push(window.setTimeout(options.onComplete, options.plan.totalDurationMs));
+      timerIds.push(
+        window.setTimeout(options.onComplete, options.plan.totalDurationMs)
+      );
 
       return {
         cancel: () => {
@@ -537,11 +589,16 @@ function expectControlUnavailable(control: HTMLElement) {
       control instanceof HTMLSelectElement) &&
     control.disabled;
 
-  expect(isNativeDisabled || control.getAttribute("aria-disabled") === "true").toBe(true);
+  expect(
+    isNativeDisabled || control.getAttribute("aria-disabled") === "true"
+  ).toBe(true);
 }
 
 function expectBarCountInBarsValue(control: HTMLElement, value: "1" | "2") {
-  if (control instanceof HTMLSelectElement || control instanceof HTMLInputElement) {
+  if (
+    control instanceof HTMLSelectElement ||
+    control instanceof HTMLInputElement
+  ) {
     expect(control).toHaveValue(value);
     return;
   }
@@ -584,7 +641,9 @@ async function selectBarCountInBars(
   }
 
   const option =
-    within(control).queryByRole("radio", { name: new RegExp(`^${value}\\b`) }) ??
+    within(control).queryByRole("radio", {
+      name: new RegExp(`^${value}\\b`)
+    }) ??
     within(control).queryByRole("button", { name: new RegExp(`^${value}\\b`) });
 
   if (!option) {
@@ -594,7 +653,9 @@ async function selectBarCountInBars(
   await user.click(option);
 }
 
-function createRejectingPracticeSegmentService(message = "Practice segments could not be loaded.") {
+function createRejectingPracticeSegmentService(
+  message = "Practice segments could not be loaded."
+) {
   return {
     listSegments: vi.fn(async () => {
       throw new Error(message);
@@ -614,7 +675,9 @@ function resetRecordingWorkflowStore() {
   });
 }
 
-function createSavedRecordingMetadata(overrides: Partial<SheetRecordingMetadata> = {}): SheetRecordingMetadata {
+function createSavedRecordingMetadata(
+  overrides: Partial<SheetRecordingMetadata> = {}
+): SheetRecordingMetadata {
   return {
     id: "recording-alpha",
     type: "sheet",
@@ -630,7 +693,9 @@ function createSavedRecordingMetadata(overrides: Partial<SheetRecordingMetadata>
   };
 }
 
-function createReviewRecordingForControls(overrides: Partial<ReviewRecording> = {}): ReviewRecording {
+function createReviewRecordingForControls(
+  overrides: Partial<ReviewRecording> = {}
+): ReviewRecording {
   return {
     id: "recording-alpha",
     type: "sheet",
@@ -659,7 +724,9 @@ function createInspectableSheetRecordingService({
   recordingIds = ["recording-alpha"],
   startCapture
 }: {
-  initialRecordings?: NonNullable<ReturnType<SheetPracticeRecordingService["getLatestSheetRecording"]>>[];
+  initialRecordings?: NonNullable<
+    ReturnType<SheetPracticeRecordingService["getLatestSheetRecording"]>
+  >[];
   latestRecordingId?: string | null;
   recordingIds?: string[];
   startCapture?: () => Promise<void>;
@@ -688,13 +755,18 @@ function createInspectableSheetRecordingService({
   const recordingsById = new Map(
     initialRecordings.map((recording) => [recording.id, recording])
   );
-  let latestRecording: ReturnType<SheetPracticeRecordingService["getLatestSheetRecording"]> =
-    latestRecordingId ? recordingsById.get(latestRecordingId) ?? null : initialRecordings[0] ?? null;
+  let latestRecording: ReturnType<
+    SheetPracticeRecordingService["getLatestSheetRecording"]
+  > = latestRecordingId
+    ? (recordingsById.get(latestRecordingId) ?? null)
+    : (initialRecordings[0] ?? null);
   const service: SheetPracticeRecordingService = {
     get isRecording() {
       return active;
     },
-    getRecording: vi.fn((recordingId) => recordingsById.get(recordingId) ?? null),
+    getRecording: vi.fn(
+      (recordingId) => recordingsById.get(recordingId) ?? null
+    ),
     startCapture: vi.fn(async () => {
       if (startCapture) {
         await startCapture();
@@ -795,7 +867,9 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
     expect(sessionService.captureSessionEvent).toHaveBeenCalledWith({
       sessionId: "session-alpha",
@@ -807,7 +881,10 @@ describe("sheet practice controls segment recording context", () => {
     await waitFor(() => {
       expect(recordingService.service.stopAndSave).toHaveBeenCalledOnce();
     });
-    expect(segmentService.getSegment).toHaveBeenCalledWith("sheet-alpha", "segment-alpha");
+    expect(segmentService.getSegment).toHaveBeenCalledWith(
+      "sheet-alpha",
+      "segment-alpha"
+    );
     expect(recordingService.service.stopAndSave).toHaveBeenCalledWith(
       expect.objectContaining({
         sheetId: "sheet-alpha",
@@ -815,7 +892,9 @@ describe("sheet practice controls segment recording context", () => {
         segmentContext: createSheetRecordingSegmentContext(segment)
       })
     );
-    expect(screen.getByText("Recording saved for Opening phrase.")).toBeVisible();
+    expect(
+      screen.getByText("Recording saved for Opening phrase.")
+    ).toBeVisible();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: "segment-alpha",
@@ -869,24 +948,35 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Record again" })
+      ).toBeEnabled();
     });
-    expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord.source?.recordingId).toBe(
-      "recording-alpha"
-    );
+    expect(
+      useSheetPracticeRecordingWorkflowStore.getState().rerecord.source
+        ?.recordingId
+    ).toBe("recording-alpha");
 
     await user.click(screen.getByRole("button", { name: "Record again" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Recording again for Opening phrase.")).toBeVisible();
+      expect(
+        screen.getByText("Recording again for Opening phrase.")
+      ).toBeVisible();
     });
-    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
-    expect(screen.queryByRole("button", { name: "Record again" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+      "active"
+    );
+    expect(
+      screen.queryByRole("button", { name: "Record again" })
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
 
@@ -965,7 +1055,9 @@ describe("sheet practice controls segment recording context", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+      expect(
+        screen.getByTestId("practice-segment-row-segment-alpha")
+      ).toBeVisible();
     });
     useSheetPracticeRecordingWorkflowStore.setState({
       sheetId: "sheet-alpha",
@@ -985,18 +1077,24 @@ describe("sheet practice controls segment recording context", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Record again" })
+      ).toBeEnabled();
     });
 
     await user.click(screen.getByRole("button", { name: "Record again" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Recording again for Opening phrase.")).toBeVisible();
+      expect(
+        screen.getByText("Recording again for Opening phrase.")
+      ).toBeVisible();
     });
-    expect(recordingService.service.getLatestSheetRecording("sheet-alpha")?.id).toBe(
-      "recording-beta"
+    expect(
+      recordingService.service.getLatestSheetRecording("sheet-alpha")?.id
+    ).toBe("recording-beta");
+    expect(recordingService.service.getRecording).toHaveBeenCalledWith(
+      "recording-alpha"
     );
-    expect(recordingService.service.getRecording).toHaveBeenCalledWith("recording-alpha");
     expect(recordingService.service.startCapture).toHaveBeenCalledOnce();
   });
 
@@ -1063,7 +1161,9 @@ describe("sheet practice controls segment recording context", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+        expect(
+          screen.getByTestId("practice-segment-row-segment-alpha")
+        ).toBeVisible();
       });
       vi.mocked(recordingService.service.getRecording).mockClear();
 
@@ -1088,14 +1188,18 @@ describe("sheet practice controls segment recording context", () => {
 
       if (expectedLookup) {
         await waitFor(() => {
-          expect(recordingService.service.getRecording).toHaveBeenCalledWith(recordingId);
+          expect(recordingService.service.getRecording).toHaveBeenCalledWith(
+            recordingId
+          );
         });
       } else {
         expect(recordingService.service.getRecording).not.toHaveBeenCalled();
       }
 
       await waitFor(() => {
-        expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+        expect(
+          useSheetPracticeRecordingWorkflowStore.getState().rerecord
+        ).toMatchObject({
           status: expectedStatus,
           unavailableReason: expectedReason
         });
@@ -1142,7 +1246,9 @@ describe("sheet practice controls segment recording context", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+        expect(
+          screen.getByTestId("practice-segment-row-segment-alpha")
+        ).toBeVisible();
       });
       await act(async () => {
         useSheetPracticeRecordingWorkflowStore.setState({
@@ -1186,10 +1292,14 @@ describe("sheet practice controls segment recording context", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText("Record again is not available for this segment.")).toBeVisible();
+        expect(
+          screen.getByText("Record again is not available for this segment.")
+        ).toBeVisible();
       });
       expect(recordingService.service.getRecording).not.toHaveBeenCalled();
-      expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+      expect(
+        useSheetPracticeRecordingWorkflowStore.getState().rerecord
+      ).toMatchObject({
         status: "invalid",
         source: null,
         unavailableReason: "selection-changed"
@@ -1217,7 +1327,9 @@ describe("sheet practice controls segment recording context", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+      expect(
+        screen.getByTestId("practice-segment-row-segment-alpha")
+      ).toBeVisible();
     });
     await act(async () => {
       useSheetPracticeRecordingWorkflowStore.setState({
@@ -1245,10 +1357,14 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(recordAgainButton);
 
     await waitFor(() => {
-      expect(screen.getByText("Record again is not available for this segment.")).toBeVisible();
+      expect(
+        screen.getByText("Record again is not available for this segment.")
+      ).toBeVisible();
     });
     expect(recordingService.service.getRecording).toHaveBeenCalledWith("");
-    expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+    expect(
+      useSheetPracticeRecordingWorkflowStore.getState().rerecord
+    ).toMatchObject({
       status: "invalid",
       source: null,
       unavailableReason: "source-recording-missing"
@@ -1286,7 +1402,9 @@ describe("sheet practice controls segment recording context", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Practice Again ready for Opening phrase.")).toBeVisible();
+      expect(
+        screen.getByText("Practice Again ready for Opening phrase.")
+      ).toBeVisible();
     });
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
@@ -1349,7 +1467,8 @@ describe("sheet practice controls segment recording context", () => {
       },
       expectedStatus: "unavailable",
       expectedReason: "no-segment-context",
-      expectedMessage: "Practice Again opened the sheet, but this take is not linked to a segment."
+      expectedMessage:
+        "Practice Again opened the sheet, but this take is not linked to a segment."
     },
     {
       name: "blank source id",
@@ -1382,7 +1501,8 @@ describe("sheet practice controls segment recording context", () => {
       ],
       expectedStatus: "invalid",
       expectedReason: "selection-changed",
-      expectedMessage: "Record Again is only available for the original segment."
+      expectedMessage:
+        "Record Again is only available for the original segment."
     },
     {
       name: "stored segment context mismatch",
@@ -1395,7 +1515,8 @@ describe("sheet practice controls segment recording context", () => {
       },
       expectedStatus: "invalid",
       expectedReason: "source-segment-invalid",
-      expectedMessage: "Practice Again source segment no longer matches this sheet."
+      expectedMessage:
+        "Practice Again source segment no longer matches this sheet."
     }
   ])(
     "keeps Record again unavailable for Practice Again invalid source: $name",
@@ -1414,15 +1535,13 @@ describe("sheet practice controls segment recording context", () => {
       const sourceSegment = createTestSegment();
       const sourceContext = createSheetRecordingSegmentContext(sourceSegment);
       const liveSegment = createTestSegment(liveSegmentOverrides ?? {});
-      const initialRecordings =
-        recordings ??
-        [
-          createReviewRecordingForControls({
-            id: "source-recording",
-            segmentContext: sourceContext,
-            ...recordingOverrides
-          })
-        ];
+      const initialRecordings = recordings ?? [
+        createReviewRecordingForControls({
+          id: "source-recording",
+          segmentContext: sourceContext,
+          ...recordingOverrides
+        })
+      ];
       const recordingService = createInspectableSheetRecordingService({
         initialRecordings
       });
@@ -1451,13 +1570,17 @@ describe("sheet practice controls segment recording context", () => {
       }
 
       await waitFor(() => {
-        expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+        expect(
+          useSheetPracticeRecordingWorkflowStore.getState().rerecord
+        ).toMatchObject({
           status: expectedStatus,
           source: null,
           unavailableReason: expectedReason
         });
       });
-      expect(screen.queryByRole("button", { name: "Record again" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Record again" })
+      ).not.toBeInTheDocument();
     }
   );
 
@@ -1495,14 +1618,22 @@ describe("sheet practice controls segment recording context", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Practice Again source segment no longer matches this sheet.")).toBeVisible();
+      expect(
+        screen.getByText(
+          "Practice Again source segment no longer matches this sheet."
+        )
+      ).toBeVisible();
     });
-    expect(useSheetPracticeRecordingWorkflowStore.getState().rerecord).toMatchObject({
+    expect(
+      useSheetPracticeRecordingWorkflowStore.getState().rerecord
+    ).toMatchObject({
       status: "invalid",
       source: null,
       unavailableReason: "source-segment-invalid"
     });
-    expect(screen.queryByRole("button", { name: "Record again" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Record again" })
+    ).not.toBeInTheDocument();
   });
 
   it("prevents rapid double-start for Record again", async () => {
@@ -1548,24 +1679,34 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Record again" })
+      ).toBeEnabled();
     });
 
-    const recordAgainButton = screen.getByRole("button", { name: "Record again" });
+    const recordAgainButton = screen.getByRole("button", {
+      name: "Record again"
+    });
     void user.click(recordAgainButton);
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Record again" })).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Record again" })
+      ).toBeDisabled();
     });
     await user.click(recordAgainButton);
 
     expect(recordingService.service.startCapture).toHaveBeenCalledTimes(2);
     releaseRepeatStart();
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
   });
 
@@ -1594,11 +1735,15 @@ describe("sheet practice controls segment recording context", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("0 saved");
+      expect(
+        screen.getByTestId("practice-segment-selector-status")
+      ).toHaveTextContent("0 saved");
     });
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
 
@@ -1612,7 +1757,9 @@ describe("sheet practice controls segment recording context", () => {
       })
     );
     expect(screen.getByText("Recording saved.")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Record again" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Record again" })
+    ).not.toBeInTheDocument();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: null,
@@ -1648,7 +1795,9 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(screen.getByRole("button", { name: "Start recording" }));
 
     await waitFor(() => {
-      expect(screen.getByText("No valid sheet context. Recording was stopped.")).toBeVisible();
+      expect(
+        screen.getByText("No valid sheet context. Recording was stopped.")
+      ).toBeVisible();
     });
     expect(recordingService.service.startCapture).toHaveBeenCalledOnce();
     expect(recordingService.service.discardCapture).toHaveBeenCalled();
@@ -1676,7 +1825,10 @@ describe("sheet practice controls segment recording context", () => {
       ensureSheetSession: vi.fn(async () => session),
       getRecentSheetSession: vi.fn(async () => session)
     };
-    const segmentService = createPracticeSegmentService([openingSegment, bridgeSegment]);
+    const segmentService = createPracticeSegmentService([
+      openingSegment,
+      bridgeSegment
+    ]);
     const recordingService = createInspectableSheetRecordingService();
 
     render(
@@ -1699,17 +1851,25 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Record again" })
+      ).toBeEnabled();
     });
 
     await user.click(screen.getByTestId("practice-segment-row-segment-beta"));
 
-    expect(screen.queryByRole("button", { name: "Record again" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
+    expect(
+      screen.queryByRole("button", { name: "Record again" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Start recording" })
+    ).toBeEnabled();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       activeSegmentId: "segment-beta",
       rerecord: {
@@ -1752,18 +1912,24 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Record again" })
+      ).toBeEnabled();
     });
 
     vi.mocked(segmentService.getSegment).mockResolvedValueOnce(null);
     await user.click(screen.getByRole("button", { name: "Record again" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Record again is not available for this segment.")).toBeVisible();
+      expect(
+        screen.getByText("Record again is not available for this segment.")
+      ).toBeVisible();
     });
     expect(recordingService.service.startCapture).toHaveBeenCalledTimes(1);
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
@@ -1809,11 +1975,15 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Record again" })
+      ).toBeEnabled();
     });
 
     sessionService.captureSessionEvent.mockClear();
@@ -1830,7 +2000,9 @@ describe("sheet practice controls segment recording context", () => {
       sessionService.captureSessionEvent,
       "recording_started"
     );
-    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+      "stopped"
+    );
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       activeSegmentId: "segment-alpha",
       status: "error",
@@ -1876,11 +2048,15 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Record again" })
+      ).toBeEnabled();
     });
 
     vi.mocked(recordingService.service.stopAndSave).mockRejectedValueOnce(
@@ -1888,7 +2064,9 @@ describe("sheet practice controls segment recording context", () => {
     );
     await user.click(screen.getByRole("button", { name: "Record again" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
 
@@ -1962,7 +2140,9 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
 
@@ -2048,15 +2228,23 @@ describe("sheet practice controls segment recording context", () => {
     await waitFor(() => {
       expect(screen.getByText("Invalid timing")).toBeVisible();
     });
-    await user.click(screen.getByTestId("practice-segment-row-segment-invalid"));
+    await user.click(
+      screen.getByTestId("practice-segment-row-segment-invalid")
+    );
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Selected segment timing is invalid. Recording was not saved.")).toBeVisible();
+      expect(
+        screen.getByText(
+          "Selected segment timing is invalid. Recording was not saved."
+        )
+      ).toBeVisible();
     });
     expect(recordingService.service.stopAndSave).not.toHaveBeenCalled();
     expect(recordingService.service.discardCapture).toHaveBeenCalledOnce();
@@ -2065,9 +2253,15 @@ describe("sheet practice controls segment recording context", () => {
       "recording_stopped"
     );
     expect(recordingService.isActive()).toBe(false);
-    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
-    expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Stop recording" })).toBeDisabled();
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+      "stopped"
+    );
+    expect(
+      screen.getByRole("button", { name: "Start recording" })
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Stop recording" })
+    ).toBeDisabled();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: "segment-invalid",
@@ -2135,9 +2329,16 @@ describe("sheet practice controls segment recording context", () => {
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Selected segment no longer exists. Recording was not saved.")).toBeVisible();
+      expect(
+        screen.getByText(
+          "Selected segment no longer exists. Recording was not saved."
+        )
+      ).toBeVisible();
     });
-    expect(segmentService.getSegment).toHaveBeenCalledWith("sheet-alpha", "segment-alpha");
+    expect(segmentService.getSegment).toHaveBeenCalledWith(
+      "sheet-alpha",
+      "segment-alpha"
+    );
     expect(recordingService.service.stopAndSave).not.toHaveBeenCalled();
     expect(recordingService.service.discardCapture).toHaveBeenCalledOnce();
     expectNoCaptureKind(
@@ -2145,9 +2346,15 @@ describe("sheet practice controls segment recording context", () => {
       "recording_stopped"
     );
     expect(recordingService.isActive()).toBe(false);
-    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
-    expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Stop recording" })).toBeDisabled();
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+      "stopped"
+    );
+    expect(
+      screen.getByRole("button", { name: "Start recording" })
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Stop recording" })
+    ).toBeDisabled();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: null,
@@ -2216,13 +2423,22 @@ describe("sheet practice controls segment recording context", () => {
       });
     });
 
-    vi.mocked(segmentService.getSegment).mockRejectedValueOnce(new Error("IndexedDB unavailable"));
+    vi.mocked(segmentService.getSegment).mockRejectedValueOnce(
+      new Error("IndexedDB unavailable")
+    );
     await user.click(screen.getByRole("button", { name: "Stop recording" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Selected segment could not be loaded. Recording was not saved.")).toBeVisible();
+      expect(
+        screen.getByText(
+          "Selected segment could not be loaded. Recording was not saved."
+        )
+      ).toBeVisible();
     });
-    expect(segmentService.getSegment).toHaveBeenCalledWith("sheet-alpha", "segment-alpha");
+    expect(segmentService.getSegment).toHaveBeenCalledWith(
+      "sheet-alpha",
+      "segment-alpha"
+    );
     expect(recordingService.service.stopAndSave).not.toHaveBeenCalled();
     expect(recordingService.service.discardCapture).toHaveBeenCalledOnce();
     expectNoCaptureKind(
@@ -2230,9 +2446,15 @@ describe("sheet practice controls segment recording context", () => {
       "recording_stopped"
     );
     expect(recordingService.isActive()).toBe(false);
-    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("stopped");
-    expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Stop recording" })).toBeDisabled();
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+      "stopped"
+    );
+    expect(
+      screen.getByRole("button", { name: "Start recording" })
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Stop recording" })
+    ).toBeDisabled();
     expect(useSheetPracticeRecordingWorkflowStore.getState()).toMatchObject({
       sheetId: "sheet-alpha",
       activeSegmentId: "segment-alpha",
@@ -2285,9 +2507,13 @@ describe("sheet practice controls state", () => {
 
     async function selectSegment(segmentId: string) {
       await waitFor(() => {
-        expect(screen.getByTestId(`practice-segment-row-${segmentId}`)).toBeVisible();
+        expect(
+          screen.getByTestId(`practice-segment-row-${segmentId}`)
+        ).toBeVisible();
       });
-      await userEvent.click(screen.getByTestId(`practice-segment-row-${segmentId}`));
+      await userEvent.click(
+        screen.getByTestId(`practice-segment-row-${segmentId}`)
+      );
     }
 
     function expectApplyTargetBpmUnavailable() {
@@ -2318,16 +2544,22 @@ describe("sheet practice controls state", () => {
       });
 
       await selectSegment("segment-target");
-      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      ).toBeEnabled();
 
-      await user.click(screen.getByRole("button", { name: /Apply target BPM/i }));
+      await user.click(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      );
 
       await waitFor(() => {
         expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(96);
       });
       expect(screen.getByText(/Tick interval 625 ms/i)).toBeVisible();
       expect(screen.getByText(/Target already applied/i)).toBeVisible();
-      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      ).toBeDisabled();
       expect(sessionService.ensureSheetSession).not.toHaveBeenCalled();
       expect(sessionService.captureSessionEvent).not.toHaveBeenCalled();
     });
@@ -2353,7 +2585,9 @@ describe("sheet practice controls state", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+        expect(
+          screen.getByText(/Select a segment to use target BPM/i)
+        ).toBeVisible();
       });
       expectApplyTargetBpmUnavailable();
 
@@ -2378,14 +2612,20 @@ describe("sheet practice controls state", () => {
 
       renderControls({
         defaultBpm: 120,
-        practiceSegmentService: createPracticeSegmentService([highTargetSegment])
+        practiceSegmentService: createPracticeSegmentService([
+          highTargetSegment
+        ])
       });
 
       await selectSegment("segment-300");
-      await user.click(screen.getByRole("button", { name: /Apply target BPM/i }));
+      await user.click(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      );
 
       await waitFor(() => {
-        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(240);
+        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(
+          240
+        );
       });
       expect(screen.getByText(/Target already applied/i)).toBeVisible();
       expect(screen.getByText(/Tick interval 250 ms/i)).toBeVisible();
@@ -2400,7 +2640,9 @@ describe("sheet practice controls state", () => {
 
       renderControls({
         defaultBpm: 240,
-        practiceSegmentService: createPracticeSegmentService([highTargetSegment])
+        practiceSegmentService: createPracticeSegmentService([
+          highTargetSegment
+        ])
       });
 
       await selectSegment("segment-300");
@@ -2430,15 +2672,23 @@ describe("sheet practice controls state", () => {
 
       await selectSegment("segment-opening");
       expect(screen.getAllByText(/Target 96 BPM/i)[0]).toBeVisible();
-      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      ).toBeEnabled();
 
       await selectSegment("segment-bridge");
       expect(screen.getAllByText(/Target 108 BPM/i)[0]).toBeVisible();
-      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      ).toBeEnabled();
 
-      await user.click(screen.getByRole("button", { name: /Apply target BPM/i }));
+      await user.click(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      );
       await waitFor(() => {
-        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(108);
+        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(
+          108
+        );
       });
     });
 
@@ -2456,15 +2706,25 @@ describe("sheet practice controls state", () => {
       });
 
       await selectSegment("segment-delete");
-      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      ).toBeEnabled();
 
-      await user.click(screen.getByRole("button", { name: "Delete Delete me" }));
-      await user.click(screen.getByRole("button", { name: "Confirm delete Delete me" }));
+      await user.click(
+        screen.getByRole("button", { name: "Delete Delete me" })
+      );
+      await user.click(
+        screen.getByRole("button", { name: "Confirm delete Delete me" })
+      );
 
       await waitFor(() => {
-        expect(screen.getByTestId("practice-segment-empty-state")).toBeVisible();
+        expect(
+          screen.getByTestId("practice-segment-empty-state")
+        ).toBeVisible();
       });
-      expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+      expect(
+        screen.getByText(/Select a segment to use target BPM/i)
+      ).toBeVisible();
       expectApplyTargetBpmUnavailable();
       expect(screen.queryByText(/Target 96 BPM/i)).not.toBeInTheDocument();
     });
@@ -2485,7 +2745,9 @@ describe("sheet practice controls state", () => {
       await selectSegment("segment-edit");
       expect(screen.getAllByText(/Target 96 BPM/i)[0]).toBeVisible();
 
-      await user.click(screen.getByRole("button", { name: "Edit Editable target" }));
+      await user.click(
+        screen.getByRole("button", { name: "Edit Editable target" })
+      );
       await user.clear(screen.getByLabelText("Target BPM"));
       await user.type(screen.getByLabelText("Target BPM"), "108");
       await user.click(screen.getByRole("button", { name: "Save segment" }));
@@ -2493,11 +2755,17 @@ describe("sheet practice controls state", () => {
       await waitFor(() => {
         expect(screen.getAllByText(/Target 108 BPM/i)[0]).toBeVisible();
       });
-      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      ).toBeEnabled();
 
-      await user.click(screen.getByRole("button", { name: /Apply target BPM/i }));
+      await user.click(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      );
       await waitFor(() => {
-        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(108);
+        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(
+          108
+        );
       });
     });
 
@@ -2516,11 +2784,13 @@ describe("sheet practice controls state", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId("practice-segment-return-status")).toHaveTextContent(
-          "Saved segment is no longer available"
-        );
+        expect(
+          screen.getByTestId("practice-segment-return-status")
+        ).toHaveTextContent("Saved segment is no longer available");
       });
-      expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+      expect(
+        screen.getByText(/Select a segment to use target BPM/i)
+      ).toBeVisible();
       expectApplyTargetBpmUnavailable();
       expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(72);
     });
@@ -2570,16 +2840,26 @@ describe("sheet practice controls state", () => {
 
       renderControls({
         defaultBpm: 72,
-        practiceSegmentService: createPracticeSegmentService([currentSheetSegment])
+        practiceSegmentService: createPracticeSegmentService([
+          currentSheetSegment
+        ])
       });
 
-      await user.click(screen.getByRole("button", { name: "Emit current selection" }));
+      await user.click(
+        screen.getByRole("button", { name: "Emit current selection" })
+      );
       expect(screen.getByText(/Target 96 BPM/i)).toBeVisible();
-      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      ).toBeEnabled();
 
-      await user.click(screen.getByRole("button", { name: "Emit stale sheet selection" }));
+      await user.click(
+        screen.getByRole("button", { name: "Emit stale sheet selection" })
+      );
 
-      expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+      expect(
+        screen.getByText(/Select a segment to use target BPM/i)
+      ).toBeVisible();
       expectApplyTargetBpmUnavailable();
       expect(screen.queryByText(/Target 108 BPM/i)).not.toBeInTheDocument();
       expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(72);
@@ -2614,7 +2894,9 @@ describe("sheet practice controls state", () => {
         targetBpm: 108
       });
 
-      practiceSegmentSelectorPanelMock.implementation = ({ onSelectedSegmentChange: notify }) => (
+      practiceSegmentSelectorPanelMock.implementation = ({
+        onSelectedSegmentChange: notify
+      }) => (
         <section data-testid="mock-practice-segment-selector">
           <button
             type="button"
@@ -2632,7 +2914,9 @@ describe("sheet practice controls state", () => {
 
       renderControls({ onSelectedSegmentChange });
 
-      await user.click(screen.getByRole("button", { name: "Emit stale sheet selection" }));
+      await user.click(
+        screen.getByRole("button", { name: "Emit stale sheet selection" })
+      );
 
       expect(onSelectedSegmentChange).toHaveBeenLastCalledWith(null);
     });
@@ -2649,7 +2933,9 @@ describe("sheet practice controls state", () => {
       });
 
       await selectSegment("segment-clear");
-      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      ).toBeEnabled();
 
       rerender(
         <SheetPracticeControls
@@ -2659,15 +2945,23 @@ describe("sheet practice controls state", () => {
           defaultTimeSignature="4/4"
           sessionService={createIdleSessionService()}
           measureGridService={createMeasureGridService(createTestGrid())}
-          practiceSegmentService={createRejectingPracticeSegmentService("Segments unavailable")}
+          practiceSegmentService={createRejectingPracticeSegmentService(
+            "Segments unavailable"
+          )}
         />
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("Unavailable");
+        expect(
+          screen.getByTestId("practice-segment-selector-status")
+        ).toHaveTextContent("Unavailable");
       });
-      expect(screen.getByRole("alert")).toHaveTextContent("Segments unavailable");
-      expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Segments unavailable"
+      );
+      expect(
+        screen.getByText(/Select a segment to use target BPM/i)
+      ).toBeVisible();
       expectApplyTargetBpmUnavailable();
 
       rerender(
@@ -2683,10 +2977,16 @@ describe("sheet practice controls state", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("practice-segment-empty-state")).toBeVisible();
+        expect(
+          screen.getByTestId("practice-segment-empty-state")
+        ).toBeVisible();
       });
-      expect(screen.getByTestId("practice-segment-selector-panel")).toBeVisible();
-      expect(screen.getByText(/Select a segment to use target BPM/i)).toBeVisible();
+      expect(
+        screen.getByTestId("practice-segment-selector-panel")
+      ).toBeVisible();
+      expect(
+        screen.getByText(/Select a segment to use target BPM/i)
+      ).toBeVisible();
       expectApplyTargetBpmUnavailable();
     });
 
@@ -2713,12 +3013,18 @@ describe("sheet practice controls state", () => {
       fireEvent.change(bpmInput, { target: { value: "240" } });
 
       expect(bpmInput).toHaveValue(240);
-      expect(screen.getByRole("button", { name: /Apply target BPM/i })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      ).toBeEnabled();
 
-      fireEvent.click(screen.getByRole("button", { name: /Apply target BPM/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /Apply target BPM/i })
+      );
 
       await waitFor(() => {
-        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(240);
+        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(
+          240
+        );
       });
       expect(screen.getByText(/Target already applied/i)).toBeVisible();
       expect(screen.getByText(/Tick interval 250 ms/i)).toBeVisible();
@@ -2781,7 +3087,9 @@ describe("sheet practice controls state", () => {
 
     async function waitForPresetManager() {
       await waitFor(() => {
-        expect(screen.getByRole("heading", { name: "Metronome presets" })).toBeVisible();
+        expect(
+          screen.getByRole("heading", { name: "Metronome presets" })
+        ).toBeVisible();
       });
     }
 
@@ -2795,7 +3103,9 @@ describe("sheet practice controls state", () => {
       await user.click(screen.getByRole("button", { name: "Save preset" }));
 
       await waitFor(() => {
-        expect(screen.getAllByText("Preset name is required.")[0]).toBeVisible();
+        expect(
+          screen.getAllByText("Preset name is required.")[0]
+        ).toBeVisible();
       });
       expect(presetService.service.savePreset).not.toHaveBeenCalled();
     });
@@ -2860,7 +3170,9 @@ describe("sheet practice controls state", () => {
       await waitFor(() => {
         expect(screen.getByText("Warmup")).toBeVisible();
       });
-      expect(presetService.service.listPresets).toHaveBeenCalledWith("sheet-alpha");
+      expect(presetService.service.listPresets).toHaveBeenCalledWith(
+        "sheet-alpha"
+      );
     });
 
     it("saves a selected-segment preset with bar count-in state and scope label", async () => {
@@ -2874,9 +3186,13 @@ describe("sheet practice controls state", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+        expect(
+          screen.getByTestId("practice-segment-row-segment-alpha")
+        ).toBeVisible();
       });
-      await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
+      await user.click(
+        screen.getByTestId("practice-segment-row-segment-alpha")
+      );
       await enableBarCountIn(user);
       await selectBarCountInBars(user, "2");
       await user.type(screen.getByLabelText("Preset name"), "Segment focus");
@@ -2900,7 +3216,9 @@ describe("sheet practice controls state", () => {
       await waitFor(() => {
         expect(screen.getByText("Selected segment presets")).toBeVisible();
       });
-      expect(screen.getAllByText("Selected segment: Opening phrase")[0]).toBeVisible();
+      expect(
+        screen.getAllByText("Selected segment: Opening phrase")[0]
+      ).toBeVisible();
     });
 
     it("loads a preset into metronome and bar-count-in controls without side effects", async () => {
@@ -2943,31 +3261,46 @@ describe("sheet practice controls state", () => {
       await waitFor(() => {
         expect(screen.getByText("Warmup")).toBeVisible();
       });
-      const gridReadCallsBeforeLoad = measureGridService.getGrid.mock.calls.length;
+      const gridReadCallsBeforeLoad =
+        measureGridService.getGrid.mock.calls.length;
 
-      await user.click(screen.getByRole("button", { name: "Load preset Warmup" }));
+      await user.click(
+        screen.getByRole("button", { name: "Load preset Warmup" })
+      );
 
       await waitFor(() => {
-        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(144);
+        expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(
+          144
+        );
       });
       expect(screen.getByLabelText("Time signature")).toHaveValue("6/8");
       expect(screen.getByLabelText("Subdivision")).toHaveValue("sixteenth");
       expect(screen.getByLabelText("Countdown")).toHaveValue("8");
-      expect(screen.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Off" })).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
       expectBarCountInToggle(getBarCountInToggle(), true);
       expectBarCountInBarsValue(getBarCountInBarsControl(), "2");
       expect(metronomeService.service.start).not.toHaveBeenCalled();
       expect(metronomeService.service.stop).not.toHaveBeenCalled();
       expect(sessionService.ensureSheetSession).not.toHaveBeenCalled();
-      expectNoCaptureKind(sessionService.captureSessionEvent, "metronome_started");
+      expectNoCaptureKind(
+        sessionService.captureSessionEvent,
+        "metronome_started"
+      );
       expect(recordingService.service.startCapture).not.toHaveBeenCalled();
       expect(recordingService.service.stopAndSave).not.toHaveBeenCalled();
-      expect(measureGridService.getGrid).toHaveBeenCalledTimes(gridReadCallsBeforeLoad);
+      expect(measureGridService.getGrid).toHaveBeenCalledTimes(
+        gridReadCallsBeforeLoad
+      );
     });
 
     it("surfaces save and load failures without changing the current controls", async () => {
       const user = userEvent.setup();
-      const presetService = createFakeSheetMetronomePresetService([createTestPreset()]);
+      const presetService = createFakeSheetMetronomePresetService([
+        createTestPreset()
+      ]);
 
       vi.mocked(presetService.service.savePreset).mockRejectedValueOnce(
         new Error("Save failed.")
@@ -2993,7 +3326,9 @@ describe("sheet practice controls state", () => {
       expect(presetNameInput).toHaveValue("Broken snapshot");
       expect(screen.queryByText("Broken snapshot")).not.toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: "Load preset Warmup" }));
+      await user.click(
+        screen.getByRole("button", { name: "Load preset Warmup" })
+      );
 
       await waitFor(() => {
         expect(screen.getAllByText("Load failed.")[0]).toBeVisible();
@@ -3003,7 +3338,9 @@ describe("sheet practice controls state", () => {
 
     it("disables preset load while the metronome is playing", async () => {
       const user = userEvent.setup();
-      const presetService = createFakeSheetMetronomePresetService([createTestPreset()]);
+      const presetService = createFakeSheetMetronomePresetService([
+        createTestPreset()
+      ]);
       const sessionService = {
         ...createIdleSessionService(),
         ensureSheetSession: vi.fn(async () => createSheetSession())
@@ -3021,10 +3358,14 @@ describe("sheet practice controls state", () => {
 
       await user.click(screen.getByRole("button", { name: "Start metronome" }));
       await waitFor(() => {
-        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+          "Playing"
+        );
       });
 
-      const loadButton = screen.getByRole("button", { name: "Load preset Warmup" });
+      const loadButton = screen.getByRole("button", {
+        name: "Load preset Warmup"
+      });
 
       expect(loadButton).toBeDisabled();
       expect(presetService.service.loadPreset).not.toHaveBeenCalled();
@@ -3038,14 +3379,20 @@ describe("sheet practice controls state", () => {
         }
       });
       const staleLoad =
-        createDeferred<Awaited<ReturnType<SheetMetronomePresetService["loadPreset"]>>>();
-      const presetService = createFakeSheetMetronomePresetService([loadedPreset]);
+        createDeferred<
+          Awaited<ReturnType<SheetMetronomePresetService["loadPreset"]>>
+        >();
+      const presetService = createFakeSheetMetronomePresetService([
+        loadedPreset
+      ]);
       const sessionService = {
         ...createIdleSessionService(),
         ensureSheetSession: vi.fn(async () => createSheetSession())
       };
 
-      vi.mocked(presetService.service.loadPreset).mockReturnValueOnce(staleLoad.promise);
+      vi.mocked(presetService.service.loadPreset).mockReturnValueOnce(
+        staleLoad.promise
+      );
 
       renderPresetControls({ presetService, sessionService, defaultBpm: 72 });
 
@@ -3053,17 +3400,23 @@ describe("sheet practice controls state", () => {
         expect(screen.getByText("Warmup")).toBeVisible();
       });
 
-      await user.click(screen.getByRole("button", { name: "Load preset Warmup" }));
+      await user.click(
+        screen.getByRole("button", { name: "Load preset Warmup" })
+      );
       await user.selectOptions(screen.getByLabelText("Countdown"), "4");
       await user.click(screen.getByRole("button", { name: "Start metronome" }));
 
       await waitFor(() => {
-        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Counting");
+        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+          "Counting"
+        );
       });
 
       await user.click(screen.getByRole("button", { name: "Stop metronome" }));
       await waitFor(() => {
-        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+          "Stopped"
+        );
       });
 
       await act(async () => {
@@ -3076,7 +3429,9 @@ describe("sheet practice controls state", () => {
       });
 
       expect(screen.getByRole("spinbutton", { name: "BPM" })).toHaveValue(72);
-      expect(screen.queryByText("Loaded preset Warmup.")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Loaded preset Warmup.")
+      ).not.toBeInTheDocument();
     });
 
     it("renames and deletes presets only after explicit actions", async () => {
@@ -3090,7 +3445,9 @@ describe("sheet practice controls state", () => {
         expect(screen.getByText("Warmup")).toBeVisible();
       });
 
-      await user.click(screen.getByRole("button", { name: "Rename preset Warmup" }));
+      await user.click(
+        screen.getByRole("button", { name: "Rename preset Warmup" })
+      );
       const renameInput = screen.getByLabelText("Rename preset Warmup name");
 
       await user.clear(renameInput);
@@ -3106,10 +3463,14 @@ describe("sheet practice controls state", () => {
         name: "Renamed warmup"
       });
 
-      await user.click(screen.getByRole("button", { name: "Delete preset Renamed warmup" }));
+      await user.click(
+        screen.getByRole("button", { name: "Delete preset Renamed warmup" })
+      );
       expect(presetService.service.deletePreset).not.toHaveBeenCalled();
       await user.click(
-        screen.getByRole("button", { name: "Confirm delete preset Renamed warmup" })
+        screen.getByRole("button", {
+          name: "Confirm delete preset Renamed warmup"
+        })
       );
 
       await waitFor(() => {
@@ -3123,7 +3484,9 @@ describe("sheet practice controls state", () => {
 
     it("surfaces delete failures without removing the preset", async () => {
       const user = userEvent.setup();
-      const presetService = createFakeSheetMetronomePresetService([createTestPreset()]);
+      const presetService = createFakeSheetMetronomePresetService([
+        createTestPreset()
+      ]);
 
       vi.mocked(presetService.service.deletePreset).mockRejectedValueOnce(
         new Error("Delete failed.")
@@ -3134,7 +3497,9 @@ describe("sheet practice controls state", () => {
         expect(screen.getByText("Warmup")).toBeVisible();
       });
 
-      await user.click(screen.getByRole("button", { name: "Delete preset Warmup" }));
+      await user.click(
+        screen.getByRole("button", { name: "Delete preset Warmup" })
+      );
       await user.click(
         screen.getByRole("button", { name: "Confirm delete preset Warmup" })
       );
@@ -3158,7 +3523,9 @@ describe("sheet practice controls state", () => {
         expect(screen.getByText("Warmup")).toBeVisible();
       });
 
-      await user.click(screen.getByRole("button", { name: "Rename preset Warmup" }));
+      await user.click(
+        screen.getByRole("button", { name: "Rename preset Warmup" })
+      );
       const renameInput = screen.getByLabelText("Rename preset Warmup name");
 
       await user.clear(renameInput);
@@ -3166,17 +3533,23 @@ describe("sheet practice controls state", () => {
       await user.click(screen.getByRole("button", { name: "Save rename" }));
 
       await waitFor(() => {
-        expect(screen.getAllByText("Preset name already exists.")[0]).toBeVisible();
+        expect(
+          screen.getAllByText("Preset name already exists.")[0]
+        ).toBeVisible();
       });
       expect(
-        presetService.getPresets().find((preset) => preset.id === "preset-alpha")?.name
+        presetService
+          .getPresets()
+          .find((preset) => preset.id === "preset-alpha")?.name
       ).toBe("Warmup");
 
       vi.mocked(presetService.service.loadPreset).mockResolvedValueOnce({
         status: "missing"
       });
       await user.click(screen.getByRole("button", { name: "Cancel rename" }));
-      await user.click(screen.getByRole("button", { name: "Load preset Warmup" }));
+      await user.click(
+        screen.getByRole("button", { name: "Load preset Warmup" })
+      );
 
       await waitFor(() => {
         expect(screen.getAllByText("Preset was not found.")[0]).toBeVisible();
@@ -3189,13 +3562,16 @@ describe("sheet practice controls state", () => {
       const staleList = createDeferred<SheetMetronomePreset[]>();
       const nextList = createDeferred<SheetMetronomePreset[]>();
       const staleLoad =
-        createDeferred<Awaited<ReturnType<SheetMetronomePresetService["loadPreset"]>>>();
+        createDeferred<
+          Awaited<ReturnType<SheetMetronomePresetService["loadPreset"]>>
+        >();
       const presetService = createFakeSheetMetronomePresetService([
         createTestPreset()
       ]);
 
-      vi.mocked(presetService.service.listPresets).mockImplementation((sheetId) =>
-        sheetId === "sheet-alpha" ? staleList.promise : nextList.promise
+      vi.mocked(presetService.service.listPresets).mockImplementation(
+        (sheetId) =>
+          sheetId === "sheet-alpha" ? staleList.promise : nextList.promise
       );
       const { rerender } = render(
         <SheetPracticeControls
@@ -3232,15 +3608,21 @@ describe("sheet practice controls state", () => {
       expect(screen.queryByText("Stale Alpha")).not.toBeInTheDocument();
 
       await act(async () => {
-        nextList.resolve([createTestPreset({ sheetId: "sheet-beta", name: "Beta preset" })]);
+        nextList.resolve([
+          createTestPreset({ sheetId: "sheet-beta", name: "Beta preset" })
+        ]);
         await nextList.promise;
       });
       await waitFor(() => {
         expect(screen.getByText("Beta preset")).toBeVisible();
       });
 
-      vi.mocked(presetService.service.loadPreset).mockReturnValueOnce(staleLoad.promise);
-      await user.click(screen.getByRole("button", { name: "Load preset Beta preset" }));
+      vi.mocked(presetService.service.loadPreset).mockReturnValueOnce(
+        staleLoad.promise
+      );
+      await user.click(
+        screen.getByRole("button", { name: "Load preset Beta preset" })
+      );
       rerender(
         <SheetPracticeControls
           sheetId="sheet-gamma"
@@ -3257,7 +3639,10 @@ describe("sheet practice controls state", () => {
       await act(async () => {
         staleLoad.resolve({
           status: "loaded",
-          preset: createTestPreset({ sheetId: "sheet-beta", name: "Beta preset" }),
+          preset: createTestPreset({
+            sheetId: "sheet-beta",
+            name: "Beta preset"
+          }),
           settings: createTestPreset({
             settings: {
               bpm: 180
@@ -3272,7 +3657,9 @@ describe("sheet practice controls state", () => {
   });
 
   it("initializes metronome settings from sheet defaults", () => {
-    expect(createSheetPracticeMetronomeSettings({ bpm: 72, timeSignature: "3/4" })).toEqual({
+    expect(
+      createSheetPracticeMetronomeSettings({ bpm: 72, timeSignature: "3/4" })
+    ).toEqual({
       ...DEFAULT_METRONOME_SETTINGS,
       bpm: 72,
       timeSignature: "3/4"
@@ -3280,21 +3667,28 @@ describe("sheet practice controls state", () => {
   });
 
   it("falls back to shared quick-metronome defaults for missing or invalid sheet defaults", () => {
-    expect(createSheetPracticeMetronomeSettings({ bpm: null, timeSignature: null })).toEqual(
-      DEFAULT_METRONOME_SETTINGS
-    );
-    expect(createSheetPracticeMetronomeSettings({ bpm: 12, timeSignature: "5/4" })).toEqual({
+    expect(
+      createSheetPracticeMetronomeSettings({ bpm: null, timeSignature: null })
+    ).toEqual(DEFAULT_METRONOME_SETTINGS);
+    expect(
+      createSheetPracticeMetronomeSettings({ bpm: 12, timeSignature: "5/4" })
+    ).toEqual({
       ...DEFAULT_METRONOME_SETTINGS,
       bpm: 30
     });
-    expect(createSheetPracticeMetronomeSettings({ bpm: 260, timeSignature: "4/4" })).toMatchObject({
+    expect(
+      createSheetPracticeMetronomeSettings({ bpm: 260, timeSignature: "4/4" })
+    ).toMatchObject({
       bpm: 240,
       timeSignature: "4/4"
     });
   });
 
   it("reports unsupported sheet meter fallback instead of silently discarding metadata", () => {
-    const state = createSheetPracticeControlInitialState({ bpm: 84, timeSignature: "5/4" });
+    const state = createSheetPracticeControlInitialState({
+      bpm: 84,
+      timeSignature: "5/4"
+    });
 
     expect(state.settings).toEqual({
       ...DEFAULT_METRONOME_SETTINGS,
@@ -3318,7 +3712,9 @@ describe("sheet practice controls state", () => {
     );
 
     expect(
-      screen.getByText("Sheet meter 5/4 is not supported by the v0 metronome; using 4/4.")
+      screen.getByText(
+        "Sheet meter 5/4 is not supported by the v0 metronome; using 4/4."
+      )
     ).toBeVisible();
     expect(screen.getByLabelText("Time signature")).toHaveValue("4/4");
   });
@@ -3359,7 +3755,9 @@ describe("sheet practice controls state", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-selector-status")).toHaveTextContent("1 saved");
+      expect(
+        screen.getByTestId("practice-segment-selector-status")
+      ).toHaveTextContent("1 saved");
     });
     expect(screen.getByTestId("practice-segment-selector-panel")).toBeVisible();
     expect(screen.getByText("Opening phrase")).toBeVisible();
@@ -3418,23 +3816,41 @@ describe("sheet practice controls state", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-status-segment-alpha")).toHaveTextContent("Grid changed");
+      expect(
+        screen.getByTestId("practice-segment-status-segment-alpha")
+      ).toHaveTextContent("Grid changed");
     });
 
     await user.clear(screen.getByRole("spinbutton", { name: "Grid BPM" }));
     await user.type(screen.getByRole("spinbutton", { name: "Grid BPM" }), "96");
-    await user.selectOptions(screen.getByLabelText("Grid time signature"), "4/4");
+    await user.selectOptions(
+      screen.getByLabelText("Grid time signature"),
+      "4/4"
+    );
     await user.clear(screen.getByRole("spinbutton", { name: "Pickup beats" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Pickup beats" }), "0");
-    await user.clear(screen.getByRole("spinbutton", { name: "Measure 1 offset" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Measure 1 offset" }), "1000");
+    await user.type(
+      screen.getByRole("spinbutton", { name: "Pickup beats" }),
+      "0"
+    );
+    await user.clear(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" })
+    );
+    await user.type(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" }),
+      "1000"
+    );
     await user.click(screen.getByRole("button", { name: "Save grid" }));
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-status-segment-alpha")).toHaveTextContent("Ready");
+      expect(
+        screen.getByTestId("practice-segment-status-segment-alpha")
+      ).toHaveTextContent("Ready");
     });
     expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
-    expect(measureGridService.saveGrid).toHaveBeenCalledWith("sheet-alpha", currentGrid);
+    expect(measureGridService.saveGrid).toHaveBeenCalledWith(
+      "sheet-alpha",
+      currentGrid
+    );
   });
 
   it("passes the current measure-grid timestamp into calibration actions", async () => {
@@ -3454,13 +3870,21 @@ describe("sheet practice controls state", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Needs calibration");
+      expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+        "Needs calibration"
+      );
     });
 
-    await user.click(screen.getByRole("button", { name: "Set measure 1 here" }));
+    await user.click(
+      screen.getByRole("button", { name: "Set measure 1 here" })
+    );
 
-    expect(screen.getByRole("spinbutton", { name: "Measure 1 offset" })).toHaveValue(2433);
-    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Unsaved changes");
+    expect(
+      screen.getByRole("spinbutton", { name: "Measure 1 offset" })
+    ).toHaveValue(2433);
+    expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+      "Unsaved changes"
+    );
 
     await user.click(screen.getByRole("button", { name: "Save grid" }));
 
@@ -3488,10 +3912,14 @@ describe("sheet practice controls state", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("measure-grid-status")).toHaveTextContent("Needs calibration");
+      expect(screen.getByTestId("measure-grid-status")).toHaveTextContent(
+        "Needs calibration"
+      );
     });
 
-    expect(screen.getByRole("button", { name: "Set measure 1 here" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Set measure 1 here" })
+    ).toBeDisabled();
     expect(screen.getByText("No playback timestamp available.")).toBeVisible();
   });
 });
@@ -3528,15 +3956,19 @@ describe("sheet practice controls metronome reuse", () => {
       accented: downbeatTicks.has(tickIndex),
       beatTick: beatTicks.has(tickIndex)
     }));
-    const traceSummary = traces.map(({ accented, subdivision, expectedIntervalMs }) => ({
-      accented,
-      subdivision,
-      expectedIntervalMs
-    }));
-    const clickIntents = fakeTone.clickIntents.map(({ accented, beatTick }) => ({
-      accented,
-      beatTick
-    }));
+    const traceSummary = traces.map(
+      ({ accented, subdivision, expectedIntervalMs }) => ({
+        accented,
+        subdivision,
+        expectedIntervalMs
+      })
+    );
+    const clickIntents = fakeTone.clickIntents.map(
+      ({ accented, beatTick }) => ({
+        accented,
+        beatTick
+      })
+    );
 
     expect(fakeTone.lastLoopInterval).toBe("8n");
     expect(traceSummary).toEqual(
@@ -3658,7 +4090,9 @@ describe("SheetPracticeControls failure handling", () => {
       await enableBarCountIn(user);
       await selectBarCountInBars(user, "2");
 
-      expect(screen.getByLabelText("Countdown", { exact: true })).toHaveValue("4");
+      expect(screen.getByLabelText("Countdown", { exact: true })).toHaveValue(
+        "4"
+      );
       expectBarCountInBarsValue(getBarCountInBarsControl(), "2");
       expect(measureGridService.saveGrid).not.toHaveBeenCalled();
       expect(measureGridService.clearGrid).not.toHaveBeenCalled();
@@ -3751,15 +4185,23 @@ describe("SheetPracticeControls failure handling", () => {
         />
       );
 
-      const gridLoadCallsBeforeStart = disabledMeasureGridService.getGrid.mock.calls.length;
+      const gridLoadCallsBeforeStart =
+        disabledMeasureGridService.getGrid.mock.calls.length;
 
-      await user.selectOptions(screen.getByLabelText("Countdown", { exact: true }), "4");
+      await user.selectOptions(
+        screen.getByLabelText("Countdown", { exact: true }),
+        "4"
+      );
       await user.click(screen.getByRole("button", { name: "Start metronome" }));
 
       await waitFor(() => {
-        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Counting");
+        expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+          "Counting"
+        );
       });
-      expect(disabledMeasureGridService.getGrid).toHaveBeenCalledTimes(gridLoadCallsBeforeStart);
+      expect(disabledMeasureGridService.getGrid).toHaveBeenCalledTimes(
+        gridLoadCallsBeforeStart
+      );
       expect(collector.plans).toEqual([]);
       expect(disabledMetronome.service.start).not.toHaveBeenCalled();
 
@@ -3781,14 +4223,19 @@ describe("SheetPracticeControls failure handling", () => {
         />
       );
 
-      await user.selectOptions(screen.getByLabelText("Countdown", { exact: true }), "4");
+      await user.selectOptions(
+        screen.getByLabelText("Countdown", { exact: true }),
+        "4"
+      );
       await enableBarCountIn(user);
       await user.click(screen.getByRole("button", { name: "Start metronome" }));
 
       await waitFor(() => {
         expect(collector.plans).toHaveLength(1);
       });
-      expect(enabledMeasureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
+      expect(enabledMeasureGridService.getGrid).toHaveBeenCalledWith(
+        "sheet-alpha"
+      );
       expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
         /Counting|Pre-roll|Measure/
       );
@@ -3807,7 +4254,9 @@ describe("SheetPracticeControls failure handling", () => {
     const gridLoad = createDeferred<MeasureGrid | null>();
     const measureGridService = {
       getGrid: vi.fn(() => gridLoad.promise),
-      saveGrid: vi.fn(async (_sheetId: string, nextGrid: MeasureGrid) => nextGrid),
+      saveGrid: vi.fn(
+        async (_sheetId: string, nextGrid: MeasureGrid) => nextGrid
+      ),
       clearGrid: vi.fn(async () => undefined)
     } satisfies MeasureGridService;
     const sessionService = {
@@ -3857,7 +4306,9 @@ describe("SheetPracticeControls failure handling", () => {
       await waitFor(() => {
         expectBarCountInToggle(getBarCountInToggle(), false);
       });
-      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        "Stopped"
+      );
       expect(collector.plans).toEqual([]);
       expect(metronome.service.start).not.toHaveBeenCalled();
       expect(sessionService.ensureSheetSession).not.toHaveBeenCalled();
@@ -3921,7 +4372,9 @@ describe("SheetPracticeControls failure handling", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+      expect(
+        screen.getByTestId("practice-segment-row-segment-alpha")
+      ).toBeVisible();
     });
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
     await enableBarCountIn(user);
@@ -3964,7 +4417,9 @@ describe("SheetPracticeControls failure handling", () => {
         await Promise.resolve();
         await Promise.resolve();
       });
-      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Counting 4");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        "Counting 4"
+      );
 
       await act(async () => {
         await vi.advanceTimersToNextTimerAsync();
@@ -3976,7 +4431,9 @@ describe("SheetPracticeControls failure handling", () => {
       fireEvent.click(screen.getByRole("button", { name: "Stop metronome" }));
 
       expect(screen.queryByText(/pre-roll beat/i)).not.toBeInTheDocument();
-      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        "Stopped"
+      );
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(5_000);
@@ -3984,7 +4441,9 @@ describe("SheetPracticeControls failure handling", () => {
       });
 
       expect(metronome.service.start).not.toHaveBeenCalled();
-      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        "Stopped"
+      );
     } finally {
       vi.useRealTimers();
     }
@@ -4015,14 +4474,24 @@ describe("SheetPracticeControls failure handling", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Start metronome" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Stop metronome" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Stop recording" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Start metronome" })
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Stop metronome" })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Start recording" })
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Stop recording" })
+    ).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+      expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+        "active"
+      );
     });
 
     await enableBarCountIn(user);
@@ -4035,16 +4504,26 @@ describe("SheetPracticeControls failure handling", () => {
     });
     expectControlUnavailable(getBarCountInToggle());
     expectControlUnavailable(getBarCountInBarsControl());
-    expect(screen.getByRole("button", { name: "Start metronome" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Stop metronome" })).toBeEnabled();
-    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    expect(
+      screen.getByRole("button", { name: "Start metronome" })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Stop metronome" })
+    ).toBeEnabled();
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+      "active"
+    );
 
     await user.click(screen.getByRole("button", { name: "Stop metronome" }));
 
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        "Stopped"
+      );
     });
-    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent("active");
+    expect(screen.getByTestId("sheet-recording-state")).toHaveTextContent(
+      "active"
+    );
   });
 
   it("keeps bar count-in keyboard accessible without renaming existing transport actions", async () => {
@@ -4063,7 +4542,11 @@ describe("SheetPracticeControls failure handling", () => {
 
     const toggle = getBarCountInToggle();
 
-    for (let index = 0; index < 20 && document.activeElement !== toggle; index += 1) {
+    for (
+      let index = 0;
+      index < 20 && document.activeElement !== toggle;
+      index += 1
+    ) {
       await user.tab();
     }
 
@@ -4076,17 +4559,29 @@ describe("SheetPracticeControls failure handling", () => {
 
     const barsControl = getBarCountInBarsControl();
 
-    for (let index = 0; index < 20 && document.activeElement !== barsControl; index += 1) {
+    for (
+      let index = 0;
+      index < 20 && document.activeElement !== barsControl;
+      index += 1
+    ) {
       await user.tab();
     }
 
     expect(document.activeElement).toBe(barsControl);
     await selectBarCountInBars(user, "2");
     expectBarCountInBarsValue(barsControl, "2");
-    expect(screen.getByRole("button", { name: "Start metronome" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Stop metronome" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Start recording" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Stop recording" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Start metronome" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Stop metronome" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Start recording" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Stop recording" })
+    ).toBeVisible();
   });
 
   it("prepares a selected-segment bar count-in plan before handing off to transport", async () => {
@@ -4126,7 +4621,9 @@ describe("SheetPracticeControls failure handling", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+      expect(
+        screen.getByTestId("practice-segment-row-segment-alpha")
+      ).toBeVisible();
     });
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
     await user.click(screen.getByRole("button", { name: "Start metronome" }));
@@ -4165,7 +4662,9 @@ describe("SheetPracticeControls failure handling", () => {
     const gridLoad = createDeferred<MeasureGrid | null>();
     const measureGridService = {
       getGrid: vi.fn(() => gridLoad.promise),
-      saveGrid: vi.fn(async (_sheetId: string, nextGrid: MeasureGrid) => nextGrid),
+      saveGrid: vi.fn(
+        async (_sheetId: string, nextGrid: MeasureGrid) => nextGrid
+      ),
       clearGrid: vi.fn(async () => undefined)
     } satisfies MeasureGridService;
     const sessionService = {
@@ -4194,7 +4693,8 @@ describe("SheetPracticeControls failure handling", () => {
         />
       );
 
-      const gridLoadCallsBeforeStart = measureGridService.getGrid.mock.calls.length;
+      const gridLoadCallsBeforeStart =
+        measureGridService.getGrid.mock.calls.length;
 
       fireEvent.click(screen.getByRole("button", { name: "Start metronome" }));
       fireEvent.click(screen.getByRole("button", { name: "Start metronome" }));
@@ -4225,7 +4725,9 @@ describe("SheetPracticeControls failure handling", () => {
 
       expect(metronome.service.start).toHaveBeenCalledTimes(1);
       expect(sessionService.ensureSheetSession).toHaveBeenCalledTimes(1);
-      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        "Playing"
+      );
     } finally {
       vi.useRealTimers();
     }
@@ -4267,7 +4769,9 @@ describe("SheetPracticeControls failure handling", () => {
 
     expect(measureGridService.getGrid).toHaveBeenCalledWith("sheet-alpha");
     expect(metronome.service.start).not.toHaveBeenCalled();
-    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+      "Stopped"
+    );
     expectNoCaptureKind(
       sessionService.captureSessionEvent,
       "metronome_started"
@@ -4314,7 +4818,9 @@ describe("SheetPracticeControls failure handling", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("practice-segment-row-segment-alpha")).toBeVisible();
+      expect(
+        screen.getByTestId("practice-segment-row-segment-alpha")
+      ).toBeVisible();
     });
     await user.click(screen.getByTestId("practice-segment-row-segment-alpha"));
     await user.click(screen.getByRole("button", { name: "Start metronome" }));
@@ -4328,7 +4834,9 @@ describe("SheetPracticeControls failure handling", () => {
 
     expect(metronome.service.start).not.toHaveBeenCalled();
     expect(sessionService.ensureSheetSession).not.toHaveBeenCalled();
-    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+      "Stopped"
+    );
     expectNoCaptureKind(
       sessionService.captureSessionEvent,
       "metronome_started"
@@ -4366,13 +4874,19 @@ describe("SheetPracticeControls failure handling", () => {
     expect(metronome.service.start).not.toHaveBeenCalled();
     expect(metronome.service.stop).toHaveBeenCalled();
     expect(metronome.isPlaying()).toBe(false);
-    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+      "Stopped"
+    );
   });
 
   it("rolls back only a session created for this metronome start when Tone start rejects", async () => {
     const user = userEvent.setup();
     const session = createSheetSession();
-    const endedSession = { ...session, endedAt: "2026-06-21T12:00:01.000Z", durationMs: 1_000 };
+    const endedSession = {
+      ...session,
+      endedAt: "2026-06-21T12:00:01.000Z",
+      durationMs: 1_000
+    };
     const sessionService = {
       ...createIdleSessionService(),
       getRecentSheetSession: vi.fn(async () => null),
@@ -4398,16 +4912,24 @@ describe("SheetPracticeControls failure handling", () => {
       expect(screen.getByText("Tone unavailable")).toBeVisible();
     });
     expect(sessionService.ensureSheetSession).toHaveBeenCalled();
-    expect(sessionService.getRecentSheetSession).toHaveBeenCalledWith("sheet-alpha");
+    expect(sessionService.getRecentSheetSession).toHaveBeenCalledWith(
+      "sheet-alpha"
+    );
     expect(metronome.service.start).toHaveBeenCalled();
     expect(metronome.service.stop).toHaveBeenCalled();
-    expect(sessionService.endPracticeSession).toHaveBeenCalledWith("session-alpha");
+    expect(sessionService.endPracticeSession).toHaveBeenCalledWith(
+      "session-alpha"
+    );
     expect(sessionService.captureSessionEvent).not.toHaveBeenCalledWith(
       expect.objectContaining({ kind: "metronome_started" })
     );
     expect(metronome.isPlaying()).toBe(false);
-    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
-    expect(screen.getByTestId("sheet-session-id")).toHaveTextContent("session-alpha");
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+      "Stopped"
+    );
+    expect(screen.getByTestId("sheet-session-id")).toHaveTextContent(
+      "session-alpha"
+    );
   });
 
   it("does not end an existing session when Tone start rejects", async () => {
@@ -4437,13 +4959,17 @@ describe("SheetPracticeControls failure handling", () => {
     await waitFor(() => {
       expect(screen.getByText("Tone unavailable")).toBeVisible();
     });
-    expect(sessionService.getRecentSheetSession).toHaveBeenCalledWith("sheet-alpha");
+    expect(sessionService.getRecentSheetSession).toHaveBeenCalledWith(
+      "sheet-alpha"
+    );
     expect(sessionService.ensureSheetSession).toHaveBeenCalled();
     expect(metronome.service.start).toHaveBeenCalled();
     expect(metronome.service.stop).toHaveBeenCalled();
     expect(sessionService.endPracticeSession).not.toHaveBeenCalled();
     expect(metronome.isPlaying()).toBe(false);
-    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+      "Stopped"
+    );
   });
 
   it("updates duration instead of ending the session when stopping within the same sheet context", async () => {
@@ -4459,7 +4985,10 @@ describe("SheetPracticeControls failure handling", () => {
       getRecentSheetSession: vi.fn(async () => null),
       ensureSheetSession: vi.fn(async () => session),
       updateSheetSessionDuration: vi.fn(async () => updatedSession),
-      endPracticeSession: vi.fn(async () => ({ ...updatedSession, endedAt: updatedSession.updatedAt }))
+      endPracticeSession: vi.fn(async () => ({
+        ...updatedSession,
+        endedAt: updatedSession.updatedAt
+      }))
     };
     const metronome = createInspectableMetronomeService();
 
@@ -4476,17 +5005,25 @@ describe("SheetPracticeControls failure handling", () => {
 
     await user.click(screen.getByRole("button", { name: "Start metronome" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        "Playing"
+      );
     });
 
     await user.click(screen.getByRole("button", { name: "Stop metronome" }));
 
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-session-duration")).toHaveTextContent("0:02");
+      expect(screen.getByTestId("sheet-session-duration")).toHaveTextContent(
+        "0:02"
+      );
     });
-    expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith("session-alpha");
+    expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith(
+      "session-alpha"
+    );
     expect(sessionService.endPracticeSession).not.toHaveBeenCalled();
-    expect(screen.getByTestId("sheet-session-id")).toHaveTextContent("session-alpha");
+    expect(screen.getByTestId("sheet-session-id")).toHaveTextContent(
+      "session-alpha"
+    );
   });
 
   it("settles sheet metronome stop state when duration update rejects", async () => {
@@ -4515,7 +5052,9 @@ describe("SheetPracticeControls failure handling", () => {
 
     await user.click(screen.getByRole("button", { name: "Start metronome" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        "Playing"
+      );
     });
 
     await user.click(screen.getByRole("button", { name: "Stop metronome" }));
@@ -4524,8 +5063,12 @@ describe("SheetPracticeControls failure handling", () => {
       expect(screen.getByText("Metronome stopped.")).toBeVisible();
     });
     expect(screen.getByText("duration unavailable")).toBeVisible();
-    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
-    expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith("session-alpha");
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+      "Stopped"
+    );
+    expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith(
+      "session-alpha"
+    );
   });
 
   it("settles sheet stop and attempts duration update when stopped-event capture rejects", async () => {
@@ -4540,13 +5083,15 @@ describe("SheetPracticeControls failure handling", () => {
       ...createIdleSessionService(),
       getRecentSheetSession: vi.fn(async () => null),
       ensureSheetSession: vi.fn(async () => session),
-      captureSessionEvent: vi.fn(async ({ kind }: PracticeSessionEventCaptureInput) => {
-        if (kind === "metronome_stopped") {
-          throw new Error("capture unavailable");
-        }
+      captureSessionEvent: vi.fn(
+        async ({ kind }: PracticeSessionEventCaptureInput) => {
+          if (kind === "metronome_stopped") {
+            throw new Error("capture unavailable");
+          }
 
-        return null;
-      }),
+          return null;
+        }
+      ),
       updateSheetSessionDuration: vi.fn(async () => updatedSession)
     };
     const metronome = createInspectableMetronomeService();
@@ -4564,7 +5109,9 @@ describe("SheetPracticeControls failure handling", () => {
 
     await user.click(screen.getByRole("button", { name: "Start metronome" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        "Playing"
+      );
     });
 
     await user.click(screen.getByRole("button", { name: "Stop metronome" }));
@@ -4572,8 +5119,12 @@ describe("SheetPracticeControls failure handling", () => {
     await waitFor(() => {
       expect(screen.getByText("Metronome stopped.")).toBeVisible();
     });
-    expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith("session-alpha");
-    expect(screen.getByTestId("sheet-session-duration")).toHaveTextContent("0:02");
+    expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith(
+      "session-alpha"
+    );
+    expect(screen.getByTestId("sheet-session-duration")).toHaveTextContent(
+      "0:02"
+    );
     expect(screen.queryByText("capture unavailable")).not.toBeInTheDocument();
   });
 
@@ -4606,7 +5157,9 @@ describe("SheetPracticeControls failure handling", () => {
 
     await user.click(screen.getByRole("button", { name: "Start metronome" }));
     await waitFor(() => {
-      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Playing");
+      expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+        "Playing"
+      );
     });
     expect(sessionService.captureSessionEvent).toHaveBeenCalledWith({
       sessionId: "session-alpha",
@@ -4616,7 +5169,9 @@ describe("SheetPracticeControls failure handling", () => {
     await user.click(screen.getByRole("button", { name: "Stop metronome" }));
 
     await waitFor(() => {
-      expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith("session-alpha");
+      expect(sessionService.updateSheetSessionDuration).toHaveBeenCalledWith(
+        "session-alpha"
+      );
     });
     expect(sessionService.captureSessionEvent).toHaveBeenCalledWith({
       sessionId: "session-alpha",
@@ -4626,7 +5181,8 @@ describe("SheetPracticeControls failure handling", () => {
 
   it("settles recording harness duration update rejections", async () => {
     const harnessWindow = window as SheetPracticeControlsHarnessWindow;
-    const previousHarnessValue = harnessWindow.__sheetPracticeControlsTestHarness;
+    const previousHarnessValue =
+      harnessWindow.__sheetPracticeControlsTestHarness;
     const session = createSheetSession();
     const sessionService = {
       ...createIdleSessionService(),
@@ -4650,7 +5206,9 @@ describe("SheetPracticeControls failure handling", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("sheet-session-id")).toHaveTextContent("session-alpha");
+        expect(screen.getByTestId("sheet-session-id")).toHaveTextContent(
+          "session-alpha"
+        );
       });
 
       act(() => {
@@ -4739,7 +5297,9 @@ describe("SheetPracticeControls failure handling", () => {
       ...createIdleSessionService(),
       getRecentSheetSession: vi.fn(async () => previousEndedSession),
       ensureSheetSession: vi.fn(async () => replacementSession),
-      restorePracticeSessionSnapshot: vi.fn(async (session: PracticeSession) => session),
+      restorePracticeSessionSnapshot: vi.fn(
+        async (session: PracticeSession) => session
+      ),
       endPracticeSession: vi.fn(async () => ({
         ...replacementSession,
         endedAt: "2026-06-21T12:05:01.000Z",
@@ -4764,15 +5324,25 @@ describe("SheetPracticeControls failure handling", () => {
     await waitFor(() => {
       expect(screen.getByText("Tone unavailable")).toBeVisible();
     });
-    expect(sessionService.getRecentSheetSession).toHaveBeenCalledWith("sheet-alpha");
+    expect(sessionService.getRecentSheetSession).toHaveBeenCalledWith(
+      "sheet-alpha"
+    );
     expect(sessionService.ensureSheetSession).toHaveBeenCalled();
     expect(metronome.service.start).toHaveBeenCalled();
     expect(metronome.service.stop).toHaveBeenCalled();
-    expect(sessionService.restorePracticeSessionSnapshot).not.toHaveBeenCalled();
-    expect(sessionService.endPracticeSession).toHaveBeenCalledWith("session-beta");
+    expect(
+      sessionService.restorePracticeSessionSnapshot
+    ).not.toHaveBeenCalled();
+    expect(sessionService.endPracticeSession).toHaveBeenCalledWith(
+      "session-beta"
+    );
     expect(metronome.isPlaying()).toBe(false);
-    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
-    expect(screen.getByTestId("sheet-session-id")).toHaveTextContent("session-beta");
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+      "Stopped"
+    );
+    expect(screen.getByTestId("sheet-session-id")).toHaveTextContent(
+      "session-beta"
+    );
   });
 
   it("does not end an active recording session before recording metadata exists when Tone start rejects", async () => {
@@ -4805,12 +5375,16 @@ describe("SheetPracticeControls failure handling", () => {
     await waitFor(() => {
       expect(screen.getByText("Tone unavailable")).toBeVisible();
     });
-    expect(sessionService.getRecentSheetSession).toHaveBeenCalledWith("sheet-alpha");
+    expect(sessionService.getRecentSheetSession).toHaveBeenCalledWith(
+      "sheet-alpha"
+    );
     expect(sessionService.ensureSheetSession).toHaveBeenCalled();
     expect(metronome.service.start).toHaveBeenCalled();
     expect(metronome.service.stop).toHaveBeenCalled();
     expect(sessionService.endPracticeSession).not.toHaveBeenCalled();
     expect(metronome.isPlaying()).toBe(false);
-    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent("Stopped");
+    expect(screen.getByTestId("sheet-metronome-state")).toHaveTextContent(
+      "Stopped"
+    );
   });
 });

@@ -75,7 +75,10 @@ export function createSheetLibraryService({
   async function toListItem(sheet: ImportedSheet): Promise<SheetListItem> {
     const normalizedSheet = normalizeOrganization(sheet);
     const artifact = await repository.getArtifact(normalizedSheet.id);
-    const artifactStatus = await importAdapter.inspectArtifact(normalizedSheet, artifact);
+    const artifactStatus = await importAdapter.inspectArtifact(
+      normalizedSheet,
+      artifact
+    );
 
     return {
       ...normalizedSheet,
@@ -83,7 +86,9 @@ export function createSheetLibraryService({
     };
   }
 
-  async function toMutationListItem(sheet: ImportedSheet): Promise<SheetListItem> {
+  async function toMutationListItem(
+    sheet: ImportedSheet
+  ): Promise<SheetListItem> {
     try {
       return await toListItem(sheet);
     } catch {

@@ -38,13 +38,13 @@ The implementation must reuse the already-verified P4-03 domain helper and P4-04
 
 ## Deferred Work
 
-| Deferred work | Owning slice |
-|---|---|
-| Per-sheet count-in or preset defaults, Dexie schema, preset persistence, save/load/rename/delete behavior, and remembered count-in preferences | P4-06/P4-07 |
-| Shared advanced countdown infrastructure or a generalized countdown engine | P4-08 |
-| Quick Metronome advanced countdown, mute training, auto-increase, and other training behavior | Pack 6 |
-| PDF overlay, bar-line drawing, measure timeline, and assisted page turning | Later viewer/reference-marker slices, not P4-05 |
-| Recording/session schema, analytics, and import/export behavior | Out of P4-05 unless a later slice explicitly owns them |
+| Deferred work                                                                                                                                  | Owning slice                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Per-sheet count-in or preset defaults, Dexie schema, preset persistence, save/load/rename/delete behavior, and remembered count-in preferences | P4-06/P4-07                                            |
+| Shared advanced countdown infrastructure or a generalized countdown engine                                                                     | P4-08                                                  |
+| Quick Metronome advanced countdown, mute training, auto-increase, and other training behavior                                                  | Pack 6                                                 |
+| PDF overlay, bar-line drawing, measure timeline, and assisted page turning                                                                     | Later viewer/reference-marker slices, not P4-05        |
+| Recording/session schema, analytics, and import/export behavior                                                                                | Out of P4-05 unless a later slice explicitly owns them |
 
 ## Current Architecture Context
 
@@ -227,20 +227,20 @@ State transitions:
 
 ## Behavior Matrix
 
-| Scenario | Expected behavior |
-|---|---|
-| Bar count-in off | Existing Sheet Practice behavior unchanged, including legacy simple countdown. |
-| Bar count-in on, one bar, saved grid, no selected segment | Uses P4-03 whole-sheet plan into measure 1; visible count-in starts; playback starts after completion. |
-| Bar count-in on, one bar, saved grid, selected segment | Uses P4-03 selected-segment plan; visible count-in references the preceding measure or pre-roll context. |
-| Bar count-in on, two bars | Uses `countInMeasures: 2`; UI shows two bars selected; scheduler receives the P4-03 two-bar plan. |
-| Missing measure grid | Start is blocked with the existing missing-grid message; transport remains stopped; no playback/session start. |
-| Stale selected segment grid | Start is blocked with the existing stale-grid message; no fallback to whole-sheet or stale snapshot timing. |
-| Invalid count-in input | UI should prevent invalid values; if an invalid value reaches the domain boundary, existing invalid-plan block/error path handles it. |
-| Stop during count-in | Count-in cancels, visible tick clears, transport returns stopped, playback does not start. |
-| Repeated Start while count-in is preparing or counting | Existing duplicate-start protection remains; no duplicate plan loads or scheduler chains. |
-| Settings changed during count-in | Existing lock policy applies for meter/subdivision/countdown/bar count-in controls; BPM remains consistent with current transport policy. |
-| Recording active during count-in | Recording remains active; stopping count-in does not stop recording. |
-| Mobile width | Controls remain visible and usable; no overlap with viewer or transport. |
+| Scenario                                                  | Expected behavior                                                                                                                         |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Bar count-in off                                          | Existing Sheet Practice behavior unchanged, including legacy simple countdown.                                                            |
+| Bar count-in on, one bar, saved grid, no selected segment | Uses P4-03 whole-sheet plan into measure 1; visible count-in starts; playback starts after completion.                                    |
+| Bar count-in on, one bar, saved grid, selected segment    | Uses P4-03 selected-segment plan; visible count-in references the preceding measure or pre-roll context.                                  |
+| Bar count-in on, two bars                                 | Uses `countInMeasures: 2`; UI shows two bars selected; scheduler receives the P4-03 two-bar plan.                                         |
+| Missing measure grid                                      | Start is blocked with the existing missing-grid message; transport remains stopped; no playback/session start.                            |
+| Stale selected segment grid                               | Start is blocked with the existing stale-grid message; no fallback to whole-sheet or stale snapshot timing.                               |
+| Invalid count-in input                                    | UI should prevent invalid values; if an invalid value reaches the domain boundary, existing invalid-plan block/error path handles it.     |
+| Stop during count-in                                      | Count-in cancels, visible tick clears, transport returns stopped, playback does not start.                                                |
+| Repeated Start while count-in is preparing or counting    | Existing duplicate-start protection remains; no duplicate plan loads or scheduler chains.                                                 |
+| Settings changed during count-in                          | Existing lock policy applies for meter/subdivision/countdown/bar count-in controls; BPM remains consistent with current transport policy. |
+| Recording active during count-in                          | Recording remains active; stopping count-in does not stop recording.                                                                      |
+| Mobile width                                              | Controls remain visible and usable; no overlap with viewer or transport.                                                                  |
 
 ## Edge Cases
 

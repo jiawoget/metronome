@@ -33,24 +33,24 @@ Therefore, the CodeScene snapshot and the planning branch contain identical `src
 
 ## Result counts
 
-| Population | All paths | `src/**` paths |
-| --- | ---: | ---: |
-| Recommended refactoring targets | 18 | 6 |
-| Local refactoring opportunities | 65 | 37 |
-| Local-only opportunities after removing recommended overlap | — | 31 |
+| Population                                                  | All paths | `src/**` paths |
+| ----------------------------------------------------------- | --------: | -------------: |
+| Recommended refactoring targets                             |        18 |              6 |
+| Local refactoring opportunities                             |        65 |             37 |
+| Local-only opportunities after removing recommended overlap |         — |             31 |
 
 The counts are evidence, not a fixed “Top 10” quota. The number of implementation plans will be determined by bounded debt roots and coupling evidence.
 
 ## Recommended `src/**` targets
 
-| Path | Code Health | Commits / 1 year | Friction | LOC |
-| --- | ---: | ---: | ---: | ---: |
-| `src/components/sheet-practice/controls/sheet-practice-controls.tsx` | 6.51 | 32 | 36% | 1,271 |
-| `src/components/recordings-review/recordings-review-experience.tsx` | 6.33 | 21 | 25% | 1,534 |
-| `src/services/practice-session/service.ts` | 7.51 | 22 | 17% | 769 |
-| `src/components/home/home-dashboard.tsx` | 7.34 | 13 | 11% | 1,532 |
-| `src/components/sheet-practice/segments/practice-segment-selector-panel.tsx` | 6.69 | 8 | 8% | 929 |
-| `src/lib/recordings-review/repository.ts` | 8.4 | 16 | 8% | 769 |
+| Path                                                                         | Code Health | Commits / 1 year | Friction |   LOC |
+| ---------------------------------------------------------------------------- | ----------: | ---------------: | -------: | ----: |
+| `src/components/sheet-practice/controls/sheet-practice-controls.tsx`         |        6.51 |               32 |      36% | 1,271 |
+| `src/components/recordings-review/recordings-review-experience.tsx`          |        6.33 |               21 |      25% | 1,534 |
+| `src/services/practice-session/service.ts`                                   |        7.51 |               22 |      17% |   769 |
+| `src/components/home/home-dashboard.tsx`                                     |        7.34 |               13 |      11% | 1,532 |
+| `src/components/sheet-practice/segments/practice-segment-selector-panel.tsx` |        6.69 |                8 |       8% |   929 |
+| `src/lib/recordings-review/repository.ts`                                    |         8.4 |               16 |       8% |   769 |
 
 Raw `src/**` recommended IDs:
 

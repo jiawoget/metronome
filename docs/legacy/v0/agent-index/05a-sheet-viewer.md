@@ -36,4 +36,3 @@ error states.
 - PDF and image rendering, zoom, page navigation, resize, reload, missing sheet,
   bad artifact, bad PDF, and bad image paths are covered.
 - No known unimplemented v0 sheet-viewer item remains.
-

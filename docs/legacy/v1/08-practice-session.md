@@ -30,7 +30,7 @@ This module extends v0 Practice Session into more structured, analytics-ready, s
 - Make practice history more useful over time.
 - Enable segment-level tracking and review.
 - Support richer dashboards and goals.
-Cross-device continuity and merge behavior are deferred to v2.
+  Cross-device continuity and merge behavior are deferred to v2.
 
 ## Required v0 Boundaries to Preserve
 

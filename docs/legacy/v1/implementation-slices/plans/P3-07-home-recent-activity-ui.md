@@ -361,15 +361,15 @@ Verification should run the focused commands above and inspect the app in browse
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Valid quick/sheet/segment Continue Practice target construction and stale target rejection | `P3-08 continue-practice-targets` |
-| Continue Practice navigation into sheet/segment context | `P3-09 continue-practice-ui-navigation` |
-| Goal completion, dashboard analytics, streaks, and goal UI | `P3-10` through `P3-15` |
-| Command palette over valid local practice targets | `P3-16` |
-| Event-derived activity timeline from durable event replay | Future explicit event-persistence/replay slice |
-| Recording media/artifact availability checks for activity rows | Future recording review or cleanup slice if product requires it |
-| Cross-device/cloud activity | v2 |
+| Deferred work                                                                              | Future owner                                                    |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| Valid quick/sheet/segment Continue Practice target construction and stale target rejection | `P3-08 continue-practice-targets`                               |
+| Continue Practice navigation into sheet/segment context                                    | `P3-09 continue-practice-ui-navigation`                         |
+| Goal completion, dashboard analytics, streaks, and goal UI                                 | `P3-10` through `P3-15`                                         |
+| Command palette over valid local practice targets                                          | `P3-16`                                                         |
+| Event-derived activity timeline from durable event replay                                  | Future explicit event-persistence/replay slice                  |
+| Recording media/artifact availability checks for activity rows                             | Future recording review or cleanup slice if product requires it |
+| Cross-device/cloud activity                                                                | v2                                                              |
 
 ## Split Triggers
 

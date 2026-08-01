@@ -1,17 +1,24 @@
-import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
+import type {
+  PracticeSession,
+  SheetRecordingMetadata
+} from "@/domain/practice";
 import {
   cleanupCommittedRecordingArtifactsOrThrow,
   createRecordingArtifactRef,
   saveCapturedRecordingArtifact
 } from "@/lib/recordings-review/artifact-storage";
 import { restoreOrDeletePracticeSessionSnapshot } from "@/services/practice-session/snapshot-rollback";
-import {
-  loadRecordingArtifactDetailsFromBody
-} from "@/lib/recordings-review/artifact-details";
+import { loadRecordingArtifactDetailsFromBody } from "@/lib/recordings-review/artifact-details";
 import { hasUsablePeaks } from "@/services/audio-analysis";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
-import type { RecordingArtifactDetails, ReviewRecording } from "@/lib/recordings-review/types";
-import type { MetronomeSettings, RecordingArtifact } from "@/lib/quick-metronome/types";
+import type {
+  RecordingArtifactDetails,
+  ReviewRecording
+} from "@/lib/recordings-review/types";
+import type {
+  MetronomeSettings,
+  RecordingArtifact
+} from "@/lib/quick-metronome/types";
 import { createBrowserRecordingCaptureService } from "@/infrastructure/audio/browser-recording-capture";
 import type {
   RecordingCaptureService,
@@ -20,7 +27,10 @@ import type {
   SheetRecordingService
 } from "@/services/recording";
 
-export type { SaveSheetRecordingInput, SaveSheetRecordingResult } from "@/services/recording";
+export type {
+  SaveSheetRecordingInput,
+  SaveSheetRecordingResult
+} from "@/services/recording";
 
 function roundDuration(durationMs: number) {
   return Math.max(0, Math.round(durationMs));
@@ -37,13 +47,17 @@ export function createSheetReviewRecording({
   settings: MetronomeSettings;
   trustedPeaks?: number[];
 }): ReviewRecording {
-  const durationMs = roundDuration(artifact.analysis?.decodedDurationMs ?? artifact.durationMs);
+  const durationMs = roundDuration(
+    artifact.analysis?.decodedDurationMs ?? artifact.durationMs
+  );
 
   return {
     id: metadata.id,
     type: "sheet",
     origin: "user",
-    name: metadata.sheetName ? `${metadata.sheetName} take` : "Sheet practice take",
+    name: metadata.sheetName
+      ? `${metadata.sheetName} take`
+      : "Sheet practice take",
     sessionId: metadata.sessionId,
     sheetId: metadata.sheetId,
     sheetName: metadata.sheetName,
@@ -91,9 +105,10 @@ async function rollbackSheetReviewRecordingMetadata(recording: {
     createdAt: recording.createdAt,
     previousSession: recording.previousSession
   });
-  await cleanupCommittedRecordingArtifactsOrThrow(
-    [...result.artifactCleanupRecordingIds, recording.id]
-  );
+  await cleanupCommittedRecordingArtifactsOrThrow([
+    ...result.artifactCleanupRecordingIds,
+    recording.id
+  ]);
 }
 
 async function captureSheetRecordingStopped({
@@ -116,7 +131,9 @@ async function captureSheetRecordingStopped({
 }
 
 export class BrowserSheetRecordingService implements SheetRecordingService {
-  constructor(private readonly captureService: RecordingCaptureService = createBrowserRecordingCaptureService()) {}
+  constructor(
+    private readonly captureService: RecordingCaptureService = createBrowserRecordingCaptureService()
+  ) {}
 
   get isRecording() {
     return this.captureService.isRecording;
@@ -127,10 +144,18 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
   }
 
   getLatestSheetRecording(sheetId: string) {
-    return recordingHistoryRepository
-      .getSnapshot()
-      .recordings.filter((recording) => recording.type === "sheet" && recording.sheetId === sheetId)
-      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0] ?? null;
+    return (
+      recordingHistoryRepository
+        .getSnapshot()
+        .recordings.filter(
+          (recording) =>
+            recording.type === "sheet" && recording.sheetId === sheetId
+        )
+        .sort(
+          (left, right) =>
+            Date.parse(right.createdAt) - Date.parse(left.createdAt)
+        )[0] ?? null
+    );
   }
 
   subscribe(listener: () => void) {
@@ -149,11 +174,15 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
     await this.captureService.stop().catch(() => undefined);
   }
 
-  async stopAndSave(input: SaveSheetRecordingInput): Promise<SaveSheetRecordingResult> {
+  async stopAndSave(
+    input: SaveSheetRecordingInput
+  ): Promise<SaveSheetRecordingResult> {
     const artifact = await this.captureService.stop();
     let metadata: SheetRecordingMetadata | null = null;
     let artifactSaved = false;
-    const previousSession = await input.sessionService.getRecentSheetSession(input.sheetId);
+    const previousSession = await input.sessionService.getRecentSheetSession(
+      input.sheetId
+    );
 
     if (artifact.sizeBytes <= 0) {
       throw new Error("Recording artifact was empty.");
@@ -166,23 +195,29 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
     const decodedDetails = await loadRecordingArtifactDetailsFromBody({
       recordingId: "pending-sheet-recording",
       blob: artifact.blob,
-      metadataDurationMs: roundDuration(artifact.analysis?.decodedDurationMs ?? artifact.durationMs)
+      metadataDurationMs: roundDuration(
+        artifact.analysis?.decodedDurationMs ?? artifact.durationMs
+      )
     });
 
     if (!hasUsablePeaks(decodedDetails.peaks)) {
-      throw new Error("Recording waveform could not be derived from the saved audio.");
+      throw new Error(
+        "Recording waveform could not be derived from the saved audio."
+      );
     }
 
     try {
-      const prepared = await input.sessionService.prepareSheetRecordingMetadata({
-        sheetId: input.sheetId,
-        sessionId: input.sessionId,
-        durationMs: roundDuration(decodedDetails.decodedDurationMs),
-        bpm: input.settings.bpm,
-        timeSignature: input.settings.timeSignature,
-        segmentContext: input.segmentContext ?? null,
-        forceNewSession: input.forceNewSession
-      });
+      const prepared = await input.sessionService.prepareSheetRecordingMetadata(
+        {
+          sheetId: input.sheetId,
+          sessionId: input.sessionId,
+          durationMs: roundDuration(decodedDetails.decodedDurationMs),
+          bpm: input.settings.bpm,
+          timeSignature: input.settings.timeSignature,
+          segmentContext: input.segmentContext ?? null,
+          forceNewSession: input.forceNewSession
+        }
+      );
 
       if (!prepared) {
         throw new Error("No valid sheet context. Recording was not saved.");
@@ -217,7 +252,9 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         ...decodedDetails,
         recordingId: recording.id,
         metadataDurationMs: recording.durationMs,
-        durationDifferenceMs: Math.abs(decodedDetails.decodedDurationMs - recording.durationMs),
+        durationDifferenceMs: Math.abs(
+          decodedDetails.decodedDurationMs - recording.durationMs
+        ),
         durationWarning: null,
         peaks: recording.trustedPeaks,
         source: "trusted-peaks"
@@ -249,9 +286,7 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
               previousSession
             });
           } else {
-            await cleanupCommittedRecordingArtifactsOrThrow([
-              metadata.id
-            ]);
+            await cleanupCommittedRecordingArtifactsOrThrow([metadata.id]);
           }
         } catch (rollbackError) {
           rollbackErrors.push(rollbackError);
@@ -270,7 +305,9 @@ export class BrowserSheetRecordingService implements SheetRecordingService {
         }
 
         if (rollbackErrors.length > 0) {
-          throw new Error("Recording save failed, and rollback could not fully restore the previous session state.");
+          throw new Error(
+            "Recording save failed, and rollback could not fully restore the previous session state."
+          );
         }
       }
 

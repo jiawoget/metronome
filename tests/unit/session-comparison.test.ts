@@ -37,7 +37,9 @@ function createSegmentContext(
   };
 }
 
-function createSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
+function createSession(
+  overrides: Partial<PracticeSession> = {}
+): PracticeSession {
   return {
     id: "session-alpha",
     sourceType: "quick",
@@ -133,12 +135,14 @@ describe("session comparison read model", () => {
       {
         key: "events",
         label: "Events",
-        reason: "Event details are unavailable because no durable session event read source is exposed."
+        reason:
+          "Event details are unavailable because no durable session event read source is exposed."
       },
       {
         key: "audio",
         label: "Audio",
-        reason: "Audio and waveform comparison are outside this metadata-only read model."
+        reason:
+          "Audio and waveform comparison are outside this metadata-only read model."
       }
     ]);
   });
@@ -197,12 +201,14 @@ describe("session comparison read model", () => {
       ]
     });
 
-    expect(result.selectedSessionIds).toEqual(["session-a", "session-b", "session-c"]);
-    expect(result.comparedSessions.map((candidate) => candidate.sessionId)).toEqual([
+    expect(result.selectedSessionIds).toEqual([
       "session-a",
       "session-b",
       "session-c"
     ]);
+    expect(
+      result.comparedSessions.map((candidate) => candidate.sessionId)
+    ).toEqual(["session-a", "session-b", "session-c"]);
     expect(result.metrics.length).toBeGreaterThan(0);
 
     const oneSelected = getSessionComparison({
@@ -257,7 +263,11 @@ describe("session comparison read model", () => {
     });
 
     expect(result.candidates).toHaveLength(2);
-    expect(result.candidates.find((candidate) => candidate.sessionId === "sheet-session")).toMatchObject({
+    expect(
+      result.candidates.find(
+        (candidate) => candidate.sessionId === "sheet-session"
+      )
+    ).toMatchObject({
       label: "Bridge - 2026-06-21 12:01 UTC",
       sheetName: "Alpha Etude",
       segmentName: "Bridge",
@@ -266,25 +276,21 @@ describe("session comparison read model", () => {
       linkedRecordingDurationMs: 75_000,
       targetState: "valid"
     });
-    expect(getMetric(result.metrics, "sessionType").values.map((entry) => entry.text)).toEqual([
-      "Quick practice",
-      "Sheet practice"
-    ]);
-    expect(getMetric(result.metrics, "duration").values.map((entry) => entry.text)).toEqual([
-      "1m 5s",
-      "2m 5s"
-    ]);
+    expect(
+      getMetric(result.metrics, "sessionType").values.map((entry) => entry.text)
+    ).toEqual(["Quick practice", "Sheet practice"]);
+    expect(
+      getMetric(result.metrics, "duration").values.map((entry) => entry.text)
+    ).toEqual(["1m 5s", "2m 5s"]);
     expect(getMetric(result.metrics, "recordings").values[1].text).toBe(
       "2 session recordings; 2 linked sheet takes; latest recording-two"
     );
-    expect(getMetric(result.metrics, "sheet").values.map((entry) => entry.text)).toEqual([
-      "Quick metronome",
-      "Alpha Etude"
-    ]);
-    expect(getMetric(result.metrics, "segment").values.map((entry) => entry.text)).toEqual([
-      "Quick metronome",
-      "Bridge m5-12"
-    ]);
+    expect(
+      getMetric(result.metrics, "sheet").values.map((entry) => entry.text)
+    ).toEqual(["Quick metronome", "Alpha Etude"]);
+    expect(
+      getMetric(result.metrics, "segment").values.map((entry) => entry.text)
+    ).toEqual(["Quick metronome", "Bridge m5-12"]);
     expect(getMetric(result.metrics, "goalContribution").values[1].text).toBe(
       "Counts as 1 session; adds 2 min; 2 sheet takes linked"
     );
@@ -303,7 +309,9 @@ describe("session comparison read model", () => {
 
     const renderedWords = JSON.stringify(result).toLowerCase();
 
-    expect(renderedWords).not.toMatch(/\b(score|rank|recommend|better|worse|improved)\b/);
+    expect(renderedWords).not.toMatch(
+      /\b(score|rank|recommend|better|worse|improved)\b/
+    );
   });
 
   it("represents missing, failed, and blank sheet or segment targets honestly", () => {
@@ -323,12 +331,16 @@ describe("session comparison read model", () => {
         }
       },
       segments: {
-        [createSessionHistorySegmentTargetKey("sheet-alpha", "segment-missing")]: {
+        [createSessionHistorySegmentTargetKey(
+          "sheet-alpha",
+          "segment-missing"
+        )]: {
           state: "missing"
         },
-        [createSessionHistorySegmentTargetKey("sheet-alpha", "segment-failed")]: {
-          state: "lookup-failed"
-        }
+        [createSessionHistorySegmentTargetKey("sheet-alpha", "segment-failed")]:
+          {
+            state: "lookup-failed"
+          }
       }
     };
     const result = getSessionComparison({
@@ -366,7 +378,10 @@ describe("session comparison read model", () => {
       selectedSessionIds: ["deleted-sheet", "missing-segment"]
     });
     const statesById = Object.fromEntries(
-      result.candidates.map((candidate) => [candidate.sessionId, candidate.targetState])
+      result.candidates.map((candidate) => [
+        candidate.sessionId,
+        candidate.targetState
+      ])
     );
 
     expect(statesById).toMatchObject({

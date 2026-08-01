@@ -53,7 +53,10 @@ export function QuickMetronomeExperience({
 }: QuickMetronomeExperienceProps = {}) {
   const metronomeService = useMemo(() => createBrowserMetronomeService(), []);
   const countdownExecutor = useMemo(() => createBrowserCountdownExecutor(), []);
-  const recordingService = useMemo(() => createBrowserRecordingCaptureService(), []);
+  const recordingService = useMemo(
+    () => createBrowserRecordingCaptureService(),
+    []
+  );
   const {
     settings,
     bpmDraft,
@@ -94,16 +97,19 @@ export function QuickMetronomeExperience({
       timeSignature: settings.timeSignature
     });
   }, [sessionService, settings.bpm, settings.timeSignature]);
-  const handleStarted = useCallback((session: PracticeSession | null) => {
-    setCurrentSession(session);
-    if (session) {
-      void sessionService.captureSessionEvent({
-        sessionId: session.id,
-        kind: "metronome_started"
-      });
-    }
-    setMessage("Metronome playing.");
-  }, [sessionService]);
+  const handleStarted = useCallback(
+    (session: PracticeSession | null) => {
+      setCurrentSession(session);
+      if (session) {
+        void sessionService.captureSessionEvent({
+          sessionId: session.id,
+          kind: "metronome_started"
+        });
+      }
+      setMessage("Metronome playing.");
+    },
+    [sessionService]
+  );
   const handleStartFailed = useCallback(
     async (error: unknown, session: PracticeSession | null) => {
       if (session) {
@@ -134,9 +140,7 @@ export function QuickMetronomeExperience({
           ? await sessionService.updatePracticeSessionDuration(
               currentSession.id
             )
-          : await sessionService.endPracticeSession(
-              currentSession.id
-            );
+          : await sessionService.endPracticeSession(currentSession.id);
 
         setCurrentSession(nextSession);
       } catch (error) {
@@ -266,9 +270,9 @@ export function QuickMetronomeExperience({
       aria-labelledby="quick-metronome-title"
       className="mx-auto flex w-full max-w-6xl flex-col gap-5"
     >
-      <header className="border-border flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-end lg:justify-between">
+      <header className="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-[0.08em] uppercase">
+          <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
             Quick Practice
           </p>
           <h1
@@ -277,20 +281,20 @@ export function QuickMetronomeExperience({
           >
             Quick Metronome
           </h1>
-          <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
             Start a timed metronome, capture a quick take, replay it, and keep
             it as an unlinked quick recording.
           </p>
         </div>
         <div
           aria-live="polite"
-          className="border-border bg-card shadow-soft flex min-h-12 items-center gap-3 rounded-md border px-4 py-3 text-sm"
+          className="flex min-h-12 items-center gap-3 rounded-md border border-border bg-card px-4 py-3 text-sm shadow-soft"
         >
           <span
             className={
               isPlaying
                 ? "h-2.5 w-2.5 rounded-full bg-green-600"
-                : "bg-muted-foreground h-2.5 w-2.5 rounded-full"
+                : "h-2.5 w-2.5 rounded-full bg-muted-foreground"
             }
             aria-hidden="true"
           />
@@ -309,7 +313,7 @@ export function QuickMetronomeExperience({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Timer className="text-accent h-5 w-5" aria-hidden="true" />
+              <Timer className="h-5 w-5 text-accent" aria-hidden="true" />
               Tempo and Meter
             </CardTitle>
           </CardHeader>
@@ -334,7 +338,7 @@ export function QuickMetronomeExperience({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Radio className="text-accent h-5 w-5" aria-hidden="true" />
+              <Radio className="h-5 w-5 text-accent" aria-hidden="true" />
               Transport and Recording
             </CardTitle>
           </CardHeader>
@@ -415,11 +419,11 @@ export function QuickMetronomeExperience({
 
               <div
                 aria-live="polite"
-                className="border-border bg-muted rounded-md border px-3 py-3 text-sm"
+                className="rounded-md border border-border bg-muted px-3 py-3 text-sm"
               >
                 <p className="font-medium">{message}</p>
                 {errorMessage ? (
-                  <p role="alert" className="text-destructive mt-2 font-medium">
+                  <p role="alert" className="mt-2 font-medium text-destructive">
                     {errorMessage}
                   </p>
                 ) : null}

@@ -6,8 +6,14 @@ import {
   seedRecordingHistoryForTests
 } from "@/lib/recordings-review/repository";
 import { recordingHistoryMetadataRepository } from "@/infrastructure/db/recording-history-metadata-repository";
-import type { RecordingReviewSnapshot, ReviewRecording } from "@/lib/recordings-review/types";
-import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
+import type {
+  RecordingReviewSnapshot,
+  ReviewRecording
+} from "@/lib/recordings-review/types";
+import type {
+  PracticeSession,
+  SheetRecordingMetadata
+} from "@/domain/practice";
 import {
   makeQuickReviewRecording,
   makeSheetRecordingSegmentContext as createSegmentContext,
@@ -53,18 +59,27 @@ describe("recording history repository", () => {
   });
 
   it("loads recordings and markers from the local data boundary", () => {
-    window.localStorage.setItem(RECORDINGS_STORAGE_KEY, JSON.stringify(snapshot));
+    window.localStorage.setItem(
+      RECORDINGS_STORAGE_KEY,
+      JSON.stringify(snapshot)
+    );
 
     expect(recordingHistoryRepository.getSnapshot().recordings).toHaveLength(1);
-    expect(recordingHistoryRepository.getErrorMarkers("recording-1")).toHaveLength(1);
-    expect(recordingHistoryRepository.getRecording("recording-1")?.audioDataUrl).toMatch(/^data:audio\/wav/);
+    expect(
+      recordingHistoryRepository.getErrorMarkers("recording-1")
+    ).toHaveLength(1);
+    expect(
+      recordingHistoryRepository.getRecording("recording-1")?.audioDataUrl
+    ).toMatch(/^data:audio\/wav/);
   });
 
   it("deletes recording metadata and linked error markers together", () => {
     seedRecordingHistoryForTests(snapshot);
     recordingHistoryRepository.deleteRecording("recording-1");
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
 
     expect(persisted.recordings).toEqual([]);
     expect(persisted.errorMarkers).toEqual([]);
@@ -100,20 +115,29 @@ describe("recording history repository", () => {
 
     expect(lateMarker.note).toBe("late accent");
     expect(earlyMarker.note).toBeNull();
-    expect(recordingHistoryRepository.getErrorMarkers("recording-1").map((marker) => marker.id)).toEqual([
-      "marker-early",
-      "marker-late"
-    ]);
-    expect(recordingHistoryRepository.getErrorMarkers("other-recording")).toEqual([]);
+    expect(
+      recordingHistoryRepository
+        .getErrorMarkers("recording-1")
+        .map((marker) => marker.id)
+    ).toEqual(["marker-early", "marker-late"]);
+    expect(
+      recordingHistoryRepository.getErrorMarkers("other-recording")
+    ).toEqual([]);
 
     recordingHistoryRepository.deleteErrorMarker("marker-early");
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
 
-    expect(recordingHistoryRepository.getErrorMarkers("recording-1").map((marker) => marker.id)).toEqual([
-      "marker-late"
-    ]);
-    expect(persisted.errorMarkers.map((marker: { id: string }) => marker.id)).toEqual(["marker-late"]);
+    expect(
+      recordingHistoryRepository
+        .getErrorMarkers("recording-1")
+        .map((marker) => marker.id)
+    ).toEqual(["marker-late"]);
+    expect(
+      persisted.errorMarkers.map((marker: { id: string }) => marker.id)
+    ).toEqual(["marker-late"]);
   });
 
   it("rejects marker timestamps outside the recording duration", () => {
@@ -190,7 +214,9 @@ describe("recording history repository", () => {
       }
     ]);
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
 
     expect(persisted.errorMarkers).toEqual([
       {
@@ -240,11 +266,15 @@ describe("recording history repository", () => {
         note: "valid loaded"
       }
     ]);
-    expect(recordingHistoryRepository.getErrorMarkers("recording-1")).toEqual(loadedSnapshot.errorMarkers);
+    expect(recordingHistoryRepository.getErrorMarkers("recording-1")).toEqual(
+      loadedSnapshot.errorMarkers
+    );
 
     seedRecordingHistoryForTests(loadedSnapshot);
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
 
     expect(persisted.errorMarkers).toEqual(loadedSnapshot.errorMarkers);
   });
@@ -252,16 +282,25 @@ describe("recording history repository", () => {
   it("stores and resolves separate best and active take metadata without changing latest-take ordering", () => {
     seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
-    const [segmentGroup, noSegmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+    const [segmentGroup, noSegmentGroup] =
+      recordingHistoryRepository.getTakeGroups().takeGroups;
 
     expect(segmentGroup.latestRecording.id).toBe("sheet-segment-new");
 
     recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old");
     recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-new");
-    recordingHistoryRepository.setBestTake(noSegmentGroup, "sheet-whole-legacy");
-    recordingHistoryRepository.setActiveTake(noSegmentGroup, "sheet-whole-legacy");
+    recordingHistoryRepository.setBestTake(
+      noSegmentGroup,
+      "sheet-whole-legacy"
+    );
+    recordingHistoryRepository.setActiveTake(
+      noSegmentGroup,
+      "sheet-whole-legacy"
+    );
 
-    expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({
+    expect(
+      recordingHistoryRepository.resolveTakeSelection(segmentGroup)
+    ).toMatchObject({
       groupId: "sheet:sheet-alpha:segment:id:segment-alpha",
       bestRecordingId: "sheet-segment-old",
       activeRecordingId: "sheet-segment-new",
@@ -272,7 +311,9 @@ describe("recording history repository", () => {
         id: "sheet-segment-new"
       }
     });
-    expect(recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)).toMatchObject({
+    expect(
+      recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)
+    ).toMatchObject({
       groupId: "sheet:sheet-alpha:segment:none",
       bestRecordingId: "sheet-whole-legacy",
       activeRecordingId: "sheet-whole-legacy",
@@ -283,11 +324,14 @@ describe("recording history repository", () => {
         id: "sheet-whole-legacy"
       }
     });
-    expect(recordingHistoryRepository.getTakeGroups().takeGroups[0].latestRecording.id).toBe(
-      "sheet-segment-new"
-    );
+    expect(
+      recordingHistoryRepository.getTakeGroups().takeGroups[0].latestRecording
+        .id
+    ).toBe("sheet-segment-new");
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
 
     expect(persisted.takeSelections).toHaveLength(2);
     expect(recordingHistoryRepository.getTakeSelections()).toHaveLength(2);
@@ -296,13 +340,16 @@ describe("recording history repository", () => {
   it("clears best and active independently and removes empty metadata records", () => {
     seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
-    const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+    const [segmentGroup] =
+      recordingHistoryRepository.getTakeGroups().takeGroups;
 
     recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old");
     recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-new");
     recordingHistoryRepository.setBestTake(segmentGroup, null);
 
-    expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({
+    expect(
+      recordingHistoryRepository.resolveTakeSelection(segmentGroup)
+    ).toMatchObject({
       bestRecordingId: null,
       activeRecordingId: "sheet-segment-new",
       bestRecording: null,
@@ -313,8 +360,12 @@ describe("recording history repository", () => {
 
     recordingHistoryRepository.setActiveTake(segmentGroup, null);
 
-    expect(recordingHistoryRepository.getTakeSelection(segmentGroup.groupId)).toBeNull();
-    expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({
+    expect(
+      recordingHistoryRepository.getTakeSelection(segmentGroup.groupId)
+    ).toBeNull();
+    expect(
+      recordingHistoryRepository.resolveTakeSelection(segmentGroup)
+    ).toMatchObject({
       bestRecordingId: null,
       activeRecordingId: null,
       bestRecording: null,
@@ -322,7 +373,9 @@ describe("recording history repository", () => {
       updatedAt: null
     });
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
 
     expect(persisted.takeSelections).toBeUndefined();
   });
@@ -330,13 +383,17 @@ describe("recording history repository", () => {
   it("rejects take selections for recordings outside the target group and preserves stored state", () => {
     seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
-    const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+    const [segmentGroup] =
+      recordingHistoryRepository.getTakeGroups().takeGroups;
 
     expect(() =>
       recordingHistoryRepository.setBestTake(segmentGroup, "sheet-whole-null")
     ).toThrow("does not belong");
     expect(() =>
-      recordingHistoryRepository.setActiveTake(segmentGroup, "quick-review-recording")
+      recordingHistoryRepository.setActiveTake(
+        segmentGroup,
+        "quick-review-recording"
+      )
     ).toThrow("does not belong");
 
     expect(recordingHistoryRepository.getTakeSelections()).toEqual([]);
@@ -345,7 +402,8 @@ describe("recording history repository", () => {
   it("rejects stale group writes for deleted recordings and does not persist orphaned refs", () => {
     seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
-    const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+    const [segmentGroup] =
+      recordingHistoryRepository.getTakeGroups().takeGroups;
 
     recordingHistoryRepository.deleteRecording("sheet-segment-old");
 
@@ -353,7 +411,10 @@ describe("recording history repository", () => {
       recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old")
     ).toThrow("does not belong");
     expect(() =>
-      recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-old")
+      recordingHistoryRepository.setActiveTake(
+        segmentGroup,
+        "sheet-segment-old"
+      )
     ).toThrow("does not belong");
     expect(recordingHistoryRepository.getTakeSelections()).toEqual([]);
 
@@ -417,7 +478,8 @@ describe("recording history repository", () => {
       })
     );
 
-    const [segmentGroup, noSegmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+    const [segmentGroup, noSegmentGroup] =
+      recordingHistoryRepository.getTakeGroups().takeGroups;
 
     expect(recordingHistoryRepository.getTakeSelections()).toEqual([
       {
@@ -437,7 +499,9 @@ describe("recording history repository", () => {
         updatedAt: "2026-06-21T10:00:00.000Z"
       }
     ]);
-    expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({
+    expect(
+      recordingHistoryRepository.resolveTakeSelection(segmentGroup)
+    ).toMatchObject({
       bestRecordingId: "missing-recording",
       activeRecordingId: "sheet-segment-new",
       bestRecording: null,
@@ -445,7 +509,9 @@ describe("recording history repository", () => {
         id: "sheet-segment-new"
       }
     });
-    expect(recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)).toMatchObject({
+    expect(
+      recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)
+    ).toMatchObject({
       bestRecordingId: "missing-recording",
       activeRecordingId: null,
       bestRecording: null,
@@ -456,16 +522,25 @@ describe("recording history repository", () => {
   it("clears deleted recording refs from take selections while preserving unrelated groups", () => {
     seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
-    const [segmentGroup, noSegmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+    const [segmentGroup, noSegmentGroup] =
+      recordingHistoryRepository.getTakeGroups().takeGroups;
 
     recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old");
     recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-new");
-    recordingHistoryRepository.setBestTake(noSegmentGroup, "sheet-whole-legacy");
-    recordingHistoryRepository.setActiveTake(noSegmentGroup, "sheet-whole-null");
+    recordingHistoryRepository.setBestTake(
+      noSegmentGroup,
+      "sheet-whole-legacy"
+    );
+    recordingHistoryRepository.setActiveTake(
+      noSegmentGroup,
+      "sheet-whole-null"
+    );
 
     recordingHistoryRepository.deleteRecording("sheet-segment-old");
 
-    expect(recordingHistoryRepository.resolveTakeSelection(segmentGroup)).toMatchObject({
+    expect(
+      recordingHistoryRepository.resolveTakeSelection(segmentGroup)
+    ).toMatchObject({
       bestRecordingId: null,
       activeRecordingId: "sheet-segment-new",
       bestRecording: null,
@@ -473,18 +548,24 @@ describe("recording history repository", () => {
         id: "sheet-segment-new"
       }
     });
-    expect(recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)).toMatchObject({
+    expect(
+      recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)
+    ).toMatchObject({
       bestRecordingId: "sheet-whole-legacy",
       activeRecordingId: "sheet-whole-null"
     });
 
     recordingHistoryRepository.deleteRecording("sheet-segment-new");
 
-    expect(recordingHistoryRepository.getTakeSelection(segmentGroup.groupId)).toBeNull();
+    expect(
+      recordingHistoryRepository.getTakeSelection(segmentGroup.groupId)
+    ).toBeNull();
 
     recordingHistoryRepository.deleteRecording("sheet-whole-legacy");
 
-    expect(recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)).toMatchObject({
+    expect(
+      recordingHistoryRepository.resolveTakeSelection(noSegmentGroup)
+    ).toMatchObject({
       bestRecordingId: null,
       activeRecordingId: "sheet-whole-null",
       bestRecording: null,
@@ -506,7 +587,10 @@ describe("recording history repository", () => {
 
     recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old");
     recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-new");
-    recordingHistoryRepository.setBestTake(noSegmentGroup, "sheet-whole-legacy");
+    recordingHistoryRepository.setBestTake(
+      noSegmentGroup,
+      "sheet-whole-legacy"
+    );
 
     const persistedBefore = JSON.parse(
       window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
@@ -518,7 +602,9 @@ describe("recording history repository", () => {
       window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
     );
 
-    expect(persistedAfter.takeSelections).toEqual(persistedBefore.takeSelections);
+    expect(persistedAfter.takeSelections).toEqual(
+      persistedBefore.takeSelections
+    );
     expect(JSON.stringify(persistedAfter.takeSelections)).toBe(
       JSON.stringify(persistedBefore.takeSelections)
     );
@@ -703,15 +789,18 @@ describe("recording history repository", () => {
     recordingHistoryRepository.setRecordingTags("quick-review-recording", [
       "Warmup"
     ]);
-    recordingHistoryRepository.setRecordingFavorite(
-      "sheet-segment-old",
-      true
-    );
+    recordingHistoryRepository.setRecordingFavorite("sheet-segment-old", true);
 
     recordingHistoryRepository.deleteRecording("quick-review-recording");
 
-    expect(recordingHistoryRepository.getRecordingOrganization("quick-review-recording")).toBeNull();
-    expect(recordingHistoryRepository.getRecordingOrganization("sheet-segment-old")).toMatchObject({
+    expect(
+      recordingHistoryRepository.getRecordingOrganization(
+        "quick-review-recording"
+      )
+    ).toBeNull();
+    expect(
+      recordingHistoryRepository.getRecordingOrganization("sheet-segment-old")
+    ).toMatchObject({
       recordingId: "sheet-segment-old",
       favorite: true
     });
@@ -724,27 +813,40 @@ describe("recording history repository", () => {
   it("stores 05e sheet recording metadata in the shared recording history boundary", async () => {
     const recording = createSheetRecording();
 
-    await recordingHistoryMetadataRepository.saveRecordingMetadata(recording, createSheetSession());
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      recording,
+      createSheetSession()
+    );
 
     const snapshot = recordingHistoryRepository.getSnapshot();
-    const reviewRecording = recordingHistoryRepository.getRecording("sheet-metadata-1");
+    const reviewRecording =
+      recordingHistoryRepository.getRecording("sheet-metadata-1");
 
     expect(snapshot.recordings).toEqual([]);
     expect(snapshot.sheetRecordingMetadata).toEqual([recording]);
     expect(reviewRecording).toBeNull();
-    await expect(recordingHistoryMetadataRepository.listRecordingMetadataForSession("session-sheet-1")).resolves.toEqual([
-      recording
-    ]);
+    await expect(
+      recordingHistoryMetadataRepository.listRecordingMetadataForSession(
+        "session-sheet-1"
+      )
+    ).resolves.toEqual([recording]);
   });
 
   it("clears 05e sheet recording metadata from the shared recording history boundary", async () => {
     const recording = createSheetRecording();
 
-    await recordingHistoryMetadataRepository.saveRecordingMetadata(recording, createSheetSession());
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      recording,
+      createSheetSession()
+    );
     await recordingHistoryMetadataRepository.clear();
 
-    expect(recordingHistoryRepository.getSnapshot().sheetRecordingMetadata).toBeUndefined();
-    await expect(recordingHistoryMetadataRepository.listRecordingMetadata()).resolves.toEqual([]);
+    expect(
+      recordingHistoryRepository.getSnapshot().sheetRecordingMetadata
+    ).toBeUndefined();
+    await expect(
+      recordingHistoryMetadataRepository.listRecordingMetadata()
+    ).resolves.toEqual([]);
   });
 
   it("filters invalid persisted sheet metadata bucket rows before listing", async () => {
@@ -771,8 +873,12 @@ describe("recording history repository", () => {
       })
     );
 
-    expect(recordingHistoryRepository.getSnapshot().sheetRecordingMetadata).toBeUndefined();
-    await expect(recordingHistoryMetadataRepository.listRecordingMetadata()).resolves.toEqual([]);
+    expect(
+      recordingHistoryRepository.getSnapshot().sheetRecordingMetadata
+    ).toBeUndefined();
+    await expect(
+      recordingHistoryMetadataRepository.listRecordingMetadata()
+    ).resolves.toEqual([]);
   });
 
   it("preserves 12/8 sheet recording metadata through the practice metadata boundary", async () => {
@@ -781,7 +887,10 @@ describe("recording history repository", () => {
       createSheetSession({ timeSignature: "12/8" })
     );
 
-    expect(recordingHistoryRepository.getSnapshot().sheetRecordingMetadata?.[0].timeSignature).toBe("12/8");
+    expect(
+      recordingHistoryRepository.getSnapshot().sheetRecordingMetadata?.[0]
+        .timeSignature
+    ).toBe("12/8");
     await expect(
       recordingHistoryMetadataRepository.listRecordingMetadataForSession(
         "session-sheet-1"
@@ -797,15 +906,22 @@ describe("recording history repository", () => {
   it("preserves review metadata across sheet snapshot writes and clears sheet organization with sheet metadata cleanup", async () => {
     seedRecordingHistoryForTests(createTakeSelectionSnapshot());
 
-    const [segmentGroup] = recordingHistoryRepository.getTakeGroups().takeGroups;
+    const [segmentGroup] =
+      recordingHistoryRepository.getTakeGroups().takeGroups;
 
     recordingHistoryRepository.setBestTake(segmentGroup, "sheet-segment-old");
     recordingHistoryRepository.setActiveTake(segmentGroup, "sheet-segment-new");
     recordingHistoryRepository.setRecordingTags("sheet-segment-old", [
       "Bridge"
     ]);
-    recordingHistoryRepository.setRecordingFavorite("quick-review-recording", true);
-    recordingHistoryRepository.setRecordingArchived("quick-review-recording", true);
+    recordingHistoryRepository.setRecordingFavorite(
+      "quick-review-recording",
+      true
+    );
+    recordingHistoryRepository.setRecordingArchived(
+      "quick-review-recording",
+      true
+    );
 
     await recordingHistoryMetadataRepository.saveRecordingMetadata(
       createSheetRecording({
@@ -821,10 +937,16 @@ describe("recording history repository", () => {
       bestRecordingId: "sheet-segment-old",
       activeRecordingId: "sheet-segment-new"
     });
-    expect(recordingHistoryRepository.getRecordingOrganization("sheet-segment-old")).toMatchObject({
+    expect(
+      recordingHistoryRepository.getRecordingOrganization("sheet-segment-old")
+    ).toMatchObject({
       tags: ["Bridge"]
     });
-    expect(recordingHistoryRepository.getRecordingOrganization("quick-review-recording")).toMatchObject({
+    expect(
+      recordingHistoryRepository.getRecordingOrganization(
+        "quick-review-recording"
+      )
+    ).toMatchObject({
       favorite: true,
       archived: true
     });
@@ -846,8 +968,14 @@ describe("recording history repository", () => {
     await recordingHistoryMetadataRepository.clear();
 
     expect(recordingHistoryRepository.getTakeSelections()).toEqual([]);
-    expect(recordingHistoryRepository.getRecordingOrganization("sheet-segment-old")).toBeNull();
-    expect(recordingHistoryRepository.getRecordingOrganization("quick-review-recording")).toMatchObject({
+    expect(
+      recordingHistoryRepository.getRecordingOrganization("sheet-segment-old")
+    ).toBeNull();
+    expect(
+      recordingHistoryRepository.getRecordingOrganization(
+        "quick-review-recording"
+      )
+    ).toMatchObject({
       favorite: true,
       archived: true
     });
@@ -863,13 +991,17 @@ describe("recording history repository", () => {
       errorMarkers: []
     });
 
-    const loaded = recordingHistoryRepository.getRecording("sheet-recording-with-segment");
+    const loaded = recordingHistoryRepository.getRecording(
+      "sheet-recording-with-segment"
+    );
 
     expect(loaded?.segmentContext).toEqual(segmentContext);
 
     seedRecordingHistoryForTests(recordingHistoryRepository.getSnapshot());
 
-    const persisted = JSON.parse(window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}");
+    const persisted = JSON.parse(
+      window.localStorage.getItem(RECORDINGS_STORAGE_KEY) ?? "{}"
+    );
 
     expect(persisted.recordings[0].segmentContext).toEqual(segmentContext);
   });
@@ -896,10 +1028,17 @@ describe("recording history repository", () => {
       })
     );
 
-    const loadedRecordings = recordingHistoryRepository.getSnapshot().recordings;
+    const loadedRecordings =
+      recordingHistoryRepository.getSnapshot().recordings;
 
-    expect(loadedRecordings.find((recording) => recording.id === "sheet-legacy")).not.toHaveProperty("segmentContext");
-    expect(loadedRecordings.find((recording) => recording.id === "sheet-malformed-segment")).toMatchObject({
+    expect(
+      loadedRecordings.find((recording) => recording.id === "sheet-legacy")
+    ).not.toHaveProperty("segmentContext");
+    expect(
+      loadedRecordings.find(
+        (recording) => recording.id === "sheet-malformed-segment"
+      )
+    ).toMatchObject({
       id: "sheet-malformed-segment",
       segmentContext: null
     });
@@ -909,10 +1048,15 @@ describe("recording history repository", () => {
     const segmentContext = createSegmentContext({ targetBpm: null });
     const recording = createSheetRecording({ segmentContext });
 
-    await recordingHistoryMetadataRepository.saveRecordingMetadata(recording, createSheetSession());
-    await expect(recordingHistoryMetadataRepository.listRecordingMetadataForSession("session-sheet-1")).resolves.toEqual([
-      recording
-    ]);
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      recording,
+      createSheetSession()
+    );
+    await expect(
+      recordingHistoryMetadataRepository.listRecordingMetadataForSession(
+        "session-sheet-1"
+      )
+    ).resolves.toEqual([recording]);
 
     seedRecordingHistoryForTests({
       sessions: [],
@@ -930,15 +1074,22 @@ describe("recording history repository", () => {
       errorMarkers: []
     });
 
-    await expect(recordingHistoryMetadataRepository.listRecordingMetadataForSession("session-sheet-1")).resolves.toEqual([
-      recording
-    ]);
+    await expect(
+      recordingHistoryMetadataRepository.listRecordingMetadataForSession(
+        "session-sheet-1"
+      )
+    ).resolves.toEqual([recording]);
   });
 
   it("removes same-id metadata-only rows when saving real sheet recordings", async () => {
-    const recording = createSheetRecording({ segmentContext: createSegmentContext() });
+    const recording = createSheetRecording({
+      segmentContext: createSegmentContext()
+    });
 
-    await recordingHistoryMetadataRepository.saveRecordingMetadata(recording, createSheetSession());
+    await recordingHistoryMetadataRepository.saveRecordingMetadata(
+      recording,
+      createSheetSession()
+    );
     recordingHistoryRepository.saveSheetRecordingMetadataWithSession({
       recording: createReviewSheetRecording({
         id: recording.id,
@@ -956,9 +1107,11 @@ describe("recording history repository", () => {
 
     expect(snapshot.sheetRecordingMetadata).toBeUndefined();
     expect(snapshot.recordings.map((item) => item.id)).toEqual([recording.id]);
-    await expect(recordingHistoryMetadataRepository.listRecordingMetadataForSession("session-sheet-1")).resolves.toEqual([
-      recording
-    ]);
+    await expect(
+      recordingHistoryMetadataRepository.listRecordingMetadataForSession(
+        "session-sheet-1"
+      )
+    ).resolves.toEqual([recording]);
   });
 
   it("rejects mismatched 05e sheet recording linkage before saving to shared history", async () => {
@@ -981,17 +1134,22 @@ describe("recording history repository", () => {
       )
     ).rejects.toThrow("sheetId must match");
     await expect(
-      recordingHistoryMetadataRepository.saveRecordingMetadata(createSheetRecording(), {
-        ...createSheetSession(),
-        sourceType: "quick",
-        sheetId: null
-      })
+      recordingHistoryMetadataRepository.saveRecordingMetadata(
+        createSheetRecording(),
+        {
+          ...createSheetSession(),
+          sourceType: "quick",
+          sheetId: null
+        }
+      )
     ).rejects.toThrow("requires a sheet practice session");
     expect(recordingHistoryRepository.getSnapshot().recordings).toEqual([]);
   });
 });
 
-function createSheetRecording(overrides: Partial<SheetRecordingMetadata> = {}): SheetRecordingMetadata {
+function createSheetRecording(
+  overrides: Partial<SheetRecordingMetadata> = {}
+): SheetRecordingMetadata {
   return {
     id: "sheet-metadata-1",
     type: "sheet",
@@ -1066,7 +1224,9 @@ function createTakeSelectionSnapshot(): RecordingReviewSnapshot {
   };
 }
 
-function createSheetSession(overrides: Partial<PracticeSession> = {}): PracticeSession {
+function createSheetSession(
+  overrides: Partial<PracticeSession> = {}
+): PracticeSession {
   const session: PracticeSession = {
     id: "session-sheet-1",
     sourceType: "sheet",

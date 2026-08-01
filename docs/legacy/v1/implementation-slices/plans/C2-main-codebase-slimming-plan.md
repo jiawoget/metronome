@@ -30,56 +30,56 @@ Measured TypeScript/TSX/CSS/JS/MJS line counts:
 
 Largest source files:
 
-| Lines | File |
-| ---: | --- |
-| 1492 | `src/components/recordings-review/recordings-review-experience.tsx` |
-| 903 | `src/components/sheet-practice/segments/practice-segment-selector-panel.tsx` |
-| 842 | `src/components/sheet-practice/controls/sheet-practice-controls.tsx` |
-| 783 | `src/lib/recordings-review/repository.ts` |
-| 647 | `src/components/sheet-practice/reference/reference-panel.tsx` |
-| 616 | `src/components/sheet-library/sheet-library-experience.tsx` |
-| 489 | `src/components/sheet-practice/measure-grid/measure-grid-calibration-panel.tsx` |
-| 419 | `src/components/app-shell/app-shell.tsx` |
-| 409 | `src/components/settings/settings-experience.tsx` |
-| 361 | `src/components/quick-metronome/quick-metronome-experience.tsx` |
-| 329 | `src/services/practice-session/service.ts` |
-| 328 | `src/components/recordings-review/recording-artifact-review.tsx` |
-| 295 | `src/lib/recordings-review/waveform-comparison-sources.ts` |
-| 285 | `src/lib/recordings-review/audio-export.ts` |
-| 282 | `src/lib/recordings-review/artifact-storage.ts` |
-| 265 | `src/stores/sheet-practice-recording-workflow-store.ts` |
-| 265 | `src/lib/sheet-practice/recording-service.ts` |
-| 256 | `src/components/recordings-review/recording-comparison-panel.tsx` |
-| 254 | `src/lib/recordings-review/recording-history-operations.ts` |
+| Lines | File                                                                            |
+| ----: | ------------------------------------------------------------------------------- |
+|  1492 | `src/components/recordings-review/recordings-review-experience.tsx`             |
+|   903 | `src/components/sheet-practice/segments/practice-segment-selector-panel.tsx`    |
+|   842 | `src/components/sheet-practice/controls/sheet-practice-controls.tsx`            |
+|   783 | `src/lib/recordings-review/repository.ts`                                       |
+|   647 | `src/components/sheet-practice/reference/reference-panel.tsx`                   |
+|   616 | `src/components/sheet-library/sheet-library-experience.tsx`                     |
+|   489 | `src/components/sheet-practice/measure-grid/measure-grid-calibration-panel.tsx` |
+|   419 | `src/components/app-shell/app-shell.tsx`                                        |
+|   409 | `src/components/settings/settings-experience.tsx`                               |
+|   361 | `src/components/quick-metronome/quick-metronome-experience.tsx`                 |
+|   329 | `src/services/practice-session/service.ts`                                      |
+|   328 | `src/components/recordings-review/recording-artifact-review.tsx`                |
+|   295 | `src/lib/recordings-review/waveform-comparison-sources.ts`                      |
+|   285 | `src/lib/recordings-review/audio-export.ts`                                     |
+|   282 | `src/lib/recordings-review/artifact-storage.ts`                                 |
+|   265 | `src/stores/sheet-practice-recording-workflow-store.ts`                         |
+|   265 | `src/lib/sheet-practice/recording-service.ts`                                   |
+|   256 | `src/components/recordings-review/recording-comparison-panel.tsx`               |
+|   254 | `src/lib/recordings-review/recording-history-operations.ts`                     |
 
 Largest test files:
 
-| Lines | File |
-| ---: | --- |
-| 2368 | `tests/e2e/recordings-review.spec.ts` |
-| 1937 | `tests/unit/recordings-review-experience.test.tsx` |
-| 1893 | `tests/unit/sheet-practice-controls.test.tsx` |
-| 1011 | `tests/unit/practice-segment-selector.test.tsx` |
-| 945 | `tests/unit/recordings-review-repository.test.ts` |
-| 899 | `tests/unit/practice-session-service.test.ts` |
-| 810 | `tests/unit/recordings-review-artifact-storage.test.ts` |
-| 749 | `tests/unit/practice-segment-repository.test.ts` |
-| 696 | `tests/e2e/sheet-recording-review.spec.ts` |
-| 578 | `tests/unit/sheet-practice-recording.test.ts` |
+| Lines | File                                                    |
+| ----: | ------------------------------------------------------- |
+|  2368 | `tests/e2e/recordings-review.spec.ts`                   |
+|  1937 | `tests/unit/recordings-review-experience.test.tsx`      |
+|  1893 | `tests/unit/sheet-practice-controls.test.tsx`           |
+|  1011 | `tests/unit/practice-segment-selector.test.tsx`         |
+|   945 | `tests/unit/recordings-review-repository.test.ts`       |
+|   899 | `tests/unit/practice-session-service.test.ts`           |
+|   810 | `tests/unit/recordings-review-artifact-storage.test.ts` |
+|   749 | `tests/unit/practice-segment-repository.test.ts`        |
+|   696 | `tests/e2e/sheet-recording-review.spec.ts`              |
+|   578 | `tests/unit/sheet-practice-recording.test.ts`           |
 
 Hot directory counts:
 
-| Lines | Files | Directory |
-| ---: | ---: | --- |
-| 15982 | 43 | `tests/unit` |
-| 7536 | 18 | `tests/e2e` |
-| 4193 | 23 | `src/lib/recordings-review` |
-| 4083 | 15 | `src/components/sheet-practice` |
-| 2626 | 7 | `src/components/recordings-review` |
-| 1605 | 29 | `src/services` |
-| 920 | 9 | `src/infrastructure/db` |
-| 747 | 12 | `src/lib/quick-metronome` |
-| 497 | 2 | `src/components/quick-metronome` |
+| Lines | Files | Directory                          |
+| ----: | ----: | ---------------------------------- |
+| 15982 |    43 | `tests/unit`                       |
+|  7536 |    18 | `tests/e2e`                        |
+|  4193 |    23 | `src/lib/recordings-review`        |
+|  4083 |    15 | `src/components/sheet-practice`    |
+|  2626 |     7 | `src/components/recordings-review` |
+|  1605 |    29 | `src/services`                     |
+|   920 |     9 | `src/infrastructure/db`            |
+|   747 |    12 | `src/lib/quick-metronome`          |
+|   497 |     2 | `src/components/quick-metronome`   |
 
 ## B. Current Functional Boundary
 
@@ -102,19 +102,19 @@ development-era compatibility solely because tests now encode it.
 
 ## C. Slimming Candidate Overview
 
-| Priority | File/module | Current responsibility | Problem type | Necessary? | Suggested action | Estimated reduction | Risk | Required tests |
-| --- | --- | --- | --- | --- | --- | ---: | --- | --- |
-| P0 | `src/infrastructure/db/recording-history-metadata-repository.ts` | Converts metadata-only sheet rows into fake `ReviewRecording` | type pollution | No | Split metadata-only rows from real review recordings before artifactRef-only cleanup | 100-240 | session aggregation behavior | practice-session, repository, review grouping |
-| P0 | `src/lib/sheet-practice/recording-service.ts` | Builds draft recording with `audioDataUrl` to decode captured audio | legacy dependency / duplicate decode | No | Decode from captured Blob/body before deleting data URL fallback | 30-70 | trusted peaks and duration | sheet recording tests |
-| P0 | `src/lib/recordings-review/artifact-migration.ts`, `artifact-data-url.ts` | Migrate legacy localStorage `audioDataUrl` rows into IndexedDB | legacy compatibility | Needs explicit data policy | After metadata split and sheet direct decode, delete legacy migration and data URL parser if developer-era local data can be dropped | 250-450 | Old local data no longer migrates | artifact storage, waveform, export |
-| P0 | `src/lib/recordings-review/artifact-storage.ts` | Resolve artifact bodies from `artifactRef` or legacy `audioDataUrl` | legacy fallback | Partly no | Make resolver artifactRef-only after no runtime path depends on `audioDataUrl` | 50-90 | Missing artifact handling regression | artifact storage unit |
-| P1 | `src/lib/recordings-review/artifact-service.ts` | Re-export barrel for artifact modules | thin facade | No | Delete barrel and import concrete modules directly | 10-20 | Low | typecheck, artifact tests |
-| P1 | `src/lib/quick-metronome/artifact-controller.ts` | Rename wrapper around recording-review artifact functions | thin facade / workaround | No | Delete or fold into a real quick controller API | 5-15 | Low | quick unit/e2e |
-| P1 | `tests/unit/architecture-boundaries.test.ts` | Enforces UI boundaries by path and function names | over-specific boundary test | Partly | Keep module/path boundaries; remove function-name bans | 10-30 | Boundary gets too loose | architecture test |
-| P2 | `src/lib/recordings-review/artifact-review-controller.ts` | Loads details and playback blob separately | duplicate IO/decode | No | Resolve body once and share details/playback body | 20-60 | playback lifecycle | artifact review tests |
-| P2 | quick/sheet save controllers | Artifact-first save, metadata commit, rollback | duplicate flow | Partly | Extract leaf helpers only, not a transaction framework | 80-140 | rollback correctness | quick/sheet save failure tests |
-| P3 | `src/lib/recordings-review/repository.ts` | Public API includes legacy `getArtifact()` and unused metadata save variant | stale public API | No | Delete stale methods | 20-30 | Tests need rewriting | repository tests |
-| P4 | large unit/e2e tests | Repeated recording/audio/storage fixtures | test bloat | No | Shared factories and artifact seed helpers | 700-1200 | Coverage accidentally removed | full unit plus focused e2e |
+| Priority | File/module                                                               | Current responsibility                                                      | Problem type                         | Necessary?                 | Suggested action                                                                                                                     | Estimated reduction | Risk                                 | Required tests                                |
+| -------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------: | ------------------------------------ | --------------------------------------------- |
+| P0       | `src/infrastructure/db/recording-history-metadata-repository.ts`          | Converts metadata-only sheet rows into fake `ReviewRecording`               | type pollution                       | No                         | Split metadata-only rows from real review recordings before artifactRef-only cleanup                                                 |             100-240 | session aggregation behavior         | practice-session, repository, review grouping |
+| P0       | `src/lib/sheet-practice/recording-service.ts`                             | Builds draft recording with `audioDataUrl` to decode captured audio         | legacy dependency / duplicate decode | No                         | Decode from captured Blob/body before deleting data URL fallback                                                                     |               30-70 | trusted peaks and duration           | sheet recording tests                         |
+| P0       | `src/lib/recordings-review/artifact-migration.ts`, `artifact-data-url.ts` | Migrate legacy localStorage `audioDataUrl` rows into IndexedDB              | legacy compatibility                 | Needs explicit data policy | After metadata split and sheet direct decode, delete legacy migration and data URL parser if developer-era local data can be dropped |             250-450 | Old local data no longer migrates    | artifact storage, waveform, export            |
+| P0       | `src/lib/recordings-review/artifact-storage.ts`                           | Resolve artifact bodies from `artifactRef` or legacy `audioDataUrl`         | legacy fallback                      | Partly no                  | Make resolver artifactRef-only after no runtime path depends on `audioDataUrl`                                                       |               50-90 | Missing artifact handling regression | artifact storage unit                         |
+| P1       | `src/lib/recordings-review/artifact-service.ts`                           | Re-export barrel for artifact modules                                       | thin facade                          | No                         | Delete barrel and import concrete modules directly                                                                                   |               10-20 | Low                                  | typecheck, artifact tests                     |
+| P1       | `src/lib/quick-metronome/artifact-controller.ts`                          | Rename wrapper around recording-review artifact functions                   | thin facade / workaround             | No                         | Delete or fold into a real quick controller API                                                                                      |                5-15 | Low                                  | quick unit/e2e                                |
+| P1       | `tests/unit/architecture-boundaries.test.ts`                              | Enforces UI boundaries by path and function names                           | over-specific boundary test          | Partly                     | Keep module/path boundaries; remove function-name bans                                                                               |               10-30 | Boundary gets too loose              | architecture test                             |
+| P2       | `src/lib/recordings-review/artifact-review-controller.ts`                 | Loads details and playback blob separately                                  | duplicate IO/decode                  | No                         | Resolve body once and share details/playback body                                                                                    |               20-60 | playback lifecycle                   | artifact review tests                         |
+| P2       | quick/sheet save controllers                                              | Artifact-first save, metadata commit, rollback                              | duplicate flow                       | Partly                     | Extract leaf helpers only, not a transaction framework                                                                               |              80-140 | rollback correctness                 | quick/sheet save failure tests                |
+| P3       | `src/lib/recordings-review/repository.ts`                                 | Public API includes legacy `getArtifact()` and unused metadata save variant | stale public API                     | No                         | Delete stale methods                                                                                                                 |               20-30 | Tests need rewriting                 | repository tests                              |
+| P4       | large unit/e2e tests                                                      | Repeated recording/audio/storage fixtures                                   | test bloat                           | No                         | Shared factories and artifact seed helpers                                                                                           |            700-1200 | Coverage accidentally removed        | full unit plus focused e2e                    |
 
 ## D. First Small PR
 

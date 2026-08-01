@@ -20,7 +20,12 @@ const userSettingsSchema = z.object({
   referenceDefaultVolume: z.number().finite()
 });
 
-function clampNumber(value: number, min: number, max: number, fallback: number) {
+function clampNumber(
+  value: number,
+  min: number,
+  max: number,
+  fallback: number
+) {
   if (!Number.isFinite(value)) {
     return fallback;
   }
@@ -59,14 +64,19 @@ export function normalizeUserSettings(value: unknown): UserSettings {
   };
 }
 
-export function normalizeSettingsPatch(current: UserSettings, patch: Partial<UserSettings>): UserSettings {
+export function normalizeSettingsPatch(
+  current: UserSettings,
+  patch: Partial<UserSettings>
+): UserSettings {
   return normalizeUserSettings({
     ...current,
     ...patch
   });
 }
 
-export function mapPermissionState(value: PermissionState | string | null | undefined): MicrophonePermissionStatus {
+export function mapPermissionState(
+  value: PermissionState | string | null | undefined
+): MicrophonePermissionStatus {
   if (value === "granted" || value === "denied" || value === "prompt") {
     return value;
   }
@@ -108,4 +118,3 @@ export function getClearLocalDataPlan() {
     "practice history"
   ];
 }
-

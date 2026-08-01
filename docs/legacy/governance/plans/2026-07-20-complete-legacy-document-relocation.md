@@ -25,6 +25,7 @@
 ### Task 1: Relocate the complete tracked legacy documentation set
 
 **Files:**
+
 - Create: `docs/README.md`
 - Create: `docs/legacy/governance/plans/2026-07-20-complete-legacy-document-relocation.md`
 - Move: `docs/v0/**` -> `docs/legacy/v0/**`
@@ -39,6 +40,7 @@
 - Modify: every tracked text file outside `docs/legacy/**` containing a navigable or source-of-truth reference to an old documentation root, plus only the moved Markdown links that must change to remain resolvable
 
 **Interfaces:**
+
 - Consumes: the exact 184-path manifest at branch head `bd7c051a18e42c3ecfad0cd51f63143ffbbdc06e`
 - Produces: one `docs/legacy/` archive namespace; current `.planning` and skill references that resolve into it; zero old tracked documentation roots
 

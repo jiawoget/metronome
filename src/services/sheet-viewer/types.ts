@@ -1,4 +1,9 @@
-import type { ImportedSheet, SheetArtifact, SheetImageDimensions, SheetListItem } from "@/domain/sheet";
+import type {
+  ImportedSheet,
+  SheetArtifact,
+  SheetImageDimensions,
+  SheetListItem
+} from "@/domain/sheet";
 
 export type SheetViewerErrorCode =
   | "missing-sheet-id"
@@ -17,12 +22,18 @@ export type SheetViewerInspection =
     }
   | {
       ok: false;
-      code: Extract<SheetViewerErrorCode, "bad-pdf" | "bad-image" | "missing-artifact" | "artifact-mismatch">;
+      code: Extract<
+        SheetViewerErrorCode,
+        "bad-pdf" | "bad-image" | "missing-artifact" | "artifact-mismatch"
+      >;
       message: string;
     };
 
 export type SheetViewerAdapter = {
-  inspectArtifact: (sheet: ImportedSheet, artifact: SheetArtifact) => Promise<SheetViewerInspection>;
+  inspectArtifact: (
+    sheet: ImportedSheet,
+    artifact: SheetArtifact
+  ) => Promise<SheetViewerInspection>;
   generatePageThumbnails: (
     sheet: ImportedSheet,
     artifact: SheetArtifact,
@@ -52,7 +63,8 @@ type SheetViewerErrorState = {
   message: string;
 };
 
-export type SheetViewerLoadState = SheetViewerReadyState | SheetViewerErrorState;
+export type SheetViewerLoadState =
+  SheetViewerReadyState | SheetViewerErrorState;
 
 export type SheetViewerObjectUrls = {
   sheetId: string;
@@ -73,7 +85,10 @@ export type SheetViewerThumbnailGeneration =
     }
   | {
       ok: false;
-      code: Extract<SheetViewerErrorCode, "bad-pdf" | "bad-image" | "missing-artifact" | "artifact-mismatch">;
+      code: Extract<
+        SheetViewerErrorCode,
+        "bad-pdf" | "bad-image" | "missing-artifact" | "artifact-mismatch"
+      >;
       message: string;
     };
 

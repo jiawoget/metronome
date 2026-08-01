@@ -1,11 +1,11 @@
-import { validatePracticeSegment, type PracticeSegment } from "@/domain/practice/segments";
+import {
+  validatePracticeSegment,
+  type PracticeSegment
+} from "@/domain/practice/segments";
 import { clampBpm } from "@/lib/quick-metronome/control";
 
 export type SegmentTempoApplyStatus =
-  | "applied"
-  | "already-applied"
-  | "no-segment"
-  | "no-target-bpm";
+  "applied" | "already-applied" | "no-segment" | "no-target-bpm";
 
 export type SegmentTempoApplyInput = {
   currentBpm: number;

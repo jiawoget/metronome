@@ -101,7 +101,10 @@ function normalizeRecording(value: unknown): ReviewRecording | null {
   }
 
   const recording = value as ReviewRecording & { segmentContext?: unknown };
-  const hasSegmentContext = Object.prototype.hasOwnProperty.call(recording, "segmentContext");
+  const hasSegmentContext = Object.prototype.hasOwnProperty.call(
+    recording,
+    "segmentContext"
+  );
 
   if (recording.type !== "sheet" || !hasSegmentContext) {
     return recording;
@@ -129,7 +132,9 @@ function isErrorMarker(value: unknown): value is RecordingErrorMarker {
     typeof marker.id === "string" &&
     typeof marker.recordingId === "string" &&
     typeof marker.timestampMs === "number" &&
-    (typeof marker.note === "string" || marker.note === null || marker.note === undefined)
+    (typeof marker.note === "string" ||
+      marker.note === null ||
+      marker.note === undefined)
   );
 }
 
@@ -140,7 +145,9 @@ function normalizeErrorMarkersForRecordings({
   markers: unknown[];
   recordings: ReviewRecording[];
 }) {
-  const recordingsById = new Map(recordings.map((recording) => [recording.id, recording]));
+  const recordingsById = new Map(
+    recordings.map((recording) => [recording.id, recording])
+  );
   const normalizedMarkers: RecordingErrorMarker[] = [];
 
   for (const value of markers) {
@@ -179,12 +186,18 @@ function normalizeSheetRecordingMetadataEntries(value: unknown) {
 
   return value
     .map(parseSheetRecordingMetadata)
-    .filter((recording): recording is SheetRecordingMetadata => recording !== null);
+    .filter(
+      (recording): recording is SheetRecordingMetadata => recording !== null
+    );
 }
 
-function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | RecordingReviewSnapshot): RecordingReviewSnapshot {
+function normalizeSnapshotValue(
+  value: Partial<RecordingReviewSnapshot> | RecordingReviewSnapshot
+): RecordingReviewSnapshot {
   const rawObject: Record<string, unknown> =
-    value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
   const futureFields = { ...rawObject };
   delete futureFields.sheetRecordingMetadata;
   const recordings = Array.isArray(value.recordings)
@@ -193,7 +206,9 @@ function normalizeSnapshotValue(value: Partial<RecordingReviewSnapshot> | Record
         .filter((recording): recording is ReviewRecording => recording !== null)
     : [];
   const markers = Array.isArray(value.errorMarkers) ? value.errorMarkers : [];
-  const takeSelections = normalizeTakeSelectionMetadataEntries(value.takeSelections);
+  const takeSelections = normalizeTakeSelectionMetadataEntries(
+    value.takeSelections
+  );
   const recordingOrganization = normalizeRecordingOrganizationEntries(
     value.recordingOrganization,
     recordings.map((recording) => recording.id)
@@ -276,7 +291,10 @@ function serializeSnapshotForWrite({
     errorMarkers: normalizedSnapshot.errorMarkers
   };
 
-  if (normalizedSnapshot.takeSelections && normalizedSnapshot.takeSelections.length > 0) {
+  if (
+    normalizedSnapshot.takeSelections &&
+    normalizedSnapshot.takeSelections.length > 0
+  ) {
     nextRaw.takeSelections = normalizedSnapshot.takeSelections;
   } else {
     delete nextRaw.takeSelections;
@@ -320,7 +338,10 @@ function publishSnapshotWrite({
 }
 
 function mutateSnapshotWithStaleWriteProtection(
-  mutate: (snapshot: RecordingReviewSnapshot, rawBase: RawSnapshotObject) => RecordingReviewSnapshot,
+  mutate: (
+    snapshot: RecordingReviewSnapshot,
+    rawBase: RawSnapshotObject
+  ) => RecordingReviewSnapshot,
   { maxAttempts = 3 }: { maxAttempts?: number } = {}
 ) {
   const storage = getStorage();
@@ -334,10 +355,11 @@ function mutateSnapshotWithStaleWriteProtection(
     const rawBase = parseRawSnapshotObject(originalRawSnapshot);
     const baseSnapshot = normalizeSnapshotValue(rawBase);
     const nextSnapshot = mutate(baseSnapshot, rawBase);
-    const { normalizedSnapshot, serializedSnapshot } = serializeSnapshotForWrite({
-      snapshot: nextSnapshot,
-      rawBase
-    });
+    const { normalizedSnapshot, serializedSnapshot } =
+      serializeSnapshotForWrite({
+        snapshot: nextSnapshot,
+        rawBase
+      });
 
     if (storage.getItem(RECORDINGS_STORAGE_KEY) !== originalRawSnapshot) {
       continue;
@@ -365,9 +387,11 @@ function getRecordingOrganizationByRecordingId({
 }) {
   const normalizedRecordingId = recordingId.trim();
 
-  return getNormalizedRecordingOrganizations(snapshot).find(
-    (organization) => organization.recordingId === normalizedRecordingId
-  ) ?? null;
+  return (
+    getNormalizedRecordingOrganizations(snapshot).find(
+      (organization) => organization.recordingId === normalizedRecordingId
+    ) ?? null
+  );
 }
 
 function requireCurrentRecording({
@@ -401,9 +425,11 @@ function getTakeSelectionByGroupId({
   snapshot: RecordingReviewSnapshot;
   groupId: string;
 }) {
-  return getNormalizedTakeSelections(snapshot).find(
-    (selection) => selection.groupId === groupId
-  ) ?? null;
+  return (
+    getNormalizedTakeSelections(snapshot).find(
+      (selection) => selection.groupId === groupId
+    ) ?? null
+  );
 }
 
 function getCurrentTakeGroup({
@@ -413,9 +439,11 @@ function getCurrentTakeGroup({
   snapshot: RecordingReviewSnapshot;
   groupId: string;
 }) {
-  return groupRecordingsByTake(snapshot.recordings).takeGroups.find(
-    (candidate) => candidate.groupId === groupId
-  ) ?? null;
+  return (
+    groupRecordingsByTake(snapshot.recordings).takeGroups.find(
+      (candidate) => candidate.groupId === groupId
+    ) ?? null
+  );
 }
 
 function assertRecordingBelongsToGroup({
@@ -431,7 +459,11 @@ function assertRecordingBelongsToGroup({
     throw new Error("Take selection recordingId must be a non-empty string.");
   }
 
-  if (!group.recordings.some((recording) => recording.id === normalizedRecordingId)) {
+  if (
+    !group.recordings.some(
+      (recording) => recording.id === normalizedRecordingId
+    )
+  ) {
     throw new Error(
       `Recording ${normalizedRecordingId} does not belong to take group ${group.groupId}.`
     );
@@ -489,15 +521,26 @@ function updateTakeSelection({
         : createTakeSelectionMetadata({
             group,
             bestRecordingId: bestRecordingId
-              ? assertRecordingBelongsToGroup({ group, recordingId: bestRecordingId })
+              ? assertRecordingBelongsToGroup({
+                  group,
+                  recordingId: bestRecordingId
+                })
               : null,
             activeRecordingId: activeRecordingId
-              ? assertRecordingBelongsToGroup({ group, recordingId: activeRecordingId })
+              ? assertRecordingBelongsToGroup({
+                  group,
+                  recordingId: activeRecordingId
+                })
               : null,
             updatedAt: new Date().toISOString()
           });
     const nextTakeSelections = nextSelection
-      ? [...takeSelections.filter((selection) => selection.groupId !== groupId), nextSelection]
+      ? [
+          ...takeSelections.filter(
+            (selection) => selection.groupId !== groupId
+          ),
+          nextSelection
+        ]
       : takeSelections.filter((selection) => selection.groupId !== groupId);
 
     return buildSnapshot({
@@ -546,7 +589,9 @@ function updateRecordingOrganization({
   return writeSnapshot(nextSnapshot);
 }
 
-export function seedRecordingHistoryForTests(snapshot: RecordingReviewSnapshot) {
+export function seedRecordingHistoryForTests(
+  snapshot: RecordingReviewSnapshot
+) {
   return writeSnapshot(snapshot);
 }
 
@@ -598,7 +643,9 @@ export const recordingHistoryRepository = {
     });
   },
 
-  resolveTakeSelection(group: RecordingTakeGroup): ResolvedRecordingTakeSelection {
+  resolveTakeSelection(
+    group: RecordingTakeGroup
+  ): ResolvedRecordingTakeSelection {
     return resolveTakeSelectionForGroup({
       group,
       selection: getTakeSelectionByGroupId({
@@ -609,11 +656,19 @@ export const recordingHistoryRepository = {
   },
 
   getRecording(recordingId: string) {
-    return readSnapshot().recordings.find((recording) => recording.id === recordingId) ?? null;
+    return (
+      readSnapshot().recordings.find(
+        (recording) => recording.id === recordingId
+      ) ?? null
+    );
   },
 
   getErrorMarkers(recordingId: string) {
-    return sortErrorMarkers(readSnapshot().errorMarkers.filter((marker) => marker.recordingId === recordingId));
+    return sortErrorMarkers(
+      readSnapshot().errorMarkers.filter(
+        (marker) => marker.recordingId === recordingId
+      )
+    );
   },
 
   saveQuickRecordingMetadata:
@@ -734,7 +789,8 @@ export const recordingHistoryRepository = {
 
     if (
       existingTags.some(
-        (existingTag) => existingTag.toLowerCase() === normalizedTag.toLowerCase()
+        (existingTag) =>
+          existingTag.toLowerCase() === normalizedTag.toLowerCase()
       )
     ) {
       throw new Error("Recording tags must not contain duplicates.");
@@ -762,7 +818,8 @@ export const recordingHistoryRepository = {
       snapshot,
       recordingId: recording.id,
       tags: (currentOrganization?.tags ?? []).filter(
-        (existingTag) => existingTag.toLowerCase() !== normalizedTag.toLowerCase()
+        (existingTag) =>
+          existingTag.toLowerCase() !== normalizedTag.toLowerCase()
       ),
       favorite: currentOrganization?.favorite ?? false,
       archived: currentOrganization?.archived ?? false
@@ -808,18 +865,22 @@ export const recordingHistoryRepository = {
     const recording = requireCurrentRecording({ snapshot, recordingId });
     const nextSnapshot = buildSnapshot({
       ...snapshot,
-      recordingOrganization: getNormalizedRecordingOrganizations(snapshot).filter(
-        (organization) => organization.recordingId !== recording.id
-      )
+      recordingOrganization: getNormalizedRecordingOrganizations(
+        snapshot
+      ).filter((organization) => organization.recordingId !== recording.id)
     });
 
     return writeSnapshot(nextSnapshot);
   },
 
-  createErrorMarker(input: Omit<CreateErrorMarkerInput, "durationMs"> & { durationMs?: number }) {
+  createErrorMarker(
+    input: Omit<CreateErrorMarkerInput, "durationMs"> & { durationMs?: number }
+  ) {
     const snapshot = readSnapshot();
     const recordingId = input.recordingId ?? "";
-    const recording = snapshot.recordings.find((item) => item.id === recordingId);
+    const recording = snapshot.recordings.find(
+      (item) => item.id === recordingId
+    );
 
     if (!recording) {
       throw new Error("A recording is required before saving an error marker.");
@@ -847,7 +908,9 @@ export const recordingHistoryRepository = {
     const snapshot = readSnapshot();
     const nextSnapshot: RecordingReviewSnapshot = {
       ...snapshot,
-      errorMarkers: snapshot.errorMarkers.filter((marker) => marker.id !== markerId)
+      errorMarkers: snapshot.errorMarkers.filter(
+        (marker) => marker.id !== markerId
+      )
     };
 
     return writeSnapshot(nextSnapshot);

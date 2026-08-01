@@ -240,15 +240,15 @@ describe("practice session browser repository", () => {
     });
 
     await practiceSessionRepository.saveSession(session);
-    await expect(practiceSessionRepository.getSession(session.id)).resolves.toEqual(
-      session
-    );
+    await expect(
+      practiceSessionRepository.getSession(session.id)
+    ).resolves.toEqual(session);
 
     resetPracticeSessionDatabaseConnectionForTests();
 
-    await expect(practiceSessionRepository.getSession(session.id)).resolves.toEqual(
-      session
-    );
+    await expect(
+      practiceSessionRepository.getSession(session.id)
+    ).resolves.toEqual(session);
   });
 
   it("reads a legacy row without segmentContext back as null after reopening Dexie", async () => {
@@ -267,13 +267,13 @@ describe("practice session browser repository", () => {
 
     resetPracticeSessionDatabaseConnectionForTests();
 
-    await expect(practiceSessionRepository.getSession("legacy-sheet")).resolves.toMatchObject(
-      {
-        id: "legacy-sheet",
-        sourceType: "sheet",
-        segmentContext: null
-      }
-    );
+    await expect(
+      practiceSessionRepository.getSession("legacy-sheet")
+    ).resolves.toMatchObject({
+      id: "legacy-sheet",
+      sourceType: "sheet",
+      segmentContext: null
+    });
   });
 
   it("filters malformed non-null segmentContext rows out of getSession and listSessions", async () => {
@@ -498,9 +498,15 @@ describe("practice session browser repository", () => {
         segmentId: item.segmentId
       }));
 
-    expect(logicalItems(afterReload.items)).toEqual(logicalItems(beforeReload.items));
+    expect(logicalItems(afterReload.items)).toEqual(
+      logicalItems(beforeReload.items)
+    );
     expect(afterReload.generatedAt).not.toBe(beforeReload.generatedAt);
-    expect(Object.fromEntries(afterReload.items.map((item) => [item.id, item.targetState]))).toMatchObject({
+    expect(
+      Object.fromEntries(
+        afterReload.items.map((item) => [item.id, item.targetState])
+      )
+    ).toMatchObject({
       "session:quick-session": "quick",
       "session:sheet-no-segment": "valid",
       "recording:recording-sheet": "valid",
@@ -590,15 +596,25 @@ describe("practice session browser repository", () => {
         segmentId: target.segmentId
       }));
 
-    expect(logicalTargets(afterReload.targets)).toEqual(logicalTargets(beforeReload.targets));
-    expect(logicalRejected(afterReload.rejected)).toEqual(logicalRejected(beforeReload.rejected));
+    expect(logicalTargets(afterReload.targets)).toEqual(
+      logicalTargets(beforeReload.targets)
+    );
+    expect(logicalRejected(afterReload.rejected)).toEqual(
+      logicalRejected(beforeReload.rejected)
+    );
     expect(afterReload.generatedAt).not.toBe(beforeReload.generatedAt);
-    expect(afterReload.targets.map((target) => [target.kind, target.targetKey])).toEqual([
+    expect(
+      afterReload.targets.map((target) => [target.kind, target.targetKey])
+    ).toEqual([
       ["segment", "segment:sheet-alpha:segment-alpha"],
       ["sheet", "sheet:sheet-alpha"],
       ["quick", "quick"]
     ]);
-    expect(Object.fromEntries(afterReload.rejected.map((target) => [target.id, target.reason]))).toMatchObject({
+    expect(
+      Object.fromEntries(
+        afterReload.rejected.map((target) => [target.id, target.reason])
+      )
+    ).toMatchObject({
       "session:missing-segment": "missing-segment",
       "session:deleted-sheet": "missing-sheet"
     });

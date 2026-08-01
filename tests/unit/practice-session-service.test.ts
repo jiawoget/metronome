@@ -25,7 +25,9 @@ import {
 function createMemorySessionRepository(): PracticeSessionRepository {
   const sessions = new Map<string, PracticeSession>();
   const listSessions = async () =>
-    Array.from(sessions.values()).sort((first, second) => second.updatedAt.localeCompare(first.updatedAt));
+    Array.from(sessions.values()).sort((first, second) =>
+      second.updatedAt.localeCompare(first.updatedAt)
+    );
 
   return {
     listSessions,
@@ -36,7 +38,10 @@ function createMemorySessionRepository(): PracticeSessionRepository {
       return (await listSessions())[0] ?? null;
     },
     async getRecentSheetSession(sheetId) {
-      return (await listSessions()).find((session) => session.sheetId === sheetId) ?? null;
+      return (
+        (await listSessions()).find((session) => session.sheetId === sheetId) ??
+        null
+      );
     },
     async saveSession(session) {
       sessions.set(session.id, validatePracticeSession(session));
@@ -53,12 +58,16 @@ function createMemorySessionRepository(): PracticeSessionRepository {
 function createMemoryRecordingRepository(): PracticeRecordingMetadataRepository {
   const recordings = new Map<string, SheetRecordingMetadata>();
   const listRecordingMetadata = async () =>
-    Array.from(recordings.values()).sort((first, second) => second.createdAt.localeCompare(first.createdAt));
+    Array.from(recordings.values()).sort((first, second) =>
+      second.createdAt.localeCompare(first.createdAt)
+    );
 
   return {
     listRecordingMetadata,
     async listRecordingMetadataForSession(sessionId) {
-      return (await listRecordingMetadata()).filter((recording) => recording.sessionId === sessionId);
+      return (await listRecordingMetadata()).filter(
+        (recording) => recording.sessionId === sessionId
+      );
     },
     async saveRecordingMetadata(recording) {
       recordings.set(recording.id, validateSheetRecordingMetadata(recording));
@@ -105,7 +114,9 @@ function createSheetGateway(
   return { gateway, lastPracticed };
 }
 
-function createSegmentContext(overrides: Partial<SheetRecordingSegmentContext> = {}): SheetRecordingSegmentContext {
+function createSegmentContext(
+  overrides: Partial<SheetRecordingSegmentContext> = {}
+): SheetRecordingSegmentContext {
   return {
     segmentId: "segment-alpha",
     segmentName: "Bridge",
@@ -114,7 +125,8 @@ function createSegmentContext(overrides: Partial<SheetRecordingSegmentContext> =
       endMeasure: 12
     },
     targetBpm: 96,
-    measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
+    measureGridVersion:
+      "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000",
     measureGridSnapshot: {
       bpm: 96,
       timeSignature: "4/4",
@@ -199,21 +211,37 @@ describe("practice session service", () => {
       createId: (prefix) => `${prefix}-${++idNumber}`
     });
 
-    return { service, repository, recordingRepository, lastPracticed, validSheetIds };
+    return {
+      service,
+      repository,
+      recordingRepository,
+      lastPracticed,
+      validSheetIds
+    };
   }
 
   it("does not create a session for missing or unknown sheet context", async () => {
     const { service, repository } = createService();
 
-    await expect(service.ensureSheetSession({ sheetId: null, trigger: "metronome" })).resolves.toBeNull();
-    await expect(service.ensureSheetSession({ sheetId: "sheet-missing", trigger: "recording" })).resolves.toBeNull();
+    await expect(
+      service.ensureSheetSession({ sheetId: null, trigger: "metronome" })
+    ).resolves.toBeNull();
+    await expect(
+      service.ensureSheetSession({
+        sheetId: "sheet-missing",
+        trigger: "recording"
+      })
+    ).resolves.toBeNull();
     await expect(repository.listSessions()).resolves.toEqual([]);
   });
 
   it("creates a sheet session on metronome trigger without recording metadata", async () => {
     const { service, lastPracticed } = createService();
 
-    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    const session = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "metronome"
+    });
 
     expect(session).toMatchObject({
       id: "session-1",
@@ -330,9 +358,15 @@ describe("practice session service", () => {
   it("restores the existing sheet session, updates duration, and drives Continue Practice", async () => {
     const { service } = createService();
 
-    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    const session = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "metronome"
+    });
     nowMs += 65_000;
-    const restored = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "recording" });
+    const restored = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording"
+    });
 
     expect(restored?.id).toBe(session?.id);
     expect(restored?.durationMs).toBe(65_000);
@@ -369,7 +403,9 @@ describe("practice session service", () => {
       segmentContext
     });
     await service.commitPreparedSheetRecordingSession(prepared!);
-    await expect(repository.getSession(created?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(created?.id ?? "")
+    ).resolves.toMatchObject({
       segmentContext
     });
 
@@ -394,7 +430,10 @@ describe("practice session service", () => {
   it("persists endedAt when metronome-only activity stops", async () => {
     const { service } = createService();
 
-    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    const session = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "metronome"
+    });
     nowMs += 5_000;
     const ended = await service.endPracticeSession(session?.id ?? "");
 
@@ -426,15 +465,19 @@ describe("practice session service", () => {
     });
 
     nowMs += 4_000;
-    await expect(service.updatePracticeSessionDuration(session.id)).resolves.toMatchObject({
+    await expect(
+      service.updatePracticeSessionDuration(session.id)
+    ).resolves.toMatchObject({
       id: "session-1",
       durationMs: 4_000
     });
-    await expect(service.endPracticeSession(session.id)).resolves.toMatchObject({
-      id: "session-1",
-      endedAt: "2026-06-21T12:00:04.000Z",
-      durationMs: 4_000
-    });
+    await expect(service.endPracticeSession(session.id)).resolves.toMatchObject(
+      {
+        id: "session-1",
+        endedAt: "2026-06-21T12:00:04.000Z",
+        durationMs: 4_000
+      }
+    );
     await expect(repository.getSession(session.id)).resolves.toMatchObject({
       sourceType: "quick",
       sheetId: null,
@@ -483,10 +526,18 @@ describe("practice session service", () => {
     const { service, repository } = createService();
     nowMs = new Date(2026, 5, 21, 10, 0, 0).getTime();
 
-    const firstSession = await service.ensureQuickSession({ trigger: "metronome", bpm: 96, timeSignature: "4/4" });
+    const firstSession = await service.ensureQuickSession({
+      trigger: "metronome",
+      bpm: 96,
+      timeSignature: "4/4"
+    });
 
     nowMs = new Date(2026, 5, 21, 10, 1, 0).getTime();
-    const sameContextSession = await service.ensureQuickSession({ trigger: "recording", bpm: 100, timeSignature: "3/4" });
+    const sameContextSession = await service.ensureQuickSession({
+      trigger: "recording",
+      bpm: 100,
+      timeSignature: "3/4"
+    });
 
     expect(sameContextSession.id).toBe(firstSession.id);
     expect(sameContextSession).toMatchObject({
@@ -499,7 +550,11 @@ describe("practice session service", () => {
 
   it("updates recording count and latest recording id for session-bound quick recordings", async () => {
     const { service, repository } = createService();
-    const session = await service.ensureQuickSession({ trigger: "recording", bpm: 96, timeSignature: "4/4" });
+    const session = await service.ensureQuickSession({
+      trigger: "recording",
+      bpm: 96,
+      timeSignature: "4/4"
+    });
 
     nowMs += 1_000;
     await expect(
@@ -541,18 +596,24 @@ describe("practice session service", () => {
     });
 
     nowMs += 4_000;
-    await expect(service.endPracticeSession(quickSession.id)).resolves.toMatchObject({
+    await expect(
+      service.endPracticeSession(quickSession.id)
+    ).resolves.toMatchObject({
       endedAt: "2026-06-21T12:00:04.000Z",
       durationMs: 4_000
     });
 
     nowMs += 60_000;
-    await expect(service.updatePracticeSessionDuration(quickSession.id)).resolves.toMatchObject({
+    await expect(
+      service.updatePracticeSessionDuration(quickSession.id)
+    ).resolves.toMatchObject({
       endedAt: "2026-06-21T12:00:04.000Z",
       durationMs: 4_000,
       updatedAt: "2026-06-21T12:01:04.000Z"
     });
-    await expect(service.endPracticeSession(quickSession.id)).resolves.toMatchObject({
+    await expect(
+      service.endPracticeSession(quickSession.id)
+    ).resolves.toMatchObject({
       endedAt: "2026-06-21T12:00:04.000Z",
       durationMs: 4_000
     });
@@ -566,12 +627,16 @@ describe("practice session service", () => {
     await service.endPracticeSession(sheetSession?.id ?? "");
 
     nowMs += 60_000;
-    await expect(service.updateSheetSessionDuration(sheetSession?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      service.updateSheetSessionDuration(sheetSession?.id ?? "")
+    ).resolves.toMatchObject({
       endedAt: "2026-06-21T12:01:10.000Z",
       durationMs: 6_000,
       updatedAt: "2026-06-21T12:02:10.000Z"
     });
-    await expect(repository.getSession(sheetSession?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(sheetSession?.id ?? "")
+    ).resolves.toMatchObject({
       endedAt: "2026-06-21T12:01:10.000Z",
       durationMs: 6_000
     });
@@ -627,7 +692,9 @@ describe("practice session service", () => {
       createdAt: "2026-06-21T12:02:05.000Z",
       durationMs: 900
     });
-    await expect(repository.getSession(sheetSession?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(sheetSession?.id ?? "")
+    ).resolves.toMatchObject({
       endedAt: "2026-06-21T12:01:05.000Z",
       durationMs: 3_000,
       recordingCount: 0
@@ -692,14 +759,20 @@ describe("practice session service", () => {
   it("creates a new sheet history entry instead of reopening an ended sheet session", async () => {
     const { service, repository } = createService();
 
-    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    const session = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "metronome"
+    });
     nowMs += 5_000;
     const ended = await service.endPracticeSession(session?.id ?? "");
 
     expect(ended?.endedAt).toBe("2026-06-21T12:00:05.000Z");
 
     nowMs += 10_000;
-    const nextSession = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    const nextSession = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "metronome"
+    });
 
     expect(nextSession).toMatchObject({
       id: "session-2",
@@ -709,16 +782,23 @@ describe("practice session service", () => {
     expect(nextSession?.id).not.toBe(session?.id);
     await expect(repository.listSessions()).resolves.toHaveLength(2);
 
-    const restored = await service.restorePracticeSessionSnapshot(ended as PracticeSession);
+    const restored = await service.restorePracticeSessionSnapshot(
+      ended as PracticeSession
+    );
 
     expect(restored).toEqual(ended);
-    await expect(repository.getSession(session?.id ?? "")).resolves.toEqual(ended);
+    await expect(repository.getSession(session?.id ?? "")).resolves.toEqual(
+      ended
+    );
   });
 
   it("creates sheet recording metadata linked to sessionId and sheetId without artifacts", async () => {
     const { service, repository } = createService();
 
-    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "recording" });
+    const session = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording"
+    });
     nowMs += 12_500;
     const recording = await service.createSheetRecordingMetadata({
       sheetId: "sheet-alpha",
@@ -748,7 +828,9 @@ describe("practice session service", () => {
     });
 
     nowMs += 1_000;
-    await expect(service.endPracticeSession(session?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      service.endPracticeSession(session?.id ?? "")
+    ).resolves.toMatchObject({
       endedAt: "2026-06-21T12:00:13.500Z",
       durationMs: 13_500
     });
@@ -786,11 +868,17 @@ describe("practice session service", () => {
     await recordingRepository.saveRecordingMetadata(recording, session);
 
     const listSessionsSpy = vi.spyOn(repository, "listSessions");
-    const listRecordingsSpy = vi.spyOn(recordingRepository, "listRecordingMetadata");
+    const listRecordingsSpy = vi.spyOn(
+      recordingRepository,
+      "listRecordingMetadata"
+    );
     const saveSessionSpy = vi.spyOn(repository, "saveSession");
     const deleteSessionSpy = vi.spyOn(repository, "deleteSession");
     const clearSessionsSpy = vi.spyOn(repository, "clear");
-    const saveRecordingSpy = vi.spyOn(recordingRepository, "saveRecordingMetadata");
+    const saveRecordingSpy = vi.spyOn(
+      recordingRepository,
+      "saveRecordingMetadata"
+    );
     const clearRecordingsSpy = vi.spyOn(recordingRepository, "clear");
 
     await expect(service.evaluateGoalCompletion(goals)).resolves.toEqual([
@@ -829,9 +917,10 @@ describe("practice session service", () => {
     vi.spyOn(sessionReadFailureRepository, "listSessions").mockRejectedValue(
       new Error("session read failed")
     );
-    vi.spyOn(recordingReadFailureRepository, "listRecordingMetadata").mockRejectedValue(
-      new Error("recording read failed")
-    );
+    vi.spyOn(
+      recordingReadFailureRepository,
+      "listRecordingMetadata"
+    ).mockRejectedValue(new Error("recording read failed"));
 
     await expect(
       createPracticeSessionService({
@@ -937,9 +1026,10 @@ describe("practice session service", () => {
     vi.spyOn(sessionReadFailureRepository, "listSessions").mockRejectedValue(
       new Error("session read failed")
     );
-    vi.spyOn(recordingReadFailureRepository, "listRecordingMetadata").mockRejectedValue(
-      new Error("recording read failed")
-    );
+    vi.spyOn(
+      recordingReadFailureRepository,
+      "listRecordingMetadata"
+    ).mockRejectedValue(new Error("recording read failed"));
 
     await expect(
       createPracticeSessionService({
@@ -1003,7 +1093,9 @@ describe("practice session service", () => {
       now: () => new Date(nowMs)
     });
 
-    await expect(service.getLibraryRecentPracticeSummaryBySheet({ limit: 5 })).resolves.toEqual({
+    await expect(
+      service.getLibraryRecentPracticeSummaryBySheet({ limit: 5 })
+    ).resolves.toEqual({
       generatedAt: "2026-06-21T12:00:00.000Z",
       limit: 5,
       items: [
@@ -1039,9 +1131,10 @@ describe("practice session service", () => {
     vi.spyOn(sessionReadFailureRepository, "listSessions").mockRejectedValue(
       new Error("session read failed")
     );
-    vi.spyOn(recordingReadFailureRepository, "listRecordingMetadata").mockRejectedValue(
-      new Error("recording read failed")
-    );
+    vi.spyOn(
+      recordingReadFailureRepository,
+      "listRecordingMetadata"
+    ).mockRejectedValue(new Error("recording read failed"));
 
     await expect(
       createPracticeSessionService({
@@ -1123,10 +1216,12 @@ describe("practice session service", () => {
       timeSignature: "4/4" as const
     }));
     const updateLastPracticedAt = vi.fn(async () => undefined);
-    const getSegmentContext = vi.fn(async (_sheetId: string, segmentId: string) => ({
-      id: segmentId,
-      name: "Live Bridge"
-    }));
+    const getSegmentContext = vi.fn(
+      async (_sheetId: string, segmentId: string) => ({
+        id: segmentId,
+        name: "Live Bridge"
+      })
+    );
     const service = createPracticeSessionService({
       repository,
       recordingRepository,
@@ -1149,7 +1244,12 @@ describe("practice session service", () => {
       selectedSessionIds: ["quick-session", "segment-session"],
       maxSelected: 3
     });
-    expect(result.candidates.map((candidate) => [candidate.sessionId, candidate.targetState])).toEqual([
+    expect(
+      result.candidates.map((candidate) => [
+        candidate.sessionId,
+        candidate.targetState
+      ])
+    ).toEqual([
       ["quick-session", "quick"],
       ["segment-session", "valid"]
     ]);
@@ -1160,7 +1260,9 @@ describe("practice session service", () => {
       linkedRecordingMetadataCount: 2,
       linkedRecordingDurationMs: 75_000
     });
-    expect(result.metrics.find((metric) => metric.key === "events")?.values).toEqual([
+    expect(
+      result.metrics.find((metric) => metric.key === "events")?.values
+    ).toEqual([
       {
         sessionId: "quick-session",
         text: "Event details not available yet",
@@ -1172,14 +1274,21 @@ describe("practice session service", () => {
         tone: "muted"
       }
     ]);
-    expect(result.metrics.find((metric) => metric.key === "goalContribution")?.values[1].text).toBe(
-      "Counts as 1 session; adds 2 min; 2 sheet takes linked"
-    );
-    expect(result.unavailable.map((entry) => entry.key)).toEqual(["events", "audio"]);
+    expect(
+      result.metrics.find((metric) => metric.key === "goalContribution")
+        ?.values[1].text
+    ).toBe("Counts as 1 session; adds 2 min; 2 sheet takes linked");
+    expect(result.unavailable.map((entry) => entry.key)).toEqual([
+      "events",
+      "audio"
+    ]);
     expect(repository.listSessions).toHaveBeenCalledTimes(1);
     expect(recordingRepository.listRecordingMetadata).toHaveBeenCalledTimes(1);
     expect(getSheetContext).toHaveBeenCalledWith("sheet-alpha");
-    expect(getSegmentContext).toHaveBeenCalledWith("sheet-alpha", "segment-alpha");
+    expect(getSegmentContext).toHaveBeenCalledWith(
+      "sheet-alpha",
+      "segment-alpha"
+    );
     expect(repository.getSession).not.toHaveBeenCalled();
     expect(repository.getRecentSession).not.toHaveBeenCalled();
     expect(repository.getRecentSheetSession).not.toHaveBeenCalled();
@@ -1188,7 +1297,9 @@ describe("practice session service", () => {
     expect(repository.clear).not.toHaveBeenCalled();
     expect(recordingRepository.saveRecordingMetadata).not.toHaveBeenCalled();
     expect(recordingRepository.clear).not.toHaveBeenCalled();
-    expect(recordingRepository.listRecordingMetadataForSession).not.toHaveBeenCalled();
+    expect(
+      recordingRepository.listRecordingMetadataForSession
+    ).not.toHaveBeenCalled();
     expect(updateLastPracticedAt).not.toHaveBeenCalled();
   });
 
@@ -1248,20 +1359,22 @@ describe("practice session service", () => {
         timeSignature: "4/4" as const
       };
     });
-    const getSegmentContext = vi.fn(async (_sheetId: string, segmentId: string) => {
-      if (segmentId === "segment-failed") {
-        throw new Error("segment lookup failed");
-      }
+    const getSegmentContext = vi.fn(
+      async (_sheetId: string, segmentId: string) => {
+        if (segmentId === "segment-failed") {
+          throw new Error("segment lookup failed");
+        }
 
-      if (segmentId === "segment-missing") {
-        return null;
-      }
+        if (segmentId === "segment-missing") {
+          return null;
+        }
 
-      return {
-        id: segmentId,
-        name: "Live Bridge"
-      };
-    });
+        return {
+          id: segmentId,
+          name: "Live Bridge"
+        };
+      }
+    );
     const updateLastPracticedAt = vi.fn(async () => undefined);
     const service = createPracticeSessionService({
       repository,
@@ -1280,7 +1393,10 @@ describe("practice session service", () => {
       selectedSessionIds: ["deleted-sheet", "missing-segment"]
     });
     const statesById = Object.fromEntries(
-      result.candidates.map((candidate) => [candidate.sessionId, candidate.targetState])
+      result.candidates.map((candidate) => [
+        candidate.sessionId,
+        candidate.targetState
+      ])
     );
 
     expect(statesById).toMatchObject({
@@ -1289,12 +1405,16 @@ describe("practice session service", () => {
       "missing-segment": "missing-segment",
       "failed-segment": "lookup-failed"
     });
-    expect(result.metrics.find((metric) => metric.key === "sheet")?.values[0]).toEqual({
+    expect(
+      result.metrics.find((metric) => metric.key === "sheet")?.values[0]
+    ).toEqual({
       sessionId: "deleted-sheet",
       text: "Deleted sheet",
       tone: "warning"
     });
-    expect(result.metrics.find((metric) => metric.key === "segment")?.values[1]).toEqual({
+    expect(
+      result.metrics.find((metric) => metric.key === "segment")?.values[1]
+    ).toEqual({
       sessionId: "missing-segment",
       text: "Deleted Bridge m5-12 (missing)",
       tone: "warning"
@@ -1312,9 +1432,10 @@ describe("practice session service", () => {
     vi.spyOn(sessionReadFailureRepository, "listSessions").mockRejectedValue(
       new Error("session read failed")
     );
-    vi.spyOn(recordingReadFailureRepository, "listRecordingMetadata").mockRejectedValue(
-      new Error("recording read failed")
-    );
+    vi.spyOn(
+      recordingReadFailureRepository,
+      "listRecordingMetadata"
+    ).mockRejectedValue(new Error("recording read failed"));
 
     await expect(
       createPracticeSessionService({
@@ -1367,7 +1488,8 @@ describe("practice session service", () => {
     const getSheetContext = vi.fn();
     const updateLastPracticedAt = vi.fn(async () => undefined);
     const getSegmentContext = vi.fn();
-    const clock = vi.fn()
+    const clock = vi
+      .fn()
       .mockReturnValueOnce(new Date("2026-06-21T12:00:00.000Z"))
       .mockReturnValueOnce(new Date("2030-01-01T00:00:00.000Z"));
     const service = createPracticeSessionService({
@@ -1430,7 +1552,10 @@ describe("practice session service", () => {
   it("prepares sheet recording metadata without persisting recording metadata or session recording counts until commit", async () => {
     const { service, repository } = createService();
 
-    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "recording" });
+    const session = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording"
+    });
     nowMs += 12_500;
 
     const prepared = await service.prepareSheetRecordingMetadata({
@@ -1459,7 +1584,9 @@ describe("practice session service", () => {
       segmentContext: null
     });
     await expect(service.listRecordingMetadata()).resolves.toEqual([]);
-    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(session?.id ?? "")
+    ).resolves.toMatchObject({
       recordingCount: 0,
       latestRecordingId: null,
       updatedAt: "2026-06-21T12:00:00.000Z",
@@ -1469,7 +1596,9 @@ describe("practice session service", () => {
     await service.commitPreparedSheetRecordingSession(prepared!);
 
     await expect(service.listRecordingMetadata()).resolves.toEqual([]);
-    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(session?.id ?? "")
+    ).resolves.toMatchObject({
       recordingCount: 1,
       latestRecordingId: "recording-2",
       updatedAt: "2026-06-21T12:00:12.500Z",
@@ -1506,7 +1635,10 @@ describe("practice session service", () => {
 
   it("creates sheet recording metadata with a valid segment context snapshot", async () => {
     const { service } = createService();
-    const session = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "recording" });
+    const session = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording"
+    });
     const segmentContext = createSegmentContext();
 
     nowMs += 1_500;
@@ -1539,7 +1671,9 @@ describe("practice session service", () => {
 
     expect(prepared?.metadata.segmentContext).toEqual(segmentContext);
     expect(prepared?.session.segmentContext).toEqual(segmentContext);
-    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(session?.id ?? "")
+    ).resolves.toMatchObject({
       recordingCount: 0,
       latestRecordingId: null,
       segmentContext: null
@@ -1547,7 +1681,9 @@ describe("practice session service", () => {
 
     await service.commitPreparedSheetRecordingSession(prepared!);
 
-    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(session?.id ?? "")
+    ).resolves.toMatchObject({
       recordingCount: 1,
       latestRecordingId: prepared?.metadata.id,
       segmentContext
@@ -1568,7 +1704,9 @@ describe("practice session service", () => {
       segmentContext
     });
     await service.commitPreparedSheetRecordingSession(preparedWithSegment!);
-    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(session?.id ?? "")
+    ).resolves.toMatchObject({
       segmentContext
     });
 
@@ -1584,7 +1722,9 @@ describe("practice session service", () => {
 
     await service.commitPreparedSheetRecordingSession(prepared!);
 
-    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(session?.id ?? "")
+    ).resolves.toMatchObject({
       recordingCount: 2,
       latestRecordingId: prepared?.metadata.id,
       segmentContext: null
@@ -1619,7 +1759,9 @@ describe("practice session service", () => {
     ).rejects.toThrow();
 
     await expect(service.listRecordingMetadata()).resolves.toEqual([]);
-    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(session?.id ?? "")
+    ).resolves.toMatchObject({
       recordingCount: 1,
       latestRecordingId: priorPrepared?.metadata.id,
       segmentContext: priorContext
@@ -1644,18 +1786,20 @@ describe("practice session service", () => {
   });
 
   it("validates segment context range, bpm, grid snapshot, and timestamp bounds", () => {
-    expect(validateSheetRecordingMetadata({
-      id: "recording-valid-segment",
-      type: "sheet",
-      sessionId: "session-1",
-      sheetId: "sheet-alpha",
-      sheetName: "Alpha Sheet",
-      createdAt: "2026-06-21T12:00:00.000Z",
-      durationMs: 1_000,
-      bpm: 96,
-      timeSignature: "4/4",
-      segmentContext: createSegmentContext({ targetBpm: null })
-    })).toMatchObject({
+    expect(
+      validateSheetRecordingMetadata({
+        id: "recording-valid-segment",
+        type: "sheet",
+        sessionId: "session-1",
+        sheetId: "sheet-alpha",
+        sheetName: "Alpha Sheet",
+        createdAt: "2026-06-21T12:00:00.000Z",
+        durationMs: 1_000,
+        bpm: 96,
+        timeSignature: "4/4",
+        segmentContext: createSegmentContext({ targetBpm: null })
+      })
+    ).toMatchObject({
       segmentContext: {
         targetBpm: null,
         measureRangeMs: {
@@ -1669,10 +1813,23 @@ describe("practice session service", () => {
       createSegmentContext({ segmentName: "" }),
       createSegmentContext({ range: { startMeasure: 12, endMeasure: 5 } }),
       createSegmentContext({ targetBpm: 301 }),
-      createSegmentContext({ measureGridSnapshot: { bpm: 0, timeSignature: "4/4", pickupBeats: 0, measureOneOffsetMs: 0 } }),
-      createSegmentContext({ measureRangeMs: { startMs: 25_000, endMs: 9_000 } }),
-      createSegmentContext({ measureRangeMs: { startMs: 9_000, endMs: 25_000 } }),
-      createSegmentContext({ measureRangeMs: { startMs: Number.NaN, endMs: 9_000 } })
+      createSegmentContext({
+        measureGridSnapshot: {
+          bpm: 0,
+          timeSignature: "4/4",
+          pickupBeats: 0,
+          measureOneOffsetMs: 0
+        }
+      }),
+      createSegmentContext({
+        measureRangeMs: { startMs: 25_000, endMs: 9_000 }
+      }),
+      createSegmentContext({
+        measureRangeMs: { startMs: 9_000, endMs: 25_000 }
+      }),
+      createSegmentContext({
+        measureRangeMs: { startMs: Number.NaN, endMs: 9_000 }
+      })
     ]) {
       expect(() =>
         validateSheetRecordingMetadata({
@@ -1710,7 +1867,9 @@ describe("practice session service", () => {
       })
     };
 
-    expect(() => validateSheetRecordingMetadata(inconsistentMetadata)).toThrow();
+    expect(() =>
+      validateSheetRecordingMetadata(inconsistentMetadata)
+    ).toThrow();
     expect(parseSheetRecordingMetadata(inconsistentMetadata)).toBeNull();
     expect(
       validateSheetRecordingMetadata({
@@ -1726,7 +1885,10 @@ describe("practice session service", () => {
   it("rejects recording metadata without an existing sessionId", async () => {
     const { service, repository } = createService();
 
-    await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "recording" });
+    await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "recording"
+    });
     await expect(
       service.createSheetRecordingMetadata({
         sheetId: "sheet-alpha",
@@ -1740,7 +1902,12 @@ describe("practice session service", () => {
         durationMs: 500
       })
     ).resolves.toBeNull();
-    await expect(service.linkRecordingToSession({ sessionId: null, recordingId: "recording-missing-session" })).resolves.toBeNull();
+    await expect(
+      service.linkRecordingToSession({
+        sessionId: null,
+        recordingId: "recording-missing-session"
+      })
+    ).resolves.toBeNull();
     await expect(repository.listSessions()).resolves.toHaveLength(1);
     await expect(service.listRecordingMetadata()).resolves.toEqual([]);
   });
@@ -1748,7 +1915,10 @@ describe("practice session service", () => {
   it("creates a fresh sheet session for Practice Again recording instead of mutating the source session", async () => {
     const { service, repository } = createService();
 
-    const sourceSession = await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    const sourceSession = await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "metronome"
+    });
     nowMs += 2_000;
     await service.endPracticeSession(sourceSession?.id ?? "");
 
@@ -1791,12 +1961,16 @@ describe("practice session service", () => {
       bpm: 88,
       timeSignature: "3/4"
     });
-    await expect(repository.getSession(sourceSession?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(sourceSession?.id ?? "")
+    ).resolves.toMatchObject({
       id: "session-1",
       latestRecordingId: null,
       recordingCount: 0
     });
-    await expect(repository.getSession(freshSession?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(freshSession?.id ?? "")
+    ).resolves.toMatchObject({
       id: "session-2",
       latestRecordingId: "recording-3",
       recordingCount: 1
@@ -1806,7 +1980,11 @@ describe("practice session service", () => {
   it("rejects a stale latest sheet session while preserving an older valid quick target", async () => {
     const { service, repository, validSheetIds } = createService();
 
-    await service.ensureQuickSession({ trigger: "metronome", bpm: 120, timeSignature: "4/4" });
+    await service.ensureQuickSession({
+      trigger: "metronome",
+      bpm: 120,
+      timeSignature: "4/4"
+    });
     expect(await service.getContinuePracticeTarget()).toEqual({
       sourceType: "quick",
       href: "/quick-metronome",
@@ -1814,7 +1992,10 @@ describe("practice session service", () => {
       sessionId: "session-1"
     });
     nowMs += 1_000;
-    await service.ensureSheetSession({ sheetId: "sheet-alpha", trigger: "metronome" });
+    await service.ensureSheetSession({
+      sheetId: "sheet-alpha",
+      trigger: "metronome"
+    });
     expect(await service.getContinuePracticeTarget()).toEqual({
       sourceType: "sheet",
       href: "/sheet-practice/sheet-alpha",
@@ -1879,7 +2060,9 @@ describe("practice session service", () => {
 
     const targets = await service.getContinuePracticeTargets();
 
-    expect(targets.targets.map((target) => [target.kind, target.targetKey])).toEqual([
+    expect(
+      targets.targets.map((target) => [target.kind, target.targetKey])
+    ).toEqual([
       ["segment", "segment:sheet-alpha:segment-alpha"],
       ["sheet", "sheet:sheet-alpha"]
     ]);
@@ -1994,7 +2177,8 @@ describe("practice session service", () => {
     const sheetRepository = createMemorySessionRepository();
     const recordingRepository = createMemoryRecordingRepository();
     const { gateway } = createSheetGateway();
-    const globalRepository = createGlobalPracticeSessionRepository(sheetRepository);
+    const globalRepository =
+      createGlobalPracticeSessionRepository(sheetRepository);
     const service = createPracticeSessionService({
       repository: globalRepository,
       recordingRepository,
@@ -2070,7 +2254,8 @@ describe("practice session service", () => {
 
   it("filters legacy quick sessions that inherit an unsupported recording meter", async () => {
     const sheetRepository = createMemorySessionRepository();
-    const globalRepository = createGlobalPracticeSessionRepository(sheetRepository);
+    const globalRepository =
+      createGlobalPracticeSessionRepository(sheetRepository);
 
     window.localStorage.setItem(
       RECORDINGS_STORAGE_KEY,
@@ -2111,7 +2296,8 @@ describe("practice session service", () => {
 
   it("normalizes legacy quick sessions from recording history to segmentContext null", async () => {
     const sheetRepository = createMemorySessionRepository();
-    const globalRepository = createGlobalPracticeSessionRepository(sheetRepository);
+    const globalRepository =
+      createGlobalPracticeSessionRepository(sheetRepository);
 
     window.localStorage.setItem(
       RECORDINGS_STORAGE_KEY,
@@ -2133,7 +2319,9 @@ describe("practice session service", () => {
       })
     );
 
-    await expect(globalRepository.getSession("legacy-quick-session")).resolves.toMatchObject({
+    await expect(
+      globalRepository.getSession("legacy-quick-session")
+    ).resolves.toMatchObject({
       id: "legacy-quick-session",
       sourceType: "quick",
       durationMs: 60_000,
@@ -2151,7 +2339,8 @@ describe("practice session service", () => {
 
   it("keeps latest recording duration as the legacy quick-session conversion source of truth", async () => {
     const sheetRepository = createMemorySessionRepository();
-    const globalRepository = createGlobalPracticeSessionRepository(sheetRepository);
+    const globalRepository =
+      createGlobalPracticeSessionRepository(sheetRepository);
 
     window.localStorage.setItem(
       RECORDINGS_STORAGE_KEY,
@@ -2202,7 +2391,9 @@ describe("practice session service", () => {
       })
     );
 
-    await expect(globalRepository.getSession("legacy-quick-session")).resolves.toMatchObject({
+    await expect(
+      globalRepository.getSession("legacy-quick-session")
+    ).resolves.toMatchObject({
       id: "legacy-quick-session",
       durationMs: 45_600,
       recordingCount: 2,
@@ -2246,7 +2437,9 @@ describe("practice session service", () => {
       createId: (prefix) => `${prefix}-history`
     });
 
-    await expect(service.getSessionHistoryGroups("date")).resolves.toMatchObject([
+    await expect(
+      service.getSessionHistoryGroups("date")
+    ).resolves.toMatchObject([
       {
         id: "date:2026-06-21",
         sessionCount: 1,
@@ -2434,7 +2627,9 @@ describe("practice session service", () => {
       segmentContext: null
     });
 
-    await expect(sheetFailure.service.getSessionHistoryGroups("sheet")).resolves.toEqual([
+    await expect(
+      sheetFailure.service.getSessionHistoryGroups("sheet")
+    ).resolves.toEqual([
       expect.objectContaining({
         id: "sheet:id:sheet-alpha",
         targetState: "lookup-failed"
@@ -2463,7 +2658,9 @@ describe("practice session service", () => {
       segmentContext: createSegmentContext()
     });
 
-    await expect(segmentFailure.service.getSessionHistoryGroups("segment")).resolves.toEqual([
+    await expect(
+      segmentFailure.service.getSessionHistoryGroups("segment")
+    ).resolves.toEqual([
       expect.objectContaining({
         id: "segment:sheet:sheet-alpha:id:segment-alpha",
         targetState: "lookup-failed"
@@ -2527,7 +2724,9 @@ describe("practice session service", () => {
       generatedAt: "2026-06-21T12:00:00.000Z",
       limit: 6
     });
-    expect(result.items.map((item) => [item.id, item.kind, item.targetState])).toEqual([
+    expect(
+      result.items.map((item) => [item.id, item.kind, item.targetState])
+    ).toEqual([
       ["recording:recording-missing-session", "sheet-recording", "valid"],
       ["session:latest-missing-recording", "sheet-session", "valid"]
     ]);
@@ -2626,20 +2825,22 @@ describe("practice session service", () => {
         timeSignature: "4/4" as const
       };
     });
-    const getSegmentContext = vi.fn(async (_sheetId: string, segmentId: string) => {
-      if (segmentId === "segment-failed") {
-        throw new Error("segment lookup failed");
-      }
+    const getSegmentContext = vi.fn(
+      async (_sheetId: string, segmentId: string) => {
+        if (segmentId === "segment-failed") {
+          throw new Error("segment lookup failed");
+        }
 
-      if (segmentId === "segment-missing") {
-        return null;
-      }
+        if (segmentId === "segment-missing") {
+          return null;
+        }
 
-      return {
-        id: segmentId,
-        name: "Live Segment"
-      };
-    });
+        return {
+          id: segmentId,
+          name: "Live Segment"
+        };
+      }
+    );
     const service = createPracticeSessionService({
       repository,
       recordingRepository,
@@ -2747,16 +2948,18 @@ describe("practice session service", () => {
         timeSignature: "4/4" as const
       };
     });
-    const getSegmentContext = vi.fn(async (_sheetId: string, segmentId: string) => {
-      if (segmentId === "segment-missing") {
-        return null;
-      }
+    const getSegmentContext = vi.fn(
+      async (_sheetId: string, segmentId: string) => {
+        if (segmentId === "segment-missing") {
+          return null;
+        }
 
-      return {
-        id: segmentId,
-        name: "Live Bridge"
-      };
-    });
+        return {
+          id: segmentId,
+          name: "Live Bridge"
+        };
+      }
+    );
     const service = createPracticeSessionService({
       repository,
       recordingRepository,
@@ -2776,9 +2979,26 @@ describe("practice session service", () => {
       generatedAt: "2026-06-21T12:00:00.000Z",
       limit: 3
     });
-    expect(result.targets.map((target) => [target.kind, target.targetKey, target.sessionId, target.recordingId])).toEqual([
-      ["segment", "segment:sheet-alpha:segment-alpha", "segment-session", "segment-recording"],
-      ["sheet", "sheet:sheet-alpha", "missing-linked-session", "sheet-recording"],
+    expect(
+      result.targets.map((target) => [
+        target.kind,
+        target.targetKey,
+        target.sessionId,
+        target.recordingId
+      ])
+    ).toEqual([
+      [
+        "segment",
+        "segment:sheet-alpha:segment-alpha",
+        "segment-session",
+        "segment-recording"
+      ],
+      [
+        "sheet",
+        "sheet:sheet-alpha",
+        "missing-linked-session",
+        "sheet-recording"
+      ],
       ["quick", "quick", "quick-session", null]
     ]);
     expect(result.targets[0]).toMatchObject({
@@ -2789,7 +3009,11 @@ describe("practice session service", () => {
       segmentRangeLabel: "m5-12"
     });
     expect(result.targets[0]).not.toHaveProperty("href");
-    expect(Object.fromEntries(result.rejected.map((target) => [target.id, target.reason]))).toMatchObject({
+    expect(
+      Object.fromEntries(
+        result.rejected.map((target) => [target.id, target.reason])
+      )
+    ).toMatchObject({
       "session:missing-segment": "missing-segment",
       "session:failed-sheet": "lookup-failed"
     });
@@ -2804,7 +3028,8 @@ describe("practice session service", () => {
   });
 
   it("captures validated quick and sheet transport events through the event sink", async () => {
-    const captured: Parameters<PracticeSessionEventSink["captureEvent"]>[0][] = [];
+    const captured: Parameters<PracticeSessionEventSink["captureEvent"]>[0][] =
+      [];
     const { service } = createService({
       eventSink: {
         captureEvent(event) {
@@ -2858,7 +3083,8 @@ describe("practice session service", () => {
   });
 
   it("rejects invalid capture contexts and normalizes optional ids before validation", async () => {
-    const captured: Parameters<PracticeSessionEventSink["captureEvent"]>[0][] = [];
+    const captured: Parameters<PracticeSessionEventSink["captureEvent"]>[0][] =
+      [];
     const { service } = createService({
       eventSink: {
         captureEvent(event) {
@@ -2877,13 +3103,22 @@ describe("practice session service", () => {
     });
 
     await expect(
-      service.captureSessionEvent({ sessionId: null, kind: "metronome_started" })
+      service.captureSessionEvent({
+        sessionId: null,
+        kind: "metronome_started"
+      })
     ).resolves.toBeNull();
     await expect(
-      service.captureSessionEvent({ sessionId: "   ", kind: "metronome_started" })
+      service.captureSessionEvent({
+        sessionId: "   ",
+        kind: "metronome_started"
+      })
     ).resolves.toBeNull();
     await expect(
-      service.captureSessionEvent({ sessionId: "session-missing", kind: "metronome_started" })
+      service.captureSessionEvent({
+        sessionId: "session-missing",
+        kind: "metronome_started"
+      })
     ).resolves.toBeNull();
     await expect(
       service.captureSessionEvent({
@@ -2977,7 +3212,9 @@ describe("practice session service", () => {
       })
     ).resolves.toBeNull();
     await expect(service.getTodaySummary()).resolves.toEqual(summaryBefore);
-    await expect(repository.getSession(session.id)).resolves.toEqual(sessionBefore);
+    await expect(repository.getSession(session.id)).resolves.toEqual(
+      sessionBefore
+    );
 
     const failingRepository: PracticeSessionRepository = {
       ...createMemorySessionRepository(),
@@ -3032,7 +3269,9 @@ describe("practice session service", () => {
       kind: "recording_stopped",
       segmentId: "segment-other"
     });
-    await expect(repository.getSession(session?.id ?? "")).resolves.toMatchObject({
+    await expect(
+      repository.getSession(session?.id ?? "")
+    ).resolves.toMatchObject({
       segmentContext: originalContext,
       recordingCount: 1,
       latestRecordingId: prepared?.metadata.id
@@ -3048,7 +3287,11 @@ describe("practice session service", () => {
     const recordingOnly = applyPracticeTrigger(stopped, "recording", true);
     const both = applyPracticeTrigger(recordingOnly, "metronome", true);
     const recordingStillActive = applyPracticeTrigger(both, "metronome", false);
-    const referenceCanJoinLater = applyPracticeTrigger(recordingStillActive, "reference", true);
+    const referenceCanJoinLater = applyPracticeTrigger(
+      recordingStillActive,
+      "reference",
+      true
+    );
 
     expect(recordingOnly).toEqual({
       metronomeActive: false,

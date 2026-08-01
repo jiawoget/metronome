@@ -158,7 +158,13 @@ type SessionComparisonCandidate = {
   segmentId: string | null;
   segmentName: string | null;
   segmentRangeLabel: string | null;
-  targetState: "quick" | "valid" | "missing-sheet" | "missing-segment" | "lookup-failed" | "no-target";
+  targetState:
+    | "quick"
+    | "valid"
+    | "missing-sheet"
+    | "missing-segment"
+    | "lookup-failed"
+    | "no-target";
 };
 
 type SessionComparisonMetric = {
@@ -603,13 +609,12 @@ Verification should run focused commands and inspect changed files. PASS require
 
 ## Deferred Work
 
-| Deferred work | Future owner |
-| --- | --- |
-| Dedicated session comparison/history route | `P3-17B` or future reviewed practice-session route slice |
-| Durable event repository/read model and event-by-session comparison | `P3-17C` or future event persistence slice |
-| Per-session goal attribution and exact goal completion contribution | `P3-17D` or future goal attribution slice |
-| Command palette command for session comparison | Future reviewed command/action slice after P3-17 UI is verified |
-| Recording waveform/audio comparison | Existing recordings review comparison or future reviewed recording slice |
-| Quality scoring, mistake detection, automatic recommendations, analysis-derived comparison | Future analysis feature, not v1 P3-17 |
-| Cloud/cross-device comparison history | v2 |
-
+| Deferred work                                                                              | Future owner                                                             |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Dedicated session comparison/history route                                                 | `P3-17B` or future reviewed practice-session route slice                 |
+| Durable event repository/read model and event-by-session comparison                        | `P3-17C` or future event persistence slice                               |
+| Per-session goal attribution and exact goal completion contribution                        | `P3-17D` or future goal attribution slice                                |
+| Command palette command for session comparison                                             | Future reviewed command/action slice after P3-17 UI is verified          |
+| Recording waveform/audio comparison                                                        | Existing recordings review comparison or future reviewed recording slice |
+| Quality scoring, mistake detection, automatic recommendations, analysis-derived comparison | Future analysis feature, not v1 P3-17                                    |
+| Cloud/cross-device comparison history                                                      | v2                                                                       |

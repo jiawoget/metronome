@@ -6,7 +6,10 @@ import {
   type MetronomeTraceEventDetail,
   type ToneMetronomeLoopInterval
 } from "@/lib/quick-metronome/metronome-service";
-import { DEFAULT_METRONOME_SETTINGS, type Subdivision } from "@/lib/quick-metronome/types";
+import {
+  DEFAULT_METRONOME_SETTINGS,
+  type Subdivision
+} from "@/lib/quick-metronome/types";
 import { createFakeToneAdapter } from "./fake-tone-metronome-adapter";
 
 const TRANSPORT_TIMELINE_START = 0;
@@ -26,12 +29,18 @@ describe("BrowserMetronomeService Tone adapter", () => {
     expect(fakeTone.adapter.cancelTransport).toHaveBeenCalledTimes(1);
     expect(fakeTone.adapter.setBpm).toHaveBeenCalledWith(96);
     expect(fakeTone.lastLoopInterval).toBe("4n");
-    expect(fakeTone.adapter.startTransport).toHaveBeenCalledWith(INITIAL_TRANSPORT_START_OFFSET);
+    expect(fakeTone.adapter.startTransport).toHaveBeenCalledWith(
+      INITIAL_TRANSPORT_START_OFFSET
+    );
 
     service.stop();
 
-    expect(fakeTone.loopHandle.stop).toHaveBeenCalledWith(TRANSPORT_TIMELINE_START);
-    expect(fakeTone.loopHandle.cancel).toHaveBeenCalledWith(TRANSPORT_TIMELINE_START);
+    expect(fakeTone.loopHandle.stop).toHaveBeenCalledWith(
+      TRANSPORT_TIMELINE_START
+    );
+    expect(fakeTone.loopHandle.cancel).toHaveBeenCalledWith(
+      TRANSPORT_TIMELINE_START
+    );
     expect(fakeTone.loopHandle.dispose).toHaveBeenCalledTimes(1);
     expect(fakeTone.adapter.stopTransport).toHaveBeenCalledTimes(2);
     expect(fakeTone.adapter.cancelTransport).toHaveBeenCalledTimes(2);
@@ -67,7 +76,10 @@ describe("BrowserMetronomeService Tone adapter", () => {
       expectedIntervalMs: 500
     });
     expect(fakeTone.clickIntents[0]?.time).toBe(traces[0]?.audioTime);
-    expect(fakeTone.adapter.draw).toHaveBeenCalledWith(expect.any(Function), 12.5);
+    expect(fakeTone.adapter.draw).toHaveBeenCalledWith(
+      expect.any(Function),
+      12.5
+    );
     expect(ticks[0]).toMatchObject({ audioTime: 12.5, accented: true });
   });
 
@@ -107,7 +119,9 @@ describe("BrowserMetronomeService Tone adapter", () => {
     expect(fakeTone.adapter.cancelTransport).toHaveBeenCalledTimes(2);
     expect(fakeTone.adapter.setBpm).toHaveBeenLastCalledWith(180);
     expect(fakeTone.lastLoopInterval).toBe("4n");
-    expect(fakeTone.adapter.startTransport).toHaveBeenLastCalledWith(RESCHEDULE_TRANSPORT_START_OFFSET);
+    expect(fakeTone.adapter.startTransport).toHaveBeenLastCalledWith(
+      RESCHEDULE_TRANSPORT_START_OFFSET
+    );
   });
 
   it("maps 4/4 subdivisions to Tone notation", async () => {
@@ -206,10 +220,12 @@ describe("BrowserMetronomeService Tone adapter", () => {
         expectedIntervalMs
       })
     );
-    const clickIntents = fakeTone.clickIntents.map(({ accented, beatTick }) => ({
-      accented,
-      beatTick
-    }));
+    const clickIntents = fakeTone.clickIntents.map(
+      ({ accented, beatTick }) => ({
+        accented,
+        beatTick
+      })
+    );
     const expectedClickIntents = expectedTraceSummary.map(({ accented }) => ({
       accented,
       beatTick: true

@@ -2,9 +2,7 @@ import { getRecordingDisplayName } from "@/lib/recordings-review/history";
 import { recordingHistoryRepository } from "@/lib/recordings-review/repository";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { browserAudioDownloadAdapter } from "@/lib/recordings-review/browser-audio-download-adapter";
-import {
-  getKnownExportAudioMimeInfo
-} from "@/lib/recordings-review/audio-mime";
+import { getKnownExportAudioMimeInfo } from "@/lib/recordings-review/audio-mime";
 import { RecordingArtifactError } from "@/lib/recordings-review/artifact-model";
 import { resolveRecordingArtifactBody } from "@/lib/recordings-review/artifact-storage";
 
@@ -43,7 +41,9 @@ export type RecordingAudioExportRepository = {
 };
 
 export type RecordingAudioArtifactResolver = {
-  resolveRecordingArtifactBody(recording: ReviewRecording): Promise<{ blob: Blob; mimeType: string; sizeBytes: number }>;
+  resolveRecordingArtifactBody(
+    recording: ReviewRecording
+  ): Promise<{ blob: Blob; mimeType: string; sizeBytes: number }>;
 };
 
 export type RecordingAudioExportEligibility =
@@ -79,7 +79,8 @@ export function createRecordingAudioExportService({
         return unavailableResult({
           recordingId,
           reason: "missing-recording",
-          message: "This recording is no longer available in local review history."
+          message:
+            "This recording is no longer available in local review history."
         });
       }
 
@@ -96,7 +97,8 @@ export function createRecordingAudioExportService({
       let blob: Blob;
 
       try {
-        const artifactBody = await artifactResolver.resolveRecordingArtifactBody(recording);
+        const artifactBody =
+          await artifactResolver.resolveRecordingArtifactBody(recording);
 
         blob = artifactBody.blob;
       } catch (error) {
@@ -112,7 +114,7 @@ export function createRecordingAudioExportService({
                     error.reason === "empty-audio" ||
                     error.reason === "unsupported-mime")
                 ? "invalid-artifact"
-              : "missing-artifact",
+                : "missing-artifact",
           message:
             error instanceof Error
               ? error.message
@@ -194,12 +196,7 @@ export function buildRecordingAudioExportFilename(recording: ReviewRecording) {
       : [getRecordingDisplayName(recording)];
   const datePart = formatCompactLocalDateTime(recording.createdAt);
   const idSuffix = getRecordingIdSuffix(recording.id);
-  const descriptiveBase = [
-    "metronome",
-    recording.type,
-    ...labelParts,
-    datePart
-  ]
+  const descriptiveBase = ["metronome", recording.type, ...labelParts, datePart]
     .map(sanitizeFilenamePart)
     .filter((part) => part.length > 0)
     .join("-");
@@ -291,9 +288,7 @@ function sanitizeFilenamePart(value: string | null | undefined) {
 }
 
 function trimFilenameBase(value: string) {
-  return value
-    .slice(0, MAX_FILENAME_BASE_LENGTH)
-    .replace(/[.\s_-]+$/g, "");
+  return value.slice(0, MAX_FILENAME_BASE_LENGTH).replace(/[.\s_-]+$/g, "");
 }
 
 function buildBoundedFilenameBase({

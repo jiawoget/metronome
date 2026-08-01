@@ -427,18 +427,18 @@ Verification should run the focused commands above. PASS requires:
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Durable local goal repository and create/edit/delete service | `P3-14 home-goal-management-domain-repository` |
+| Deferred work                                                                                     | Future owner                                                       |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Durable local goal repository and create/edit/delete service                                      | `P3-14 home-goal-management-domain-repository`                     |
 | Goal completion writeback to durable goal records, including stored status or completedAt updates | Separate reviewed P3-14 follow-up or explicit goal-writeback slice |
-| Home goal list/editor/progress UI and Playwright create/edit/delete/reload flows | `P3-15 home-goal-management-ui` |
-| Dashboard analytics that include goal progress | `P3-11`, `P3-12` |
-| Practice streaks and calendar-style consistency claims | `P3-13` |
-| Command palette actions for goals or goal targets | `P3-16` |
-| Notifications, reminders, achievements, plans, social sharing | Future explicit feature, not v1 P3-10 |
-| Durable event-derived goal progress | Future explicit event-persistence/replay slice |
-| Unified quick recording metadata source for takes goals | Future recording/goal-source slice |
-| Cloud/cross-device goal sync | v2 |
+| Home goal list/editor/progress UI and Playwright create/edit/delete/reload flows                  | `P3-15 home-goal-management-ui`                                    |
+| Dashboard analytics that include goal progress                                                    | `P3-11`, `P3-12`                                                   |
+| Practice streaks and calendar-style consistency claims                                            | `P3-13`                                                            |
+| Command palette actions for goals or goal targets                                                 | `P3-16`                                                            |
+| Notifications, reminders, achievements, plans, social sharing                                     | Future explicit feature, not v1 P3-10                              |
+| Durable event-derived goal progress                                                               | Future explicit event-persistence/replay slice                     |
+| Unified quick recording metadata source for takes goals                                           | Future recording/goal-source slice                                 |
+| Cloud/cross-device goal sync                                                                      | v2                                                                 |
 
 ## Split Triggers
 

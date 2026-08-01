@@ -120,7 +120,7 @@ function getBarCountInPlan(input: {
   measureGrid: MeasureGrid;
   selectedSegment: PracticeSegment | null;
   countInMeasures?: number;
-}): BarCountInPlan
+}): BarCountInPlan;
 ```
 
 Required semantics:
@@ -227,13 +227,13 @@ No integration tests, browser E2E, reload/persistence tests, audio fixtures, PDF
 
 ## Deferred Work
 
-| Deferred work | Owning slice |
-|---|---|
-| Scheduler wiring, Tone/WebAudio integration, playback countdown state, and timing trace evidence | P4-04 |
-| Count-in controls, visible countdown UI, responsive browser E2E, and user-facing copy | P4-05 |
-| Per-sheet preset persistence, schema/repository work, and preset UI | P4-06/P4-07 |
-| Shared advanced countdown infrastructure, if still needed after P4-03 through P4-07 | P4-08 |
-| Quick Metronome advanced countdown, mute training, auto-increase, and other Pack 6 training behavior | Pack 6 |
+| Deferred work                                                                                        | Owning slice |
+| ---------------------------------------------------------------------------------------------------- | ------------ |
+| Scheduler wiring, Tone/WebAudio integration, playback countdown state, and timing trace evidence     | P4-04        |
+| Count-in controls, visible countdown UI, responsive browser E2E, and user-facing copy                | P4-05        |
+| Per-sheet preset persistence, schema/repository work, and preset UI                                  | P4-06/P4-07  |
+| Shared advanced countdown infrastructure, if still needed after P4-03 through P4-07                  | P4-08        |
+| Quick Metronome advanced countdown, mute training, auto-increase, and other Pack 6 training behavior | Pack 6       |
 
 ## Verification Evidence
 

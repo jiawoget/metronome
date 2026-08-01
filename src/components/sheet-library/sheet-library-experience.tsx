@@ -49,12 +49,7 @@ const defaultMetadata = {
 };
 
 type ImportState =
-  | "idle"
-  | "checking"
-  | "ready"
-  | "saving"
-  | "batching"
-  | "error";
+  "idle" | "checking" | "ready" | "saving" | "batching" | "error";
 type MetadataDraft = typeof defaultMetadata;
 type SheetLibraryPracticeSummaryService = Pick<
   PracticeSessionService,
@@ -146,9 +141,7 @@ function formatBatchSummary(result: SheetBatchImportResult) {
   }
 
   const failedText =
-    result.failedCount === 1
-      ? "1 failed."
-      : `${result.failedCount} failed.`;
+    result.failedCount === 1 ? "1 failed." : `${result.failedCount} failed.`;
 
   return `Imported ${result.importedCount} of ${result.total} files. ${failedText}`;
 }
@@ -173,8 +166,9 @@ export function SheetLibraryExperience({
   const [tagFilter, setTagFilter] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [preview, setPreview] = useState<SheetImportPreview | null>(null);
-  const [batchResult, setBatchResult] =
-    useState<SheetBatchImportResult | null>(null);
+  const [batchResult, setBatchResult] = useState<SheetBatchImportResult | null>(
+    null
+  );
   const [metadata, setMetadata] = useState(defaultMetadata);
   const [importState, setImportState] = useState<ImportState>("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -415,7 +409,9 @@ export function SheetLibraryExperience({
           ...importedSheets,
           ...current.filter(
             (sheet) =>
-              !importedSheets.some((importedSheet) => importedSheet.id === sheet.id)
+              !importedSheets.some(
+                (importedSheet) => importedSheet.id === sheet.id
+              )
           )
         ]);
         setTagDrafts((current) => ({
@@ -440,10 +436,7 @@ export function SheetLibraryExperience({
     } catch (error) {
       setBatchResult({
         ok: false,
-        message: getMutationFailureMessage(
-          error,
-          "Sheet batch import failed."
-        ),
+        message: getMutationFailureMessage(error, "Sheet batch import failed."),
         total: selectedFiles.length,
         importedCount: 0,
         failedCount: selectedFiles.length,
@@ -514,10 +507,7 @@ export function SheetLibraryExperience({
       });
     } catch (error) {
       setMessage(
-        getMutationFailureMessage(
-          error,
-          "Sheet metadata could not be updated."
-        )
+        getMutationFailureMessage(error, "Sheet metadata could not be updated.")
       );
       setMessageKind("error");
       return;
@@ -555,7 +545,9 @@ export function SheetLibraryExperience({
       }
 
       setSheets((current) =>
-        current.map((item) => (item.id === result.sheet.id ? result.sheet : item))
+        current.map((item) =>
+          item.id === result.sheet.id ? result.sheet : item
+        )
       );
       setMessage(
         result.sheet.favorite
@@ -565,10 +557,7 @@ export function SheetLibraryExperience({
       setMessageKind("status");
     } catch (error) {
       setMessage(
-        getMutationFailureMessage(
-          error,
-          "Sheet favorite could not be updated."
-        )
+        getMutationFailureMessage(error, "Sheet favorite could not be updated.")
       );
       setMessageKind("error");
     } finally {
@@ -597,7 +586,9 @@ export function SheetLibraryExperience({
       }
 
       setSheets((current) =>
-        current.map((item) => (item.id === result.sheet.id ? result.sheet : item))
+        current.map((item) =>
+          item.id === result.sheet.id ? result.sheet : item
+        )
       );
       setTagDrafts((current) => ({
         ...current,
@@ -620,9 +611,9 @@ export function SheetLibraryExperience({
       aria-labelledby="sheet-library-title"
       className="mx-auto flex w-full max-w-6xl flex-col gap-5"
     >
-      <header className="border-border bg-card shadow-soft flex flex-col gap-4 rounded-lg border p-5 md:flex-row md:items-center md:justify-between">
+      <header className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 shadow-soft md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-[0.08em] uppercase">
+          <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
             Sheet Library
           </p>
           <h1
@@ -631,12 +622,12 @@ export function SheetLibraryExperience({
           >
             Sheet Library
           </h1>
-          <p className="text-muted-foreground mt-3 max-w-3xl text-sm leading-6">
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
             Import Sheet entry lands here and now saves real PDF or image
             artifacts for practice routing.
           </p>
         </div>
-        <div className="bg-primary text-primary-foreground flex h-14 w-14 shrink-0 items-center justify-center rounded-full">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
           <LibraryBig className="h-7 w-7" aria-hidden="true" />
         </div>
       </header>
@@ -658,7 +649,7 @@ export function SheetLibraryExperience({
                   onChange={(event) =>
                     void handleFileChange(event.target.files)
                   }
-                  className="border-border bg-background file:bg-muted min-h-11 rounded-md border px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:px-3 file:py-1.5 file:text-sm file:font-medium"
+                  className="min-h-11 rounded-md border border-border bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-medium"
                 />
               </label>
 
@@ -673,7 +664,7 @@ export function SheetLibraryExperience({
                         name: event.target.value
                       }))
                     }
-                    className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+                    className="h-10 rounded-md border border-border bg-background px-3 text-sm"
                   />
                 </label>
                 <label className="grid gap-2 text-sm font-medium">
@@ -687,7 +678,7 @@ export function SheetLibraryExperience({
                         category: event.target.value as SheetCategory
                       }))
                     }
-                    className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+                    className="h-10 rounded-md border border-border bg-background px-3 text-sm"
                   >
                     {SHEET_CATEGORIES.map((category) => (
                       <option key={category} value={category}>
@@ -707,7 +698,7 @@ export function SheetLibraryExperience({
                         bpm: event.target.value
                       }))
                     }
-                    className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+                    className="h-10 rounded-md border border-border bg-background px-3 text-sm"
                   />
                 </label>
                 <label className="grid gap-2 text-sm font-medium">
@@ -720,7 +711,7 @@ export function SheetLibraryExperience({
                         timeSignature: event.target.value
                       }))
                     }
-                    className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+                    className="h-10 rounded-md border border-border bg-background px-3 text-sm"
                   />
                 </label>
               </div>
@@ -750,13 +741,14 @@ export function SheetLibraryExperience({
                   className={cn(
                     "rounded-md border px-3 py-2 text-sm",
                     !batchResult.ok ||
-                      (batchResult.total > 0 &&
-                        batchResult.importedCount === 0)
+                      (batchResult.total > 0 && batchResult.importedCount === 0)
                       ? "border-destructive/30 bg-destructive/10 text-destructive"
                       : "border-border bg-muted text-foreground"
                   )}
                 >
-                  <p className="font-medium">{formatBatchSummary(batchResult)}</p>
+                  <p className="font-medium">
+                    {formatBatchSummary(batchResult)}
+                  </p>
                   {batchResult.items.length > 0 ? (
                     <ul className="mt-2 grid gap-1">
                       {batchResult.items.map((item, index) => (
@@ -772,7 +764,7 @@ export function SheetLibraryExperience({
               ) : null}
             </div>
 
-            <div className="border-border bg-muted rounded-md border p-4 text-sm">
+            <div className="rounded-md border border-border bg-muted p-4 text-sm">
               <div className="mb-3 flex items-center gap-2 font-medium">
                 {preview?.kind === "image" ? (
                   <FileImage className="h-4 w-4" aria-hidden="true" />
@@ -782,29 +774,29 @@ export function SheetLibraryExperience({
                 Import Preview
               </div>
               {preview ? (
-                <dl className="text-muted-foreground grid gap-2">
+                <dl className="grid gap-2 text-muted-foreground">
                   <div className="flex justify-between gap-3">
                     <dt>Type</dt>
-                    <dd className="text-foreground font-medium">
+                    <dd className="font-medium text-foreground">
                       {preview.kind === "pdf" ? "PDF" : "Image sheet"}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt>Pages</dt>
-                    <dd className="text-foreground font-medium">
+                    <dd className="font-medium text-foreground">
                       {preview.pageCount ?? preview.imageCount}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt>Size</dt>
-                    <dd className="text-foreground font-medium">
+                    <dd className="font-medium text-foreground">
                       {formatBytes(preview.sizeBytes)}
                     </dd>
                   </div>
                   {preview.imageDimensions[0] ? (
                     <div className="flex justify-between gap-3">
                       <dt>First image</dt>
-                      <dd className="text-foreground font-medium">
+                      <dd className="font-medium text-foreground">
                         {preview.imageDimensions[0].width} x{" "}
                         {preview.imageDimensions[0].height}
                       </dd>
@@ -812,7 +804,7 @@ export function SheetLibraryExperience({
                   ) : null}
                 </dl>
               ) : (
-                <p className="text-muted-foreground leading-6">
+                <p className="leading-6 text-muted-foreground">
                   Choose a PDF or PNG/JPG image. Validation and metadata
                   extraction run before save.
                 </p>
@@ -851,21 +843,21 @@ export function SheetLibraryExperience({
         <label className="relative grid gap-2 text-sm font-medium">
           Search
           <Search
-            className="text-muted-foreground pointer-events-none absolute bottom-3 left-3 h-4 w-4"
+            className="pointer-events-none absolute bottom-3 left-3 h-4 w-4 text-muted-foreground"
             aria-hidden="true"
           />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by name, category, BPM, or time signature"
-            className="border-border bg-background h-10 rounded-md border pr-3 pl-9 text-sm"
+            className="h-10 rounded-md border border-border bg-background pr-3 pl-9 text-sm"
           />
         </label>
         <label className="grid gap-2 text-sm font-medium">
           Category filter
           <span className="relative">
             <Filter
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+              className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden="true"
             />
             <select
@@ -874,7 +866,7 @@ export function SheetLibraryExperience({
               onChange={(event) =>
                 setCategoryFilter(event.target.value as SheetCategoryFilter)
               }
-              className="border-border bg-background h-10 w-full rounded-md border pr-3 pl-9 text-sm"
+              className="h-10 w-full rounded-md border border-border bg-background pr-3 pl-9 text-sm"
             >
               <option value="all">All categories</option>
               {SHEET_CATEGORIES.map((category) => (
@@ -892,7 +884,7 @@ export function SheetLibraryExperience({
             aria-pressed={favoritesOnly}
             aria-label="Show favorites only"
             onClick={() => setFavoritesOnly((current) => !current)}
-            className="border-border bg-background hover:bg-muted focus-visible:ring-ring aria-pressed:border-primary aria-pressed:bg-primary/10 flex h-10 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            className="flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-background px-3 text-sm font-semibold transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:border-primary aria-pressed:bg-primary/10"
           >
             <Star className="h-4 w-4" aria-hidden="true" />
             Favorites only
@@ -904,7 +896,7 @@ export function SheetLibraryExperience({
             value={tagFilter}
             onChange={(event) => setTagFilter(event.target.value)}
             placeholder="Filter by tag"
-            className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+            className="h-10 rounded-md border border-border bg-background px-3 text-sm"
           />
         </label>
       </div>
@@ -913,7 +905,7 @@ export function SheetLibraryExperience({
         {!loading && visibleSheets.length > 0 && practiceSummaryError ? (
           <p
             role="alert"
-            className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm"
+            className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           >
             {practiceSummaryError}
           </p>
@@ -921,20 +913,20 @@ export function SheetLibraryExperience({
         {loading ? (
           <Card>
             <CardContent className="pt-5">
-              <p className="text-muted-foreground text-sm">Loading sheets...</p>
+              <p className="text-sm text-muted-foreground">Loading sheets...</p>
             </CardContent>
           </Card>
         ) : visibleSheets.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-start gap-3 pt-5">
-              <div className="bg-muted flex h-11 w-11 items-center justify-center rounded-full">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted">
                 <Wand2 className="h-5 w-5" aria-hidden="true" />
               </div>
               <div>
                 <h2 className="text-base font-semibold">
                   No sheets imported yet
                 </h2>
-                <p className="text-muted-foreground mt-1 text-sm leading-6">
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
                   Imported PDF and image artifacts will appear here with
                   metadata and practice routing.
                 </p>
@@ -957,7 +949,7 @@ export function SheetLibraryExperience({
                         <h2 className="text-lg font-semibold break-words">
                           {sheet.name}
                         </h2>
-                        <span className="bg-muted rounded-md px-2 py-1 text-xs font-medium">
+                        <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">
                           {sheetCategoryLabels[sheet.category]}
                         </span>
                         <span
@@ -971,27 +963,27 @@ export function SheetLibraryExperience({
                           {sheet.artifactStatus.label}
                         </span>
                       </div>
-                      <dl className="text-muted-foreground mt-3 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-5">
+                      <dl className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-5">
                         <div>
-                          <dt className="text-foreground font-medium">Pages</dt>
+                          <dt className="font-medium text-foreground">Pages</dt>
                           <dd>{formatPageCount(sheet)}</dd>
                         </div>
                         <div>
-                          <dt className="text-foreground font-medium">BPM</dt>
+                          <dt className="font-medium text-foreground">BPM</dt>
                           <dd>{sheet.bpm}</dd>
                         </div>
                         <div>
-                          <dt className="text-foreground font-medium">Time</dt>
+                          <dt className="font-medium text-foreground">Time</dt>
                           <dd>{sheet.timeSignature}</dd>
                         </div>
                         <div>
-                          <dt className="text-foreground font-medium">
+                          <dt className="font-medium text-foreground">
                             Last practiced
                           </dt>
                           <dd>{formatLastPracticed(sheet.lastPracticedAt)}</dd>
                         </div>
                         <div>
-                          <dt className="text-foreground font-medium">
+                          <dt className="font-medium text-foreground">
                             Artifact
                           </dt>
                           <dd>{sheet.originalFileNames.join(", ")}</dd>
@@ -1000,20 +992,20 @@ export function SheetLibraryExperience({
                       {!practiceSummaryError ? (
                         <div
                           aria-label={`Recent practice for ${sheet.name}`}
-                          className="border-border bg-muted/50 mt-3 rounded-md border px-3 py-2 text-sm"
+                          className="mt-3 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm"
                         >
-                          <p className="text-foreground font-medium">
+                          <p className="font-medium text-foreground">
                             Recent practice
                           </p>
                           {practiceSummaryLoading ? (
                             <p
                               aria-busy="true"
-                              className="text-muted-foreground mt-1"
+                              className="mt-1 text-muted-foreground"
                             >
                               Loading practice summary...
                             </p>
                           ) : practiceSummary ? (
-                            <div className="text-muted-foreground mt-1 grid gap-1">
+                            <div className="mt-1 grid gap-1 text-muted-foreground">
                               <p>
                                 Last practiced{" "}
                                 {formatPracticeDate(
@@ -1023,7 +1015,7 @@ export function SheetLibraryExperience({
                               <p>{formatPracticeMetrics(practiceSummary)}</p>
                             </div>
                           ) : (
-                            <p className="text-muted-foreground mt-1">
+                            <p className="mt-1 text-muted-foreground">
                               No local practice summary yet.
                             </p>
                           )}
@@ -1035,13 +1027,13 @@ export function SheetLibraryExperience({
                             sheetTags.map((tag) => (
                               <span
                                 key={tag}
-                                className="bg-muted rounded-md px-2 py-1 text-xs font-medium"
+                                className="rounded-md bg-muted px-2 py-1 text-xs font-medium"
                               >
                                 {tag}
                               </span>
                             ))
                           ) : (
-                            <span className="text-muted-foreground text-sm">
+                            <span className="text-sm text-muted-foreground">
                               No tags
                             </span>
                           )}
@@ -1060,7 +1052,7 @@ export function SheetLibraryExperience({
                                   [sheet.id]: event.target.value
                                 }))
                               }
-                              className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+                              className="h-10 rounded-md border border-border bg-background px-3 text-sm"
                             />
                           </label>
                           <Button
@@ -1075,7 +1067,7 @@ export function SheetLibraryExperience({
                         </div>
                       </div>
                       {isEditing ? (
-                        <div className="border-border bg-background mt-4 grid gap-3 rounded-md border p-3">
+                        <div className="mt-4 grid gap-3 rounded-md border border-border bg-background p-3">
                           <div className="grid gap-3 sm:grid-cols-2">
                             <label className="grid gap-2 text-sm font-medium">
                               Edit name
@@ -1088,7 +1080,7 @@ export function SheetLibraryExperience({
                                     name: event.target.value
                                   }))
                                 }
-                                className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+                                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
                               />
                             </label>
                             <label className="grid gap-2 text-sm font-medium">
@@ -1103,7 +1095,7 @@ export function SheetLibraryExperience({
                                       .value as SheetCategory
                                   }))
                                 }
-                                className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+                                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
                               >
                                 {SHEET_CATEGORIES.map((category) => (
                                   <option key={category} value={category}>
@@ -1124,7 +1116,7 @@ export function SheetLibraryExperience({
                                     bpm: event.target.value
                                   }))
                                 }
-                                className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+                                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
                               />
                             </label>
                             <label className="grid gap-2 text-sm font-medium">
@@ -1138,7 +1130,7 @@ export function SheetLibraryExperience({
                                     timeSignature: event.target.value
                                   }))
                                 }
-                                className="border-border bg-background h-10 rounded-md border px-3 text-sm"
+                                className="h-10 rounded-md border border-border bg-background px-3 text-sm"
                               />
                             </label>
                           </div>

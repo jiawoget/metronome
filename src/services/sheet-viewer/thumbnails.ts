@@ -4,9 +4,15 @@ import type { SheetPageThumbnailBlob } from "@/services/sheet-viewer/types";
 export const DEFAULT_SHEET_VIEWER_THUMBNAIL_MAX_WIDTH = 120;
 export const SHEET_VIEWER_THUMBNAIL_CACHE_LIMIT = 5;
 
-export function createSheetViewerThumbnailCacheKey(artifact: SheetArtifact, maxWidth: number) {
+export function createSheetViewerThumbnailCacheKey(
+  artifact: SheetArtifact,
+  maxWidth: number
+) {
   const filesKey = artifact.files
-    .map((file) => `${file.pageNumber}:${file.sizeBytes}:${file.width ?? ""}x${file.height ?? ""}`)
+    .map(
+      (file) =>
+        `${file.pageNumber}:${file.sizeBytes}:${file.width ?? ""}x${file.height ?? ""}`
+    )
     .join(",");
 
   return `${artifact.sheetId}:${artifact.createdAt}:${artifact.kind}:${maxWidth}:${filesKey}`;

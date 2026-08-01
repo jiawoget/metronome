@@ -36,10 +36,7 @@ export type ImportSheetInput = {
   metadata: SheetMetadataInput;
 };
 
-export type SheetBatchImportMetadataDefaults = Omit<
-  SheetMetadataInput,
-  "name"
->;
+export type SheetBatchImportMetadataDefaults = Omit<SheetMetadataInput, "name">;
 
 export type ImportSheetsBatchInput = {
   files: File[];

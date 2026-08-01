@@ -68,8 +68,8 @@ export function BarCountInControl({
         : disabled
           ? lockedText
           : enabled
-            ? readinessText ??
-              `Counts ${formatBarsText(bars)} before the selected segment or measure 1.`
+            ? (readinessText ??
+              `Counts ${formatBarsText(bars)} before the selected segment or measure 1.`)
             : helperText;
 
   function handleEnabledChange(event: ChangeEvent<HTMLInputElement>) {
@@ -83,7 +83,7 @@ export function BarCountInControl({
   return (
     <div
       className={cn(
-        "bg-muted/40 grid gap-3 rounded-md px-3 py-2 sm:grid-cols-[minmax(0,1fr)_7rem] sm:items-start",
+        "grid gap-3 rounded-md bg-muted/40 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_7rem] sm:items-start",
         className
       )}
     >
@@ -95,7 +95,7 @@ export function BarCountInControl({
             checked={enabled}
             disabled={disabled}
             onChange={handleEnabledChange}
-            className="border-border text-primary focus-visible:ring-ring h-4 w-4 rounded focus-visible:ring-2 focus-visible:outline-none"
+            className="h-4 w-4 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
           <span className="truncate">Bar count-in</span>
         </label>
@@ -103,7 +103,7 @@ export function BarCountInControl({
           role="status"
           aria-live="polite"
           className={cn(
-            "text-muted-foreground mt-1 text-xs leading-5",
+            "mt-1 text-xs leading-5 text-muted-foreground",
             blockedText && "text-destructive"
           )}
         >
@@ -112,7 +112,10 @@ export function BarCountInControl({
       </div>
 
       <div className="min-w-0">
-        <label htmlFor="sheet-bar-count-in-bars" className="text-xs font-medium">
+        <label
+          htmlFor="sheet-bar-count-in-bars"
+          className="text-xs font-medium"
+        >
           Bars
         </label>
         <select
@@ -121,7 +124,7 @@ export function BarCountInControl({
           value={String(bars)}
           disabled={barsDisabled}
           onChange={handleBarsChange}
-          className="border-border bg-background focus-visible:ring-ring mt-1 h-9 w-full rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+          className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
         >
           <option value="1">1 bar</option>
           <option value="2">2 bars</option>

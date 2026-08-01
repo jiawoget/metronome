@@ -14,7 +14,8 @@ function createActivityItem(
 ): HomeRecentActivityItem {
   const kind = overrides.kind ?? "sheet-session";
   const isQuick = kind === "quick-session";
-  const isRecording = kind === "sheet-recording" || kind === "segment-recording";
+  const isRecording =
+    kind === "sheet-recording" || kind === "segment-recording";
   const isSegment = kind === "segment-session" || kind === "segment-recording";
   const occurredAt = overrides.occurredAt ?? "2026-06-21T12:00:00.000Z";
 
@@ -22,9 +23,14 @@ function createActivityItem(
     id: `${isRecording ? "recording" : "session"}:${overrides.recordingId ?? overrides.sessionId ?? "alpha"}`,
     kind,
     occurredAt,
-    sortTimestamp: overrides.sortTimestamp === undefined ? occurredAt : overrides.sortTimestamp,
+    sortTimestamp:
+      overrides.sortTimestamp === undefined
+        ? occurredAt
+        : overrides.sortTimestamp,
     label: isQuick ? "Quick Practice" : isSegment ? "Bridge" : "Alpha Sheet",
-    metadata: isSegment ? ["1m", "96 BPM", "4/4", "m5-12"] : ["1m", "96 BPM", "4/4"],
+    metadata: isSegment
+      ? ["1m", "96 BPM", "4/4", "m5-12"]
+      : ["1m", "96 BPM", "4/4"],
     targetState: isQuick ? "quick" : "valid",
     sessionId: isRecording ? "session-alpha" : "session-alpha",
     recordingId: isRecording ? "recording-alpha" : null,
@@ -40,7 +46,9 @@ function createActivityItem(
   };
 }
 
-function createRecentActivity(items: HomeRecentActivityItem[]): HomeRecentActivityResult {
+function createRecentActivity(
+  items: HomeRecentActivityItem[]
+): HomeRecentActivityResult {
   return {
     items,
     generatedAt: "2026-06-21T12:30:00.000Z",
@@ -82,7 +90,9 @@ describe("continue practice targets", () => {
       ])
     );
 
-    expect(result.targets.map((target) => [target.kind, target.targetKey])).toEqual([
+    expect(
+      result.targets.map((target) => [target.kind, target.targetKey])
+    ).toEqual([
       ["segment", "segment:sheet-alpha:segment-alpha"],
       ["sheet", "sheet:sheet-alpha"],
       ["quick", "quick"]
@@ -131,7 +141,13 @@ describe("continue practice targets", () => {
       { limit: 2 }
     );
 
-    expect(result.targets.map((target) => [target.kind, target.sessionId, target.recordingId])).toEqual([
+    expect(
+      result.targets.map((target) => [
+        target.kind,
+        target.sessionId,
+        target.recordingId
+      ])
+    ).toEqual([
       ["segment", "segment-session", "segment-recording"],
       ["sheet", "newer-sheet-session", "newer-sheet-recording"]
     ]);
@@ -183,8 +199,17 @@ describe("continue practice targets", () => {
       sheetId?: string | null;
       segmentId?: string | null;
     }> = [
-      { id: "session:no-target", kind: "sheet-session", targetState: "no-target", sheetId: null },
-      { id: "session:deleted-sheet", kind: "sheet-session", targetState: "missing-sheet" },
+      {
+        id: "session:no-target",
+        kind: "sheet-session",
+        targetState: "no-target",
+        sheetId: null
+      },
+      {
+        id: "session:deleted-sheet",
+        kind: "sheet-session",
+        targetState: "missing-sheet"
+      },
       {
         id: "session:missing-segment",
         kind: "segment-session",
@@ -211,11 +236,28 @@ describe("continue practice targets", () => {
     );
 
     expect(result.targets).toEqual([]);
-    expect(result.rejected.map((target) => [target.id, target.reason, target.sheetId, target.segmentId])).toEqual([
+    expect(
+      result.rejected.map((target) => [
+        target.id,
+        target.reason,
+        target.sheetId,
+        target.segmentId
+      ])
+    ).toEqual([
       ["session:no-target", "no-target", null, null],
       ["session:deleted-sheet", "missing-sheet", "sheet-alpha", null],
-      ["session:missing-segment", "missing-segment", "sheet-alpha", "segment-alpha"],
-      ["recording:lookup-failed", "lookup-failed", "sheet-alpha", "segment-alpha"]
+      [
+        "session:missing-segment",
+        "missing-segment",
+        "sheet-alpha",
+        "segment-alpha"
+      ],
+      [
+        "recording:lookup-failed",
+        "lookup-failed",
+        "sheet-alpha",
+        "segment-alpha"
+      ]
     ]);
   });
 
@@ -243,7 +285,9 @@ describe("continue practice targets", () => {
       sheetId: "sheet-alpha"
     });
     expect(
-      getHomeCompatibleContinuePracticeTarget(result.targets.filter((target) => target.kind === "segment"))
+      getHomeCompatibleContinuePracticeTarget(
+        result.targets.filter((target) => target.kind === "segment")
+      )
     ).toBeNull();
   });
 });

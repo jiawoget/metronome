@@ -1,4 +1,7 @@
-import type { RecordingArtifactRef, ReviewRecording } from "@/lib/recordings-review/types";
+import type {
+  RecordingArtifactRef,
+  ReviewRecording
+} from "@/lib/recordings-review/types";
 import type { RecordingArtifact } from "@/lib/quick-metronome/types";
 import {
   recordingArtifactRepository,
@@ -27,7 +30,9 @@ export class RecordingArtifactCleanupError extends Error {
   }
 }
 
-export function isValidArtifactRef(value: unknown): value is RecordingArtifactRef {
+export function isValidArtifactRef(
+  value: unknown
+): value is RecordingArtifactRef {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -42,7 +47,9 @@ export function isValidArtifactRef(value: unknown): value is RecordingArtifactRe
   );
 }
 
-export function createRecordingArtifactRef(recordingId: string): RecordingArtifactRef {
+export function createRecordingArtifactRef(
+  recordingId: string
+): RecordingArtifactRef {
   return {
     kind: "indexeddb",
     artifactId: recordingId,
@@ -148,7 +155,8 @@ export async function cleanupCommittedRecordingArtifacts(
   }
 
   try {
-    const artifacts = await repository.listArtifactsForRecordings(cleanupRecordingIds);
+    const artifacts =
+      await repository.listArtifactsForRecordings(cleanupRecordingIds);
     const retainedRecordingIdsAfterList = new Set(
       recordingHistoryRepository
         .getSnapshot()

@@ -476,14 +476,14 @@ Review should explicitly check:
 
 ## Deferred Work
 
-| Deferred work | Future owner |
-| --- | --- |
-| Home goal create/edit/delete/progress UI and browser E2E | `P3-15 home-goal-management-ui` |
-| Goal progress display inside Home cards | `P3-15 home-goal-management-ui` |
-| Dashboard analytics display of stored-goal progress | `P3-15` or a reviewed analytics follow-up |
-| Goal completion writeback/status auto-maintenance | Separate reviewed goal-writeback slice |
-| Goal templates/defaults/recommendations/practice plans | Future explicit feature |
-| Weekly/monthly/streak/per-sheet/per-segment/target-BPM goals | Future explicit feature |
-| Import/export, selective cleanup, storage usage for goals | Pack 8 or reviewed settings/local-data slice |
-| Notifications/reminders/achievements/social sharing | Future explicit feature |
-| Cloud/cross-device goal sync | v2 |
+| Deferred work                                                | Future owner                                 |
+| ------------------------------------------------------------ | -------------------------------------------- |
+| Home goal create/edit/delete/progress UI and browser E2E     | `P3-15 home-goal-management-ui`              |
+| Goal progress display inside Home cards                      | `P3-15 home-goal-management-ui`              |
+| Dashboard analytics display of stored-goal progress          | `P3-15` or a reviewed analytics follow-up    |
+| Goal completion writeback/status auto-maintenance            | Separate reviewed goal-writeback slice       |
+| Goal templates/defaults/recommendations/practice plans       | Future explicit feature                      |
+| Weekly/monthly/streak/per-sheet/per-segment/target-BPM goals | Future explicit feature                      |
+| Import/export, selective cleanup, storage usage for goals    | Pack 8 or reviewed settings/local-data slice |
+| Notifications/reminders/achievements/social sharing          | Future explicit feature                      |
+| Cloud/cross-device goal sync                                 | v2                                           |

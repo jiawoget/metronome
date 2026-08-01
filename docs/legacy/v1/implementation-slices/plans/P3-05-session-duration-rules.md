@@ -105,7 +105,10 @@ The centralized helper should expose names that match local style, but it must m
 Recommended domain contract shape:
 
 ```ts
-type PracticeSessionDurationInput = Pick<PracticeSession, "startedAt" | "endedAt">;
+type PracticeSessionDurationInput = Pick<
+  PracticeSession,
+  "startedAt" | "endedAt"
+>;
 
 function calculatePracticeSessionDurationMs(
   session: PracticeSessionDurationInput,
@@ -333,18 +336,18 @@ Coding handoff:
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Durable session event repository, event table, schema version, and migration | Future explicit persistence slice |
-| Event replay duration from start/stop pairs and incomplete-pair handling | Future explicit duration-from-events slice after persistence |
-| Pause/resume active-time semantics from session lifecycle events | Future lifecycle/persistence slice |
-| Transport-specific duration, such as metronome-only or recording-only active intervals | Future analytics slice after durable events |
-| Segment duration partitioning or multi-segment session timeline | Future explicit segment-session slice |
-| Home recent activity source/UI | `P3-06`, `P3-07` |
-| Continue Practice target construction, stale target rejection, and segment navigation | `P3-08`, `P3-09` |
-| Goal completion, dashboard analytics, streaks, and UI labels | `P3-10` through `P3-15` |
-| Full grouped session-history UI and cross-screen duration consistency E2E | Future explicit UI slice |
-| Cross-device sync, cloud merge, login, background tracking, backup conflict resolution | v2 |
+| Deferred work                                                                          | Future owner                                                 |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Durable session event repository, event table, schema version, and migration           | Future explicit persistence slice                            |
+| Event replay duration from start/stop pairs and incomplete-pair handling               | Future explicit duration-from-events slice after persistence |
+| Pause/resume active-time semantics from session lifecycle events                       | Future lifecycle/persistence slice                           |
+| Transport-specific duration, such as metronome-only or recording-only active intervals | Future analytics slice after durable events                  |
+| Segment duration partitioning or multi-segment session timeline                        | Future explicit segment-session slice                        |
+| Home recent activity source/UI                                                         | `P3-06`, `P3-07`                                             |
+| Continue Practice target construction, stale target rejection, and segment navigation  | `P3-08`, `P3-09`                                             |
+| Goal completion, dashboard analytics, streaks, and UI labels                           | `P3-10` through `P3-15`                                      |
+| Full grouped session-history UI and cross-screen duration consistency E2E              | Future explicit UI slice                                     |
+| Cross-device sync, cloud merge, login, background tracking, backup conflict resolution | v2                                                           |
 
 ## Split Triggers
 

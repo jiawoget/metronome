@@ -140,9 +140,9 @@ Before editing, inventory and preserve these file-specific semantics.
   - range `5..12`
   - `targetBpm: 96`
   - `measureGridVersion:
-    "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000"`
+"bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:1000"`
   - grid snapshot `{ bpm: 96, timeSignature: "4/4", pickupBeats: 0,
-    measureOneOffsetMs: 1_000 }`
+measureOneOffsetMs: 1_000 }`
   - measure range `11_000..31_000`
 - Default artifact ref auto-attachment must remain enabled.
 - Explicit `artifactRef: null` or explicit non-null `artifactRef` overrides

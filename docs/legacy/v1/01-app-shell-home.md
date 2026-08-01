@@ -55,7 +55,7 @@ This module extends the v0 practice dashboard into a richer long-term practice c
 - Dashboard complexity could obscure fast practice entry.
 - Analytics could imply precision the app does not yet support.
 - Notifications and goals may create product weight before the practice loop is strong.
-Cross-device resume is deferred to v2.
+  Cross-device resume is deferred to v2.
 
 ## Promotion Criteria
 

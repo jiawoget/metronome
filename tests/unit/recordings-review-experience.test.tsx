@@ -1,4 +1,10 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -39,7 +45,9 @@ vi.mock("@/components/recordings-review/recording-artifact-review", () => ({
 
 vi.mock("@/lib/recordings-review/audio-export", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("@/lib/recordings-review/audio-export")>();
+    await importOriginal<
+      typeof import("@/lib/recordings-review/audio-export")
+    >();
 
   return {
     ...actual,
@@ -49,18 +57,23 @@ vi.mock("@/lib/recordings-review/audio-export", async (importOriginal) => {
   };
 });
 
-vi.mock("@/lib/recordings-review/waveform-comparison-sources", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/lib/recordings-review/waveform-comparison-sources")>();
+vi.mock(
+  "@/lib/recordings-review/waveform-comparison-sources",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("@/lib/recordings-review/waveform-comparison-sources")
+      >();
 
-  return {
-    ...actual,
-    loadWaveformComparisonSourcesForRecordingIds:
-      loadWaveformComparisonSourcesForRecordingIdsMock,
-    loadWaveformComparisonSourcesForGroup:
-      loadWaveformComparisonSourcesForGroupMock
-  };
-});
+    return {
+      ...actual,
+      loadWaveformComparisonSourcesForRecordingIds:
+        loadWaveformComparisonSourcesForRecordingIdsMock,
+      loadWaveformComparisonSourcesForGroup:
+        loadWaveformComparisonSourcesForGroupMock
+    };
+  }
+);
 
 afterEach(() => {
   cleanup();
@@ -157,17 +170,23 @@ describe("RecordingsReviewExperience grouped take history", () => {
       )
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("recording-row-quick-alpha")).toBeVisible();
-    expect(screen.queryByTestId("best-take-control-quick-alpha")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("active-take-control-quick-alpha")).not.toBeInTheDocument();
-    expect(screen.getByTestId("ungrouped-recordings-section")).toHaveTextContent(
-      "Legacy recordings with missing sheet links"
-    );
+    expect(
+      screen.queryByTestId("best-take-control-quick-alpha")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("active-take-control-quick-alpha")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("ungrouped-recordings-section")
+    ).toHaveTextContent("Legacy recordings with missing sheet links");
     expect(
       within(screen.getByTestId("ungrouped-recordings-section")).queryByTestId(
         "take-history-summary"
       )
     ).not.toBeInTheDocument();
-    expect(screen.getByTestId("recording-row-sheet-missing-link")).toBeVisible();
+    expect(
+      screen.getByTestId("recording-row-sheet-missing-link")
+    ).toBeVisible();
     expect(
       screen.queryByTestId("best-take-control-sheet-missing-link")
     ).not.toBeInTheDocument();
@@ -175,14 +194,17 @@ describe("RecordingsReviewExperience grouped take history", () => {
       screen.queryByTestId("active-take-control-sheet-missing-link")
     ).not.toBeInTheDocument();
 
-    expect(screen.getByTestId("recording-row-sheet-bridge-new")).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
-    expect(screen.getByTestId("recording-row-sheet-bridge-new")).toHaveAccessibleName(
+    expect(
+      screen.getByTestId("recording-row-sheet-bridge-new")
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByTestId("recording-row-sheet-bridge-new")
+    ).toHaveAccessibleName(
       /Bridge take 2, Alpha Etude, Segment Bridge, recorded/
     );
-    expect(screen.getByTestId("recording-row-sheet-whole-null")).toHaveAccessibleName(
+    expect(
+      screen.getByTestId("recording-row-sheet-whole-null")
+    ).toHaveAccessibleName(
       /Whole sheet explicit, Alpha Etude, Whole sheet \/ no segment, recorded/
     );
     expect(screen.getByTestId("recording-details")).toHaveAttribute(
@@ -237,8 +259,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     );
     expect(
       screen.getByRole("link", {
-        name:
-          "Practice again for sheet recording Missing sheet link without a linked sheet"
+        name: "Practice again for sheet recording Missing sheet link without a linked sheet"
       })
     ).toHaveAttribute("href", "/sheet-practice?recordingId=sheet-missing-link");
   });
@@ -252,32 +273,48 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     await expect(screen.findByTestId("recordings-list")).resolves.toBeVisible();
 
-    await user.type(screen.getByRole("textbox", { name: "Search recordings" }), "bridge");
+    await user.type(
+      screen.getByRole("textbox", { name: "Search recordings" }),
+      "bridge"
+    );
 
     expect(
-      screen.getByTestId("take-group-sheet:sheet-alpha:segment:id:segment-bridge")
+      screen.getByTestId(
+        "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
+      )
     ).toBeVisible();
     expect(
       screen.queryByTestId("take-group-sheet:sheet-alpha:segment:none")
     ).not.toBeInTheDocument();
-    expect(screen.queryByTestId("quick-recordings-section")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("quick-recordings-section")
+    ).not.toBeInTheDocument();
 
-    await user.clear(screen.getByRole("textbox", { name: "Search recordings" }));
+    await user.clear(
+      screen.getByRole("textbox", { name: "Search recordings" })
+    );
     await user.selectOptions(screen.getByLabelText("Type filter"), "quick");
 
     expect(screen.getByTestId("quick-recordings-section")).toBeVisible();
     expect(
-      screen.queryByTestId("take-group-sheet:sheet-alpha:segment:id:segment-bridge")
+      screen.queryByTestId(
+        "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
+      )
     ).not.toBeInTheDocument();
 
-    await user.type(screen.getByRole("textbox", { name: "Search recordings" }), "no match");
+    await user.type(
+      screen.getByRole("textbox", { name: "Search recordings" }),
+      "no match"
+    );
 
     await waitFor(() => {
-      expect(screen.getByTestId("recordings-filter-empty-state")).toHaveTextContent(
-        "No recordings match"
-      );
+      expect(
+        screen.getByTestId("recordings-filter-empty-state")
+      ).toHaveTextContent("No recordings match");
     });
-    expect(screen.queryByTestId("quick-recordings-section")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("quick-recordings-section")
+    ).not.toBeInTheDocument();
   });
 
   it("edits tags, favorites, archive state, and combines organization filters", async () => {
@@ -300,7 +337,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("recording-details")).toHaveTextContent("Warmup");
+      expect(screen.getByTestId("recording-details")).toHaveTextContent(
+        "Warmup"
+      );
       expect(
         screen.getByTestId("details-favorite-control-sheet-bridge-new")
       ).toHaveAttribute("aria-pressed", "true");
@@ -313,43 +352,66 @@ describe("RecordingsReviewExperience grouped take history", () => {
     await user.selectOptions(screen.getByLabelText("Tag filter"), "Warmup");
 
     expect(
-      screen.getByTestId("take-group-sheet:sheet-alpha:segment:id:segment-bridge")
+      screen.getByTestId(
+        "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
+      )
     ).toBeVisible();
     expect(screen.getByTestId("recording-row-sheet-bridge-new")).toBeVisible();
-    expect(screen.queryByTestId("recording-row-sheet-bridge-old")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("quick-recordings-section")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("recording-row-sheet-bridge-old")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("quick-recordings-section")
+    ).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Tag filter"), "all");
-    await user.click(screen.getByTestId("favorite-recording-control-quick-alpha"));
-    await user.click(screen.getByRole("button", { name: "Show favorites only" }));
+    await user.click(
+      screen.getByTestId("favorite-recording-control-quick-alpha")
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Show favorites only" })
+    );
 
     expect(screen.getByTestId("recording-row-sheet-bridge-new")).toBeVisible();
     expect(screen.getByTestId("recording-row-quick-alpha")).toBeVisible();
-    expect(screen.queryByTestId("recording-row-sheet-bridge-old")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("recording-row-sheet-bridge-old")
+    ).not.toBeInTheDocument();
 
-    await user.click(screen.getByTestId("details-archive-control-sheet-bridge-new"));
+    await user.click(
+      screen.getByTestId("details-archive-control-sheet-bridge-new")
+    );
 
     await waitFor(() => {
-      expect(screen.queryByTestId("recording-row-sheet-bridge-new")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("recording-row-sheet-bridge-new")
+      ).not.toBeInTheDocument();
       expect(screen.getByTestId("recording-details")).toHaveAttribute(
         "data-recording-id",
         "quick-alpha"
       );
     });
 
-    await user.selectOptions(screen.getByLabelText("Archive filter"), "archived");
+    await user.selectOptions(
+      screen.getByLabelText("Archive filter"),
+      "archived"
+    );
 
     expect(screen.getByTestId("recording-row-sheet-bridge-new")).toBeVisible();
     expect(screen.getByTestId("recording-details")).toHaveAttribute(
       "data-recording-id",
       "sheet-bridge-new"
     );
-    expect(screen.getByTestId("recording-details")).toHaveTextContent("Archived");
+    expect(screen.getByTestId("recording-details")).toHaveTextContent(
+      "Archived"
+    );
     expect(
       screen.getByTestId("details-archive-control-sheet-bridge-new")
     ).toHaveTextContent("Unarchive");
 
-    await user.click(screen.getByTestId("details-archive-control-sheet-bridge-new"));
+    await user.click(
+      screen.getByTestId("details-archive-control-sheet-bridge-new")
+    );
     await user.selectOptions(screen.getByLabelText("Archive filter"), "active");
 
     expect(screen.getByTestId("recording-row-sheet-bridge-new")).toBeVisible();
@@ -390,9 +452,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
       expect(exportRecordingAudioMock).toHaveBeenLastCalledWith({
         recordingId: "sheet-bridge-new"
       });
-      expect(screen.getByTestId("recording-audio-export-status")).toHaveTextContent(
-        "Audio export started."
-      );
+      expect(
+        screen.getByTestId("recording-audio-export-status")
+      ).toHaveTextContent("Audio export started.");
     });
     expect(screen.getByTestId("recording-details")).toHaveAttribute(
       "data-recording-id",
@@ -420,7 +482,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
         recordingId: "quick-alpha"
       });
     });
-    expect(screen.queryByRole("button", { name: /Export all/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Export all/i })
+    ).not.toBeInTheDocument();
   });
 
   it("shows unavailable export states for missing and unsupported artifacts without downloading", async () => {
@@ -449,25 +513,33 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     await expect(screen.findByTestId("recordings-list")).resolves.toBeVisible();
 
-    await user.click(screen.getByTestId("recording-row-quick-missing-artifact"));
+    await user.click(
+      screen.getByTestId("recording-row-quick-missing-artifact")
+    );
 
     expect(
       screen.getByRole("button", {
         name: "Export audio for Quick missing artifact"
       })
     ).toBeDisabled();
-    expect(screen.getByTestId("recording-audio-export-unavailable")).toHaveTextContent(
+    expect(
+      screen.getByTestId("recording-audio-export-unavailable")
+    ).toHaveTextContent(
       "This recording has no local audio artifact to export."
     );
 
-    await user.click(screen.getByTestId("recording-row-sheet-unsupported-artifact"));
+    await user.click(
+      screen.getByTestId("recording-row-sheet-unsupported-artifact")
+    );
 
     expect(
       screen.getByRole("button", {
         name: "Export audio for Unsupported sheet artifact"
       })
     ).toBeDisabled();
-    expect(screen.getByTestId("recording-audio-export-unavailable")).toHaveTextContent(
+    expect(
+      screen.getByTestId("recording-audio-export-unavailable")
+    ).toHaveTextContent(
       "This recording artifact is not a supported audio file."
     );
     expect(exportRecordingAudioMock).not.toHaveBeenCalled();
@@ -478,7 +550,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     seedRecordingHistoryForTests(createMixedSnapshot());
     loadWaveformComparisonSourcesForRecordingIdsMock.mockResolvedValue(
-      createComparisonResult([createReadyComparisonSource(createSheetRecording())])
+      createComparisonResult([
+        createReadyComparisonSource(createSheetRecording())
+      ])
     );
     exportRecordingAudioMock.mockResolvedValue({
       ok: false,
@@ -503,7 +577,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("recording-audio-export-error")).toHaveTextContent(
+      expect(
+        screen.getByTestId("recording-audio-export-error")
+      ).toHaveTextContent(
         "This recording artifact could not be prepared for export."
       );
     });
@@ -547,12 +623,17 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     await expect(screen.findByTestId("recordings-list")).resolves.toBeVisible();
 
-    expect(screen.queryByTestId("recording-row-sheet-bridge-new")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("recording-row-sheet-bridge-new")
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Export audio for Bridge take 2" })
     ).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText("Archive filter"), "archived");
+    await user.selectOptions(
+      screen.getByLabelText("Archive filter"),
+      "archived"
+    );
 
     await expect(
       screen.findByTestId("recording-row-sheet-bridge-new")
@@ -592,7 +673,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
         "sheet-whole-null"
       );
     });
-    expect(screen.queryByTestId("recording-row-sheet-bridge-new")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("recording-row-sheet-bridge-new")
+    ).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Type filter"), "quick");
     await waitFor(() => {
@@ -610,7 +693,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
         "sheet-whole-null"
       );
     });
-    expect(screen.queryByTestId("recording-row-quick-alpha")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("recording-row-quick-alpha")
+    ).not.toBeInTheDocument();
   });
 
   it("compares visible recordings through the P2-07 recording-id boundary without changing group waveform selection", async () => {
@@ -630,7 +715,8 @@ describe("RecordingsReviewExperience grouped take history", () => {
               return createUnavailableComparisonSource({
                 recording,
                 reason: "not-sheet-take",
-                message: "Only saved sheet takes can be used for waveform comparison."
+                message:
+                  "Only saved sheet takes can be used for waveform comparison."
               });
             }
 
@@ -641,23 +727,27 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     render(<RecordingsReviewExperience />);
 
-    await expect(screen.findByTestId("recording-comparison")).resolves.toHaveTextContent(
-      "Select recordings to compare"
+    await expect(
+      screen.findByTestId("recording-comparison")
+    ).resolves.toHaveTextContent("Select recordings to compare");
+
+    await user.click(
+      screen.getByTestId("compare-recording-control-sheet-bridge-new")
     );
 
-    await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-new"));
-
     await waitFor(() => {
-      expect(screen.getByTestId("recording-comparison-status")).toHaveTextContent(
-        "Select another recording to compare"
-      );
+      expect(
+        screen.getByTestId("recording-comparison-status")
+      ).toHaveTextContent("Select another recording to compare");
     });
     expect(
       within(screen.getByTestId("recording-comparison")).getByTestId(
         "recording-comparison-metadata-sheet-bridge-new"
       )
     ).toHaveTextContent("Sheet recording");
-    expect(loadWaveformComparisonSourcesForRecordingIdsMock).not.toHaveBeenCalled();
+    expect(
+      loadWaveformComparisonSourcesForRecordingIdsMock
+    ).not.toHaveBeenCalled();
     expect(
       screen.queryByTestId("recording-comparison-loading")
     ).not.toBeInTheDocument();
@@ -665,13 +755,14 @@ describe("RecordingsReviewExperience grouped take history", () => {
       screen.queryByTestId("recording-comparison-waveform-results")
     ).not.toBeInTheDocument();
 
-    await user.click(screen.getByTestId("compare-recording-control-quick-alpha"));
+    await user.click(
+      screen.getByTestId("compare-recording-control-quick-alpha")
+    );
 
     await waitFor(() => {
-      expect(loadWaveformComparisonSourcesForRecordingIdsMock).toHaveBeenLastCalledWith([
-        "sheet-bridge-new",
-        "quick-alpha"
-      ]);
+      expect(
+        loadWaveformComparisonSourcesForRecordingIdsMock
+      ).toHaveBeenLastCalledWith(["sheet-bridge-new", "quick-alpha"]);
       expect(
         within(screen.getByTestId("recording-comparison")).getByTestId(
           "waveform-comparison-row-sheet-bridge-new"
@@ -692,17 +783,23 @@ describe("RecordingsReviewExperience grouped take history", () => {
       )
     ).toHaveTextContent("Latest");
     expect(
-      within(comparisonPanel).getByTestId("recording-comparison-metadata-quick-alpha")
+      within(comparisonPanel).getByTestId(
+        "recording-comparison-metadata-quick-alpha"
+      )
     ).toHaveTextContent("Quick recording");
     expect(
-      within(comparisonPanel).getByTestId("recording-comparison-metadata-quick-alpha")
+      within(comparisonPanel).getByTestId(
+        "recording-comparison-metadata-quick-alpha"
+      )
     ).toHaveTextContent("1 manual marker");
     expect(
       within(comparisonPanel).getByTestId("waveform-comparison-row-quick-alpha")
     ).toHaveAttribute("data-unavailable-reason", "not-sheet-take");
     expect(
       within(comparisonPanel).getByTestId("waveform-comparison-row-quick-alpha")
-    ).toHaveTextContent("Only saved sheet takes can be used for waveform comparison.");
+    ).toHaveTextContent(
+      "Only saved sheet takes can be used for waveform comparison."
+    );
     expect(
       within(comparisonPanel).queryByTestId("comparison-waveform-quick-alpha")
     ).not.toBeInTheDocument();
@@ -725,8 +822,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
         createComparisonResult(
           recordingIds.map((recordingId) =>
             createReadyComparisonSource(
-              snapshot.recordings.find((recording) => recording.id === recordingId) ??
-                createSheetRecording({ id: recordingId })
+              snapshot.recordings.find(
+                (recording) => recording.id === recordingId
+              ) ?? createSheetRecording({ id: recordingId })
             )
           )
         )
@@ -734,16 +832,21 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     render(<RecordingsReviewExperience />);
 
-    await expect(screen.findByTestId("recording-comparison")).resolves.toBeVisible();
+    await expect(
+      screen.findByTestId("recording-comparison")
+    ).resolves.toBeVisible();
 
-    await user.click(screen.getByTestId("compare-recording-control-sheet-whole-legacy"));
-    await user.click(screen.getByTestId("compare-recording-control-sheet-whole-null"));
+    await user.click(
+      screen.getByTestId("compare-recording-control-sheet-whole-legacy")
+    );
+    await user.click(
+      screen.getByTestId("compare-recording-control-sheet-whole-null")
+    );
 
     await waitFor(() => {
-      expect(loadWaveformComparisonSourcesForRecordingIdsMock).toHaveBeenLastCalledWith([
-        "sheet-whole-legacy",
-        "sheet-whole-null"
-      ]);
+      expect(
+        loadWaveformComparisonSourcesForRecordingIdsMock
+      ).toHaveBeenLastCalledWith(["sheet-whole-legacy", "sheet-whole-null"]);
       expect(
         within(screen.getByTestId("recording-comparison")).getByTestId(
           "waveform-comparison-row-sheet-whole-legacy"
@@ -780,22 +883,25 @@ describe("RecordingsReviewExperience grouped take history", () => {
       createComparisonResult([
         createUnavailableComparisonSource({
           recording:
-            snapshot.recordings.find((recording) => recording.id === "sheet-bridge-new") ??
-            null,
+            snapshot.recordings.find(
+              (recording) => recording.id === "sheet-bridge-new"
+            ) ?? null,
           reason: "missing-artifact",
           message: "This recording has no accessible local audio artifact."
         }),
         createUnavailableComparisonSource({
           recording:
-            snapshot.recordings.find((recording) => recording.id === "sheet-whole-null") ??
-            null,
+            snapshot.recordings.find(
+              (recording) => recording.id === "sheet-whole-null"
+            ) ?? null,
           reason: "unsupported-mime",
           message: "This recording artifact is not a supported audio type."
         }),
         createUnavailableComparisonSource({
           recording:
-            snapshot.recordings.find((recording) => recording.id === "sheet-whole-legacy") ??
-            null,
+            snapshot.recordings.find(
+              (recording) => recording.id === "sheet-whole-legacy"
+            ) ?? null,
           reason: "invalid-peaks",
           message: "This recording has invalid waveform peak data."
         })
@@ -804,14 +910,24 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     render(<RecordingsReviewExperience />);
 
-    await expect(screen.findByTestId("recording-comparison")).resolves.toBeVisible();
+    await expect(
+      screen.findByTestId("recording-comparison")
+    ).resolves.toBeVisible();
 
-    await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-new"));
-    await user.click(screen.getByTestId("compare-recording-control-sheet-whole-null"));
-    await user.click(screen.getByTestId("compare-recording-control-sheet-whole-legacy"));
+    await user.click(
+      screen.getByTestId("compare-recording-control-sheet-bridge-new")
+    );
+    await user.click(
+      screen.getByTestId("compare-recording-control-sheet-whole-null")
+    );
+    await user.click(
+      screen.getByTestId("compare-recording-control-sheet-whole-legacy")
+    );
 
     await waitFor(() => {
-      expect(loadWaveformComparisonSourcesForRecordingIdsMock).toHaveBeenLastCalledWith([
+      expect(
+        loadWaveformComparisonSourcesForRecordingIdsMock
+      ).toHaveBeenLastCalledWith([
         "sheet-bridge-new",
         "sheet-whole-null",
         "sheet-whole-legacy"
@@ -834,13 +950,19 @@ describe("RecordingsReviewExperience grouped take history", () => {
       "This recording has invalid waveform peak data."
     );
     expect(
-      within(comparisonPanel).queryByTestId("comparison-waveform-sheet-bridge-new")
+      within(comparisonPanel).queryByTestId(
+        "comparison-waveform-sheet-bridge-new"
+      )
     ).not.toBeInTheDocument();
     expect(
-      within(comparisonPanel).queryByTestId("comparison-waveform-sheet-whole-null")
+      within(comparisonPanel).queryByTestId(
+        "comparison-waveform-sheet-whole-null"
+      )
     ).not.toBeInTheDocument();
     expect(
-      within(comparisonPanel).queryByTestId("comparison-waveform-sheet-whole-legacy")
+      within(comparisonPanel).queryByTestId(
+        "comparison-waveform-sheet-whole-legacy"
+      )
     ).not.toBeInTheDocument();
     expect(loadWaveformComparisonSourcesForGroupMock).not.toHaveBeenCalled();
   });
@@ -866,8 +988,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
         createComparisonResult(
           recordingIds.map((recordingId) =>
             createReadyComparisonSource(
-              snapshot.recordings.find((recording) => recording.id === recordingId) ??
-                createSheetRecording({ id: recordingId })
+              snapshot.recordings.find(
+                (recording) => recording.id === recordingId
+              ) ?? createSheetRecording({ id: recordingId })
             )
           )
         )
@@ -880,18 +1003,25 @@ describe("RecordingsReviewExperience grouped take history", () => {
       screen.queryByTestId("compare-recording-control-sheet-bridge-old")
     ).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText("Archive filter"), "archived");
-    await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-old"));
+    await user.selectOptions(
+      screen.getByLabelText("Archive filter"),
+      "archived"
+    );
+    await user.click(
+      screen.getByTestId("compare-recording-control-sheet-bridge-old")
+    );
 
     await waitFor(() => {
-      expect(screen.getByTestId("recording-comparison-status")).toHaveTextContent(
-        "Select another recording to compare"
-      );
+      expect(
+        screen.getByTestId("recording-comparison-status")
+      ).toHaveTextContent("Select another recording to compare");
     });
     expect(screen.getByTestId("recording-comparison")).toHaveTextContent(
       "Archived"
     );
-    expect(loadWaveformComparisonSourcesForRecordingIdsMock).not.toHaveBeenCalled();
+    expect(
+      loadWaveformComparisonSourcesForRecordingIdsMock
+    ).not.toHaveBeenCalled();
     expect(
       screen.queryByTestId("recording-comparison-waveform-results")
     ).not.toBeInTheDocument();
@@ -899,9 +1029,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
     await user.selectOptions(screen.getByLabelText("Archive filter"), "active");
 
     await waitFor(() => {
-      expect(screen.getByTestId("recording-comparison-status")).toHaveTextContent(
-        "Select recordings to compare"
-      );
+      expect(
+        screen.getByTestId("recording-comparison-status")
+      ).toHaveTextContent("Select recordings to compare");
     });
     expect(
       screen.queryByTestId("waveform-comparison-row-sheet-bridge-old")
@@ -921,8 +1051,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
         createComparisonResult(
           recordingIds.map((recordingId) =>
             createReadyComparisonSource(
-              snapshot.recordings.find((recording) => recording.id === recordingId) ??
-                createSheetRecording({ id: recordingId })
+              snapshot.recordings.find(
+                (recording) => recording.id === recordingId
+              ) ?? createSheetRecording({ id: recordingId })
             )
           )
         )
@@ -930,9 +1061,15 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     const { unmount } = render(<RecordingsReviewExperience />);
 
-    await expect(screen.findByTestId("recording-comparison")).resolves.toBeVisible();
-    await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-old"));
-    await user.click(screen.getByTestId("compare-recording-control-sheet-bridge-new"));
+    await expect(
+      screen.findByTestId("recording-comparison")
+    ).resolves.toBeVisible();
+    await user.click(
+      screen.getByTestId("compare-recording-control-sheet-bridge-old")
+    );
+    await user.click(
+      screen.getByTestId("compare-recording-control-sheet-bridge-new")
+    );
 
     await waitFor(() => {
       expect(
@@ -981,9 +1118,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
     unmount();
     render(<RecordingsReviewExperience />);
 
-    await expect(screen.findByTestId("recording-comparison-status")).resolves.toHaveTextContent(
-      "Select recordings to compare"
-    );
+    await expect(
+      screen.findByTestId("recording-comparison-status")
+    ).resolves.toHaveTextContent("Select recordings to compare");
     expect(
       screen.queryByTestId("recording-comparison-waveform-results")
     ).not.toBeInTheDocument();
@@ -1210,7 +1347,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     expect(screen.getByTestId("quick-recordings-section")).toBeVisible();
     expect(
-      screen.queryByTestId("take-group-sheet:sheet-alpha:segment:id:segment-bridge")
+      screen.queryByTestId(
+        "take-group-sheet:sheet-alpha:segment:id:segment-bridge"
+      )
     ).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Type filter"), "sheet");
@@ -1340,7 +1479,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
     );
 
     expect(
-      within(segmentGroup).getByTestId("waveform-comparison-sheet:sheet-alpha:segment:id:segment-bridge")
+      within(segmentGroup).getByTestId(
+        "waveform-comparison-sheet:sheet-alpha:segment:id:segment-bridge"
+      )
     ).toHaveTextContent("Select takes to compare");
     expect(
       within(segmentGroup).getByTestId("compare-take-control-sheet-bridge-new")
@@ -1360,17 +1501,12 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockImplementation(
-      async ({
-        recordingIds
-      }: {
-        recordingIds: string[];
-      }) =>
+      async ({ recordingIds }: { recordingIds: string[] }) =>
         createComparisonResult(
           recordingIds.map((recordingId) => {
             const recording =
-              snapshot.recordings.find(
-                (item) => item.id === recordingId
-              ) ?? createSheetRecording({ id: recordingId });
+              snapshot.recordings.find((item) => item.id === recordingId) ??
+              createSheetRecording({ id: recordingId });
 
             return createReadyComparisonSource(
               recording,
@@ -1396,7 +1532,9 @@ describe("RecordingsReviewExperience grouped take history", () => {
     );
 
     await waitFor(() => {
-      expect(loadWaveformComparisonSourcesForGroupMock).toHaveBeenLastCalledWith(
+      expect(
+        loadWaveformComparisonSourcesForGroupMock
+      ).toHaveBeenLastCalledWith(
         expect.objectContaining({
           group: expect.objectContaining({
             groupId: "sheet:sheet-alpha:segment:id:segment-bridge"
@@ -1449,15 +1587,12 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockImplementation(
-      async ({
-        recordingIds
-      }: {
-        recordingIds: string[];
-      }) => {
+      async ({ recordingIds }: { recordingIds: string[] }) => {
         const sources = recordingIds.map((recordingId) =>
           createReadyComparisonSource(
-            snapshot.recordings.find((recording) => recording.id === recordingId) ??
-              createSheetRecording({ id: recordingId })
+            snapshot.recordings.find(
+              (recording) => recording.id === recordingId
+            ) ?? createSheetRecording({ id: recordingId })
           )
         );
 
@@ -1554,15 +1689,12 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockImplementation(
-      async ({
-        recordingIds
-      }: {
-        recordingIds: string[];
-      }) => {
+      async ({ recordingIds }: { recordingIds: string[] }) => {
         const sources = recordingIds.map((recordingId) =>
           createReadyComparisonSource(
-            snapshot.recordings.find((recording) => recording.id === recordingId) ??
-              createSheetRecording({ id: recordingId })
+            snapshot.recordings.find(
+              (recording) => recording.id === recordingId
+            ) ?? createSheetRecording({ id: recordingId })
           )
         );
 
@@ -1648,15 +1780,12 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockImplementation(
-      async ({
-        recordingIds
-      }: {
-        recordingIds: string[];
-      }) => {
+      async ({ recordingIds }: { recordingIds: string[] }) => {
         const sources = recordingIds.map((recordingId) =>
           createReadyComparisonSource(
-            snapshot.recordings.find((recording) => recording.id === recordingId) ??
-              createSheetRecording({ id: recordingId })
+            snapshot.recordings.find(
+              (recording) => recording.id === recordingId
+            ) ?? createSheetRecording({ id: recordingId })
           )
         );
 
@@ -1745,7 +1874,8 @@ describe("RecordingsReviewExperience grouped take history", () => {
           recordingId: "deleted-take",
           recording: null,
           reason: "missing-recording",
-          message: "This recording is no longer available in local review history."
+          message:
+            "This recording is no longer available in local review history."
         }),
         createUnavailableComparisonSource({
           recording: snapshot.recordings[1],
@@ -1760,7 +1890,8 @@ describe("RecordingsReviewExperience grouped take history", () => {
         createUnavailableComparisonSource({
           recording: snapshot.recordings[1],
           reason: "stale-group-membership",
-          message: "This recording is no longer part of the selected take group."
+          message:
+            "This recording is no longer part of the selected take group."
         }),
         createUnavailableComparisonSource({
           recording: snapshot.recordings[1],
@@ -1830,16 +1961,13 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockImplementation(
-      async ({
-        recordingIds
-      }: {
-        recordingIds: string[];
-      }) =>
+      async ({ recordingIds }: { recordingIds: string[] }) =>
         createComparisonResult(
           recordingIds.map((recordingId) =>
             createReadyComparisonSource(
-              snapshot.recordings.find((recording) => recording.id === recordingId) ??
-                createSheetRecording({ id: recordingId })
+              snapshot.recordings.find(
+                (recording) => recording.id === recordingId
+              ) ?? createSheetRecording({ id: recordingId })
             )
           )
         )
@@ -1889,16 +2017,13 @@ describe("RecordingsReviewExperience grouped take history", () => {
 
     seedRecordingHistoryForTests(snapshot);
     loadWaveformComparisonSourcesForGroupMock.mockImplementation(
-      async ({
-        recordingIds
-      }: {
-        recordingIds: string[];
-      }) =>
+      async ({ recordingIds }: { recordingIds: string[] }) =>
         createComparisonResult(
           recordingIds.map((recordingId) =>
             createReadyComparisonSource(
-              snapshot.recordings.find((recording) => recording.id === recordingId) ??
-                createSheetRecording({ id: recordingId })
+              snapshot.recordings.find(
+                (recording) => recording.id === recordingId
+              ) ?? createSheetRecording({ id: recordingId })
             )
           )
         )
@@ -1987,9 +2112,7 @@ describe("RecordingsReviewExperience grouped take history", () => {
     await waitFor(() => {
       expect(
         within(segmentGroup).getByTestId("waveform-comparison-error")
-      ).toHaveTextContent(
-        "Waveform comparison sources could not be loaded."
-      );
+      ).toHaveTextContent("Waveform comparison sources could not be loaded.");
     });
     expect(
       within(segmentGroup).getByTestId("recording-row-sheet-bridge-new")
@@ -2112,7 +2235,9 @@ function createComparisonResult(
 
 function createReadyComparisonSource(
   recording: ReviewRecording,
-  overrides: Partial<Extract<WaveformComparisonSourceState, { status: "ready" }>> = {}
+  overrides: Partial<
+    Extract<WaveformComparisonSourceState, { status: "ready" }>
+  > = {}
 ): Extract<WaveformComparisonSourceState, { status: "ready" }> {
   const artifactDetails: RecordingArtifactDetails = {
     recordingId: recording.id,

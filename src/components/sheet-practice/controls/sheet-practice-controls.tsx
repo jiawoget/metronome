@@ -260,9 +260,8 @@ export function SheetPracticeControls({
   const activeRecordingWorkflowSheetId = useSheetPracticeRecordingWorkflowStore(
     (state) => state.sheetId
   );
-  const activeRecordingWorkflowSegmentId = useSheetPracticeRecordingWorkflowStore(
-    (state) => state.activeSegmentId
-  );
+  const activeRecordingWorkflowSegmentId =
+    useSheetPracticeRecordingWorkflowStore((state) => state.activeSegmentId);
   const setActiveRecordingSegment = useSheetPracticeRecordingWorkflowStore(
     (state) => state.setActiveSegment
   );
@@ -425,7 +424,8 @@ export function SheetPracticeControls({
         return;
       }
 
-      const { recording, sourceContext: sourceSegmentContext } = sourceInspection;
+      const { recording, sourceContext: sourceSegmentContext } =
+        sourceInspection;
 
       const liveSegment = await practiceSegmentService.getSegment(
         sheetId,
@@ -855,20 +855,22 @@ export function SheetPracticeControls({
       setActiveBarCountInPlan(null);
       setActiveBarCountInTick(null);
 
-      void prepareBarCountInPlan(barCountInOptions, prepareRunId).then((plan) => {
-        if (barCountInPrepareRunIdRef.current !== prepareRunId) {
-          return;
+      void prepareBarCountInPlan(barCountInOptions, prepareRunId).then(
+        (plan) => {
+          if (barCountInPrepareRunIdRef.current !== prepareRunId) {
+            return;
+          }
+
+          isPreparingBarCountInRef.current = false;
+
+          if (plan === null) {
+            return;
+          }
+
+          pendingBarCountInStartRef.current = true;
+          setActiveBarCountInPlan(plan);
         }
-
-        isPreparingBarCountInRef.current = false;
-
-        if (plan === null) {
-          return;
-        }
-
-        pendingBarCountInStartRef.current = true;
-        setActiveBarCountInPlan(plan);
-      });
+      );
 
       return;
     }
@@ -894,12 +896,15 @@ export function SheetPracticeControls({
     () => formatBarCountInTickDetail(activeBarCountInTick),
     [activeBarCountInTick]
   );
-  const handleBarCountInEnabledChange = useCallback((enabled: boolean) => {
-    invalidateBarCountInPrepare();
-    setActiveBarCountInPlan(null);
-    setIsBarCountInEnabled(enabled);
-    setActiveBarCountInTick(null);
-  }, [invalidateBarCountInPrepare]);
+  const handleBarCountInEnabledChange = useCallback(
+    (enabled: boolean) => {
+      invalidateBarCountInPrepare();
+      setActiveBarCountInPlan(null);
+      setIsBarCountInEnabled(enabled);
+      setActiveBarCountInTick(null);
+    },
+    [invalidateBarCountInPrepare]
+  );
   const handleBarCountInMeasuresChange = useCallback(
     (measures: BarCountInBars) => {
       invalidateBarCountInPrepare();
@@ -955,7 +960,9 @@ export function SheetPracticeControls({
     }
 
     const source = sourceSelection.value;
-    const sourceRecording = sheetRecordingService.getRecording(source.recordingId);
+    const sourceRecording = sheetRecordingService.getRecording(
+      source.recordingId
+    );
     const recordingInspection = inspectReadyRerecordSourceRecording({
       recording: sourceRecording,
       sheetId,
@@ -1044,10 +1051,7 @@ export function SheetPracticeControls({
         segmentId: recordingSegmentId
       });
       setRecordingState("recording");
-      beginWorkflowRecording(
-        sheetId,
-        recordingSegmentId
-      );
+      beginWorkflowRecording(sheetId, recordingSegmentId);
       setMessage(
         recordAgainContext
           ? `Recording again for ${recordAgainContext.segmentName}.`
@@ -1085,7 +1089,9 @@ export function SheetPracticeControls({
       return null;
     }
 
-    let selectedSegment: Awaited<ReturnType<typeof practiceSegmentService.getSegment>>;
+    let selectedSegment: Awaited<
+      ReturnType<typeof practiceSegmentService.getSegment>
+    >;
 
     try {
       selectedSegment = await practiceSegmentService.getSegment(
@@ -1093,25 +1099,33 @@ export function SheetPracticeControls({
         selectedRecordingSegmentId
       );
     } catch {
-      throw new Error("Selected segment could not be loaded. Recording was not saved.");
+      throw new Error(
+        "Selected segment could not be loaded. Recording was not saved."
+      );
     }
 
     if (selectedSegment === null) {
       setActiveRecordingSegment(sheetId, null);
       invalidateRerecordSource(sheetId, "source-segment-missing");
-      throw new Error("Selected segment no longer exists. Recording was not saved.");
+      throw new Error(
+        "Selected segment no longer exists. Recording was not saved."
+      );
     }
 
     if (selectedSegment.sheetId !== sheetId) {
       setActiveRecordingSegment(sheetId, null);
       invalidateRerecordSource(sheetId, "sheet-mismatch");
-      throw new Error("Selected segment belongs to a different sheet. Recording was not saved.");
+      throw new Error(
+        "Selected segment belongs to a different sheet. Recording was not saved."
+      );
     }
 
     try {
       return createSheetRecordingSegmentContext(selectedSegment);
     } catch {
-      throw new Error("Selected segment timing is invalid. Recording was not saved.");
+      throw new Error(
+        "Selected segment timing is invalid. Recording was not saved."
+      );
     }
   }
 
@@ -1234,7 +1248,7 @@ export function SheetPracticeControls({
     <section
       aria-labelledby="sheet-practice-controls-title"
       data-testid="sheet-practice-controls"
-      className="border-border bg-card shadow-soft shrink-0 rounded-lg border"
+      className="shrink-0 rounded-lg border border-border bg-card shadow-soft"
     >
       <div className="grid gap-3 p-3 lg:grid-cols-[minmax(16rem,0.9fr)_minmax(22rem,1.35fr)_minmax(16rem,0.9fr)] lg:items-stretch">
         <PracticeStatusPanel
@@ -1325,7 +1339,7 @@ export function SheetPracticeControls({
           startRecordAgain={() => void startSheetRecording("record-again")}
         />
       </div>
-      <div className="border-border grid gap-3 border-t px-3 py-3 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(24rem,1.15fr)]">
+      <div className="grid gap-3 border-t border-border px-3 py-3 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(24rem,1.15fr)]">
         <PracticeSegmentSelectorPanel
           sheetId={sheetId}
           initialSegmentId={returnSegmentId}
@@ -1344,7 +1358,7 @@ export function SheetPracticeControls({
           onGridSaved={() => setMeasureGridRevision((revision) => revision + 1)}
         />
       </div>
-      <div className="border-border text-muted-foreground flex flex-wrap items-center gap-3 border-t px-3 py-2 text-xs">
+      <div className="flex flex-wrap items-center gap-3 border-t border-border px-3 py-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Timer className="h-3.5 w-3.5" aria-hidden="true" />
           Defaults: {initialState.settings.bpm} BPM,{" "}

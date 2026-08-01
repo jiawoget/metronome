@@ -28,10 +28,9 @@ function createAudioBufferLike({
 
 describe("audio analysis service", () => {
   it("derives and normalizes fixed-count peaks from decoded samples", () => {
-    expect(derivePeaksFromSamples(new Float32Array([0, 0.5, -1, 0.25]), 2)).toEqual([
-      0.5,
-      1
-    ]);
+    expect(
+      derivePeaksFromSamples(new Float32Array([0, 0.5, -1, 0.25]), 2)
+    ).toEqual([0.5, 1]);
     expect(
       derivePeaksFromBuffer(
         createAudioBufferLike({
@@ -87,12 +86,16 @@ describe("audio analysis service", () => {
       }
     };
 
-    await expect(analyzeRecordingBlob(blob, decodeAdapter)).resolves.toMatchObject({
+    await expect(
+      analyzeRecordingBlob(blob, decodeAdapter)
+    ).resolves.toMatchObject({
       decodedDurationMs: 500,
       sampleRate: 4_000,
       isSilent: false
     });
-    await expect(analyzeRecordingBlob(blob, failingAdapter)).resolves.toBeNull();
+    await expect(
+      analyzeRecordingBlob(blob, failingAdapter)
+    ).resolves.toBeNull();
   });
 
   it("has no wavesurfer or DOM container dependency", () => {

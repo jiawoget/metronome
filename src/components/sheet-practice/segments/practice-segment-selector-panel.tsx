@@ -99,7 +99,9 @@ function formatMeasureRange(segment: PracticeSegment) {
 }
 
 function formatTargetBpm(segment: PracticeSegment) {
-  return segment.targetBpm === null ? "No target BPM" : `Target ${segment.targetBpm} BPM`;
+  return segment.targetBpm === null
+    ? "No target BPM"
+    : `Target ${segment.targetBpm} BPM`;
 }
 
 function getStatusLabel(status: PracticeSegmentGridStatus) {
@@ -115,7 +117,10 @@ function getStatusLabel(status: PracticeSegmentGridStatus) {
   }
 }
 
-function getStatusClassName(status: PracticeSegmentGridStatus, selected: boolean) {
+function getStatusClassName(
+  status: PracticeSegmentGridStatus,
+  selected: boolean
+) {
   if (selected && status === "current") {
     return "border-primary/40 bg-primary/15 text-foreground";
   }
@@ -135,7 +140,11 @@ function getStatusClassName(status: PracticeSegmentGridStatus, selected: boolean
   return "border-muted-foreground/20 bg-muted text-muted-foreground";
 }
 
-function getSegmentStatus(segment: PracticeSegment, currentGrid: MeasureGrid | null, gridLoadState: GridLoadState) {
+function getSegmentStatus(
+  segment: PracticeSegment,
+  currentGrid: MeasureGrid | null,
+  gridLoadState: GridLoadState
+) {
   if (gridLoadState === "loading") {
     return "missing-grid";
   }
@@ -198,7 +207,8 @@ function validateSegmentDraft(draft: SegmentDraft): SegmentDraftValidation {
   if (startMeasure === null || endMeasure === null) {
     errors.range = "Measures must be whole numbers starting at 1.";
   } else if (endMeasure < startMeasure) {
-    errors.range = "End measure must be greater than or equal to start measure.";
+    errors.range =
+      "End measure must be greater than or equal to start measure.";
   }
 
   if (
@@ -212,7 +222,12 @@ function validateSegmentDraft(draft: SegmentDraft): SegmentDraftValidation {
     errors.notes = "Notes must be 1000 characters or fewer.";
   }
 
-  if (Object.keys(errors).length > 0 || startMeasure === null || endMeasure === null || Number.isNaN(targetBpm)) {
+  if (
+    Object.keys(errors).length > 0 ||
+    startMeasure === null ||
+    endMeasure === null ||
+    Number.isNaN(targetBpm)
+  ) {
     return {
       segmentFields: null,
       errors
@@ -242,7 +257,9 @@ function createSegmentId() {
 }
 
 function getUnknownErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error && error.message.trim().length > 0 ? error.message : fallback;
+  return error instanceof Error && error.message.trim().length > 0
+    ? error.message
+    : fallback;
 }
 
 function normalizeOptionalSegmentId(value: string | null | undefined) {
@@ -284,12 +301,21 @@ export function PracticeSegmentSelectorPanel({
     errorMessage: null,
     gridErrorMessage: null
   });
-  const [selectedSegmentKey, setSelectedSegmentKey] = useState<SelectedSegmentKey | null>(null);
+  const [selectedSegmentKey, setSelectedSegmentKey] =
+    useState<SelectedSegmentKey | null>(null);
   const [editor, setEditor] = useState<SegmentEditorState | null>(null);
-  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
-  const [mutationState, setMutationState] = useState<"idle" | "saving" | "deleting">("idle");
-  const [mutationErrorMessage, setMutationErrorMessage] = useState<string | null>(null);
-  const [returnSegmentMessage, setReturnSegmentMessage] = useState<string | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(
+    null
+  );
+  const [mutationState, setMutationState] = useState<
+    "idle" | "saving" | "deleting"
+  >("idle");
+  const [mutationErrorMessage, setMutationErrorMessage] = useState<
+    string | null
+  >(null);
+  const [returnSegmentMessage, setReturnSegmentMessage] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     let isActive = true;
@@ -324,7 +350,10 @@ export function PracticeSegmentSelectorPanel({
         return;
       }
 
-      const nextSegments = segmentResult.status === "fulfilled" ? segmentResult.value : EMPTY_SEGMENTS;
+      const nextSegments =
+        segmentResult.status === "fulfilled"
+          ? segmentResult.value
+          : EMPTY_SEGMENTS;
       const initialSegmentKey = normalizedInitialSegmentId
         ? `${sheetId}:${normalizedInitialSegmentId}`
         : null;
@@ -367,7 +396,8 @@ export function PracticeSegmentSelectorPanel({
       setLoadResult({
         sheetId,
         segments: nextSegments,
-        currentGrid: gridResult.status === "fulfilled" ? gridResult.value : null,
+        currentGrid:
+          gridResult.status === "fulfilled" ? gridResult.value : null,
         loadState: segmentResult.status === "fulfilled" ? "ready" : "error",
         gridLoadState: gridResult.status === "fulfilled" ? "ready" : "error",
         errorMessage:
@@ -393,7 +423,11 @@ export function PracticeSegmentSelectorPanel({
           return null;
         }
 
-        if (nextSegments.some((segment) => segment.id === currentSelection.segmentId)) {
+        if (
+          nextSegments.some(
+            (segment) => segment.id === currentSelection.segmentId
+          )
+        ) {
           return currentSelection;
         }
 
@@ -424,23 +458,36 @@ export function PracticeSegmentSelectorPanel({
 
   const isLoadedSheet = loadResult.sheetId === sheetId;
   const effectiveLoadState = isLoadedSheet ? loadResult.loadState : "loading";
-  const effectiveGridLoadState = isLoadedSheet ? loadResult.gridLoadState : "loading";
-  const effectiveSegments = isLoadedSheet ? loadResult.segments : EMPTY_SEGMENTS;
+  const effectiveGridLoadState = isLoadedSheet
+    ? loadResult.gridLoadState
+    : "loading";
+  const effectiveSegments = isLoadedSheet
+    ? loadResult.segments
+    : EMPTY_SEGMENTS;
   const effectiveGrid = isLoadedSheet ? loadResult.currentGrid : null;
   const errorMessage = isLoadedSheet ? loadResult.errorMessage : null;
   const gridErrorMessage = isLoadedSheet ? loadResult.gridErrorMessage : null;
-  const selectedSegmentId = selectedSegmentKey?.sheetId === sheetId ? selectedSegmentKey.segmentId : null;
+  const selectedSegmentId =
+    selectedSegmentKey?.sheetId === sheetId
+      ? selectedSegmentKey.segmentId
+      : null;
   const selectedSegment = useMemo(
-    () => effectiveSegments.find((segment) => segment.id === selectedSegmentId) ?? null,
+    () =>
+      effectiveSegments.find((segment) => segment.id === selectedSegmentId) ??
+      null,
     [effectiveSegments, selectedSegmentId]
   );
   const selectedSegmentForNotification =
     effectiveLoadState === "ready" && selectedSegment?.sheetId === sheetId
       ? selectedSegment
       : null;
-  const hasCurrentGrid = effectiveLoadState === "ready" && effectiveGridLoadState === "ready" && effectiveGrid !== null;
+  const hasCurrentGrid =
+    effectiveLoadState === "ready" &&
+    effectiveGridLoadState === "ready" &&
+    effectiveGrid !== null;
   const isMutating = mutationState !== "idle";
-  const canOpenCreate = effectiveLoadState === "ready" && hasCurrentGrid && !isMutating;
+  const canOpenCreate =
+    effectiveLoadState === "ready" && hasCurrentGrid && !isMutating;
   const canEdit = hasCurrentGrid && !isMutating;
   const canDelete = effectiveLoadState === "ready" && !isMutating;
   const disabledCreateReasonId = `${idPrefix}-create-disabled-reason`;
@@ -477,7 +524,8 @@ export function PracticeSegmentSelectorPanel({
   ]);
 
   async function refreshSegmentListAfterMutation(targetSheetId: string) {
-    const nextSegments = await practiceSegmentService.listSegments(targetSheetId);
+    const nextSegments =
+      await practiceSegmentService.listSegments(targetSheetId);
 
     if (currentSheetIdRef.current !== targetSheetId) {
       return nextSegments;
@@ -500,7 +548,11 @@ export function PracticeSegmentSelectorPanel({
         return null;
       }
 
-      if (nextSegments.some((segment) => segment.id === currentSelection.segmentId)) {
+      if (
+        nextSegments.some(
+          (segment) => segment.id === currentSelection.segmentId
+        )
+      ) {
         return currentSelection;
       }
 
@@ -557,7 +609,11 @@ export function PracticeSegmentSelectorPanel({
   }
 
   async function saveEditor() {
-    if (!editor || mutationState !== "idle" || !editorValidation?.segmentFields) {
+    if (
+      !editor ||
+      mutationState !== "idle" ||
+      !editorValidation?.segmentFields
+    ) {
       return;
     }
 
@@ -567,7 +623,8 @@ export function PracticeSegmentSelectorPanel({
     }
 
     const targetSheetId = sheetId;
-    const targetSegmentId = editor.mode === "edit" ? editor.segmentId : createSegmentId();
+    const targetSegmentId =
+      editor.mode === "edit" ? editor.segmentId : createSegmentId();
     const shouldSelectCreatedSegment = editor.mode === "create";
 
     setMutationState("saving");
@@ -575,7 +632,10 @@ export function PracticeSegmentSelectorPanel({
 
     try {
       if (editor.mode === "edit") {
-        const existingSegment = await practiceSegmentService.getSegment(targetSheetId, editor.segmentId);
+        const existingSegment = await practiceSegmentService.getSegment(
+          targetSheetId,
+          editor.segmentId
+        );
 
         if (existingSegment === null) {
           await refreshSegmentListAfterMutation(targetSheetId);
@@ -607,9 +667,14 @@ export function PracticeSegmentSelectorPanel({
         });
         setReturnSegmentMessage(null);
         setActiveRecordingSegment(targetSheetId, savedSegment.id);
-      } else if (!nextSegments.some((segment) => segment.id === savedSegment.id)) {
+      } else if (
+        !nextSegments.some((segment) => segment.id === savedSegment.id)
+      ) {
         setSelectedSegmentKey((currentSelection) => {
-          if (currentSelection?.sheetId === targetSheetId && currentSelection.segmentId === savedSegment.id) {
+          if (
+            currentSelection?.sheetId === targetSheetId &&
+            currentSelection.segmentId === savedSegment.id
+          ) {
             setActiveRecordingSegment(targetSheetId, null);
             invalidateRerecordSource(targetSheetId, "source-segment-missing");
 
@@ -621,7 +686,9 @@ export function PracticeSegmentSelectorPanel({
       }
     } catch (error) {
       if (currentSheetIdRef.current === targetSheetId) {
-        setMutationErrorMessage(getUnknownErrorMessage(error, "Segment could not be saved."));
+        setMutationErrorMessage(
+          getUnknownErrorMessage(error, "Segment could not be saved.")
+        );
       }
     } finally {
       if (currentSheetIdRef.current === targetSheetId) {
@@ -646,10 +713,15 @@ export function PracticeSegmentSelectorPanel({
 
       setConfirmingDeleteId(null);
       setEditor((currentEditor) =>
-        currentEditor?.mode === "edit" && currentEditor.segmentId === segment.id ? null : currentEditor
+        currentEditor?.mode === "edit" && currentEditor.segmentId === segment.id
+          ? null
+          : currentEditor
       );
       setSelectedSegmentKey((currentSelection) => {
-        if (currentSelection?.sheetId === targetSheetId && currentSelection.segmentId === segment.id) {
+        if (
+          currentSelection?.sheetId === targetSheetId &&
+          currentSelection.segmentId === segment.id
+        ) {
           setActiveRecordingSegment(targetSheetId, null);
           invalidateRerecordSource(targetSheetId, "source-segment-missing");
 
@@ -660,7 +732,9 @@ export function PracticeSegmentSelectorPanel({
       });
     } catch (error) {
       if (currentSheetIdRef.current === targetSheetId) {
-        setMutationErrorMessage(getUnknownErrorMessage(error, "Segment could not be deleted."));
+        setMutationErrorMessage(
+          getUnknownErrorMessage(error, "Segment could not be deleted.")
+        );
       }
     } finally {
       if (currentSheetIdRef.current === targetSheetId) {
@@ -673,19 +747,24 @@ export function PracticeSegmentSelectorPanel({
     <section
       aria-labelledby="practice-segment-selector-title"
       data-testid="practice-segment-selector-panel"
-      className="border-border bg-background rounded-md border p-3"
+      className="rounded-md border border-border bg-background p-3"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 id="practice-segment-selector-title" className="text-sm font-semibold tracking-normal">
+          <h3
+            id="practice-segment-selector-title"
+            className="text-sm font-semibold tracking-normal"
+          >
             Practice segments
           </h3>
-          <p className="text-muted-foreground mt-1 text-xs">Saved ranges for this sheet.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Saved ranges for this sheet.
+          </p>
         </div>
         <span
           aria-live="polite"
           data-testid="practice-segment-selector-status"
-          className="border-muted-foreground/20 bg-muted text-muted-foreground inline-flex min-w-[8.5rem] justify-center rounded-md border px-2.5 py-1 text-xs font-semibold"
+          className="inline-flex min-w-[8.5rem] justify-center rounded-md border border-muted-foreground/20 bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground"
         >
           {effectiveLoadState === "loading"
             ? "Loading"
@@ -699,34 +778,45 @@ export function PracticeSegmentSelectorPanel({
           type="button"
           variant="secondary"
           disabled={!canOpenCreate}
-          aria-describedby={!canOpenCreate && effectiveLoadState !== "error" ? disabledCreateReasonId : undefined}
+          aria-describedby={
+            !canOpenCreate && effectiveLoadState !== "error"
+              ? disabledCreateReasonId
+              : undefined
+          }
           onClick={openCreateEditor}
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
           New segment
         </Button>
         {effectiveLoadState === "ready" && !hasCurrentGrid ? (
-          <p id={disabledCreateReasonId} className="text-muted-foreground text-xs">
+          <p
+            id={disabledCreateReasonId}
+            className="text-xs text-muted-foreground"
+          >
             Save a measure grid before creating segments.
           </p>
         ) : null}
       </div>
 
       {effectiveLoadState === "error" ? (
-        <p role="alert" className="text-destructive mt-3 text-sm font-medium">
+        <p role="alert" className="mt-3 text-sm font-medium text-destructive">
           {errorMessage ?? "Practice segments could not be loaded."}
         </p>
       ) : null}
 
       {effectiveLoadState !== "error" && effectiveGridLoadState === "error" ? (
-        <p role="status" className="text-muted-foreground mt-3 text-xs">
-          {gridErrorMessage ?? "Measure grid status could not be loaded."} Segment timing is marked needs
-          calibration.
+        <p role="status" className="mt-3 text-xs text-muted-foreground">
+          {gridErrorMessage ?? "Measure grid status could not be loaded."}{" "}
+          Segment timing is marked needs calibration.
         </p>
       ) : null}
 
       {mutationErrorMessage ? (
-        <p role="alert" data-testid="practice-segment-mutation-error" className="text-destructive mt-3 text-sm font-medium">
+        <p
+          role="alert"
+          data-testid="practice-segment-mutation-error"
+          className="mt-3 text-sm font-medium text-destructive"
+        >
           {mutationErrorMessage}
         </p>
       ) : null}
@@ -735,7 +825,7 @@ export function PracticeSegmentSelectorPanel({
         <p
           role="status"
           data-testid="practice-segment-return-status"
-          className="text-muted-foreground mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium"
+          className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-muted-foreground"
         >
           {returnSegmentMessage}
         </p>
@@ -744,7 +834,7 @@ export function PracticeSegmentSelectorPanel({
       {editor ? (
         <form
           data-testid="practice-segment-editor"
-          className="border-border bg-card mt-3 grid gap-3 rounded-md border p-3"
+          className="mt-3 grid gap-3 rounded-md border border-border bg-card p-3"
           onSubmit={(event) => {
             event.preventDefault();
             void saveEditor();
@@ -770,102 +860,161 @@ export function PracticeSegmentSelectorPanel({
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="min-w-0 md:col-span-2">
-              <label htmlFor={`${idPrefix}-segment-name`} className="text-sm font-medium">
+              <label
+                htmlFor={`${idPrefix}-segment-name`}
+                className="text-sm font-medium"
+              >
                 Name
               </label>
               <input
                 id={`${idPrefix}-segment-name`}
                 aria-label="Segment name"
-                aria-describedby={editorValidation?.errors.name ? editorNameErrorId : undefined}
+                aria-describedby={
+                  editorValidation?.errors.name ? editorNameErrorId : undefined
+                }
                 value={editor.draft.name}
                 maxLength={120}
-                onChange={(event) => updateEditorDraft({ name: event.target.value })}
-                className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                onChange={(event) =>
+                  updateEditorDraft({ name: event.target.value })
+                }
+                className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               />
               {editorValidation?.errors.name ? (
-                <p id={editorNameErrorId} role="alert" className="text-destructive mt-1 text-xs font-medium">
+                <p
+                  id={editorNameErrorId}
+                  role="alert"
+                  className="mt-1 text-xs font-medium text-destructive"
+                >
                   {editorValidation.errors.name}
                 </p>
               ) : null}
             </div>
 
             <div className="min-w-0">
-              <label htmlFor={`${idPrefix}-segment-start`} className="text-sm font-medium">
+              <label
+                htmlFor={`${idPrefix}-segment-start`}
+                className="text-sm font-medium"
+              >
                 Start measure
               </label>
               <input
                 id={`${idPrefix}-segment-start`}
                 aria-label="Start measure"
-                aria-describedby={editorValidation?.errors.range ? editorRangeErrorId : undefined}
+                aria-describedby={
+                  editorValidation?.errors.range
+                    ? editorRangeErrorId
+                    : undefined
+                }
                 type="number"
                 min={1}
                 step={1}
                 value={editor.draft.startMeasure}
-                onChange={(event) => updateEditorDraft({ startMeasure: event.target.value })}
-                className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                onChange={(event) =>
+                  updateEditorDraft({ startMeasure: event.target.value })
+                }
+                className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               />
             </div>
 
             <div className="min-w-0">
-              <label htmlFor={`${idPrefix}-segment-end`} className="text-sm font-medium">
+              <label
+                htmlFor={`${idPrefix}-segment-end`}
+                className="text-sm font-medium"
+              >
                 End measure
               </label>
               <input
                 id={`${idPrefix}-segment-end`}
                 aria-label="End measure"
-                aria-describedby={editorValidation?.errors.range ? editorRangeErrorId : undefined}
+                aria-describedby={
+                  editorValidation?.errors.range
+                    ? editorRangeErrorId
+                    : undefined
+                }
                 type="number"
                 min={1}
                 step={1}
                 value={editor.draft.endMeasure}
-                onChange={(event) => updateEditorDraft({ endMeasure: event.target.value })}
-                className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                onChange={(event) =>
+                  updateEditorDraft({ endMeasure: event.target.value })
+                }
+                className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               />
             </div>
             {editorValidation?.errors.range ? (
-              <p id={editorRangeErrorId} role="alert" className="text-destructive -mt-2 text-xs font-medium md:col-span-2">
+              <p
+                id={editorRangeErrorId}
+                role="alert"
+                className="-mt-2 text-xs font-medium text-destructive md:col-span-2"
+              >
                 {editorValidation.errors.range}
               </p>
             ) : null}
 
             <div className="min-w-0">
-              <label htmlFor={`${idPrefix}-segment-target-bpm`} className="text-sm font-medium">
+              <label
+                htmlFor={`${idPrefix}-segment-target-bpm`}
+                className="text-sm font-medium"
+              >
                 Target BPM
               </label>
               <input
                 id={`${idPrefix}-segment-target-bpm`}
                 aria-label="Target BPM"
-                aria-describedby={editorValidation?.errors.targetBpm ? editorTargetBpmErrorId : undefined}
+                aria-describedby={
+                  editorValidation?.errors.targetBpm
+                    ? editorTargetBpmErrorId
+                    : undefined
+                }
                 type="number"
                 min={30}
                 max={300}
                 step={1}
                 value={editor.draft.targetBpm}
-                onChange={(event) => updateEditorDraft({ targetBpm: event.target.value })}
-                className="border-border bg-background focus-visible:ring-ring mt-2 h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                onChange={(event) =>
+                  updateEditorDraft({ targetBpm: event.target.value })
+                }
+                className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               />
               {editorValidation?.errors.targetBpm ? (
-                <p id={editorTargetBpmErrorId} role="alert" className="text-destructive mt-1 text-xs font-medium">
+                <p
+                  id={editorTargetBpmErrorId}
+                  role="alert"
+                  className="mt-1 text-xs font-medium text-destructive"
+                >
                   {editorValidation.errors.targetBpm}
                 </p>
               ) : null}
             </div>
 
             <div className="min-w-0 md:col-span-2">
-              <label htmlFor={`${idPrefix}-segment-notes`} className="text-sm font-medium">
+              <label
+                htmlFor={`${idPrefix}-segment-notes`}
+                className="text-sm font-medium"
+              >
                 Notes
               </label>
               <textarea
                 id={`${idPrefix}-segment-notes`}
                 aria-label="Segment notes"
-                aria-describedby={editorValidation?.errors.notes ? editorNotesErrorId : undefined}
+                aria-describedby={
+                  editorValidation?.errors.notes
+                    ? editorNotesErrorId
+                    : undefined
+                }
                 value={editor.draft.notes}
                 rows={3}
-                onChange={(event) => updateEditorDraft({ notes: event.target.value })}
-                className="border-border bg-background focus-visible:ring-ring mt-2 w-full resize-y rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                onChange={(event) =>
+                  updateEditorDraft({ notes: event.target.value })
+                }
+                className="mt-2 w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               />
               {editorValidation?.errors.notes ? (
-                <p id={editorNotesErrorId} role="alert" className="text-destructive mt-1 text-xs font-medium">
+                <p
+                  id={editorNotesErrorId}
+                  role="alert"
+                  className="mt-1 text-xs font-medium text-destructive"
+                >
                   {editorValidation.errors.notes}
                 </p>
               ) : null}
@@ -873,7 +1022,7 @@ export function PracticeSegmentSelectorPanel({
           </div>
 
           {!hasCurrentGrid ? (
-            <p role="alert" className="text-destructive text-sm font-medium">
+            <p role="alert" className="text-sm font-medium text-destructive">
               Save a measure grid before creating segments.
             </p>
           ) : null}
@@ -898,25 +1047,40 @@ export function PracticeSegmentSelectorPanel({
       ) : null}
 
       {effectiveLoadState === "ready" && effectiveSegments.length === 0 ? (
-        <div data-testid="practice-segment-empty-state" className="mt-3 rounded-md border border-dashed p-3">
+        <div
+          data-testid="practice-segment-empty-state"
+          className="mt-3 rounded-md border border-dashed p-3"
+        >
           <p className="text-sm font-medium">No saved segments yet.</p>
-          <p className="text-muted-foreground mt-1 text-xs">Sheet Practice is ready without a selected segment.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Sheet Practice is ready without a selected segment.
+          </p>
         </div>
       ) : null}
 
       {effectiveLoadState === "ready" && effectiveSegments.length > 0 ? (
         <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(13rem,0.8fr)]">
-          <div role="list" aria-label="Saved practice segments" className="grid gap-2">
+          <div
+            role="list"
+            aria-label="Saved practice segments"
+            className="grid gap-2"
+          >
             {effectiveSegments.map((segment) => {
               const selected = selectedSegmentId === segment.id;
-              const status = getSegmentStatus(segment, effectiveGrid, effectiveGridLoadState);
+              const status = getSegmentStatus(
+                segment,
+                effectiveGrid,
+                effectiveGridLoadState
+              );
               const isConfirmingDelete = confirmingDeleteId === segment.id;
 
               return (
                 <div
                   key={segment.id}
-                  className={`border-border focus-visible:ring-ring grid w-full min-w-0 gap-2 rounded-md border p-3 text-left text-sm transition focus-visible:ring-2 focus-visible:outline-none ${
-                    selected ? "bg-primary/10 ring-primary/30 ring-1" : "bg-card hover:bg-muted/60"
+                  className={`grid w-full min-w-0 gap-2 rounded-md border border-border p-3 text-left text-sm transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+                    selected
+                      ? "bg-primary/10 ring-1 ring-primary/30"
+                      : "bg-card hover:bg-muted/60"
                   }`}
                 >
                   <button
@@ -928,12 +1092,14 @@ export function PracticeSegmentSelectorPanel({
                       setReturnSegmentMessage(null);
                       setActiveRecordingSegment(sheetId, segment.id);
                     }}
-                    className="focus-visible:ring-ring min-w-0 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none"
+                    className="min-w-0 rounded-sm text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     <span className="flex min-w-0 flex-wrap items-center gap-2">
-                      <span className="min-w-0 break-words font-semibold">{segment.name}</span>
+                      <span className="min-w-0 font-semibold break-words">
+                        {segment.name}
+                      </span>
                       {selected ? (
-                        <span className="border-primary/40 bg-primary/15 inline-flex rounded-md border px-2 py-0.5 text-xs font-semibold text-foreground">
+                        <span className="inline-flex rounded-md border border-primary/40 bg-primary/15 px-2 py-0.5 text-xs font-semibold text-foreground">
                           Active
                         </span>
                       ) : null}
@@ -944,7 +1110,7 @@ export function PracticeSegmentSelectorPanel({
                         {getStatusLabel(status)}
                       </span>
                     </span>
-                    <span className="text-muted-foreground mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                    <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span>{formatMeasureRange(segment)}</span>
                       <span>{formatTargetBpm(segment)}</span>
                     </span>
@@ -953,7 +1119,7 @@ export function PracticeSegmentSelectorPanel({
                   <div className="flex flex-wrap items-center gap-2">
                     {isConfirmingDelete ? (
                       <>
-                        <span className="text-muted-foreground min-w-0 flex-1 text-xs">
+                        <span className="min-w-0 flex-1 text-xs text-muted-foreground">
                           Delete {segment.name} ({formatMeasureRange(segment)})?
                         </span>
                         <Button
@@ -970,7 +1136,9 @@ export function PracticeSegmentSelectorPanel({
                           onClick={() => void deleteSegment(segment)}
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
-                          {mutationState === "deleting" ? "Deleting..." : `Confirm delete ${segment.name}`}
+                          {mutationState === "deleting"
+                            ? "Deleting..."
+                            : `Confirm delete ${segment.name}`}
                         </Button>
                       </>
                     ) : (
@@ -1006,31 +1174,46 @@ export function PracticeSegmentSelectorPanel({
 
           <div
             data-testid="practice-segment-active-summary"
-            className="border-border bg-card min-w-0 rounded-md border p-3"
+            className="min-w-0 rounded-md border border-border bg-card p-3"
           >
             {selectedSegment ? (
               <>
-                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-normal">Active segment</p>
-                <p className="mt-2 break-words text-sm font-semibold">{selectedSegment.name}</p>
-                <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                <p className="text-xs font-semibold tracking-normal text-muted-foreground uppercase">
+                  Active segment
+                </p>
+                <p className="mt-2 text-sm font-semibold break-words">
+                  {selectedSegment.name}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span>{formatMeasureRange(selectedSegment)}</span>
                   <span>{formatTargetBpm(selectedSegment)}</span>
                 </div>
                 <span
                   data-testid="practice-segment-active-status"
                   className={`mt-3 inline-flex rounded-md border px-2 py-1 text-xs font-semibold ${getStatusClassName(
-                    getSegmentStatus(selectedSegment, effectiveGrid, effectiveGridLoadState),
+                    getSegmentStatus(
+                      selectedSegment,
+                      effectiveGrid,
+                      effectiveGridLoadState
+                    ),
                     true
                   )}`}
                 >
-                  {getStatusLabel(getSegmentStatus(selectedSegment, effectiveGrid, effectiveGridLoadState))}
+                  {getStatusLabel(
+                    getSegmentStatus(
+                      selectedSegment,
+                      effectiveGrid,
+                      effectiveGridLoadState
+                    )
+                  )}
                 </span>
               </>
             ) : (
               <>
                 <p className="text-sm font-semibold">Choose a segment</p>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Select one saved range to make it active for this practice view.
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Select one saved range to make it active for this practice
+                  view.
                 </p>
               </>
             )}

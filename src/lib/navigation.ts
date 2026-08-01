@@ -1,11 +1,4 @@
-import {
-  Gauge,
-  Home,
-  LibraryBig,
-  Mic2,
-  Music2,
-  Settings
-} from "lucide-react";
+import { Gauge, Home, LibraryBig, Mic2, Music2, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 type TopLevelRouteId =
@@ -83,5 +76,7 @@ export function getActiveNavItem(pathname: string) {
     return exactMatch;
   }
 
-  return topLevelNavItems.find((item) => item.href !== "/" && pathname.startsWith(`${item.href}/`));
+  return topLevelNavItems.find(
+    (item) => item.href !== "/" && pathname.startsWith(`${item.href}/`)
+  );
 }

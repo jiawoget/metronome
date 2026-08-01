@@ -15,8 +15,15 @@ import {
   seedPracticeSegmentRecordForTests
 } from "@/infrastructure/db/browser-practice-segment-service";
 import { PRACTICE_SEGMENT_DB_NAME } from "@/infrastructure/storage/storage-contracts";
-import { createPracticeSegmentService, type PracticeSegmentRepository } from "@/services/practice-segments";
-import { buildMeasureGrid, buildPracticeSegment, TEST_ISO_DATE } from "./factories/practice";
+import {
+  createPracticeSegmentService,
+  type PracticeSegmentRepository
+} from "@/services/practice-segments";
+import {
+  buildMeasureGrid,
+  buildPracticeSegment,
+  TEST_ISO_DATE
+} from "./factories/practice";
 
 const baseGrid = buildMeasureGrid();
 const staleGrid: MeasureGrid = {
@@ -24,7 +31,9 @@ const staleGrid: MeasureGrid = {
   bpm: 108
 };
 
-function buildSegment(overrides: Partial<PracticeSegment> = {}): PracticeSegment {
+function buildSegment(
+  overrides: Partial<PracticeSegment> = {}
+): PracticeSegment {
   return buildPracticeSegment(overrides);
 }
 
@@ -54,7 +63,8 @@ function createMemoryPracticeSegmentRepository(
   const segments = new Map<string, Map<string, PracticeSegment>>();
 
   for (const segment of initialSegments) {
-    const sheetSegments = segments.get(segment.sheetId) ?? new Map<string, PracticeSegment>();
+    const sheetSegments =
+      segments.get(segment.sheetId) ?? new Map<string, PracticeSegment>();
     sheetSegments.set(segment.id, segment);
     segments.set(segment.sheetId, sheetSegments);
   }
@@ -67,7 +77,8 @@ function createMemoryPracticeSegmentRepository(
       return segments.get(sheetId)?.get(segmentId) ?? null;
     },
     async saveSegment(segment) {
-      const sheetSegments = segments.get(segment.sheetId) ?? new Map<string, PracticeSegment>();
+      const sheetSegments =
+        segments.get(segment.sheetId) ?? new Map<string, PracticeSegment>();
       sheetSegments.set(segment.id, segment);
       segments.set(segment.sheetId, sheetSegments);
     },
@@ -89,10 +100,14 @@ function createMemoryPracticeSegmentRepository(
 
 describe("practice segment service", () => {
   it("returns an empty array when a valid sheet has no persisted segments", async () => {
-    const service = createPracticeSegmentService(createMemoryPracticeSegmentRepository());
+    const service = createPracticeSegmentService(
+      createMemoryPracticeSegmentRepository()
+    );
 
     await expect(service.listSegments("sheet-alpha")).resolves.toEqual([]);
-    await expect(service.getSegment("sheet-alpha", "segment-1")).resolves.toBeNull();
+    await expect(
+      service.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toBeNull();
   });
 
   it("returns the validated segment and trims id, sheetId, name, and notes before saving", async () => {
@@ -128,10 +143,18 @@ describe("practice segment service", () => {
       createMemoryPracticeSegmentRepository([segmentAlpha, segmentBravo])
     );
 
-    await expect(service.listSegments("sheet-alpha")).resolves.toEqual([segmentAlpha]);
-    await expect(service.listSegments("sheet-bravo")).resolves.toEqual([segmentBravo]);
-    await expect(service.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(segmentAlpha);
-    await expect(service.getSegment("sheet-alpha", "segment-2")).resolves.toBeNull();
+    await expect(service.listSegments("sheet-alpha")).resolves.toEqual([
+      segmentAlpha
+    ]);
+    await expect(service.listSegments("sheet-bravo")).resolves.toEqual([
+      segmentBravo
+    ]);
+    await expect(
+      service.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toEqual(segmentAlpha);
+    await expect(
+      service.getSegment("sheet-alpha", "segment-2")
+    ).resolves.toBeNull();
   });
 
   it("replaces the full segment payload for the same sheet and id", async () => {
@@ -148,8 +171,12 @@ describe("practice segment service", () => {
       }
     });
 
-    await expect(service.saveSegment(updatedSegment)).resolves.toEqual(updatedSegment);
-    await expect(service.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(updatedSegment);
+    await expect(service.saveSegment(updatedSegment)).resolves.toEqual(
+      updatedSegment
+    );
+    await expect(
+      service.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toEqual(updatedSegment);
   });
 
   it("rejects duplicate segment names on the same sheet using trimmed case-insensitive comparison", async () => {
@@ -190,7 +217,9 @@ describe("practice segment service", () => {
       ...updatedSegment,
       name: "bridge"
     });
-    await expect(service.getSegment("sheet-alpha", "segment-1")).resolves.toEqual({
+    await expect(
+      service.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toEqual({
       ...updatedSegment,
       name: "bridge"
     });
@@ -210,7 +239,9 @@ describe("practice segment service", () => {
       ...otherSheetSegment,
       name: "bridge"
     });
-    await expect(service.listSegments("sheet-alpha")).resolves.toEqual([buildSegment({ name: "Bridge" })]);
+    await expect(service.listSegments("sheet-alpha")).resolves.toEqual([
+      buildSegment({ name: "Bridge" })
+    ]);
     await expect(service.listSegments("sheet-bravo")).resolves.toEqual([
       {
         ...otherSheetSegment,
@@ -220,18 +251,28 @@ describe("practice segment service", () => {
   });
 
   it("keeps overlapping segment ids isolated by sheet", async () => {
-    const service = createPracticeSegmentService(createMemoryPracticeSegmentRepository());
+    const service = createPracticeSegmentService(
+      createMemoryPracticeSegmentRepository()
+    );
     const firstSheetSegment = buildSegment();
     const secondSheetSegment = buildSegment({
       sheetId: "sheet-bravo",
       name: "Second Sheet"
     });
 
-    await expect(service.saveSegment(firstSheetSegment)).resolves.toEqual(firstSheetSegment);
-    await expect(service.saveSegment(secondSheetSegment)).resolves.toEqual(secondSheetSegment);
+    await expect(service.saveSegment(firstSheetSegment)).resolves.toEqual(
+      firstSheetSegment
+    );
+    await expect(service.saveSegment(secondSheetSegment)).resolves.toEqual(
+      secondSheetSegment
+    );
 
-    await expect(service.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(firstSheetSegment);
-    await expect(service.getSegment("sheet-bravo", "segment-1")).resolves.toEqual(secondSheetSegment);
+    await expect(
+      service.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toEqual(firstSheetSegment);
+    await expect(
+      service.getSegment("sheet-bravo", "segment-1")
+    ).resolves.toEqual(secondSheetSegment);
   });
 
   it("deletes only the requested segment and stays idempotent for a missing segment", async () => {
@@ -248,12 +289,22 @@ describe("practice segment service", () => {
       ])
     );
 
-    await expect(service.deleteSegment("sheet-alpha", "segment-1")).resolves.toBeUndefined();
-    await expect(service.deleteSegment("sheet-alpha", "segment-missing")).resolves.toBeUndefined();
+    await expect(
+      service.deleteSegment("sheet-alpha", "segment-1")
+    ).resolves.toBeUndefined();
+    await expect(
+      service.deleteSegment("sheet-alpha", "segment-missing")
+    ).resolves.toBeUndefined();
 
-    await expect(service.getSegment("sheet-alpha", "segment-1")).resolves.toBeNull();
-    await expect(service.listSegments("sheet-alpha")).resolves.toEqual([keptSegment]);
-    await expect(service.getSegment("sheet-bravo", "segment-1")).resolves.toEqual(
+    await expect(
+      service.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toBeNull();
+    await expect(service.listSegments("sheet-alpha")).resolves.toEqual([
+      keptSegment
+    ]);
+    await expect(
+      service.getSegment("sheet-bravo", "segment-1")
+    ).resolves.toEqual(
       buildSegment({
         sheetId: "sheet-bravo"
       })
@@ -269,7 +320,9 @@ describe("practice segment service", () => {
     };
     const service = createPracticeSegmentService(repository);
 
-    await expect(service.listSegments("   ")).rejects.toThrow("sheetId is required");
+    await expect(service.listSegments("   ")).rejects.toThrow(
+      "sheetId is required"
+    );
     expect(repository.listSegments).not.toHaveBeenCalled();
   });
 
@@ -282,8 +335,12 @@ describe("practice segment service", () => {
     };
     const service = createPracticeSegmentService(repository);
 
-    await expect(service.getSegment("   ", "segment-1")).rejects.toThrow("sheetId is required");
-    await expect(service.getSegment("sheet-alpha", "   ")).rejects.toThrow("segmentId is required");
+    await expect(service.getSegment("   ", "segment-1")).rejects.toThrow(
+      "sheetId is required"
+    );
+    await expect(service.getSegment("sheet-alpha", "   ")).rejects.toThrow(
+      "segmentId is required"
+    );
     expect(repository.getSegment).not.toHaveBeenCalled();
   });
 
@@ -296,8 +353,12 @@ describe("practice segment service", () => {
     };
     const service = createPracticeSegmentService(repository);
 
-    await expect(service.deleteSegment("   ", "segment-1")).rejects.toThrow("sheetId is required");
-    await expect(service.deleteSegment("sheet-alpha", "   ")).rejects.toThrow("segmentId is required");
+    await expect(service.deleteSegment("   ", "segment-1")).rejects.toThrow(
+      "sheetId is required"
+    );
+    await expect(service.deleteSegment("sheet-alpha", "   ")).rejects.toThrow(
+      "segmentId is required"
+    );
     expect(repository.deleteSegment).not.toHaveBeenCalled();
   });
 
@@ -340,18 +401,23 @@ describe("practice segment service", () => {
         }
       })
     }
-  ])("rejects $name saves and does not call the repository", async ({ segment }) => {
-    const repository: PracticeSegmentRepository = {
-      listSegments: vi.fn(async () => []),
-      getSegment: vi.fn(async () => null),
-      saveSegment: vi.fn(async () => undefined),
-      deleteSegment: vi.fn(async () => undefined)
-    };
-    const service = createPracticeSegmentService(repository);
+  ])(
+    "rejects $name saves and does not call the repository",
+    async ({ segment }) => {
+      const repository: PracticeSegmentRepository = {
+        listSegments: vi.fn(async () => []),
+        getSegment: vi.fn(async () => null),
+        saveSegment: vi.fn(async () => undefined),
+        deleteSegment: vi.fn(async () => undefined)
+      };
+      const service = createPracticeSegmentService(repository);
 
-    await expect(service.saveSegment(segment as PracticeSegment)).rejects.toThrow();
-    expect(repository.saveSegment).not.toHaveBeenCalled();
-  });
+      await expect(
+        service.saveSegment(segment as PracticeSegment)
+      ).rejects.toThrow();
+      expect(repository.saveSegment).not.toHaveBeenCalled();
+    }
+  );
 
   it("preserves prior valid data when a later save fails validation", async () => {
     const service = createPracticeSegmentService(
@@ -366,7 +432,9 @@ describe("practice segment service", () => {
       )
     ).rejects.toThrow();
 
-    await expect(service.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(buildSegment());
+    await expect(
+      service.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toEqual(buildSegment());
   });
 
   it("propagates repository storage failures", async () => {
@@ -380,7 +448,9 @@ describe("practice segment service", () => {
     };
     const service = createPracticeSegmentService(repository);
 
-    await expect(service.saveSegment(buildSegment())).rejects.toThrow("write failed");
+    await expect(service.saveSegment(buildSegment())).rejects.toThrow(
+      "write failed"
+    );
   });
 });
 
@@ -418,8 +488,12 @@ describe("practice segment browser repository", () => {
   });
 
   it("returns an empty list and null get for missing rows", async () => {
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([]);
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")).resolves.toBeNull();
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-alpha")
+    ).resolves.toEqual([]);
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toBeNull();
   });
 
   it("persists one valid segment by trimmed sheet id", async () => {
@@ -432,10 +506,12 @@ describe("practice segment browser repository", () => {
       })
     );
 
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([buildSegment()]);
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(
-      buildSegment()
-    );
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-alpha")
+    ).resolves.toEqual([buildSegment()]);
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toEqual(buildSegment());
   });
 
   it("persists multiple segments for the same sheet", async () => {
@@ -451,14 +527,15 @@ describe("practice segment browser repository", () => {
     await browserPracticeSegmentRepository.saveSegment(buildSegment());
     await browserPracticeSegmentRepository.saveSegment(secondSegment);
 
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([
-      buildSegment(),
-      secondSegment
-    ]);
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-alpha")
+    ).resolves.toEqual([buildSegment(), secondSegment]);
   });
 
   it("rejects duplicate names through the browser service before persistence", async () => {
-    await browserPracticeSegmentService.saveSegment(buildSegment({ name: "Bridge" }));
+    await browserPracticeSegmentService.saveSegment(
+      buildSegment({ name: "Bridge" })
+    );
 
     await expect(
       browserPracticeSegmentService.saveSegment(
@@ -469,25 +546,38 @@ describe("practice segment browser repository", () => {
       )
     ).rejects.toThrow("Segment name already exists.");
 
-    await expect(browserPracticeSegmentService.listSegments("sheet-alpha")).resolves.toEqual([
-      buildSegment({ name: "Bridge" })
-    ]);
+    await expect(
+      browserPracticeSegmentService.listSegments("sheet-alpha")
+    ).resolves.toEqual([buildSegment({ name: "Bridge" })]);
   });
 
   it("serializes concurrent duplicate-name saves through the browser service transaction", async () => {
     const results = await Promise.allSettled([
-      browserPracticeSegmentService.saveSegment(buildSegment({ id: "segment-1", name: "Bridge" })),
-      browserPracticeSegmentService.saveSegment(buildSegment({ id: "segment-2", name: " bridge " }))
+      browserPracticeSegmentService.saveSegment(
+        buildSegment({ id: "segment-1", name: "Bridge" })
+      ),
+      browserPracticeSegmentService.saveSegment(
+        buildSegment({ id: "segment-2", name: " bridge " })
+      )
     ]);
-    const fulfilledResults = results.filter((result) => result.status === "fulfilled");
-    const rejectedResults = results.filter((result) => result.status === "rejected");
+    const fulfilledResults = results.filter(
+      (result) => result.status === "fulfilled"
+    );
+    const rejectedResults = results.filter(
+      (result) => result.status === "rejected"
+    );
 
     expect(fulfilledResults).toHaveLength(1);
     expect(rejectedResults).toHaveLength(1);
-    expect((rejectedResults[0] as PromiseRejectedResult).reason).toBeInstanceOf(Error);
-    expect((rejectedResults[0] as PromiseRejectedResult).reason.message).toBe("Segment name already exists.");
+    expect((rejectedResults[0] as PromiseRejectedResult).reason).toBeInstanceOf(
+      Error
+    );
+    expect((rejectedResults[0] as PromiseRejectedResult).reason.message).toBe(
+      "Segment name already exists."
+    );
 
-    const savedSegments = await browserPracticeSegmentService.listSegments("sheet-alpha");
+    const savedSegments =
+      await browserPracticeSegmentService.listSegments("sheet-alpha");
 
     expect(savedSegments).toHaveLength(1);
     expect(["segment-1", "segment-2"]).toContain(savedSegments[0]?.id);
@@ -503,16 +593,18 @@ describe("practice segment browser repository", () => {
     await browserPracticeSegmentRepository.saveSegment(buildSegment());
     await browserPracticeSegmentRepository.saveSegment(secondSheetSegment);
 
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([buildSegment()]);
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-bravo")).resolves.toEqual([
-      secondSheetSegment
-    ]);
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(
-      buildSegment()
-    );
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-bravo", "segment-1")).resolves.toEqual(
-      secondSheetSegment
-    );
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-alpha")
+    ).resolves.toEqual([buildSegment()]);
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-bravo")
+    ).resolves.toEqual([secondSheetSegment]);
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toEqual(buildSegment());
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-bravo", "segment-1")
+    ).resolves.toEqual(secondSheetSegment);
   });
 
   it("keeps delimiter-collision ids distinct across CRUD and delete", async () => {
@@ -535,19 +627,33 @@ describe("practice segment browser repository", () => {
     await browserPracticeSegmentRepository.saveSegment(firstSegment);
     await browserPracticeSegmentRepository.saveSegment(secondSegment);
 
-    await expect(browserPracticeSegmentRepository.getSegment("a::b", "c")).resolves.toEqual(firstSegment);
-    await expect(browserPracticeSegmentRepository.getSegment("a", "b::c")).resolves.toEqual(secondSegment);
+    await expect(
+      browserPracticeSegmentRepository.getSegment("a::b", "c")
+    ).resolves.toEqual(firstSegment);
+    await expect(
+      browserPracticeSegmentRepository.getSegment("a", "b::c")
+    ).resolves.toEqual(secondSegment);
 
     await browserPracticeSegmentRepository.saveSegment(updatedFirstSegment);
 
-    await expect(browserPracticeSegmentRepository.getSegment("a::b", "c")).resolves.toEqual(updatedFirstSegment);
-    await expect(browserPracticeSegmentRepository.getSegment("a", "b::c")).resolves.toEqual(secondSegment);
+    await expect(
+      browserPracticeSegmentRepository.getSegment("a::b", "c")
+    ).resolves.toEqual(updatedFirstSegment);
+    await expect(
+      browserPracticeSegmentRepository.getSegment("a", "b::c")
+    ).resolves.toEqual(secondSegment);
 
     await browserPracticeSegmentRepository.deleteSegment("a::b", "c");
 
-    await expect(browserPracticeSegmentRepository.getSegment("a::b", "c")).resolves.toBeNull();
-    await expect(browserPracticeSegmentRepository.getSegment("a", "b::c")).resolves.toEqual(secondSegment);
-    await expect(browserPracticeSegmentRepository.listSegments("a")).resolves.toEqual([secondSegment]);
+    await expect(
+      browserPracticeSegmentRepository.getSegment("a::b", "c")
+    ).resolves.toBeNull();
+    await expect(
+      browserPracticeSegmentRepository.getSegment("a", "b::c")
+    ).resolves.toEqual(secondSegment);
+    await expect(
+      browserPracticeSegmentRepository.listSegments("a")
+    ).resolves.toEqual([secondSegment]);
   });
 
   it("updates and replaces the same sheet and segment row", async () => {
@@ -570,11 +676,15 @@ describe("practice segment browser repository", () => {
     );
     await browserPracticeSegmentRepository.saveSegment(updatedSegment);
 
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(
-      updatedSegment
-    );
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([updatedSegment]);
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-bravo", "segment-1")).resolves.toEqual(
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toEqual(updatedSegment);
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-alpha")
+    ).resolves.toEqual([updatedSegment]);
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-bravo", "segment-1")
+    ).resolves.toEqual(
       buildSegment({
         sheetId: "sheet-bravo",
         name: "Other Sheet"
@@ -594,16 +704,25 @@ describe("practice segment browser repository", () => {
     await browserPracticeSegmentRepository.saveSegment(keptSegment);
     await browserPracticeSegmentRepository.saveSegment(otherSheetSegment);
 
-    await expect(browserPracticeSegmentRepository.deleteSegment("sheet-alpha", "segment-1")).resolves.toBeUndefined();
     await expect(
-      browserPracticeSegmentRepository.deleteSegment("sheet-alpha", "segment-missing")
+      browserPracticeSegmentRepository.deleteSegment("sheet-alpha", "segment-1")
+    ).resolves.toBeUndefined();
+    await expect(
+      browserPracticeSegmentRepository.deleteSegment(
+        "sheet-alpha",
+        "segment-missing"
+      )
     ).resolves.toBeUndefined();
 
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([keptSegment]);
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")).resolves.toBeNull();
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-bravo", "segment-1")).resolves.toEqual(
-      otherSheetSegment
-    );
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-alpha")
+    ).resolves.toEqual([keptSegment]);
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toBeNull();
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-bravo", "segment-1")
+    ).resolves.toEqual(otherSheetSegment);
   });
 
   it("validates before write and preserves the prior valid row when validation fails", async () => {
@@ -617,9 +736,9 @@ describe("practice segment browser repository", () => {
       )
     ).rejects.toThrow();
 
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(
-      buildSegment()
-    );
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toEqual(buildSegment());
   });
 
   it("survives a Dexie connection reset and reload with all valid segments intact", async () => {
@@ -637,13 +756,12 @@ describe("practice segment browser repository", () => {
 
     resetPracticeSegmentDatabaseConnectionForTests();
 
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([
-      buildSegment(),
-      secondSegment
-    ]);
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-bravo")).resolves.toEqual([
-      otherSheetSegment
-    ]);
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-alpha")
+    ).resolves.toEqual([buildSegment(), secondSegment]);
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-bravo")
+    ).resolves.toEqual([otherSheetSegment]);
   });
 
   it("migrates legacy v1 key-path rows into the compound-key segments store", async () => {
@@ -672,23 +790,36 @@ describe("practice segment browser repository", () => {
     legacyDatabase.close();
     resetPracticeSegmentDatabaseConnectionForTests();
 
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([legacySegment]);
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(
-      legacySegment
-    );
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-corrupt")).resolves.toBeNull();
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-alpha")
+    ).resolves.toEqual([legacySegment]);
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toEqual(legacySegment);
+    await expect(
+      browserPracticeSegmentRepository.getSegment(
+        "sheet-alpha",
+        "segment-corrupt"
+      )
+    ).resolves.toBeNull();
 
     const updatedSegment = buildSegment({
       name: "Migrated Segment Updated",
       notes: "Saved after migration"
     });
 
-    await expect(browserPracticeSegmentRepository.saveSegment(updatedSegment)).resolves.toBeUndefined();
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")).resolves.toEqual(
-      updatedSegment
-    );
-    await expect(browserPracticeSegmentRepository.deleteSegment("sheet-alpha", "segment-1")).resolves.toBeUndefined();
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([]);
+    await expect(
+      browserPracticeSegmentRepository.saveSegment(updatedSegment)
+    ).resolves.toBeUndefined();
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")
+    ).resolves.toEqual(updatedSegment);
+    await expect(
+      browserPracticeSegmentRepository.deleteSegment("sheet-alpha", "segment-1")
+    ).resolves.toBeUndefined();
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-alpha")
+    ).resolves.toEqual([]);
   });
 
   it("reads a valid segment with a stale grid association without requiring a current grid lookup", async () => {
@@ -696,28 +827,39 @@ describe("practice segment browser repository", () => {
 
     await browserPracticeSegmentRepository.saveSegment(segment);
 
-    const savedSegment = await browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1");
+    const savedSegment = await browserPracticeSegmentRepository.getSegment(
+      "sheet-alpha",
+      "segment-1"
+    );
 
     expect(savedSegment).toEqual(segment);
     expect(getPracticeSegmentGridStatus(savedSegment, staleGrid)).toBe("stale");
-    expect(getPracticeSegmentGridStatus(savedSegment, null)).toBe("missing-grid");
+    expect(getPracticeSegmentGridStatus(savedSegment, null)).toBe(
+      "missing-grid"
+    );
   });
 
   it("rejects invalid sheet ids or segment ids for get, list, save, and delete", async () => {
-    await expect(browserPracticeSegmentRepository.listSegments("   ")).rejects.toThrow("sheetId is required");
-    await expect(browserPracticeSegmentRepository.getSegment("   ", "segment-1")).rejects.toThrow(
-      "sheetId is required"
-    );
-    await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "   ")).rejects.toThrow(
-      "segmentId is required"
-    );
-    await expect(browserPracticeSegmentRepository.saveSegment(buildSegment({ sheetId: "   " }))).rejects.toThrow();
-    await expect(browserPracticeSegmentRepository.deleteSegment("   ", "segment-1")).rejects.toThrow(
-      "sheetId is required"
-    );
-    await expect(browserPracticeSegmentRepository.deleteSegment("sheet-alpha", "   ")).rejects.toThrow(
-      "segmentId is required"
-    );
+    await expect(
+      browserPracticeSegmentRepository.listSegments("   ")
+    ).rejects.toThrow("sheetId is required");
+    await expect(
+      browserPracticeSegmentRepository.getSegment("   ", "segment-1")
+    ).rejects.toThrow("sheetId is required");
+    await expect(
+      browserPracticeSegmentRepository.getSegment("sheet-alpha", "   ")
+    ).rejects.toThrow("segmentId is required");
+    await expect(
+      browserPracticeSegmentRepository.saveSegment(
+        buildSegment({ sheetId: "   " })
+      )
+    ).rejects.toThrow();
+    await expect(
+      browserPracticeSegmentRepository.deleteSegment("   ", "segment-1")
+    ).rejects.toThrow("sheetId is required");
+    await expect(
+      browserPracticeSegmentRepository.deleteSegment("sheet-alpha", "   ")
+    ).rejects.toThrow("segmentId is required");
   });
 
   it("returns safe absence for a true non-object persisted row", async () => {
@@ -729,7 +871,10 @@ describe("practice segment browser repository", () => {
     const originalGet = IDBObjectStore.prototype.get;
     const getSpy = vi
       .spyOn(IDBObjectStore.prototype, "get")
-      .mockImplementation(function (this: IDBObjectStore, query: IDBValidKey | IDBKeyRange) {
+      .mockImplementation(function (
+        this: IDBObjectStore,
+        query: IDBValidKey | IDBKeyRange
+      ) {
         const request = originalGet.call(this, query);
 
         request.addEventListener(
@@ -747,7 +892,9 @@ describe("practice segment browser repository", () => {
       });
 
     try {
-      await expect(browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")).resolves.toBeNull();
+      await expect(
+        browserPracticeSegmentRepository.getSegment("sheet-alpha", "segment-1")
+      ).resolves.toBeNull();
     } finally {
       getSpy.mockRestore();
     }
@@ -834,11 +981,16 @@ describe("practice segment browser repository", () => {
         updatedAt: TEST_ISO_DATE
       }
     }
-  ])("returns safe absence for malformed persisted row: $name", async ({ sheetId, segmentId, value }) => {
-    await seedPracticeSegmentRecordForTests(sheetId, segmentId, value);
+  ])(
+    "returns safe absence for malformed persisted row: $name",
+    async ({ sheetId, segmentId, value }) => {
+      await seedPracticeSegmentRecordForTests(sheetId, segmentId, value);
 
-    await expect(browserPracticeSegmentRepository.getSegment(sheetId, segmentId)).resolves.toBeNull();
-  });
+      await expect(
+        browserPracticeSegmentRepository.getSegment(sheetId, segmentId)
+      ).resolves.toBeNull();
+    }
+  );
 
   it("filters malformed persisted rows out of listSegments", async () => {
     const validSegment = buildSegment();
@@ -852,6 +1004,8 @@ describe("practice segment browser repository", () => {
       updatedAt: TEST_ISO_DATE
     });
 
-    await expect(browserPracticeSegmentRepository.listSegments("sheet-alpha")).resolves.toEqual([validSegment]);
+    await expect(
+      browserPracticeSegmentRepository.listSegments("sheet-alpha")
+    ).resolves.toEqual([validSegment]);
   });
 });

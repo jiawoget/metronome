@@ -17,7 +17,8 @@ function createAudioBufferLike({
   const channelData = new Float32Array(length);
 
   for (let index = 0; index < length; index += 1) {
-    channelData[index] = amplitude * Math.sin((2 * Math.PI * frequencyHz * index) / sampleRate);
+    channelData[index] =
+      amplitude * Math.sin((2 * Math.PI * frequencyHz * index) / sampleRate);
   }
 
   return {

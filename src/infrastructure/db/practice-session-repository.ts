@@ -15,7 +15,10 @@ type PracticeSessionDatabaseSchema = {
   sessions: Table<PracticeSession, string>;
 };
 
-class PracticeSessionDexieDatabase extends Dexie implements PracticeSessionDatabaseSchema {
+class PracticeSessionDexieDatabase
+  extends Dexie
+  implements PracticeSessionDatabaseSchema
+{
   sessions!: Table<PracticeSession, string>;
 
   constructor() {
@@ -50,27 +53,48 @@ function dispatchPracticeSessionChange() {
   }
 }
 
-function isPracticeSession(session: PracticeSession | null): session is PracticeSession {
+function isPracticeSession(
+  session: PracticeSession | null
+): session is PracticeSession {
   return session !== null;
 }
 
 export const practiceSessionRepository: PracticeSessionRepository = {
   async listSessions() {
-    return sortSessionsByRecentActivity((await getDatabase().sessions.toArray()).map(parsePracticeSession).filter(isPracticeSession));
+    return sortSessionsByRecentActivity(
+      (await getDatabase().sessions.toArray())
+        .map(parsePracticeSession)
+        .filter(isPracticeSession)
+    );
   },
 
   async getSession(sessionId) {
-    return parsePracticeSession((await getDatabase().sessions.get(sessionId)) ?? null);
+    return parsePracticeSession(
+      (await getDatabase().sessions.get(sessionId)) ?? null
+    );
   },
 
   async getRecentSession() {
-    return sortSessionsByRecentActivity((await getDatabase().sessions.toArray()).map(parsePracticeSession).filter(isPracticeSession))[0] ?? null;
+    return (
+      sortSessionsByRecentActivity(
+        (await getDatabase().sessions.toArray())
+          .map(parsePracticeSession)
+          .filter(isPracticeSession)
+      )[0] ?? null
+    );
   },
 
   async getRecentSheetSession(sheetId) {
-    const sessions = await getDatabase().sessions.where("sheetId").equals(sheetId).toArray();
+    const sessions = await getDatabase()
+      .sessions.where("sheetId")
+      .equals(sheetId)
+      .toArray();
 
-    return sortSessionsByRecentActivity(sessions.map(parsePracticeSession).filter(isPracticeSession))[0] ?? null;
+    return (
+      sortSessionsByRecentActivity(
+        sessions.map(parsePracticeSession).filter(isPracticeSession)
+      )[0] ?? null
+    );
   },
 
   async saveSession(session) {

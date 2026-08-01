@@ -26,11 +26,7 @@ export const SETTINGS_TIME_SIGNATURES = TIME_SIGNATURES;
 export const SETTINGS_SUBDIVISIONS = SUBDIVISIONS;
 
 export type MicrophonePermissionStatus =
-  | "granted"
-  | "denied"
-  | "prompt"
-  | "unknown"
-  | "unsupported";
+  "granted" | "denied" | "prompt" | "unknown" | "unsupported";
 
 export type LocalDataCounts = {
   sheets: number;

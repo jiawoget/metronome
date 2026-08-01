@@ -14,7 +14,10 @@ export function titleForSheetViewerInspectionCode(code: InspectionErrorCode) {
   }[code];
 }
 
-export function formatSheetViewerPageLabel(currentPage: number, totalPages: number) {
+export function formatSheetViewerPageLabel(
+  currentPage: number,
+  totalPages: number
+) {
   return `Page ${currentPage} of ${totalPages}`;
 }
 

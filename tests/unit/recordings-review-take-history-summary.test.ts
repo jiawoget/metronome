@@ -34,9 +34,9 @@ describe("createTakeHistorySummary", () => {
       group,
       selection: createResolvedSelection({
         group,
-        bestRecording: group.recordings.find(
-          (recording) => recording.id === "older-best"
-        ) ?? null
+        bestRecording:
+          group.recordings.find((recording) => recording.id === "older-best") ??
+          null
       }),
       markers: [
         createMarker({ id: "marker-1", recordingId: "older-best" }),
@@ -139,8 +139,7 @@ describe("createTakeHistorySummary", () => {
         durationMs: -1,
         settings: {
           bpm: Number.NaN,
-          timeSignature:
-            "   " as ReviewRecording["settings"]["timeSignature"]
+          timeSignature: "   " as ReviewRecording["settings"]["timeSignature"]
         }
       })
     ]);

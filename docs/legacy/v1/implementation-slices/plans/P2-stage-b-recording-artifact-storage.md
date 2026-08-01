@@ -157,7 +157,8 @@ Dexie table:
 recordingArtifacts: Table<LocalRecordingArtifact, string>;
 
 this.version(1).stores({
-  recordingArtifacts: "artifactId, recordingId, recordingType, createdAt, updatedAt"
+  recordingArtifacts:
+    "artifactId, recordingId, recordingType, createdAt, updatedAt"
 });
 ```
 
@@ -198,20 +199,26 @@ type RecordingArtifactRepository = {
   getArtifact(artifactId: string): Promise<LocalRecordingArtifact | null>;
   deleteArtifact(artifactId: string): Promise<void>;
   deleteArtifacts(artifactIds: string[]): Promise<void>;
-  listArtifactsForRecordings(recordingIds: string[]): Promise<LocalRecordingArtifact[]>;
+  listArtifactsForRecordings(
+    recordingIds: string[]
+  ): Promise<LocalRecordingArtifact[]>;
   clear(): Promise<void>;
   subscribe?(listener: () => void): () => void;
 };
 
 type RecordingArtifactResolver = {
-  resolveArtifactBody(recording: ReviewRecording): Promise<RecordingArtifactBody>;
+  resolveArtifactBody(
+    recording: ReviewRecording
+  ): Promise<RecordingArtifactBody>;
   saveCapturedArtifact(input: {
     recordingId: string;
     recordingType: "quick" | "sheet";
     artifact: RecordingArtifact;
     createdAt: string;
   }): Promise<RecordingArtifactRef>;
-  migrateLegacyArtifact(recording: ReviewRecording): Promise<RecordingArtifactRef | null>;
+  migrateLegacyArtifact(
+    recording: ReviewRecording
+  ): Promise<RecordingArtifactRef | null>;
   deleteArtifactForRecording(recording: ReviewRecording): Promise<void>;
 };
 ```
@@ -323,14 +330,17 @@ Algorithm for each recording in current snapshot:
    - any normalized fields that are intentionally updated.
 9. Immediately before writing, re-read localStorage and compare it to `originalRawSnapshot`. If it changed, abort/retry from the new raw value and do not write the stale mutation.
 10. If any artifact save, conversion, validation, or metadata rewrite fails for a specific record:
-   - do not remove or modify that record's `audioDataUrl`;
-   - preserve that record's original localStorage bytes;
-   - do not clear the artifact table;
-   - return a migration result with per-record failure details.
+
+- do not remove or modify that record's `audioDataUrl`;
+- preserve that record's original localStorage bytes;
+- do not clear the artifact table;
+- return a migration result with per-record failure details.
+
 11. If metadata rewrite fails after artifact saves:
-   - keep original localStorage bytes;
-   - leave any saved artifact bodies in Dexie as harmless duplicates/orphans for a later idempotent retry;
-   - on retry, overwrite the same deterministic artifact id or reuse an existing matching artifact.
+
+- keep original localStorage bytes;
+- leave any saved artifact bodies in Dexie as harmless duplicates/orphans for a later idempotent retry;
+- on retry, overwrite the same deterministic artifact id or reuse an existing matching artifact.
 
 Migration result:
 

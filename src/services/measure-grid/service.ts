@@ -1,8 +1,13 @@
 import { validateMeasureGrid } from "@/domain/practice";
-import type { MeasureGridRepository, MeasureGridService } from "@/services/measure-grid/types";
+import type {
+  MeasureGridRepository,
+  MeasureGridService
+} from "@/services/measure-grid/types";
 import { normalizeMeasureGridSheetId } from "@/services/measure-grid/validation";
 
-export function createMeasureGridService(repository: MeasureGridRepository): MeasureGridService {
+export function createMeasureGridService(
+  repository: MeasureGridRepository
+): MeasureGridService {
   return {
     async getGrid(sheetId) {
       return repository.getGrid(normalizeMeasureGridSheetId(sheetId));

@@ -149,7 +149,7 @@ PDF behavior:
 - Use the existing local worker path:
 
 ```ts
-new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString()
+new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 ```
 
 - Do not use `pdfjs-dist/legacy`.
@@ -365,13 +365,13 @@ Stop and return to planning if implementation appears to require:
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Thumbnail rail/drawer UI and page selection | P5-08 |
-| Page number jump and invalid input handling | P5-09 |
-| Viewer zoom-pan domain and UI | P5-10/P5-11 |
-| Assisted/manual page turning at segment boundaries | P5-12 |
-| Persistent thumbnail cache with cleanup/export/import support | Future reviewed storage/performance slice, only after P5-08 proves need |
-| Import-time thumbnail precomputation | Future reviewed performance slice |
-| Better visual placeholders for per-page thumbnail errors | P5-08 or later UI slice |
-| Cloud sync, score following, automatic recognition, mistake detection | v2 or future reviewed feature |
+| Deferred work                                                         | Future owner                                                            |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Thumbnail rail/drawer UI and page selection                           | P5-08                                                                   |
+| Page number jump and invalid input handling                           | P5-09                                                                   |
+| Viewer zoom-pan domain and UI                                         | P5-10/P5-11                                                             |
+| Assisted/manual page turning at segment boundaries                    | P5-12                                                                   |
+| Persistent thumbnail cache with cleanup/export/import support         | Future reviewed storage/performance slice, only after P5-08 proves need |
+| Import-time thumbnail precomputation                                  | Future reviewed performance slice                                       |
+| Better visual placeholders for per-page thumbnail errors              | P5-08 or later UI slice                                                 |
+| Cloud sync, score following, automatic recognition, mistake detection | v2 or future reviewed feature                                           |

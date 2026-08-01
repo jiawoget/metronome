@@ -1,4 +1,8 @@
-import { DEFAULT_USER_SETTINGS, normalizeSettingsPatch, normalizeUserSettings } from "@/domain/settings";
+import {
+  DEFAULT_USER_SETTINGS,
+  normalizeSettingsPatch,
+  normalizeUserSettings
+} from "@/domain/settings";
 import type {
   SettingsRepository,
   StorageSummaryService,
@@ -6,17 +10,23 @@ import type {
   UserSettingsService
 } from "@/services/settings/types";
 
-export function createUserSettingsService(repository: SettingsRepository): UserSettingsService {
+export function createUserSettingsService(
+  repository: SettingsRepository
+): UserSettingsService {
   let pendingUpdate = Promise.resolve();
 
   return {
     async getSettings() {
-      return normalizeUserSettings((await repository.getSettings()) ?? DEFAULT_USER_SETTINGS);
+      return normalizeUserSettings(
+        (await repository.getSettings()) ?? DEFAULT_USER_SETTINGS
+      );
     },
 
     async updateSettings(patch) {
       const update = pendingUpdate.then(async () => {
-        const currentSettings = normalizeUserSettings((await repository.getSettings()) ?? DEFAULT_USER_SETTINGS);
+        const currentSettings = normalizeUserSettings(
+          (await repository.getSettings()) ?? DEFAULT_USER_SETTINGS
+        );
         const nextSettings = normalizeSettingsPatch(currentSettings, patch);
 
         await repository.saveSettings(nextSettings);
@@ -41,7 +51,9 @@ export function createUserSettingsService(repository: SettingsRepository): UserS
   };
 }
 
-export function createStorageSummaryService(source: StorageSummarySource): StorageSummaryService {
+export function createStorageSummaryService(
+  source: StorageSummarySource
+): StorageSummaryService {
   return {
     async getSummary() {
       const [counts, storageEstimate] = await Promise.all([

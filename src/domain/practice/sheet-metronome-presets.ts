@@ -49,15 +49,19 @@ export type SheetMetronomePreset = {
   updatedAt: string;
 };
 
-const isoDateSchema = z.iso
-  .datetime({ offset: true })
-  .refine((value) => {
+const isoDateSchema = z.iso.datetime({ offset: true }).refine(
+  (value) => {
     const parsedValue = new Date(value);
 
-    return Number.isFinite(parsedValue.getTime()) && parsedValue.toISOString() === value;
-  }, {
+    return (
+      Number.isFinite(parsedValue.getTime()) &&
+      parsedValue.toISOString() === value
+    );
+  },
+  {
     message: "Expected a strict ISO datetime with a real calendar date."
-  });
+  }
+);
 const presetSheetIdSchema = z.string().trim().min(1, "sheetId is required.");
 const presetIdSchema = z.string().trim().min(1, "presetId is required.");
 const presetNameSchema = z.string().trim().min(1, "Preset name is required.");
@@ -128,7 +132,9 @@ export function normalizeSheetMetronomePresetId(presetId: string) {
   return presetIdSchema.parse(presetId);
 }
 
-export function parseSheetMetronomePresetSegmentId(value: unknown): string | null {
+export function parseSheetMetronomePresetSegmentId(
+  value: unknown
+): string | null {
   const result = presetSegmentIdSchema.safeParse(value);
 
   return result.success ? result.data : null;

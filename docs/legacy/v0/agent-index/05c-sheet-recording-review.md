@@ -37,4 +37,3 @@ visibility, Practice Again immutability, and permission/bad-artifact states.
   permission denial, Recordings visibility, and Practice Again immutability are
   covered.
 - No known unimplemented v0 sheet-recording-review item remains.
-

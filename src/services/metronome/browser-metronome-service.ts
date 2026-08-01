@@ -5,7 +5,10 @@ import {
   getTickIntervalMs,
   isAccentTick
 } from "@/lib/quick-metronome/control";
-import { DEFAULT_METRONOME_SETTINGS, type MetronomeSettings } from "@/lib/quick-metronome/types";
+import {
+  DEFAULT_METRONOME_SETTINGS,
+  type MetronomeSettings
+} from "@/lib/quick-metronome/types";
 import {
   createToneMetronomeAdapter,
   type ToneMetronomeAdapter,
@@ -36,7 +39,9 @@ export class BrowserMetronomeService implements MetronomeService {
   private tickIndex = 0;
   private readonly tickHandlers = new Set<MetronomeTickHandler>();
 
-  constructor(createAdapter: ToneMetronomeAdapterFactory = createToneMetronomeAdapter) {
+  constructor(
+    createAdapter: ToneMetronomeAdapterFactory = createToneMetronomeAdapter
+  ) {
     this.createAdapter = createAdapter;
   }
 
@@ -59,7 +64,9 @@ export class BrowserMetronomeService implements MetronomeService {
     }
 
     if (typeof window === "undefined") {
-      throw new Error("Metronome playback is not available outside the browser.");
+      throw new Error(
+        "Metronome playback is not available outside the browser."
+      );
     }
 
     this.settings = settings;
@@ -187,7 +194,11 @@ export class BrowserMetronomeService implements MetronomeService {
       timeSignature: this.settings.timeSignature
     };
 
-    window.dispatchEvent(new CustomEvent<MetronomeTraceEventDetail>(METRONOME_TRACE_EVENT, { detail }));
+    window.dispatchEvent(
+      new CustomEvent<MetronomeTraceEventDetail>(METRONOME_TRACE_EVENT, {
+        detail
+      })
+    );
   }
 }
 

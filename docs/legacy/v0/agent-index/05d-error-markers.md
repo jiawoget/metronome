@@ -40,4 +40,3 @@ marker, delete, persistence, and no automatic mistake/bar detection.
   negative, tiny negative before rounding, out-of-range, `NaN`, `Infinity`,
   blank input, note trimming, and overlong note errors.
 - No known unimplemented v0 error-marker item remains.
-

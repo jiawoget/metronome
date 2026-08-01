@@ -222,10 +222,7 @@ function compareStrings(left: string, right: string) {
   return left.localeCompare(right);
 }
 
-function compareNullableStrings(
-  left: string | null,
-  right: string | null
-) {
+function compareNullableStrings(left: string | null, right: string | null) {
   return (left ?? "").localeCompare(right ?? "");
 }
 

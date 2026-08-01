@@ -48,7 +48,10 @@ function normalizeSheetOrganization(sheet: ImportedSheet) {
 
 export const sheetLibraryRepository: SheetLibraryRepository = {
   async listSheets() {
-    const sheets = await getDatabase().sheets.orderBy("createdAt").reverse().toArray();
+    const sheets = await getDatabase()
+      .sheets.orderBy("createdAt")
+      .reverse()
+      .toArray();
 
     return sheets.map(normalizeSheetOrganization);
   },

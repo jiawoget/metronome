@@ -47,13 +47,13 @@ export function SheetMetronomePresetSaveForm({
           value={nameDraft}
           disabled={disabled || isBusy}
           onChange={(event) => onNameDraftChange(event.currentTarget.value)}
-          className="border-border bg-background focus-visible:ring-ring h-9 min-w-0 rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+          className="h-9 min-w-0 rounded-md border border-border bg-background px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         />
       </label>
       <fieldset className="grid gap-1">
         <legend className="text-xs font-medium">Save scope</legend>
         <div className="flex flex-wrap gap-2">
-          <label className="border-border bg-background flex min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-sm">
+          <label className="flex min-w-0 items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-sm">
             <input
               type="radio"
               name={`sheet-metronome-preset-scope-${sheetId}`}
@@ -66,7 +66,7 @@ export function SheetMetronomePresetSaveForm({
           </label>
           <label
             className={cn(
-              "border-border bg-background flex min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-sm",
+              "flex min-w-0 items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-sm",
               selectedSegmentScopeDisabled && "opacity-60"
             )}
           >
@@ -82,11 +82,11 @@ export function SheetMetronomePresetSaveForm({
           </label>
         </div>
         {selectedSegment ? (
-          <p className="text-muted-foreground text-xs leading-5">
+          <p className="text-xs leading-5 text-muted-foreground">
             Selected segment: {selectedSegment.name}
           </p>
         ) : (
-          <p className="text-muted-foreground text-xs leading-5">
+          <p className="text-xs leading-5 text-muted-foreground">
             Select a segment to enable segment-scoped presets.
           </p>
         )}

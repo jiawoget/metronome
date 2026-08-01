@@ -195,11 +195,11 @@ Service responsibilities:
 - Add small methods such as:
 
 ```ts
-updateSheetOrganization(input)
-setSheetFavorite(sheetId, favorite)
-setSheetTags(sheetId, tags)
-addSheetTag(sheetId, tag)
-removeSheetTag(sheetId, tag)
+updateSheetOrganization(input);
+setSheetFavorite(sheetId, favorite);
+setSheetTags(sheetId, tags);
+addSheetTag(sheetId, tag);
+removeSheetTag(sheetId, tag);
 ```
 
 The coding agent may implement only `updateSheetOrganization`, `setSheetFavorite`, and `setSheetTags` if that covers P5-02 cleanly. Add one-tag helpers only if they remove duplication without extra state machinery.

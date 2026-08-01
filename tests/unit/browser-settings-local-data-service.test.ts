@@ -85,7 +85,9 @@ describe("browser local data cleanup service", () => {
     ).rejects.toThrow("metadata clear failed");
 
     expect(mocks.recordingArtifactRepository.clear).not.toHaveBeenCalled();
-    expect(mocks.browserSettingsRepository.clearSettings).not.toHaveBeenCalled();
+    expect(
+      mocks.browserSettingsRepository.clearSettings
+    ).not.toHaveBeenCalled();
     expect(mocks.browserSettingsService.resetToDefaults).not.toHaveBeenCalled();
   });
 
@@ -105,7 +107,9 @@ describe("browser local data cleanup service", () => {
     ).toBeLessThan(
       mocks.recordingArtifactRepository.clear.mock.invocationCallOrder[0]
     );
-    expect(mocks.browserSettingsRepository.clearSettings).toHaveBeenCalledOnce();
+    expect(
+      mocks.browserSettingsRepository.clearSettings
+    ).toHaveBeenCalledOnce();
     expect(mocks.browserSettingsService.resetToDefaults).toHaveBeenCalledOnce();
   });
 });

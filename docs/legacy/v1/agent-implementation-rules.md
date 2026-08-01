@@ -211,5 +211,3 @@ Verification must fail if:
 - User-facing UI ignores the reference image or v1 UI design requirements.
 - The feature implements v2 scope.
 - A previously verified core v0 workflow is broken.
-
-

@@ -167,21 +167,21 @@ P1-06 must not implement:
 
 ## 7. Boundary Matrix
 
-| Condition | Required behavior | Required evidence |
-| --- | --- | --- |
-| No segments for active sheet | Show concise empty state; no create/edit/delete UI; existing Sheet Practice controls remain usable | Component test and E2E |
-| No saved MeasureGrid | Segment list still loads; statuses show `Needs calibration`; no authoritative timing display | Component test and E2E |
-| Stale grid | Segment remains visible/selectable; status shows `Grid changed` or equivalent; no crash | Component test using changed grid |
-| Current grid | Segment can show current/ready status; selected summary shows active state, range, and target BPM | Component test and E2E |
-| Missing segment after reload/delete elsewhere | If selected id is absent after list reload or sheet remount, clear active selection and show unselected/empty state | Component test with rerendered service result |
-| Segment service error | Segment panel shows recoverable local error; viewer, metronome controls, recording controls, and MeasureGrid panel stay usable | Component test |
-| MeasureGrid service error | Segment panel treats grid as unavailable/needs calibration or shows compact status error; segment list still renders when segment service succeeds | Component test |
-| Sheet switch | Old sheet segments disappear; active selection clears or reloads for new sheet; other sheet's segments never appear | Component test and E2E |
-| In-flight old-sheet read resolves late | Ignore stale result and keep new sheet state correct | Component test with controlled promises |
-| Invalid/malformed repository rows already normalized by service | UI assumes returned list is valid; defensive `invalid-association` status does not crash | Source inspection plus component defensive test if easy |
-| Target BPM missing | Active/row metadata omits target BPM or shows compact `No target BPM`; no layout shift/clipping | Component test |
-| Long segment name | Truncates/wraps professionally without overlapping badges/buttons | Component or responsive visual check |
-| Mobile layout | Segment panel/list remains usable at narrow width and does not cover sheet or transport controls | E2E responsive checks |
+| Condition                                                       | Required behavior                                                                                                                                  | Required evidence                                       |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| No segments for active sheet                                    | Show concise empty state; no create/edit/delete UI; existing Sheet Practice controls remain usable                                                 | Component test and E2E                                  |
+| No saved MeasureGrid                                            | Segment list still loads; statuses show `Needs calibration`; no authoritative timing display                                                       | Component test and E2E                                  |
+| Stale grid                                                      | Segment remains visible/selectable; status shows `Grid changed` or equivalent; no crash                                                            | Component test using changed grid                       |
+| Current grid                                                    | Segment can show current/ready status; selected summary shows active state, range, and target BPM                                                  | Component test and E2E                                  |
+| Missing segment after reload/delete elsewhere                   | If selected id is absent after list reload or sheet remount, clear active selection and show unselected/empty state                                | Component test with rerendered service result           |
+| Segment service error                                           | Segment panel shows recoverable local error; viewer, metronome controls, recording controls, and MeasureGrid panel stay usable                     | Component test                                          |
+| MeasureGrid service error                                       | Segment panel treats grid as unavailable/needs calibration or shows compact status error; segment list still renders when segment service succeeds | Component test                                          |
+| Sheet switch                                                    | Old sheet segments disappear; active selection clears or reloads for new sheet; other sheet's segments never appear                                | Component test and E2E                                  |
+| In-flight old-sheet read resolves late                          | Ignore stale result and keep new sheet state correct                                                                                               | Component test with controlled promises                 |
+| Invalid/malformed repository rows already normalized by service | UI assumes returned list is valid; defensive `invalid-association` status does not crash                                                           | Source inspection plus component defensive test if easy |
+| Target BPM missing                                              | Active/row metadata omits target BPM or shows compact `No target BPM`; no layout shift/clipping                                                    | Component test                                          |
+| Long segment name                                               | Truncates/wraps professionally without overlapping badges/buttons                                                                                  | Component or responsive visual check                    |
+| Mobile layout                                                   | Segment panel/list remains usable at narrow width and does not cover sheet or transport controls                                                   | E2E responsive checks                                   |
 
 ## 8. Exact Test Plan
 

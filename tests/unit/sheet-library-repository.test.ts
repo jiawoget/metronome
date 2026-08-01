@@ -95,7 +95,9 @@ describe("sheet library repository", () => {
 
     resetSheetLibraryDatabaseConnectionForTests();
 
-    await expect(sheetLibraryRepository.getSheet("sheet-persisted")).resolves.toMatchObject({
+    await expect(
+      sheetLibraryRepository.getSheet("sheet-persisted")
+    ).resolves.toMatchObject({
       id: "sheet-persisted",
       tags: ["Focus", "Warm Up"],
       favorite: true
@@ -137,7 +139,9 @@ describe("sheet library repository", () => {
       updatedAt: "2026-06-21T10:05:00.000Z"
     });
 
-    await expect(sheetLibraryRepository.getArtifact("sheet-update-org")).resolves.toMatchObject({
+    await expect(
+      sheetLibraryRepository.getArtifact("sheet-update-org")
+    ).resolves.toMatchObject({
       sheetId: artifact.sheetId,
       kind: artifact.kind,
       createdAt: artifact.createdAt,

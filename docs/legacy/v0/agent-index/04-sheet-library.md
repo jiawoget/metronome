@@ -38,4 +38,3 @@ file error states.
 - Delete checks include metadata and artifact removal.
 - Bad PDF, bad image, and unsupported file states are covered.
 - No known unimplemented v0 sheet-library item remains.
-

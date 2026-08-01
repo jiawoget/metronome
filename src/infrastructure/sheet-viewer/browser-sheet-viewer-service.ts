@@ -9,7 +9,13 @@ export const browserSheetViewerService = createSheetViewerService({
   viewerAdapter: browserSheetViewerAdapter
 });
 
-if (process.env.NEXT_PUBLIC_METRONOME_E2E === "1" && typeof window !== "undefined") {
-  (window as Window & { __metronomeSheetViewerService?: typeof browserSheetViewerService })
-    .__metronomeSheetViewerService = browserSheetViewerService;
+if (
+  process.env.NEXT_PUBLIC_METRONOME_E2E === "1" &&
+  typeof window !== "undefined"
+) {
+  (
+    window as Window & {
+      __metronomeSheetViewerService?: typeof browserSheetViewerService;
+    }
+  ).__metronomeSheetViewerService = browserSheetViewerService;
 }

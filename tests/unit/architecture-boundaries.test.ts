@@ -18,13 +18,19 @@ type ApprovedUsage = {
 const repoRoot = process.cwd();
 const primitiveExceptionMarker = "PACK_F_APPROVED_PRIMITIVE_EXCEPTION";
 const runtimeTimerExceptionMarker = "PACK_F_APPROVED_RUNTIME_TIMER_EXCEPTION";
-const approvedMediaCaptureAdapter = "src/infrastructure/audio/browser-recording-capture.ts";
-const approvedAudioDecodeAdapter = "src/infrastructure/audio/browser-audio-decode-adapter.ts";
+const approvedMediaCaptureAdapter =
+  "src/infrastructure/audio/browser-recording-capture.ts";
+const approvedAudioDecodeAdapter =
+  "src/infrastructure/audio/browser-audio-decode-adapter.ts";
 
 const musicPrimitiveTableAllowlist = new Map<string, ApprovedUsage>([
   [
     "src/domain/music/meter-policy.ts",
-    { count: 2, reason: "F5-approved product policy owner for supported time signatures and subdivisions" }
+    {
+      count: 2,
+      reason:
+        "F5-approved product policy owner for supported time signatures and subdivisions"
+    }
   ]
 ]);
 
@@ -33,7 +39,12 @@ const uiInfrastructureImportAllowlist = new Map<string, ApprovedUsage>();
 const runtimeTimerSchedulingAllowlist = new Map<string, ApprovedUsage>([
   [
     "src/components/sheet-practice/controls/sheet-practice-controls.tsx",
-    { count: 1, reason: "non-audio zero-delay session hydration refresh remains until Pack F boundary cleanup", expiresAtStage: "F7" }
+    {
+      count: 1,
+      reason:
+        "non-audio zero-delay session hydration refresh remains until Pack F boundary cleanup",
+      expiresAtStage: "F7"
+    }
   ]
 ]);
 
@@ -115,13 +126,17 @@ function countedInfrastructureImports(files: SourceFile[]) {
     .map((file) => ({
       path: file.path,
       count: Array.from(file.source.matchAll(importSpecifierPattern)).filter(
-        (match) => resolvesToInfrastructure(file, match[1] ?? match[2] ?? match[3] ?? "")
+        (match) =>
+          resolvesToInfrastructure(file, match[1] ?? match[2] ?? match[3] ?? "")
       ).length
     }))
     .filter((usage) => usage.count > 0);
 }
 
-function unexpectedUsages(usages: { path: string; count: number }[], allowlist: Map<string, ApprovedUsage>) {
+function unexpectedUsages(
+  usages: { path: string; count: number }[],
+  allowlist: Map<string, ApprovedUsage>
+) {
   return usages
     .filter((usage) => {
       const approved = allowlist.get(usage.path);
@@ -135,7 +150,10 @@ function unexpectedUsages(usages: { path: string; count: number }[], allowlist: 
     }));
 }
 
-function staleAllowlistEntries(usages: { path: string; count: number }[], allowlist: Map<string, ApprovedUsage>) {
+function staleAllowlistEntries(
+  usages: { path: string; count: number }[],
+  allowlist: Map<string, ApprovedUsage>
+) {
   const usageCounts = new Map(usages.map((usage) => [usage.path, usage.count]));
 
   return Array.from(allowlist.entries())
@@ -148,8 +166,7 @@ function staleAllowlistEntries(usages: { path: string; count: number }[], allowl
 }
 
 function filesWithLocalPeakDerivation(files: SourceFile[]) {
-  const localHelperPattern =
-    /\b(?:function|const)\s+derivePeaksFromSamples\b/;
+  const localHelperPattern = /\b(?:function|const)\s+derivePeaksFromSamples\b/;
   const derivationSignals = [
     /\bbucketSize\b/,
     /\bpeakIndex\b/,
@@ -176,7 +193,9 @@ function filesWithLocalPeakDerivation(files: SourceFile[]) {
 
 describe("source architecture boundaries", () => {
   it("keeps UI components away from concrete browser audio and recording adapters", () => {
-    const files = readSources(listSourceFiles(join(repoRoot, "src/components"), [".tsx"]));
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src/components"), [".tsx"])
+    );
     const violations = matchingFiles(files, [
       /from\s+["']tone["']/,
       /import\(["']tone["']\)/,
@@ -192,13 +211,18 @@ describe("source architecture boundaries", () => {
   });
 
   it("keeps browser capture and Tone imports in infrastructure audio adapters", () => {
-    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"]));
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])
+    );
     const captureViolations = matchingFiles(
       files.filter((file) => file.path !== approvedMediaCaptureAdapter),
       [/MediaRecorder/, /navigator\.mediaDevices\.getUserMedia/]
     );
     const toneViolations = matchingFiles(
-      files.filter((file) => file.path !== "src/infrastructure/audio/tone-metronome-adapter.ts"),
+      files.filter(
+        (file) =>
+          file.path !== "src/infrastructure/audio/tone-metronome-adapter.ts"
+      ),
       [/from\s+["']tone["']/, /import\(["']tone["']\)/]
     );
 
@@ -207,7 +231,9 @@ describe("source architecture boundaries", () => {
   });
 
   it("keeps browser audio decoding in the shared decode adapter", () => {
-    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"]));
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])
+    );
     const decodeViolations = matchingFiles(
       files.filter((file) => file.path !== approvedAudioDecodeAdapter),
       [/decodeAudioData/, /new\s+AudioContext\b/, /webkitAudioContext/]
@@ -217,7 +243,9 @@ describe("source architecture boundaries", () => {
   });
 
   it("keeps production peak derivation in the audio-analysis service", () => {
-    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"]));
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])
+    );
 
     expect(filesWithLocalPeakDerivation(files)).toEqual([]);
   });
@@ -228,7 +256,9 @@ describe("source architecture boundaries", () => {
       JSON.stringify(packageJson.dependencies ?? {}),
       JSON.stringify(packageJson.devDependencies ?? {})
     ].join("\n");
-    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"]));
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])
+    );
     const heavyDspPattern = /\b(?:Meyda|Aubio|Essentia|meyda|aubio|essentia)\b/;
 
     expect(packageSources).not.toMatch(heavyDspPattern);
@@ -263,7 +293,8 @@ describe("source architecture boundaries", () => {
         },
         {
           path: "src/hooks/use-example.ts",
-          source: 'const module = await import("../infrastructure/db/browser-thing");'
+          source:
+            'const module = await import("../infrastructure/db/browser-thing");'
         },
         {
           path: "src/app/example/page.tsx",
@@ -286,50 +317,66 @@ describe("source architecture boundaries", () => {
     const files = readSources(listUiBoundarySourceFiles());
     const usages = countedInfrastructureImports(files);
 
-    expect(unexpectedUsages(usages, uiInfrastructureImportAllowlist)).toEqual([]);
-    expect(staleAllowlistEntries(usages, uiInfrastructureImportAllowlist)).toEqual([]);
+    expect(unexpectedUsages(usages, uiInfrastructureImportAllowlist)).toEqual(
+      []
+    );
+    expect(
+      staleAllowlistEntries(usages, uiInfrastructureImportAllowlist)
+    ).toEqual([]);
     for (const approval of uiInfrastructureImportAllowlist.values()) {
       expect(approval.reason).not.toHaveLength(0);
     }
   });
 
   it("blocks custom music primitive tables unless they are approved policy or facade exceptions", () => {
-    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])).filter(
-      (file) => !file.source.includes(primitiveExceptionMarker)
-    );
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])
+    ).filter((file) => !file.source.includes(primitiveExceptionMarker));
     const primitiveTablePattern =
       /\b(?:export\s+)?(?:const|let|var)\s+(?:[A-Z0-9_]*(?:NOTE|NOTES|INTERVAL|INTERVALS|CHORD|CHORDS|SCALE|SCALES|KEY_SIGNATURE|KEY_SIGNATURES|TIME_SIGNATURE|TIME_SIGNATURES|SUBDIVISION|SUBDIVISIONS|RHYTHM|RHYTHMS|DURATION|DURATIONS|DURATION_VALUE|DURATION_VALUES|NOTE_VALUE|NOTE_VALUES|BEAT_VALUE|BEAT_VALUES|PITCH|MIDI)[A-Z0-9_]*|noteNames|notesByName|intervalNames|intervalsByName|chordNames|chordsByName|scaleNames|scalesByName|keySignatures|keysByName|timeSignatures|timeSignaturesByName|subdivisions|subdivisionsByName|rhythms|rhythmPatterns|durations|durationValues|noteDurations|beatValues|pitchClasses|midiNotes)\s*=\s*(?:\[|{)/g;
     const usages = countedMatches(files, primitiveTablePattern);
 
     expect(unexpectedUsages(usages, musicPrimitiveTableAllowlist)).toEqual([]);
-    expect(staleAllowlistEntries(usages, musicPrimitiveTableAllowlist)).toEqual([]);
+    expect(staleAllowlistEntries(usages, musicPrimitiveTableAllowlist)).toEqual(
+      []
+    );
     for (const approval of musicPrimitiveTableAllowlist.values()) {
       expect(approval.reason).not.toHaveLength(0);
     }
   });
 
   it("blocks direct time-signature string parsing outside the music domain", () => {
-    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])).filter(
-      (file) => !file.path.startsWith("src/domain/music/")
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])
+    ).filter((file) => !file.path.startsWith("src/domain/music/"));
+    const usages = countedMatches(
+      files,
+      /\btimeSignature\.split\(["']\/["']\)/g
     );
-    const usages = countedMatches(files, /\btimeSignature\.split\(["']\/["']\)/g);
 
     expect(usages).toEqual([]);
   });
 
   it("blocks new beat, countdown, and metronome runtime setTimeout scheduling", () => {
-    const files = readSources(listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"]))
+    const files = readSources(
+      listSourceFiles(join(repoRoot, "src"), [".ts", ".tsx"])
+    )
       .filter((file) => !file.source.includes(runtimeTimerExceptionMarker))
       .filter(
         (file) =>
           file.path.startsWith("src/services/metronome/") ||
           file.path.startsWith("src/lib/quick-metronome/") ||
-          file.path === "src/components/sheet-practice/controls/sheet-practice-controls.tsx"
+          file.path ===
+            "src/components/sheet-practice/controls/sheet-practice-controls.tsx"
       );
     const usages = countedMatches(files, /\bsetTimeout\b/g);
 
-    expect(unexpectedUsages(usages, runtimeTimerSchedulingAllowlist)).toEqual([]);
-    expect(staleAllowlistEntries(usages, runtimeTimerSchedulingAllowlist)).toEqual([]);
+    expect(unexpectedUsages(usages, runtimeTimerSchedulingAllowlist)).toEqual(
+      []
+    );
+    expect(
+      staleAllowlistEntries(usages, runtimeTimerSchedulingAllowlist)
+    ).toEqual([]);
     for (const approval of runtimeTimerSchedulingAllowlist.values()) {
       expect(approval.reason).not.toHaveLength(0);
     }

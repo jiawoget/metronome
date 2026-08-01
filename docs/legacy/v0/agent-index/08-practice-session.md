@@ -48,4 +48,3 @@ Summary, local-day aggregation, persistence, and clear-data integration.
   deterministic quick session selection, same-context sheet session reuse, and
   missing-sheet recovery.
 - No known unimplemented v0 practice-session item remains.
-

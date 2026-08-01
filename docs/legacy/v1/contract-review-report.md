@@ -88,5 +88,3 @@ Do not launch implementation until the relevant contract has been reviewed and a
 - [ ] Confirm module-level statuses should also be `contract_ready`.
 - [ ] Confirm implementation should begin with the Practice Segment spine.
 - [ ] Confirm no product code changes are included in this planning pass.
-
-

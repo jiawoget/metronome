@@ -33,14 +33,22 @@ describe("AppShell", () => {
 
     expect(screen.getByTestId("diagnostics-panel")).toBeVisible();
 
-    await user.click(screen.getAllByRole("button", { name: "Hide devtools for this session" })[0]);
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "Hide devtools for this session"
+      })[0]
+    );
 
     expect(screen.queryByTestId("diagnostics-panel")).not.toBeInTheDocument();
     expect(screen.getByTestId("diagnostics-restore")).toBeVisible();
     const restoreRegion = screen.getByTestId("diagnostics-restore");
-    expect(within(restoreRegion).getByRole("button", { name: "Restore diagnostics" })).toBeVisible();
+    expect(
+      within(restoreRegion).getByRole("button", { name: "Restore diagnostics" })
+    ).toBeVisible();
 
-    await user.click(within(restoreRegion).getByRole("button", { name: "Restore diagnostics" }));
+    await user.click(
+      within(restoreRegion).getByRole("button", { name: "Restore diagnostics" })
+    );
 
     expect(screen.getByTestId("diagnostics-panel")).toBeVisible();
     expect(screen.queryByTestId("diagnostics-restore")).not.toBeInTheDocument();
@@ -55,7 +63,9 @@ describe("AppShell", () => {
       </AppShell>
     );
 
-    const trigger = screen.getAllByRole("button", { name: "Open command palette" })[0];
+    const trigger = screen.getAllByRole("button", {
+      name: "Open command palette"
+    })[0];
 
     await user.click(trigger);
 
@@ -67,7 +77,9 @@ describe("AppShell", () => {
 
     await user.keyboard("{Escape}");
 
-    expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Command palette" })
+    ).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
   });
 
@@ -86,17 +98,23 @@ describe("AppShell", () => {
     await user.click(screen.getByLabelText("Goal name"));
     await user.keyboard("{Control>}k{/Control}");
 
-    expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Command palette" })
+    ).not.toBeInTheDocument();
 
     await user.click(document.body);
     await user.keyboard("{Control>}k{/Control}");
 
-    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeVisible();
+    expect(
+      screen.getByRole("dialog", { name: "Command palette" })
+    ).toBeVisible();
 
     await user.keyboard("{Escape}");
     await user.keyboard("{Meta>}k{/Meta}");
 
-    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeVisible();
+    expect(
+      screen.getByRole("dialog", { name: "Command palette" })
+    ).toBeVisible();
   });
 
   it("updates the active result with arrow keys and ignores Enter when no result matches", async () => {
@@ -133,7 +151,11 @@ describe("AppShell", () => {
 
     expect(within(dialog).getByText("No commands found.")).toBeVisible();
     expect(mockRouterPush).not.toHaveBeenCalled();
-    expect(pushStateSpy).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.stringContaining("/"));
+    expect(pushStateSpy).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.stringContaining("/")
+    );
   });
 
   it("keeps click execution on the active-recording guarded navigation path", async () => {
@@ -160,13 +182,18 @@ describe("AppShell", () => {
     await user.keyboard("{Control>}k{/Control}");
     const dialog = screen.getByRole("dialog", { name: "Command palette" });
 
-    await user.type(within(dialog).getByLabelText("Search commands"), "recordings");
-    await user.click(within(dialog).getByRole("option", { name: /Recordings/ }));
+    await user.type(
+      within(dialog).getByLabelText("Search commands"),
+      "recordings"
+    );
+    await user.click(
+      within(dialog).getByRole("option", { name: /Recordings/ })
+    );
 
     expect(window.location.pathname).toBe("/");
-    expect(screen.getByTestId("active-recording-navigation-guard")).toHaveTextContent(
-      "Navigation blocked while sheet recording is active."
-    );
+    expect(
+      screen.getByTestId("active-recording-navigation-guard")
+    ).toHaveTextContent("Navigation blocked while sheet recording is active.");
   });
 
   it("keeps Enter execution on the active-recording guarded navigation path", async () => {
@@ -193,12 +220,15 @@ describe("AppShell", () => {
     await user.keyboard("{Control>}k{/Control}");
     const dialog = screen.getByRole("dialog", { name: "Command palette" });
 
-    await user.type(within(dialog).getByLabelText("Search commands"), "settings");
+    await user.type(
+      within(dialog).getByLabelText("Search commands"),
+      "settings"
+    );
     await user.keyboard("{Enter}");
 
     expect(window.location.pathname).toBe("/");
-    expect(screen.getByTestId("active-recording-navigation-guard")).toHaveTextContent(
-      "Navigation blocked while sheet recording is active."
-    );
+    expect(
+      screen.getByTestId("active-recording-navigation-guard")
+    ).toHaveTextContent("Navigation blocked while sheet recording is active.");
   });
 });

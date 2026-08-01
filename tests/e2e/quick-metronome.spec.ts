@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { decodeRecordingHistoryAudio, installSyntheticMicrophone } from "./fixtures/audio";
+import {
+  decodeRecordingHistoryAudio,
+  installSyntheticMicrophone
+} from "./fixtures/audio";
 import { RECORDING_HISTORY_STORAGE_KEY } from "./fixtures/storage";
 
 type MetronomeTrace = {
@@ -59,7 +62,6 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
     window.HTMLMediaElement.prototype.play = function play() {
       return originalPlay.call(this).catch(() => Promise.resolve());
     };
-
   });
 
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -184,9 +186,12 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   ]);
   await page.getByLabel("Time signature").selectOption("6/8");
   await expect(page.getByText(/Tick interval 250 ms/i)).toBeVisible();
-  await expect(
-    page.getByLabel("Countdown").locator("option")
-  ).toHaveText(["Off", "4 beats", "8 beats", "16 beats"]);
+  await expect(page.getByLabel("Countdown").locator("option")).toHaveText([
+    "Off",
+    "4 beats",
+    "8 beats",
+    "16 beats"
+  ]);
   const countdownOptionValues = await page
     .getByLabel("Countdown")
     .locator("option")
@@ -328,9 +333,7 @@ test("quick metronome records, replays, persists, and keeps playback and recordi
   await expect(page.getByText("quick").first()).toBeVisible();
   await expect(page.getByText("No sheet linked.")).toBeVisible();
   const latestRecording = await page.evaluate((storageKey) => {
-    const rawValue = window.localStorage.getItem(
-      storageKey
-    );
+    const rawValue = window.localStorage.getItem(storageKey);
     const parsed = rawValue ? JSON.parse(rawValue) : null;
 
     return parsed?.recordings?.[0] ?? null;

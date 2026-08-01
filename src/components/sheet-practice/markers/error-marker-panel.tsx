@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import type { RecordingPlaybackControls } from "@/components/recordings-review/recording-artifact-review";
 import { seekToErrorMarker } from "@/lib/recordings-review/error-markers";
 import { formatTimestamp } from "@/lib/recordings-review/format";
-import type { RecordingErrorMarker, ReviewRecording } from "@/lib/recordings-review/types";
+import type {
+  RecordingErrorMarker,
+  ReviewRecording
+} from "@/lib/recordings-review/types";
 import {
   sheetErrorMarkerService,
   type SheetErrorMarkerService
@@ -44,7 +47,9 @@ export function ErrorMarkerPanel({
     recording ? markerService.getErrorMarkers(recording.id) : []
   );
   const [note, setNote] = useState("");
-  const [timestampDraftOverride, setTimestampDraftOverride] = useState<string | null>(null);
+  const [timestampDraftOverride, setTimestampDraftOverride] = useState<
+    string | null
+  >(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -68,7 +73,8 @@ export function ErrorMarkerPanel({
     return markerService.subscribe(refreshMarkers);
   }, [markerService, recording]);
 
-  const timestampDraft = timestampDraftOverride ?? formatSecondsInput(clampedCurrentTimeMs);
+  const timestampDraft =
+    timestampDraftOverride ?? formatSecondsInput(clampedCurrentTimeMs);
 
   if (!recording) {
     return (
@@ -101,11 +107,17 @@ export function ErrorMarkerPanel({
       });
 
       setNote("");
-      setMessage(`Error marker saved at ${formatTimestamp(marker.timestampMs)}.`);
+      setMessage(
+        `Error marker saved at ${formatTimestamp(marker.timestampMs)}.`
+      );
       setErrorMessage(null);
     } catch (error) {
       setMessage(null);
-      setErrorMessage(error instanceof Error ? error.message : "Error marker could not be saved.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Error marker could not be saved."
+      );
     }
   }
 
@@ -142,10 +154,16 @@ export function ErrorMarkerPanel({
       className="grid gap-3 rounded-md border border-border bg-background px-3 py-3"
     >
       <div>
-        <h3 id="sheet-error-markers-title" className="text-sm font-semibold tracking-normal">
+        <h3
+          id="sheet-error-markers-title"
+          className="text-sm font-semibold tracking-normal"
+        >
           Error markers
         </h3>
-        <p data-testid="sheet-error-marker-scope" className="mt-1 text-xs text-muted-foreground">
+        <p
+          data-testid="sheet-error-marker-scope"
+          className="mt-1 text-xs text-muted-foreground"
+        >
           Recording {activeRecording.id}
         </p>
       </div>
@@ -162,10 +180,15 @@ export function ErrorMarkerPanel({
               onChange={(event) => {
                 setTimestampDraftOverride(event.target.value);
               }}
-              className="h-10 min-w-0 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-10 min-w-0 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             />
           </label>
-          <Button type="button" variant="secondary" onClick={usePlaybackTime} disabled={!controlsReady}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={usePlaybackTime}
+            disabled={!controlsReady}
+          >
             Use playback time
           </Button>
         </div>
@@ -176,7 +199,7 @@ export function ErrorMarkerPanel({
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder="Optional note"
-            className="h-10 min-w-0 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-10 min-w-0 rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
         </label>
         <Button type="submit">
@@ -186,12 +209,20 @@ export function ErrorMarkerPanel({
       </form>
 
       {errorMessage ? (
-        <p role="alert" data-testid="sheet-error-marker-error" className="text-sm font-medium text-destructive">
+        <p
+          role="alert"
+          data-testid="sheet-error-marker-error"
+          className="text-sm font-medium text-destructive"
+        >
           {errorMessage}
         </p>
       ) : null}
       {message ? (
-        <p role="status" data-testid="sheet-error-marker-message" className="text-sm font-medium text-muted-foreground">
+        <p
+          role="status"
+          data-testid="sheet-error-marker-message"
+          className="text-sm font-medium text-muted-foreground"
+        >
           {message}
         </p>
       ) : null}
@@ -207,10 +238,12 @@ export function ErrorMarkerPanel({
               <button
                 type="button"
                 onClick={() => seekToMarker(marker)}
-                className="min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-w-0 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 aria-label={`Seek to marker ${formatTimestamp(marker.timestampMs)}`}
               >
-                <span className="font-semibold">{formatTimestamp(marker.timestampMs)}</span>
+                <span className="font-semibold">
+                  {formatTimestamp(marker.timestampMs)}
+                </span>
                 <span
                   data-testid="sheet-error-marker-note"
                   className="block min-w-0 break-all text-muted-foreground sm:ml-2 sm:inline"
@@ -231,7 +264,10 @@ export function ErrorMarkerPanel({
           ))}
         </ul>
       ) : (
-        <p data-testid="sheet-error-marker-list-empty" className="rounded-md border border-dashed border-border bg-muted px-3 py-3 text-sm text-muted-foreground">
+        <p
+          data-testid="sheet-error-marker-list-empty"
+          className="rounded-md border border-dashed border-border bg-muted px-3 py-3 text-sm text-muted-foreground"
+        >
           No manual error markers saved for this recording.
         </p>
       )}

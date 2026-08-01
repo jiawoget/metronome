@@ -51,19 +51,30 @@ export type PracticeSessionRepository = {
 
 export type PracticeRecordingMetadataRepository = {
   listRecordingMetadata: () => Promise<SheetRecordingMetadata[]>;
-  listRecordingMetadataForSession: (sessionId: string) => Promise<SheetRecordingMetadata[]>;
-  saveRecordingMetadata: (recording: SheetRecordingMetadata, session: PracticeSession) => Promise<void>;
+  listRecordingMetadataForSession: (
+    sessionId: string
+  ) => Promise<SheetRecordingMetadata[]>;
+  saveRecordingMetadata: (
+    recording: SheetRecordingMetadata,
+    session: PracticeSession
+  ) => Promise<void>;
   clear: () => Promise<void>;
   subscribe?: (listener: () => void) => () => void;
 };
 
 export type PracticeSessionSheetGateway = {
   getSheetContext: (sheetId: string) => Promise<SheetSessionContext | null>;
-  updateLastPracticedAt: (sheetId: string, practicedAt: string) => Promise<void>;
+  updateLastPracticedAt: (
+    sheetId: string,
+    practicedAt: string
+  ) => Promise<void>;
 };
 
 export type PracticeSessionSegmentGateway = {
-  getSegmentContext: (sheetId: string, segmentId: string) => Promise<SegmentSessionContext | null>;
+  getSegmentContext: (
+    sheetId: string,
+    segmentId: string
+  ) => Promise<SegmentSessionContext | null>;
 };
 
 export type SheetPracticeActivityInput = {
@@ -122,33 +133,63 @@ export type PracticeSessionEventSink = {
 };
 
 export type PracticeSessionService = {
-  ensureQuickSession: (input: QuickPracticeActivityInput) => Promise<PracticeSession>;
-  ensureSheetSession: (input: SheetPracticeActivityInput) => Promise<PracticeSession | null>;
-  captureSessionEvent: (input: PracticeSessionEventCaptureInput) => Promise<PracticeSessionEvent | null>;
-  restorePracticeSessionSnapshot: (session: PracticeSession) => Promise<PracticeSession>;
+  ensureQuickSession: (
+    input: QuickPracticeActivityInput
+  ) => Promise<PracticeSession>;
+  ensureSheetSession: (
+    input: SheetPracticeActivityInput
+  ) => Promise<PracticeSession | null>;
+  captureSessionEvent: (
+    input: PracticeSessionEventCaptureInput
+  ) => Promise<PracticeSessionEvent | null>;
+  restorePracticeSessionSnapshot: (
+    session: PracticeSession
+  ) => Promise<PracticeSession>;
   deletePracticeSessionSnapshot: (sessionId: string) => Promise<void>;
-  updatePracticeSessionDuration: (sessionId: string) => Promise<PracticeSession | null>;
-  updateSheetSessionDuration: (sessionId: string) => Promise<PracticeSession | null>;
+  updatePracticeSessionDuration: (
+    sessionId: string
+  ) => Promise<PracticeSession | null>;
+  updateSheetSessionDuration: (
+    sessionId: string
+  ) => Promise<PracticeSession | null>;
   endPracticeSession: (sessionId: string) => Promise<PracticeSession | null>;
-  linkRecordingToSession: (input: PracticeRecordingLinkInput) => Promise<PracticeSession | null>;
-  prepareSheetRecordingMetadata: (input: SheetRecordingMetadataInput) => Promise<PreparedSheetRecordingMetadata | null>;
-  commitPreparedSheetRecordingSession: (input: PreparedSheetRecordingSessionInput) => Promise<void>;
-  createSheetRecordingMetadata: (input: SheetRecordingMetadataInput) => Promise<SheetRecordingMetadata | null>;
+  linkRecordingToSession: (
+    input: PracticeRecordingLinkInput
+  ) => Promise<PracticeSession | null>;
+  prepareSheetRecordingMetadata: (
+    input: SheetRecordingMetadataInput
+  ) => Promise<PreparedSheetRecordingMetadata | null>;
+  commitPreparedSheetRecordingSession: (
+    input: PreparedSheetRecordingSessionInput
+  ) => Promise<void>;
+  createSheetRecordingMetadata: (
+    input: SheetRecordingMetadataInput
+  ) => Promise<SheetRecordingMetadata | null>;
   listSessions: () => Promise<PracticeSession[]>;
-  getHomeRecentActivity: (options?: HomeRecentActivityOptions) => Promise<HomeRecentActivityResult>;
-  getSessionHistoryGroups: (mode: SessionHistoryGroupingMode) => Promise<SessionHistoryGroup[]>;
+  getHomeRecentActivity: (
+    options?: HomeRecentActivityOptions
+  ) => Promise<HomeRecentActivityResult>;
+  getSessionHistoryGroups: (
+    mode: SessionHistoryGroupingMode
+  ) => Promise<SessionHistoryGroup[]>;
   getTodaySummary: () => Promise<TodayPracticeSummary>;
   getRecentSession: () => Promise<PracticeSession | null>;
   getRecentSheetSession: (sheetId: string) => Promise<PracticeSession | null>;
-  getContinuePracticeTargets: (options?: ContinuePracticeTargetsOptions) => Promise<ContinuePracticeTargetsResult>;
+  getContinuePracticeTargets: (
+    options?: ContinuePracticeTargetsOptions
+  ) => Promise<ContinuePracticeTargetsResult>;
   getContinuePracticeTarget: () => Promise<ContinuePracticeTarget | null>;
-  evaluateGoalCompletion: (goals: readonly LocalPracticeGoal[]) => Promise<GoalCompletionEvaluation[]>;
+  evaluateGoalCompletion: (
+    goals: readonly LocalPracticeGoal[]
+  ) => Promise<GoalCompletionEvaluation[]>;
   getHomeDashboardAnalyticsSource: () => Promise<HomeDashboardAnalyticsSource>;
   getHomePracticeStreaks: () => Promise<HomePracticeStreaks>;
   getLibraryRecentPracticeSummaryBySheet: (
     options?: LibraryRecentPracticeSummaryBySheetOptions
   ) => Promise<LibraryRecentPracticeSummaryBySheetSource>;
-  getSessionComparison: (options?: SessionComparisonOptions) => Promise<SessionComparisonResult>;
+  getSessionComparison: (
+    options?: SessionComparisonOptions
+  ) => Promise<SessionComparisonResult>;
   listRecordingMetadata: () => Promise<SheetRecordingMetadata[]>;
   clear: () => Promise<void>;
   subscribe: (listener: () => void) => () => void;

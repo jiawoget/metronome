@@ -1,12 +1,27 @@
 import type { PracticeSession } from "@/domain/practice";
-import type { MetronomeSettings, QuickRecording, RecordingArtifact } from "@/lib/quick-metronome/types";
+import type {
+  MetronomeSettings,
+  QuickRecording,
+  RecordingArtifact
+} from "@/lib/quick-metronome/types";
 
 function createId(prefix: string) {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `${prefix}_${crypto.randomUUID()}`;
+  const secureCrypto = typeof crypto === "undefined" ? undefined : crypto;
+
+  if (typeof secureCrypto?.randomUUID === "function") {
+    return `${prefix}_${secureCrypto.randomUUID()}`;
   }
 
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  if (typeof secureCrypto?.getRandomValues === "function") {
+    const bytes = secureCrypto.getRandomValues(new Uint8Array(16));
+    const randomId = Array.from(bytes, (byte) =>
+      byte.toString(16).padStart(2, "0")
+    ).join("");
+
+    return `${prefix}_${randomId}`;
+  }
+
+  throw new Error("Secure random number generation is unavailable");
 }
 
 export function createQuickRecording({
@@ -20,7 +35,8 @@ export function createQuickRecording({
   settings: MetronomeSettings;
   createdAt?: Date;
 }) {
-  const durationMs = artifact.analysis?.decodedDurationMs ?? artifact.durationMs;
+  const durationMs =
+    artifact.analysis?.decodedDurationMs ?? artifact.durationMs;
   const recordingId = createId("recording");
 
   return {

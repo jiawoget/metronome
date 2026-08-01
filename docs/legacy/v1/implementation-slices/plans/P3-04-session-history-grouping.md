@@ -364,18 +364,18 @@ Coding handoff:
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Duration rules from event pairs, active intervals, or incomplete pairs | `P3-05 session-duration-rules` |
-| Home recent activity source and UI | `P3-06`, `P3-07` |
-| Continue Practice target construction, stale target rejection, and segment navigation | `P3-08`, `P3-09` |
-| Goal completion and dashboard analytics | `P3-10` through `P3-15` |
-| Full grouped session-history UI with filters, responsive QA, and navigation | Future explicit UI slice |
-| Any grouped rows/labels, existing history host extension, route/sidebar/Home entry, or UI smoke coverage | Future explicit UI slice |
-| Durable session event repository, event replay, or event migration | Future explicit persistence slice |
-| Segment duration partitioning or multi-segment session timeline | Future explicit segment-session slice |
-| Segment-session child table or indexed segment query optimization | Future planning only if selector performance requires it |
-| Cross-device sync, cloud merge, login, backup conflict resolution | v2 |
+| Deferred work                                                                                            | Future owner                                             |
+| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Duration rules from event pairs, active intervals, or incomplete pairs                                   | `P3-05 session-duration-rules`                           |
+| Home recent activity source and UI                                                                       | `P3-06`, `P3-07`                                         |
+| Continue Practice target construction, stale target rejection, and segment navigation                    | `P3-08`, `P3-09`                                         |
+| Goal completion and dashboard analytics                                                                  | `P3-10` through `P3-15`                                  |
+| Full grouped session-history UI with filters, responsive QA, and navigation                              | Future explicit UI slice                                 |
+| Any grouped rows/labels, existing history host extension, route/sidebar/Home entry, or UI smoke coverage | Future explicit UI slice                                 |
+| Durable session event repository, event replay, or event migration                                       | Future explicit persistence slice                        |
+| Segment duration partitioning or multi-segment session timeline                                          | Future explicit segment-session slice                    |
+| Segment-session child table or indexed segment query optimization                                        | Future planning only if selector performance requires it |
+| Cross-device sync, cloud merge, login, backup conflict resolution                                        | v2                                                       |
 
 ## Split Triggers
 

@@ -35,4 +35,3 @@ independence, and sheet session activity.
 - Verification fix `22563a5` changed same-context sheet stops to update session
   duration rather than ending the active sheet session.
 - No known unimplemented v0 practice-control item remains.
-

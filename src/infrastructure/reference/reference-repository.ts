@@ -53,9 +53,12 @@ function sortReferences(first: SheetReference, second: SheetReference) {
 }
 
 async function listReferences(sheetId: string) {
-    const rows = await getDatabase().references.where("sheetId").equals(sheetId).toArray();
+  const rows = await getDatabase()
+    .references.where("sheetId")
+    .equals(sheetId)
+    .toArray();
 
-    return rows.map(validateSheetReference).sort(sortReferences);
+  return rows.map(validateSheetReference).sort(sortReferences);
 }
 
 export const referenceRepository: ReferenceRepository = {
@@ -65,7 +68,10 @@ export const referenceRepository: ReferenceRepository = {
   },
 
   async getActiveReference(sheetId) {
-    return (await listReferences(sheetId)).find((reference) => reference.isActive) ?? null;
+    return (
+      (await listReferences(sheetId)).find((reference) => reference.isActive) ??
+      null
+    );
   },
 
   async getLocalAudioArtifact(referenceId) {
@@ -79,7 +85,10 @@ export const referenceRepository: ReferenceRepository = {
     const persistedReference = validateSheetReference(reference);
 
     await db.transaction("rw", db.references, db.artifacts, async () => {
-      const existingReferences = await db.references.where("sheetId").equals(persistedReference.sheetId).toArray();
+      const existingReferences = await db.references
+        .where("sheetId")
+        .equals(persistedReference.sheetId)
+        .toArray();
 
       await Promise.all(
         existingReferences.map((existingReference) =>
@@ -96,7 +105,10 @@ export const referenceRepository: ReferenceRepository = {
       await db.references.put(persistedReference);
 
       if (artifact) {
-        await db.artifacts.put(validateLocalAudioArtifact(artifact), persistedReference.id);
+        await db.artifacts.put(
+          validateLocalAudioArtifact(artifact),
+          persistedReference.id
+        );
       }
     });
     dispatchReferenceChange();

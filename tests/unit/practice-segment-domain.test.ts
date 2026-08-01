@@ -30,7 +30,9 @@ describe("practice segment domain", () => {
     measureOneOffsetMs: 500
   };
 
-  const buildSegment = (overrides: Partial<PracticeSegment> = {}): PracticeSegment => ({
+  const buildSegment = (
+    overrides: Partial<PracticeSegment> = {}
+  ): PracticeSegment => ({
     id: "segment-1",
     sheetId: "sheet-alpha",
     name: "Bridge",
@@ -121,7 +123,8 @@ describe("practice segment domain", () => {
         endMeasure: 3
       },
       targetBpm: null,
-      measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:500",
+      measureGridVersion:
+        "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:500",
       measureGridSnapshot: oldGrid,
       measureRangeMs: {
         startMs: 3_000,
@@ -137,7 +140,9 @@ describe("practice segment domain", () => {
     expect(parsePracticeSegmentNotes(undefined)).toBeNull();
     expect(parsePracticeSegmentNotes(null)).toBeNull();
     expect(parsePracticeSegmentNotes("   ")).toBeNull();
-    expect(parsePracticeSegmentNotes("  line 1\nline 2  ")).toBe("line 1\nline 2");
+    expect(parsePracticeSegmentNotes("  line 1\nline 2  ")).toBe(
+      "line 1\nline 2"
+    );
     expect(validatePracticeSegmentNotes(null)).toBeNull();
 
     expect(parsePracticeSegmentTargetBpm(undefined)).toBeNull();
@@ -221,30 +226,73 @@ describe("practice segment domain", () => {
     expect(parsePracticeSegment(buildSegment({ sheetId: "   " }))).toBeNull();
     expect(parsePracticeSegmentName("   ")).toBeNull();
     expect(parsePracticeSegmentName("x".repeat(81))).toBeNull();
-    expect(parsePracticeSegment(buildSegment({ range: { startMeasure: 0, endMeasure: 1 } }))).toBeNull();
-    expect(parsePracticeSegment(buildSegment({ range: { startMeasure: -1, endMeasure: 1 } }))).toBeNull();
-    expect(parsePracticeSegment(buildSegment({ range: { startMeasure: 1.5, endMeasure: 2 } }))).toBeNull();
-    expect(parsePracticeSegment({ ...buildSegment(), range: { startMeasure: "5", endMeasure: 12 } })).toBeNull();
-    expect(parsePracticeSegment(buildSegment({ range: { startMeasure: 7, endMeasure: 6 } }))).toBeNull();
+    expect(
+      parsePracticeSegment(
+        buildSegment({ range: { startMeasure: 0, endMeasure: 1 } })
+      )
+    ).toBeNull();
+    expect(
+      parsePracticeSegment(
+        buildSegment({ range: { startMeasure: -1, endMeasure: 1 } })
+      )
+    ).toBeNull();
+    expect(
+      parsePracticeSegment(
+        buildSegment({ range: { startMeasure: 1.5, endMeasure: 2 } })
+      )
+    ).toBeNull();
+    expect(
+      parsePracticeSegment({
+        ...buildSegment(),
+        range: { startMeasure: "5", endMeasure: 12 }
+      })
+    ).toBeNull();
+    expect(
+      parsePracticeSegment(
+        buildSegment({ range: { startMeasure: 7, endMeasure: 6 } })
+      )
+    ).toBeNull();
     expect(parsePracticeSegment(buildSegment({ targetBpm: 29 }))).toBeNull();
     expect(parsePracticeSegment(buildSegment({ targetBpm: 301 }))).toBeNull();
     expect(parsePracticeSegment(buildSegment({ targetBpm: 96.5 }))).toBeNull();
-    expect(parsePracticeSegment({ ...buildSegment(), targetBpm: "96" })).toBeNull();
-    expect(parsePracticeSegment({ ...buildSegment(), targetBpm: Number.NaN })).toBeNull();
-    expect(parsePracticeSegment({ ...buildSegment(), targetBpm: Number.POSITIVE_INFINITY })).toBeNull();
+    expect(
+      parsePracticeSegment({ ...buildSegment(), targetBpm: "96" })
+    ).toBeNull();
+    expect(
+      parsePracticeSegment({ ...buildSegment(), targetBpm: Number.NaN })
+    ).toBeNull();
+    expect(
+      parsePracticeSegment({
+        ...buildSegment(),
+        targetBpm: Number.POSITIVE_INFINITY
+      })
+    ).toBeNull();
     expect(parsePracticeSegmentNotes("n".repeat(1001))).toBeNull();
     expect(parsePracticeSegment({ ...buildSegment(), notes: 42 })).toBeNull();
     expect(parsePracticeSegment({ ...buildSegment(), grid: null })).toBeNull();
-    expect(parsePracticeSegmentGridAssociation({ measureGridVersion: " ", measureGridSnapshot: baseGrid })).toBeNull();
     expect(
       parsePracticeSegmentGridAssociation({
-        measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:500",
+        measureGridVersion: " ",
+        measureGridSnapshot: baseGrid
+      })
+    ).toBeNull();
+    expect(
+      parsePracticeSegmentGridAssociation({
+        measureGridVersion:
+          "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:500",
         measureGridSnapshot: { ...baseGrid, bpm: 29 }
       })
     ).toBeNull();
 
-    expect(() => validatePracticeSegment(buildSegment({ id: "   " }))).toThrow();
-    expect(() => validatePracticeSegmentGridAssociation({ measureGridVersion: "", measureGridSnapshot: baseGrid })).toThrow();
+    expect(() =>
+      validatePracticeSegment(buildSegment({ id: "   " }))
+    ).toThrow();
+    expect(() =>
+      validatePracticeSegmentGridAssociation({
+        measureGridVersion: "",
+        measureGridSnapshot: baseGrid
+      })
+    ).toThrow();
     expect(() => validatePracticeSegmentName("   ")).toThrow();
     expect(() => validatePracticeSegmentTargetBpm(29)).toThrow();
     expect(() => validatePracticeSegmentNotes("n".repeat(1001))).toThrow();
@@ -261,37 +309,81 @@ describe("practice segment domain", () => {
     const association = createPracticeSegmentGridAssociation(baseGrid);
 
     expect(association).toEqual({
-      measureGridVersion: "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:500",
+      measureGridVersion:
+        "bpm:96|timeSignature:4/4|pickupBeats:0|measureOneOffsetMs:500",
       measureGridSnapshot: baseGrid
     });
-    expect(getMeasureGridVersion(baseGrid)).toBe(getMeasureGridVersion(equivalentGrid));
-    expect(getPracticeSegmentGridStatus(buildSegment(), equivalentGrid)).toBe("current");
-    expect(isPracticeSegmentGridStale(buildSegment(), equivalentGrid)).toBe(false);
+    expect(getMeasureGridVersion(baseGrid)).toBe(
+      getMeasureGridVersion(equivalentGrid)
+    );
+    expect(getPracticeSegmentGridStatus(buildSegment(), equivalentGrid)).toBe(
+      "current"
+    );
+    expect(isPracticeSegmentGridStale(buildSegment(), equivalentGrid)).toBe(
+      false
+    );
   });
 
   it("marks grid changes and missing grids with the expected stale statuses", () => {
     const segment = buildSegment();
 
-    expect(getMeasureGridVersion({ ...baseGrid, bpm: 120 })).not.toBe(getMeasureGridVersion(baseGrid));
-    expect(getMeasureGridVersion({ ...baseGrid, timeSignature: "3/4" })).not.toBe(getMeasureGridVersion(baseGrid));
-    expect(getMeasureGridVersion({ ...baseGrid, pickupBeats: 1 })).not.toBe(getMeasureGridVersion(baseGrid));
-    expect(getMeasureGridVersion({ ...baseGrid, measureOneOffsetMs: 750 })).not.toBe(getMeasureGridVersion(baseGrid));
+    expect(getMeasureGridVersion({ ...baseGrid, bpm: 120 })).not.toBe(
+      getMeasureGridVersion(baseGrid)
+    );
+    expect(
+      getMeasureGridVersion({ ...baseGrid, timeSignature: "3/4" })
+    ).not.toBe(getMeasureGridVersion(baseGrid));
+    expect(getMeasureGridVersion({ ...baseGrid, pickupBeats: 1 })).not.toBe(
+      getMeasureGridVersion(baseGrid)
+    );
+    expect(
+      getMeasureGridVersion({ ...baseGrid, measureOneOffsetMs: 750 })
+    ).not.toBe(getMeasureGridVersion(baseGrid));
 
-    expect(getPracticeSegmentGridStatus(segment, { ...baseGrid, bpm: 120 })).toBe("stale");
-    expect(getPracticeSegmentGridStatus(segment, { ...baseGrid, timeSignature: "3/4" })).toBe("stale");
-    expect(getPracticeSegmentGridStatus(segment, { ...baseGrid, pickupBeats: 1 })).toBe("stale");
-    expect(getPracticeSegmentGridStatus(segment, { ...baseGrid, measureOneOffsetMs: 750 })).toBe("stale");
+    expect(
+      getPracticeSegmentGridStatus(segment, { ...baseGrid, bpm: 120 })
+    ).toBe("stale");
+    expect(
+      getPracticeSegmentGridStatus(segment, {
+        ...baseGrid,
+        timeSignature: "3/4"
+      })
+    ).toBe("stale");
+    expect(
+      getPracticeSegmentGridStatus(segment, { ...baseGrid, pickupBeats: 1 })
+    ).toBe("stale");
+    expect(
+      getPracticeSegmentGridStatus(segment, {
+        ...baseGrid,
+        measureOneOffsetMs: 750
+      })
+    ).toBe("stale");
     expect(getPracticeSegmentGridStatus(segment, null)).toBe("missing-grid");
     expect(isPracticeSegmentGridStale(segment, null)).toBe(true);
-    expect(isPracticeSegmentGridStale(segment, { ...baseGrid, bpm: 120 })).toBe(true);
+    expect(isPracticeSegmentGridStale(segment, { ...baseGrid, bpm: 120 })).toBe(
+      true
+    );
   });
 
   it("reports invalid associations for malformed segment-like inputs", () => {
-    expect(getPracticeSegmentGridStatus(null, baseGrid)).toBe("invalid-association");
-    expect(getPracticeSegmentGridStatus({ ...buildSegment(), grid: { measureGridVersion: "", measureGridSnapshot: baseGrid } }, baseGrid)).toBe(
+    expect(getPracticeSegmentGridStatus(null, baseGrid)).toBe(
       "invalid-association"
     );
-    expect(getPracticeSegmentGridStatus(buildSegment(), { ...baseGrid, bpm: 29 } as MeasureGrid)).toBe("invalid-association");
+    expect(
+      getPracticeSegmentGridStatus(
+        {
+          ...buildSegment(),
+          grid: { measureGridVersion: "", measureGridSnapshot: baseGrid }
+        },
+        baseGrid
+      )
+    ).toBe("invalid-association");
+    expect(
+      getPracticeSegmentGridStatus(buildSegment(), {
+        ...baseGrid,
+        bpm: 29
+      } as MeasureGrid)
+    ).toBe("invalid-association");
   });
 
   describe("segment tempo apply policy", () => {

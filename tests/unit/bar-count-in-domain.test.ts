@@ -123,11 +123,13 @@ describe("bar count-in domain", () => {
         endMeasure: 12
       }
     });
-    expect(plan.beats.map(({ sourceMeasureNumber, isPreRoll, beatNumber }) => ({
-      sourceMeasureNumber,
-      isPreRoll,
-      beatNumber
-    }))).toEqual([
+    expect(
+      plan.beats.map(({ sourceMeasureNumber, isPreRoll, beatNumber }) => ({
+        sourceMeasureNumber,
+        isPreRoll,
+        beatNumber
+      }))
+    ).toEqual([
       { sourceMeasureNumber: 4, isPreRoll: false, beatNumber: 1 },
       { sourceMeasureNumber: 4, isPreRoll: false, beatNumber: 2 },
       { sourceMeasureNumber: 4, isPreRoll: false, beatNumber: 3 },
@@ -178,20 +180,24 @@ describe("bar count-in domain", () => {
       timeSignature: "12/8"
     };
 
-    expect(getBarCountInPlan({
-      measureGrid: sixEightGrid,
-      selectedSegment: null
-    })).toMatchObject({
+    expect(
+      getBarCountInPlan({
+        measureGrid: sixEightGrid,
+        selectedSegment: null
+      })
+    ).toMatchObject({
       status: "ready",
       beatCount: 6,
       beatsPerMeasure: 6,
       beatDurationMs: 250,
       totalDurationMs: 1_500
     });
-    expect(getBarCountInPlan({
-      measureGrid: twelveEightGrid,
-      selectedSegment: null
-    })).toMatchObject({
+    expect(
+      getBarCountInPlan({
+        measureGrid: twelveEightGrid,
+        selectedSegment: null
+      })
+    ).toMatchObject({
       status: "ready",
       beatCount: 12,
       beatsPerMeasure: 12,
@@ -216,11 +222,13 @@ describe("bar count-in domain", () => {
       startMeasure: 5,
       startMs: getMeasureStartMs(fourFourGrid, 5)
     });
-    expect(plan.beats.map(({ sourceMeasureNumber, isPreRoll, beatNumber }) => ({
-      sourceMeasureNumber,
-      isPreRoll,
-      beatNumber
-    }))).toEqual([
+    expect(
+      plan.beats.map(({ sourceMeasureNumber, isPreRoll, beatNumber }) => ({
+        sourceMeasureNumber,
+        isPreRoll,
+        beatNumber
+      }))
+    ).toEqual([
       { sourceMeasureNumber: 3, isPreRoll: false, beatNumber: 1 },
       { sourceMeasureNumber: 3, isPreRoll: false, beatNumber: 2 },
       { sourceMeasureNumber: 3, isPreRoll: false, beatNumber: 3 },
@@ -246,11 +254,13 @@ describe("bar count-in domain", () => {
       beatCount: 8,
       totalDurationMs: 4_000
     });
-    expect(plan.beats.map(({ sourceMeasureNumber, isPreRoll, beatNumber }) => ({
-      sourceMeasureNumber,
-      isPreRoll,
-      beatNumber
-    }))).toEqual([
+    expect(
+      plan.beats.map(({ sourceMeasureNumber, isPreRoll, beatNumber }) => ({
+        sourceMeasureNumber,
+        isPreRoll,
+        beatNumber
+      }))
+    ).toEqual([
       { sourceMeasureNumber: null, isPreRoll: true, beatNumber: 1 },
       { sourceMeasureNumber: null, isPreRoll: true, beatNumber: 2 },
       { sourceMeasureNumber: null, isPreRoll: true, beatNumber: 3 },
@@ -280,7 +290,9 @@ describe("bar count-in domain", () => {
       startMs: 750,
       pickupBeats: 2
     });
-    expect(plan.beats.map((beat) => beat.startsAtMs)).toEqual([-1_250, -750, -250, 250]);
+    expect(plan.beats.map((beat) => beat.startsAtMs)).toEqual([
+      -1_250, -750, -250, 250
+    ]);
   });
 
   it("accounts for nonzero measure-one offsets in absolute starts", () => {
@@ -298,8 +310,12 @@ describe("bar count-in domain", () => {
       status: "ready",
       startMs: 2_500
     });
-    expect(plan.beats.map((beat) => beat.offsetMs)).toEqual([-2_000, -1_500, -1_000, -500]);
-    expect(plan.beats.map((beat) => beat.startsAtMs)).toEqual([500, 1_000, 1_500, 2_000]);
+    expect(plan.beats.map((beat) => beat.offsetMs)).toEqual([
+      -2_000, -1_500, -1_000, -500
+    ]);
+    expect(plan.beats.map((beat) => beat.startsAtMs)).toEqual([
+      500, 1_000, 1_500, 2_000
+    ]);
   });
 
   it("uses the same count-in timing for one-measure and multi-measure segments with the same start", () => {
@@ -329,7 +345,9 @@ describe("bar count-in domain", () => {
     expect(oneMeasurePlan.status).toBe("ready");
     expect(multiMeasurePlan.status).toBe("ready");
     expect(oneMeasurePlan.startMs).toBe(multiMeasurePlan.startMs);
-    expect(oneMeasurePlan.totalDurationMs).toBe(multiMeasurePlan.totalDurationMs);
+    expect(oneMeasurePlan.totalDurationMs).toBe(
+      multiMeasurePlan.totalDurationMs
+    );
     expect(oneMeasurePlan.beats.map((beat) => beat.offsetMs)).toEqual(
       multiMeasurePlan.beats.map((beat) => beat.offsetMs)
     );
@@ -343,10 +361,12 @@ describe("bar count-in domain", () => {
     };
     const segment = buildSegment(oldGrid);
 
-    expect(getBarCountInPlan({
-      measureGrid: fourFourGrid,
-      selectedSegment: segment
-    })).toEqual({
+    expect(
+      getBarCountInPlan({
+        measureGrid: fourFourGrid,
+        selectedSegment: segment
+      })
+    ).toEqual({
       status: "segment-grid-stale",
       scope: "selected-segment",
       startMeasure: 5,

@@ -287,22 +287,22 @@ The second CodeScene result still had `quality_gates: failed` because introduced
 
 The fourteen `Agent Gate Evidence` labels and values are:
 
-| Label | Legal value |
-|---|---|
-| Planner skill read evidence | names `skills/metronome_planner.md` |
-| Planner skill verdict | exact `PLAN_READY` |
-| Coder skill read evidence | names `skills/metronome_coder.md` |
-| Coder repo map / primitive search | concrete, non-placeholder evidence |
-| Reviewer skill read evidence | names `skills/metronome_reviewer.md` |
-| Reviewer verdict | exact `PASS` or `PASS_WITH_NITS` |
+| Label                               | Legal value                                                 |
+| ----------------------------------- | ----------------------------------------------------------- |
+| Planner skill read evidence         | names `skills/metronome_planner.md`                         |
+| Planner skill verdict               | exact `PLAN_READY`                                          |
+| Coder skill read evidence           | names `skills/metronome_coder.md`                           |
+| Coder repo map / primitive search   | concrete, non-placeholder evidence                          |
+| Reviewer skill read evidence        | names `skills/metronome_reviewer.md`                        |
+| Reviewer verdict                    | exact `PASS` or `PASS_WITH_NITS`                            |
 | ChatGPT final review prompt/verdict | `PENDING` at `MSO-5`; `PASS` or `PASS_WITH_NITS` at `MSO-6` |
-| Overlay plan path | exact approved workflow plan path |
-| Overlay plan commit | valid ancestor commit containing the approved plan |
-| Overlay plan blob | matches approved commit and tracked `HEAD` plan blob |
-| Overlay plan SHA-256 | matches tracked `HEAD` Git object bytes |
-| Independent plan review policy | exact Terra standard or Luna standard policy |
-| Independent plan review verdict | exact `PLAN_REVIEW_PASS` |
-| Current metronome Stage | exact `MSO-5` or `MSO-6`, legally paired |
+| Overlay plan path                   | exact approved workflow plan path                           |
+| Overlay plan commit                 | valid ancestor commit containing the approved plan          |
+| Overlay plan blob                   | matches approved commit and tracked `HEAD` plan blob        |
+| Overlay plan SHA-256                | matches tracked `HEAD` Git object bytes                     |
+| Independent plan review policy      | exact Terra standard or Luna standard policy                |
+| Independent plan review verdict     | exact `PLAN_REVIEW_PASS`                                    |
+| Current metronome Stage             | exact `MSO-5` or `MSO-6`, legally paired                    |
 
 Non-overlay debt-contract PRs retain their existing ChatGPT
 `PASS|PASS_WITH_NITS` rule. For overlay-control changes, any cross-pair,
@@ -332,26 +332,26 @@ parsing or renamed equivalents.
 
 ## Validation Matrix
 
-| Boundary | Owner | Command or gate name | Required result |
-|---|---|---|---|
-| Revised plan | planning agent | `git diff --check` | pass |
-| Revised plan | planning agent | line count | at most 491 |
-| MSO-2 | coder/monitor | `node scripts/validate-pr-debt-contract.selftest.mjs` | exit 0 |
-| MSO-2 onward | monitor | `npm run validate:debt-gates` | pass |
-| Candidate | monitor | exact allowlist/scope proof | no outside path |
-| Candidate | monitor | semantic accounting proof | zero `src/**`; one validator; no duplicate workflow, ledger, polling, compatibility, wrapper, or parallel path; circular role requirements and obsolete R-01 evidence absent |
-| Candidate | monitor | `npm run lint:debt:changed` | pass |
-| Candidate | monitor | `npm run lint:xo:changed` | pass |
-| Candidate | monitor | `npm run lint` | pass |
-| Candidate | monitor | `npm run typecheck` | pass |
-| Candidate | monitor | `npm run test:unit` | pass |
-| Candidate | monitor | `npm run build` | pass |
-| Staged candidate | monitor | CodeScene pre-commit safeguard | pass; no decline; diagnosed validator methods below applicable thresholds |
-| Committed HEAD | monitor | CodeScene `analyze_change_set` | no decline; `quality_gates: passed` |
-| Committed HEAD | reviewer | semantic implementation review | exact `PASS|PASS_WITH_NITS` |
-| Draft PR | CI | existing CI | green on exact reviewed HEAD |
-| Draft PR | ChatGPT | external PR review | exact `PASS|PASS_WITH_NITS` |
-| Final body | CI | pull-request edited-event CI | green on unchanged HEAD |
+| Boundary         | Owner          | Command or gate name                                  | Required result                                                                                                                                                              |
+| ---------------- | -------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Revised plan     | planning agent | `git diff --check`                                    | pass                                                                                                                                                                         |
+| Revised plan     | planning agent | line count                                            | at most 491                                                                                                                                                                  |
+| MSO-2            | coder/monitor  | `node scripts/validate-pr-debt-contract.selftest.mjs` | exit 0                                                                                                                                                                       |
+| MSO-2 onward     | monitor        | `npm run validate:debt-gates`                         | pass                                                                                                                                                                         |
+| Candidate        | monitor        | exact allowlist/scope proof                           | no outside path                                                                                                                                                              |
+| Candidate        | monitor        | semantic accounting proof                             | zero `src/**`; one validator; no duplicate workflow, ledger, polling, compatibility, wrapper, or parallel path; circular role requirements and obsolete R-01 evidence absent |
+| Candidate        | monitor        | `npm run lint:debt:changed`                           | pass                                                                                                                                                                         |
+| Candidate        | monitor        | `npm run lint:xo:changed`                             | pass                                                                                                                                                                         |
+| Candidate        | monitor        | `npm run lint`                                        | pass                                                                                                                                                                         |
+| Candidate        | monitor        | `npm run typecheck`                                   | pass                                                                                                                                                                         |
+| Candidate        | monitor        | `npm run test:unit`                                   | pass                                                                                                                                                                         |
+| Candidate        | monitor        | `npm run build`                                       | pass                                                                                                                                                                         |
+| Staged candidate | monitor        | CodeScene pre-commit safeguard                        | pass; no decline; diagnosed validator methods below applicable thresholds                                                                                                    |
+| Committed HEAD   | monitor        | CodeScene `analyze_change_set`                        | no decline; `quality_gates: passed`                                                                                                                                          |
+| Committed HEAD   | reviewer       | semantic implementation review                        | exact `PASS                                                                                                                                                                  | PASS_WITH_NITS` |
+| Draft PR         | CI             | existing CI                                           | green on exact reviewed HEAD                                                                                                                                                 |
+| Draft PR         | ChatGPT        | external PR review                                    | exact `PASS                                                                                                                                                                  | PASS_WITH_NITS` |
+| Final body       | CI             | pull-request edited-event CI                          | green on unchanged HEAD                                                                                                                                                      |
 
 The validator self-test must include these positive and negative cases:
 

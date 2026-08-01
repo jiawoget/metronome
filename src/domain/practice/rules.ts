@@ -17,7 +17,10 @@ import type {
 } from "@/domain/practice/types";
 import { getSheetPracticeHref } from "@/domain/sheet/routes";
 
-export type PracticeSessionDurationInput = Pick<PracticeSession, "startedAt" | "endedAt">;
+export type PracticeSessionDurationInput = Pick<
+  PracticeSession,
+  "startedAt" | "endedAt"
+>;
 
 function parseFiniteTimestampMs(value: Date | string | null | undefined) {
   if (value instanceof Date) {
@@ -40,7 +43,9 @@ export function calculatePracticeDurationMs(
   now = new Date()
 ) {
   const startedAtMs = parseFiniteTimestampMs(session.startedAt);
-  const endMs = parseFiniteTimestampMs(session.endedAt === null ? now : session.endedAt);
+  const endMs = parseFiniteTimestampMs(
+    session.endedAt === null ? now : session.endedAt
+  );
 
   if (startedAtMs === null || endMs === null) {
     return 0;
@@ -69,7 +74,9 @@ export function sortSessionsByRecentActivity(sessions: PracticeSession[]) {
   });
 }
 
-export function getContinuePracticeTarget(session: PracticeSession | null): ContinuePracticeTarget | null {
+export function getContinuePracticeTarget(
+  session: PracticeSession | null
+): ContinuePracticeTarget | null {
   if (!session) {
     return null;
   }
@@ -137,14 +144,21 @@ function parseBrowserLocalDayKey(localDayKey: string) {
   const month = Number(match[2]);
   const day = Number(match[3]);
 
-  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day)
+  ) {
     return null;
   }
 
   return { year, month, day };
 }
 
-function getRelativeBrowserLocalDayKey(localDayKey: string, offsetDays: number) {
+function getRelativeBrowserLocalDayKey(
+  localDayKey: string,
+  offsetDays: number
+) {
   const parsed = parseBrowserLocalDayKey(localDayKey);
 
   if (!parsed) {
@@ -198,23 +212,31 @@ export function getHomePracticeStreaks({
   let previousLocalDay: string | null = null;
 
   for (const localDay of orderedLocalDays) {
-    currentRunDays = previousLocalDay && getRelativeBrowserLocalDayKey(localDay, -1) === previousLocalDay
-      ? currentRunDays + 1
-      : 1;
+    currentRunDays =
+      previousLocalDay &&
+      getRelativeBrowserLocalDayKey(localDay, -1) === previousLocalDay
+        ? currentRunDays + 1
+        : 1;
     longestStreakDays = Math.max(longestStreakDays, currentRunDays);
     previousLocalDay = localDay;
   }
 
   const todayLocalDay = getBrowserLocalDayKey(now);
-  const practicedToday = !!todayLocalDay && practicedLocalDays.has(todayLocalDay);
+  const practicedToday =
+    !!todayLocalDay && practicedLocalDays.has(todayLocalDay);
   const currentStreakAnchor = practicedToday
     ? todayLocalDay
-    : todayLocalDay ? getRelativeBrowserLocalDayKey(todayLocalDay, -1) : null;
+    : todayLocalDay
+      ? getRelativeBrowserLocalDayKey(todayLocalDay, -1)
+      : null;
 
   return {
     generatedAt,
     currentStreakDays: currentStreakAnchor
-      ? countConsecutiveLocalDaysEndingAt(practicedLocalDays, currentStreakAnchor)
+      ? countConsecutiveLocalDaysEndingAt(
+          practicedLocalDays,
+          currentStreakAnchor
+        )
       : 0,
     longestStreakDays,
     practicedToday,
@@ -229,14 +251,22 @@ export function getTodayPracticeSummary(
   sessions: PracticeSession[],
   now = new Date()
 ): TodayPracticeSummary {
-  const todaySessions = sessions.filter((session) => isBrowserLocalDay(session.startedAt, now));
-  const durationMs = todaySessions.reduce((total, session) => total + session.durationMs, 0);
+  const todaySessions = sessions.filter((session) =>
+    isBrowserLocalDay(session.startedAt, now)
+  );
+  const durationMs = todaySessions.reduce(
+    (total, session) => total + session.durationMs,
+    0
+  );
 
   return {
     durationMs,
     minutesToday: Math.round(durationMs / 60_000),
     sessionsToday: todaySessions.length,
-    recordingsToday: todaySessions.reduce((total, session) => total + session.recordingCount, 0)
+    recordingsToday: todaySessions.reduce(
+      (total, session) => total + session.recordingCount,
+      0
+    )
   };
 }
 
@@ -284,7 +314,9 @@ export function getHomeDashboardAnalyticsSource({
     }
   }
 
-  const sheetTakes = recordings.filter((recording) => recording.type === "sheet").length;
+  const sheetTakes = recordings.filter(
+    (recording) => recording.type === "sheet"
+  ).length;
   const practicedSheets = practicedSheetIds.size;
 
   return {
@@ -324,12 +356,13 @@ export type LibraryRecentPracticeSummaryBySheetInput = {
   limit?: number;
 };
 
-type LibraryRecentPracticeSummaryDraft = LibraryRecentPracticeSummaryBySheetItem & {
-  lastPracticedAtMs: number | null;
-  lastSessionAtMs: number | null;
-  latestRecordingAtMs: number | null;
-  sessionLatestRecordingId: string | null;
-};
+type LibraryRecentPracticeSummaryDraft =
+  LibraryRecentPracticeSummaryBySheetItem & {
+    lastPracticedAtMs: number | null;
+    lastSessionAtMs: number | null;
+    latestRecordingAtMs: number | null;
+    sessionLatestRecordingId: string | null;
+  };
 
 const DEFAULT_LIBRARY_RECENT_PRACTICE_SUMMARY_LIMIT = 20;
 
@@ -352,7 +385,10 @@ function getValidIsoTimestampMs(value: string | null | undefined) {
 }
 
 function getSessionActivityTimestampMs(session: PracticeSession) {
-  return getValidIsoTimestampMs(session.updatedAt) ?? getValidIsoTimestampMs(session.startedAt);
+  return (
+    getValidIsoTimestampMs(session.updatedAt) ??
+    getValidIsoTimestampMs(session.startedAt)
+  );
 }
 
 function getOrCreateLibrarySummaryDraft(
@@ -393,7 +429,10 @@ function applyLibrarySummaryActivityTimestamp(
     return;
   }
 
-  if (draft.lastPracticedAtMs === null || timestampMs > draft.lastPracticedAtMs) {
+  if (
+    draft.lastPracticedAtMs === null ||
+    timestampMs > draft.lastPracticedAtMs
+  ) {
     draft.lastPracticedAtMs = timestampMs;
     draft.lastPracticedAt = new Date(timestampMs).toISOString();
   }
@@ -431,10 +470,15 @@ export function getLibraryRecentPracticeSummaryBySheet({
 
     applyLibrarySummaryActivityTimestamp(draft, timestampMs);
 
-    if (timestampMs !== null && (draft.lastSessionAtMs === null || timestampMs > draft.lastSessionAtMs)) {
+    if (
+      timestampMs !== null &&
+      (draft.lastSessionAtMs === null || timestampMs > draft.lastSessionAtMs)
+    ) {
       draft.lastSessionAtMs = timestampMs;
       draft.lastSessionId = session.id;
-      draft.sessionLatestRecordingId = normalizeAnalyticsId(session.latestRecordingId);
+      draft.sessionLatestRecordingId = normalizeAnalyticsId(
+        session.latestRecordingId
+      );
     }
   }
 
@@ -460,7 +504,11 @@ export function getLibraryRecentPracticeSummaryBySheet({
 
     applyLibrarySummaryActivityTimestamp(draft, timestampMs);
 
-    if (timestampMs !== null && (draft.latestRecordingAtMs === null || timestampMs > draft.latestRecordingAtMs)) {
+    if (
+      timestampMs !== null &&
+      (draft.latestRecordingAtMs === null ||
+        timestampMs > draft.latestRecordingAtMs)
+    ) {
       draft.latestRecordingAtMs = timestampMs;
       draft.latestRecordingId = recording.id;
     }
@@ -469,7 +517,8 @@ export function getLibraryRecentPracticeSummaryBySheet({
   const items = Array.from(drafts.values())
     .filter((draft) => draft.lastPracticedAtMs !== null)
     .sort((first, second) => {
-      const recentOrder = (second.lastPracticedAtMs ?? 0) - (first.lastPracticedAtMs ?? 0);
+      const recentOrder =
+        (second.lastPracticedAtMs ?? 0) - (first.lastPracticedAtMs ?? 0);
 
       return recentOrder || first.sheetId.localeCompare(second.sheetId);
     })
@@ -478,7 +527,8 @@ export function getLibraryRecentPracticeSummaryBySheet({
       sheetId: draft.sheetId,
       lastPracticedAt: draft.lastPracticedAt,
       lastSessionId: draft.lastSessionId,
-      latestRecordingId: draft.latestRecordingId ?? draft.sessionLatestRecordingId,
+      latestRecordingId:
+        draft.latestRecordingId ?? draft.sessionLatestRecordingId,
       sessionCount: draft.sessionCount,
       recordingCount: draft.recordingCount,
       durationMs: draft.durationMs,
@@ -499,9 +549,20 @@ export type PracticeGoalEvaluationInput = {
   now?: Date;
 };
 
-const LOCAL_PRACTICE_GOAL_KINDS = new Set<LocalPracticeGoalKind>(["minutes", "sessions", "takes"]);
-const LOCAL_PRACTICE_GOAL_PERIODS = new Set<LocalPracticeGoalPeriod>(["today", "all-time"]);
-const LOCAL_PRACTICE_GOAL_STATUSES = new Set<LocalPracticeGoalStatus>(["active", "completed", "invalid"]);
+const LOCAL_PRACTICE_GOAL_KINDS = new Set<LocalPracticeGoalKind>([
+  "minutes",
+  "sessions",
+  "takes"
+]);
+const LOCAL_PRACTICE_GOAL_PERIODS = new Set<LocalPracticeGoalPeriod>([
+  "today",
+  "all-time"
+]);
+const LOCAL_PRACTICE_GOAL_STATUSES = new Set<LocalPracticeGoalStatus>([
+  "active",
+  "completed",
+  "invalid"
+]);
 
 function isFiniteIsoDate(value: unknown) {
   return typeof value === "string" && Number.isFinite(Date.parse(value));
@@ -512,13 +573,15 @@ function normalizeGoalId(value: unknown) {
 }
 
 function normalizeGoalKind(value: unknown): LocalPracticeGoalKind | null {
-  return typeof value === "string" && LOCAL_PRACTICE_GOAL_KINDS.has(value as LocalPracticeGoalKind)
+  return typeof value === "string" &&
+    LOCAL_PRACTICE_GOAL_KINDS.has(value as LocalPracticeGoalKind)
     ? (value as LocalPracticeGoalKind)
     : null;
 }
 
 function normalizeGoalPeriod(value: unknown): LocalPracticeGoalPeriod | null {
-  return typeof value === "string" && LOCAL_PRACTICE_GOAL_PERIODS.has(value as LocalPracticeGoalPeriod)
+  return typeof value === "string" &&
+    LOCAL_PRACTICE_GOAL_PERIODS.has(value as LocalPracticeGoalPeriod)
     ? (value as LocalPracticeGoalPeriod)
     : null;
 }
@@ -528,13 +591,17 @@ function normalizeGoalStatus(value: unknown): LocalPracticeGoalStatus | null {
     return "active";
   }
 
-  return typeof value === "string" && LOCAL_PRACTICE_GOAL_STATUSES.has(value as LocalPracticeGoalStatus)
+  return typeof value === "string" &&
+    LOCAL_PRACTICE_GOAL_STATUSES.has(value as LocalPracticeGoalStatus)
     ? (value as LocalPracticeGoalStatus)
     : null;
 }
 
 function normalizeGoalTarget(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) && Number.isInteger(value) && value > 0
+  return typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value > 0
     ? value
     : null;
 }
@@ -556,7 +623,11 @@ function invalidGoalEvaluation(
   };
 }
 
-function isInGoalPeriod(period: LocalPracticeGoalPeriod, isoValue: string, now: Date) {
+function isInGoalPeriod(
+  period: LocalPracticeGoalPeriod,
+  isoValue: string,
+  now: Date
+) {
   if (!isFiniteIsoDate(isoValue)) {
     return false;
   }
@@ -574,7 +645,12 @@ function sumGoalDurationMs(
       return total;
     }
 
-    return total + (Number.isFinite(session.durationMs) && session.durationMs > 0 ? session.durationMs : 0);
+    return (
+      total +
+      (Number.isFinite(session.durationMs) && session.durationMs > 0
+        ? session.durationMs
+        : 0)
+    );
   }, 0);
 }
 
@@ -583,7 +659,9 @@ function countGoalSessions(
   period: LocalPracticeGoalPeriod,
   now: Date
 ) {
-  return sessions.filter((session) => isInGoalPeriod(period, session.startedAt, now)).length;
+  return sessions.filter((session) =>
+    isInGoalPeriod(period, session.startedAt, now)
+  ).length;
 }
 
 function countGoalRecordings(
@@ -591,8 +669,10 @@ function countGoalRecordings(
   period: LocalPracticeGoalPeriod,
   now: Date
 ) {
-  return recordings.filter((recording) =>
-    recording.type === "sheet" && isInGoalPeriod(period, recording.createdAt, now)
+  return recordings.filter(
+    (recording) =>
+      recording.type === "sheet" &&
+      isInGoalPeriod(period, recording.createdAt, now)
   ).length;
 }
 
@@ -605,7 +685,7 @@ function clampGoalProgressRatio(value: number) {
 }
 
 function getValidCompletedAt(goal: LocalPracticeGoal) {
-  return isFiniteIsoDate(goal.completedAt) ? goal.completedAt ?? null : null;
+  return isFiniteIsoDate(goal.completedAt) ? (goal.completedAt ?? null) : null;
 }
 
 function createCompletedEvaluation(
@@ -624,7 +704,10 @@ function createCompletedEvaluation(
     progress,
     target,
     progressRatio: clampGoalProgressRatio(progressRatio),
-    completedAt: status === "completed" ? getValidCompletedAt(goal) ?? now.toISOString() : now.toISOString(),
+    completedAt:
+      status === "completed"
+        ? (getValidCompletedAt(goal) ?? now.toISOString())
+        : now.toISOString(),
     reason: null
   };
 }
@@ -635,7 +718,9 @@ function createIncompleteEvaluation(
   target: number,
   progress: number,
   progressRatio: number,
-  status: "not-started" | "in-progress" = progress > 0 ? "in-progress" : "not-started"
+  status: "not-started" | "in-progress" = progress > 0
+    ? "in-progress"
+    : "not-started"
 ): GoalCompletionEvaluation {
   return {
     goalId: goal.id.trim(),
@@ -697,24 +782,41 @@ export function evaluatePracticeGoalCompletion({
       const progressRatio = durationMs / targetMs;
 
       return durationMs >= targetMs
-        ? createCompletedEvaluation(goal, kind, target, progress, progressRatio, now, status)
+        ? createCompletedEvaluation(
+            goal,
+            kind,
+            target,
+            progress,
+            progressRatio,
+            now,
+            status
+          )
         : createIncompleteEvaluation(
+            goal,
+            kind,
+            target,
+            progress,
+            progressRatio,
+            durationMs > 0 ? "in-progress" : "not-started"
+          );
+    }
+
+    const progress =
+      kind === "sessions"
+        ? countGoalSessions(sessions, period, now)
+        : countGoalRecordings(recordings, period, now);
+    const progressRatio = progress / target;
+
+    return progress >= target
+      ? createCompletedEvaluation(
           goal,
           kind,
           target,
           progress,
           progressRatio,
-          durationMs > 0 ? "in-progress" : "not-started"
-        );
-    }
-
-    const progress = kind === "sessions"
-      ? countGoalSessions(sessions, period, now)
-      : countGoalRecordings(recordings, period, now);
-    const progressRatio = progress / target;
-
-    return progress >= target
-      ? createCompletedEvaluation(goal, kind, target, progress, progressRatio, now, status)
+          now,
+          status
+        )
       : createIncompleteEvaluation(goal, kind, target, progress, progressRatio);
   });
 }

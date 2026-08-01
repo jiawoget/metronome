@@ -43,4 +43,3 @@ error states, and independence from metronome/recording.
 - Known operational risk: live Bilibili endpoint may fail due to network/CORS or
   third-party changes; deterministic E2E does not depend on live network.
 - No known unimplemented v0 reference item remains.
-

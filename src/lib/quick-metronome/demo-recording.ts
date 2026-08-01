@@ -1,4 +1,7 @@
-import { DEFAULT_METRONOME_SETTINGS, type QuickRecording } from "@/lib/quick-metronome/types";
+import {
+  DEFAULT_METRONOME_SETTINGS,
+  type QuickRecording
+} from "@/lib/quick-metronome/types";
 
 const DEMO_SAMPLE_RATE = 8_000;
 const DEMO_DURATION_SECONDS = 1;
@@ -12,7 +15,8 @@ function writeString(view: DataView, offset: number, value: string) {
 }
 
 function base64Encode(bytes: Uint8Array) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const alphabet =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   let output = "";
 
   for (let index = 0; index < bytes.length; index += 3) {
@@ -91,4 +95,3 @@ export function getDemoQuickRecording(): QuickRecording {
     settings: DEFAULT_METRONOME_SETTINGS
   };
 }
-

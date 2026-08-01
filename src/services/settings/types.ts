@@ -34,4 +34,3 @@ export type StorageSummaryService = {
 export type LocalDataCleanupService = {
   clearAllLocalData: () => Promise<void>;
 };
-

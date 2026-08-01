@@ -87,8 +87,11 @@ export function makeSheetReviewRecording(
   options: ReviewRecordingFactoryOptions<MakeSheetReviewRecordingOverrides> = {}
 ): ReviewRecording {
   const defaults = options.defaults ?? {};
-  const { settings: defaultSettings, segmentContext: defaultSegmentContext, ...defaultOverrides } =
-    defaults;
+  const {
+    settings: defaultSettings,
+    segmentContext: defaultSegmentContext,
+    ...defaultOverrides
+  } = defaults;
   const { settings, segmentContext, ...recordingOverrides } = overrides;
   const hasDefaultSegmentContext = hasOwn(defaults, "segmentContext");
   const hasSegmentContextOverride = hasOwn(overrides, "segmentContext");

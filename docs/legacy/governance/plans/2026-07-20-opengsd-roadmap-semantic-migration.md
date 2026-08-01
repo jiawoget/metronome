@@ -153,40 +153,40 @@ The resulting file must contain exactly 32 checked requirements, each mapped to 
 
 Move these exact Pending IDs and stable feature keys into a `ROADMAP.md` `## Backlog` table. Source-ground each `Required behavior` sentence and `Legacy source` link in the product-feature map and its linked frozen legacy contract:
 
-| ID | Feature key |
-|---|---|
-| REQ-001 | `design-style.analytics-visuals` |
-| REQ-002 | `design-style.segment-visual-states` |
-| REQ-003 | `design-style.review-comparison-views` |
-| REQ-010 | `quick.auto-increase` |
-| REQ-011 | `quick.mute-training` |
-| REQ-012 | `quick.practice-templates` |
-| REQ-013 | `quick.warmup-routines` |
-| REQ-014 | `quick.tempo-progress-history` |
-| REQ-015 | `quick.advanced-countdown` |
-| REQ-039 | `markers.categories-severity` |
-| REQ-040 | `markers.segment-markers` |
-| REQ-041 | `markers.waveform-overlay` |
-| REQ-042 | `sessions.event-timeline` |
-| REQ-043 | `sessions.segment-sessions` |
-| REQ-044 | `sessions.session-history-grouping` |
-| REQ-046 | `reference.ab-loop` |
-| REQ-047 | `reference.playback-speed` |
-| REQ-048 | `reference.manual-offset-alignment` |
-| REQ-049 | `reference.segment-binding` |
-| REQ-050 | `reference.waveform-display` |
-| REQ-051 | `settings.audio-device-selection` |
-| REQ-052 | `settings.theme-system` |
-| REQ-053 | `settings.notification-settings` |
-| REQ-054 | `settings.data-import-export` |
-| REQ-055 | `settings.storage-usage-breakdown` |
-| REQ-056 | `settings.selective-cleanup` |
-| REQ-057 | `practice-session.event-timeline` |
-| REQ-058 | `practice-session.segment-history` |
-| REQ-061 | `analysis.engine-boundary` |
-| REQ-062 | `analysis.peak-precomputation` |
+| ID      | Feature key                               |
+| ------- | ----------------------------------------- |
+| REQ-001 | `design-style.analytics-visuals`          |
+| REQ-002 | `design-style.segment-visual-states`      |
+| REQ-003 | `design-style.review-comparison-views`    |
+| REQ-010 | `quick.auto-increase`                     |
+| REQ-011 | `quick.mute-training`                     |
+| REQ-012 | `quick.practice-templates`                |
+| REQ-013 | `quick.warmup-routines`                   |
+| REQ-014 | `quick.tempo-progress-history`            |
+| REQ-015 | `quick.advanced-countdown`                |
+| REQ-039 | `markers.categories-severity`             |
+| REQ-040 | `markers.segment-markers`                 |
+| REQ-041 | `markers.waveform-overlay`                |
+| REQ-042 | `sessions.event-timeline`                 |
+| REQ-043 | `sessions.segment-sessions`               |
+| REQ-044 | `sessions.session-history-grouping`       |
+| REQ-046 | `reference.ab-loop`                       |
+| REQ-047 | `reference.playback-speed`                |
+| REQ-048 | `reference.manual-offset-alignment`       |
+| REQ-049 | `reference.segment-binding`               |
+| REQ-050 | `reference.waveform-display`              |
+| REQ-051 | `settings.audio-device-selection`         |
+| REQ-052 | `settings.theme-system`                   |
+| REQ-053 | `settings.notification-settings`          |
+| REQ-054 | `settings.data-import-export`             |
+| REQ-055 | `settings.storage-usage-breakdown`        |
+| REQ-056 | `settings.selective-cleanup`              |
+| REQ-057 | `practice-session.event-timeline`         |
+| REQ-058 | `practice-session.segment-history`        |
+| REQ-061 | `analysis.engine-boundary`                |
+| REQ-062 | `analysis.peak-precomputation`            |
 | REQ-063 | `analysis.onset-detection-infrastructure` |
-| REQ-064 | `analysis.reference-recording-support` |
+| REQ-064 | `analysis.reference-recording-support`    |
 
 Each Backlog row has columns `ID`, `Feature key`, `Required behavior`, `Status`, and `Legacy source`. Every status is `Pending`. Do not add a Phase column.
 

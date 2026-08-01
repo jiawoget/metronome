@@ -15,10 +15,10 @@ Should the two CodeScene-recommended Sheet Practice files be one multi-file refa
 
 ### CodeScene web baseline
 
-| File | Code Health | Commits / 1 year | Friction | LOC |
-| --- | ---: | ---: | ---: | ---: |
-| `sheet-practice-controls.tsx` | 6.51 | 32 | 36% | 1,271 |
-| `practice-segment-selector-panel.tsx` | 6.69 | 8 | 8% | 929 |
+| File                                  | Code Health | Commits / 1 year | Friction |   LOC |
+| ------------------------------------- | ----------: | ---------------: | -------: | ----: |
+| `sheet-practice-controls.tsx`         |        6.51 |               32 |      36% | 1,271 |
+| `practice-segment-selector-panel.tsx` |        6.69 |                8 |       8% |   929 |
 
 ### Local CodeScene MCP review
 

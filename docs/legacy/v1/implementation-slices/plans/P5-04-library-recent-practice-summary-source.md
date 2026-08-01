@@ -255,15 +255,15 @@ Implement P5-04 only. Prefer one pure selector and one thin service method. Do n
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Rendering compact recent-practice summaries on sheet rows/details | P5-05 `library-recent-practice-summary-ui` |
-| Loading/error/empty UI copy for the library summary panel | P5-05 |
-| Joining summary rows to `SheetListItem` in React or a tiny UI adapter | P5-05 |
-| Navigating from a sheet to Recordings Review filtered by sheet | P5-06 `library-review-by-sheet-link` |
-| Review route/query/filter behavior and stale sheet handling in recordings review | P5-06 |
-| Viewer thumbnails, page jump, zoom/pan, assisted page turning | P5-07 through P5-12 |
-| Folder system, cloud sync, account features, sharing, automatic score following, scoring, mistake detection | Future reviewed feature, not Pack 5 P5-04 |
+| Deferred work                                                                                               | Future owner                               |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Rendering compact recent-practice summaries on sheet rows/details                                           | P5-05 `library-recent-practice-summary-ui` |
+| Loading/error/empty UI copy for the library summary panel                                                   | P5-05                                      |
+| Joining summary rows to `SheetListItem` in React or a tiny UI adapter                                       | P5-05                                      |
+| Navigating from a sheet to Recordings Review filtered by sheet                                              | P5-06 `library-review-by-sheet-link`       |
+| Review route/query/filter behavior and stale sheet handling in recordings review                            | P5-06                                      |
+| Viewer thumbnails, page jump, zoom/pan, assisted page turning                                               | P5-07 through P5-12                        |
+| Folder system, cloud sync, account features, sharing, automatic score following, scoring, mistake detection | Future reviewed feature, not Pack 5 P5-04  |
 
 ## Split Triggers
 

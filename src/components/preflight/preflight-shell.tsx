@@ -24,12 +24,16 @@ export function PreflightShell() {
               <ShieldCheck className="h-4 w-4 text-accent" aria-hidden="true" />
               v0 preflight
             </p>
-            <h1 id="preflight-title" className="text-3xl font-semibold tracking-normal sm:text-4xl">
+            <h1
+              id="preflight-title"
+              className="text-3xl font-semibold tracking-normal sm:text-4xl"
+            >
               Metronome Practice
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
-              Engineering foundation is in place for separate module verification. Product modules
-              are intentionally unavailable in this build.
+              Engineering foundation is in place for separate module
+              verification. Product modules are intentionally unavailable in
+              this build.
             </p>
           </div>
           <div className="flex items-center gap-3 rounded-md border border-border bg-card px-4 py-3 shadow-soft">
@@ -63,15 +67,19 @@ export function PreflightShell() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Construction className="h-5 w-5 text-accent" aria-hidden="true" />
+                <Construction
+                  className="h-5 w-5 text-accent"
+                  aria-hidden="true"
+                />
                 Module Status
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-muted-foreground">
-                This placeholder exists only for install, build, unit, and browser smoke checks.
-                Metronome playback, recording, sheet import, sheet viewing, references, and settings
-                remain out of scope for preflight.
+                This placeholder exists only for install, build, unit, and
+                browser smoke checks. Metronome playback, recording, sheet
+                import, sheet viewing, references, and settings remain out of
+                scope for preflight.
               </p>
             </CardContent>
           </Card>

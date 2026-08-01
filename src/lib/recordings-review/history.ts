@@ -1,6 +1,12 @@
-import { formatDuration, formatRecordingDate } from "@/lib/recordings-review/format";
+import {
+  formatDuration,
+  formatRecordingDate
+} from "@/lib/recordings-review/format";
 import { getSheetPracticeQueryHref } from "@/domain/sheet/routes";
-export { getErrorMarkerSeekTarget, sortErrorMarkers } from "@/lib/recordings-review/error-markers";
+export {
+  getErrorMarkerSeekTarget,
+  sortErrorMarkers
+} from "@/lib/recordings-review/error-markers";
 import { sortReviewRecordingsByNewest } from "@/lib/recordings-review/take-groups";
 import type {
   RecordingOrganizationMetadata,
@@ -17,7 +23,9 @@ export function getRecordingDisplayName(recording: ReviewRecording) {
     return recording.name.trim();
   }
 
-  return recording.type === "sheet" ? "Sheet practice recording" : "Quick metronome recording";
+  return recording.type === "sheet"
+    ? "Sheet practice recording"
+    : "Quick metronome recording";
 }
 
 export function sortRecordingsByNewest(recordings: ReviewRecording[]) {
@@ -93,8 +101,9 @@ export function filterRecordings({
   const normalizedQuery = query.trim().toLowerCase();
   const normalizedTag = tag.trim().toLowerCase();
   const normalizedSheetId = normalizeOptionalRouteValue(sheetId);
-  const organizationByRecordingId =
-    createRecordingOrganizationMap(recordingOrganization);
+  const organizationByRecordingId = createRecordingOrganizationMap(
+    recordingOrganization
+  );
 
   return sortRecordingsByNewest(recordings).filter((recording) => {
     if (
@@ -127,7 +136,9 @@ export function filterRecordings({
     if (
       normalizedTag &&
       normalizedTag !== "all" &&
-      !organization?.tags.some((candidate) => candidate.toLowerCase() === normalizedTag)
+      !organization?.tags.some(
+        (candidate) => candidate.toLowerCase() === normalizedTag
+      )
     ) {
       return false;
     }

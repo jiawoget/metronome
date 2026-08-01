@@ -28,6 +28,9 @@ export type PracticeGoalService = {
 export type CreatePracticeGoalServiceOptions = {
   repository: PracticeGoalRepository;
   sessionRepository: Pick<PracticeSessionRepository, "listSessions">;
-  recordingRepository: Pick<PracticeRecordingMetadataRepository, "listRecordingMetadata">;
+  recordingRepository: Pick<
+    PracticeRecordingMetadataRepository,
+    "listRecordingMetadata"
+  >;
   now?: () => Date;
 };

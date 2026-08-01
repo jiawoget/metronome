@@ -52,8 +52,7 @@ class SheetMetronomePresetDexieDatabase
 
 let database: SheetMetronomePresetDexieDatabase | null = null;
 let malformedRowListener:
-  | ((info: SheetMetronomePresetMalformedRowInfo) => void)
-  | null = null;
+  ((info: SheetMetronomePresetMalformedRowInfo) => void) | null = null;
 
 function getDatabase() {
   database ??= new SheetMetronomePresetDexieDatabase();
@@ -77,11 +76,7 @@ function parseNormalizedRowId(
 }
 
 function parsePersistedSegmentId(value: unknown) {
-  if (
-    value !== undefined &&
-    value !== null &&
-    typeof value !== "string"
-  ) {
+  if (value !== undefined && value !== null && typeof value !== "string") {
     return {
       ok: false as const
     };
@@ -112,9 +107,7 @@ function parsePersistedSheetMetronomePresetRecordIdentifiers(value: unknown) {
     candidate.presetId,
     normalizeSheetMetronomePresetId
   );
-  const parsedSegmentId = parsePersistedSegmentId(
-    candidate.segmentId
-  );
+  const parsedSegmentId = parsePersistedSegmentId(candidate.segmentId);
   const parsedPreset = parseSheetMetronomePreset(candidate.preset);
 
   if (
@@ -145,9 +138,8 @@ function parsePersistedSheetMetronomePresetRecordIdentifiers(value: unknown) {
 export function parsePersistedSheetMetronomePresetRecord(
   value: unknown
 ): SheetMetronomePreset | null {
-  const parsedRecord = parsePersistedSheetMetronomePresetRecordIdentifiers(
-    value
-  );
+  const parsedRecord =
+    parsePersistedSheetMetronomePresetRecordIdentifiers(value);
 
   return parsedRecord?.parsedPreset ?? null;
 }
@@ -185,13 +177,12 @@ export const browserSheetMetronomePresetRepository: SheetMetronomePresetReposito
       const parsedPresets: SheetMetronomePreset[] = [];
 
       for (const record of records) {
-        const parsedRecord =
-          parsePresetRecordForRepositoryRead({
-            operation: "listPresets",
-            sheetId: normalizedSheetId,
-            presetId: null,
-            row: record
-          });
+        const parsedRecord = parsePresetRecordForRepositoryRead({
+          operation: "listPresets",
+          sheetId: normalizedSheetId,
+          presetId: null,
+          row: record
+        });
 
         if (!parsedRecord) {
           continue;
@@ -239,7 +230,10 @@ export const browserSheetMetronomePresetRepository: SheetMetronomePresetReposito
       const normalizedSheetId = normalizeSheetMetronomePresetSheetId(sheetId);
       const normalizedPresetId = normalizeSheetMetronomePresetId(presetId);
 
-      await getDatabase().presets.delete([normalizedSheetId, normalizedPresetId]);
+      await getDatabase().presets.delete([
+        normalizedSheetId,
+        normalizedPresetId
+      ]);
     }
   };
 
@@ -260,7 +254,9 @@ export async function seedSheetMetronomePresetRecordForTests(
     sheetId: normalizedSheetId,
     presetId: normalizedPresetId,
     segmentId: null,
-    ...(value && typeof value === "object" && !Array.isArray(value) ? value : {})
+    ...(value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {})
   } as PersistedSheetMetronomePresetRecord);
 }
 

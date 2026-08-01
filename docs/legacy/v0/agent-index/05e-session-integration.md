@@ -44,4 +44,3 @@ metronome/recording/reference transports.
   playback now has browser proof for creating/restoring a sheet session while
   remaining reference-only before recording.
 - No known unimplemented v0 session-integration item remains.
-

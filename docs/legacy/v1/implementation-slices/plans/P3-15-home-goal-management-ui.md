@@ -593,14 +593,14 @@ If browser E2E uses Playwright `[chromium]`, report it explicitly as Playwright 
 
 ## Deferred Work
 
-| Deferred work | Future owner |
-| --- | --- |
-| Command palette actions for goal creation or focus | `P3-16 home-command-palette` or later reviewed split |
-| Dashboard analytics aggregation that treats goal progress as an analytics panel metric | Reviewed analytics follow-up |
-| Goal completion writeback/status auto-maintenance | Separate reviewed goal-writeback slice |
-| Goal templates/defaults/recommendations/practice plans | Future explicit feature |
-| Weekly/monthly/streak/per-sheet/per-segment/target-BPM goals | Future explicit feature |
-| Goal notifications/reminders/achievements/social sharing | Future explicit feature |
-| Import/export, selective cleanup, or storage usage for goals | Pack 8 or reviewed settings/local-data slice |
-| Practice-session session comparison or comparison UI/source behavior | `P3-17 practice-session-session-comparison` or later reviewed split |
-| Cloud/cross-device goal sync | v2 |
+| Deferred work                                                                          | Future owner                                                        |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Command palette actions for goal creation or focus                                     | `P3-16 home-command-palette` or later reviewed split                |
+| Dashboard analytics aggregation that treats goal progress as an analytics panel metric | Reviewed analytics follow-up                                        |
+| Goal completion writeback/status auto-maintenance                                      | Separate reviewed goal-writeback slice                              |
+| Goal templates/defaults/recommendations/practice plans                                 | Future explicit feature                                             |
+| Weekly/monthly/streak/per-sheet/per-segment/target-BPM goals                           | Future explicit feature                                             |
+| Goal notifications/reminders/achievements/social sharing                               | Future explicit feature                                             |
+| Import/export, selective cleanup, or storage usage for goals                           | Pack 8 or reviewed settings/local-data slice                        |
+| Practice-session session comparison or comparison UI/source behavior                   | `P3-17 practice-session-session-comparison` or later reviewed split |
+| Cloud/cross-device goal sync                                                           | v2                                                                  |

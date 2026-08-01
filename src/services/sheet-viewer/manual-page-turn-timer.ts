@@ -1,4 +1,7 @@
-import { createSheetRecordingSegmentContext, type PracticeSegment } from "@/domain/practice";
+import {
+  createSheetRecordingSegmentContext,
+  type PracticeSegment
+} from "@/domain/practice";
 
 export type ManualSegmentPageTurnTimerApi = {
   setTimeout: (handler: () => void, timeoutMs: number) => number;
@@ -9,7 +12,9 @@ export type ManualSegmentPageTurnTimer = {
   cancel: () => void;
 };
 
-export function getManualSegmentPageTurnDelayMs(segment: PracticeSegment | null | undefined) {
+export function getManualSegmentPageTurnDelayMs(
+  segment: PracticeSegment | null | undefined
+) {
   if (!segment) {
     return null;
   }
@@ -24,7 +29,8 @@ export function getManualSegmentPageTurnDelayMs(segment: PracticeSegment | null 
   }
 }
 
-export const getSheetViewerAssistedPageTurnDelayMs = getManualSegmentPageTurnDelayMs;
+export const getSheetViewerAssistedPageTurnDelayMs =
+  getManualSegmentPageTurnDelayMs;
 
 export function armManualSegmentPageTurnTimer({
   delayMs,

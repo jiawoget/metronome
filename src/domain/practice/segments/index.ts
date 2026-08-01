@@ -28,16 +28,21 @@ export type PracticeSegment = {
   grid: PracticeSegmentGridAssociation;
 };
 
-export type PracticeSegmentGridStatus = "current" | "stale" | "missing-grid" | "invalid-association";
+export type PracticeSegmentGridStatus =
+  "current" | "stale" | "missing-grid" | "invalid-association";
 
 const trimmedRequiredStringSchema = z.string().trim().min(1);
 
 const practiceSegmentNameSchema = z.string().trim().min(1).max(80);
 
-const practiceSegmentTargetBpmSchema = z
-  .preprocess((value) => (value === undefined ? null : value), z.number().finite().int().min(30).max(300).nullable());
+const practiceSegmentTargetBpmSchema = z.preprocess(
+  (value) => (value === undefined ? null : value),
+  z.number().finite().int().min(30).max(300).nullable()
+);
 
-const practiceSegmentTargetBpmFieldSchema = practiceSegmentTargetBpmSchema.optional().transform((value) => value ?? null);
+const practiceSegmentTargetBpmFieldSchema = practiceSegmentTargetBpmSchema
+  .optional()
+  .transform((value) => value ?? null);
 
 const practiceSegmentNotesSchema = z.preprocess((value) => {
   if (value === undefined || value === null) {
@@ -53,7 +58,9 @@ const practiceSegmentNotesSchema = z.preprocess((value) => {
   return trimmedValue.length === 0 ? null : trimmedValue;
 }, z.string().max(1000).nullable());
 
-const practiceSegmentNotesFieldSchema = practiceSegmentNotesSchema.optional().transform((value) => value ?? null);
+const practiceSegmentNotesFieldSchema = practiceSegmentNotesSchema
+  .optional()
+  .transform((value) => value ?? null);
 
 const practiceSegmentGridAssociationSchema = z.object({
   measureGridVersion: trimmedRequiredStringSchema,
@@ -86,7 +93,9 @@ export function parsePracticeSegmentNotes(value: unknown): string | null {
   return result.success ? result.data : null;
 }
 
-export function validatePracticeSegmentNotes(value: string | null): string | null {
+export function validatePracticeSegmentNotes(
+  value: string | null
+): string | null {
   return practiceSegmentNotesSchema.parse(value);
 }
 
@@ -96,11 +105,15 @@ export function parsePracticeSegmentTargetBpm(value: unknown): number | null {
   return result.success ? result.data : null;
 }
 
-export function validatePracticeSegmentTargetBpm(value: number | null): number | null {
+export function validatePracticeSegmentTargetBpm(
+  value: number | null
+): number | null {
   return practiceSegmentTargetBpmSchema.parse(value);
 }
 
-export function parsePracticeSegmentGridAssociation(value: unknown): PracticeSegmentGridAssociation | null {
+export function parsePracticeSegmentGridAssociation(
+  value: unknown
+): PracticeSegmentGridAssociation | null {
   const result = practiceSegmentGridAssociationSchema.safeParse(value);
 
   return result.success ? result.data : null;
@@ -118,7 +131,9 @@ export function parsePracticeSegment(value: unknown): PracticeSegment | null {
   return result.success ? result.data : null;
 }
 
-export function validatePracticeSegment(value: PracticeSegment): PracticeSegment {
+export function validatePracticeSegment(
+  value: PracticeSegment
+): PracticeSegment {
   return practiceSegmentSchema.parse(value);
 }
 
@@ -133,7 +148,9 @@ export function getMeasureGridVersion(grid: MeasureGrid): string {
   ].join("|");
 }
 
-export function createPracticeSegmentGridAssociation(grid: MeasureGrid): PracticeSegmentGridAssociation {
+export function createPracticeSegmentGridAssociation(
+  grid: MeasureGrid
+): PracticeSegmentGridAssociation {
   const validatedGrid = validateMeasureGrid(grid);
 
   return {
@@ -160,16 +177,25 @@ export function getPracticeSegmentGridStatus(
     return "invalid-association";
   }
 
-  return parsedSegment.grid.measureGridVersion === getMeasureGridVersion(currentGrid) ? "current" : "stale";
+  return parsedSegment.grid.measureGridVersion ===
+    getMeasureGridVersion(currentGrid)
+    ? "current"
+    : "stale";
 }
 
-export function isPracticeSegmentGridStale(segment: unknown, currentGrid: MeasureGrid | null): boolean {
+export function isPracticeSegmentGridStale(
+  segment: unknown,
+  currentGrid: MeasureGrid | null
+): boolean {
   const status = getPracticeSegmentGridStatus(segment, currentGrid);
 
   return status === "stale" || status === "missing-grid";
 }
 
-export function getPracticeSegmentRangeMs(segment: PracticeSegment, grid: MeasureGrid): MeasureRangeMs {
+export function getPracticeSegmentRangeMs(
+  segment: PracticeSegment,
+  grid: MeasureGrid
+): MeasureRangeMs {
   const validatedSegment = validatePracticeSegment(segment);
 
   return getMeasureRangeMs(grid, validatedSegment.range);

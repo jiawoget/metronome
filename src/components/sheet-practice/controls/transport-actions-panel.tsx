@@ -1,6 +1,9 @@
 import { Mic, Octagon, Play, Radio, RotateCcw, Square } from "lucide-react";
 
-import type { PracticeSession, SheetRecordingMetadata } from "@/domain/practice";
+import type {
+  PracticeSession,
+  SheetRecordingMetadata
+} from "@/domain/practice";
 import type { MetronomeTick } from "@/services/metronome";
 import type { ReviewRecording } from "@/lib/recordings-review/types";
 import { LatestSheetRecording } from "@/components/sheet-practice/recording/latest-sheet-recording";
@@ -53,7 +56,7 @@ export function TransportActionsPanel({
   startRecordAgain
 }: TransportActionsPanelProps) {
   return (
-    <div className="border-border bg-background flex min-w-0 flex-col justify-between gap-3 rounded-md border p-3">
+    <div className="flex min-w-0 flex-col justify-between gap-3 rounded-md border border-border bg-background p-3">
       <div className="grid grid-cols-2 gap-2">
         <Button
           type="button"
@@ -134,17 +137,17 @@ export function TransportActionsPanel({
 
       <div
         aria-live="polite"
-        className="border-border bg-muted rounded-md border px-3 py-2 text-sm"
+        className="rounded-md border border-border bg-muted px-3 py-2 text-sm"
       >
         <div className="flex items-start gap-2">
           <Radio
-            className="text-accent mt-0.5 h-4 w-4 shrink-0"
+            className="mt-0.5 h-4 w-4 shrink-0 text-accent"
             aria-hidden="true"
           />
           <div className="min-w-0">
             <p className="font-medium">{message}</p>
             <p
-              className="text-muted-foreground mt-1 min-h-5 text-xs"
+              className="mt-1 min-h-5 text-xs text-muted-foreground"
               data-testid="sheet-bar-count-in-active-tick"
             >
               {activeBarCountInTickDetail ?? ""}
@@ -152,7 +155,7 @@ export function TransportActionsPanel({
           </div>
         </div>
         {errorMessage ? (
-          <p role="alert" className="text-destructive mt-2 font-medium">
+          <p role="alert" className="mt-2 font-medium text-destructive">
             {errorMessage}
           </p>
         ) : null}

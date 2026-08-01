@@ -20,7 +20,10 @@ type PracticeGoalDatabaseSchema = {
   goals: Table<PersistedPracticeGoal, string>;
 };
 
-class PracticeGoalDexieDatabase extends Dexie implements PracticeGoalDatabaseSchema {
+class PracticeGoalDexieDatabase
+  extends Dexie
+  implements PracticeGoalDatabaseSchema
+{
   goals!: Table<PersistedPracticeGoal, string>;
 
   constructor() {
@@ -46,7 +49,9 @@ function dispatchPracticeGoalChange() {
   }
 }
 
-function isPracticeGoal(goal: LocalPracticeGoal | null): goal is LocalPracticeGoal {
+function isPracticeGoal(
+  goal: LocalPracticeGoal | null
+): goal is LocalPracticeGoal {
   return goal !== null;
 }
 
@@ -141,7 +146,10 @@ export const practiceGoalRepository: PracticeGoalRepository = {
   }
 };
 
-export async function seedPracticeGoalRecordForTests(goalId: string, value: unknown) {
+export async function seedPracticeGoalRecordForTests(
+  goalId: string,
+  value: unknown
+) {
   await getDatabase().goals.put({
     ...(value && typeof value === "object" && !Array.isArray(value)
       ? value

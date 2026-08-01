@@ -60,12 +60,12 @@ Hard Quick Metronome boundary:
 
 ## Boundaries With Existing Work
 
-| Area | P4-08 boundary |
-|---|---|
-| P4-03 `bar-count-in-domain` | Reuse and adapt `BarCountInReadyPlan`; do not change measure-grid, stale-segment, pickup, or beat-label math. |
-| P4-04 `bar-count-in-scheduler` | Extract the existing scheduler behavior to generic pre-start countdown scheduling; keep `scheduleBarCountIn` as a small wrapper or compatibility export. |
-| P4-05 `bar-count-in-ui` | Existing UI, harness events, messages, and disabled-state behavior must remain unchanged. |
-| P4-06/P4-07 presets | Existing preset snapshot behavior for `countdownBeats` and bar count-in state must remain unchanged. |
+| Area                             | P4-08 boundary                                                                                                                                                                                                    |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P4-03 `bar-count-in-domain`      | Reuse and adapt `BarCountInReadyPlan`; do not change measure-grid, stale-segment, pickup, or beat-label math.                                                                                                     |
+| P4-04 `bar-count-in-scheduler`   | Extract the existing scheduler behavior to generic pre-start countdown scheduling; keep `scheduleBarCountIn` as a small wrapper or compatibility export.                                                          |
+| P4-05 `bar-count-in-ui`          | Existing UI, harness events, messages, and disabled-state behavior must remain unchanged.                                                                                                                         |
+| P4-06/P4-07 presets              | Existing preset snapshot behavior for `countdownBeats` and bar count-in state must remain unchanged.                                                                                                              |
 | P6-14 `quick-advanced-countdown` | Owns visible Quick Metronome advanced countdown UI, route wiring, E2E acceptance, and whether advanced countdown replaces or extends the fixed `countdownBeats` select. P4-08 does not satisfy Pack 6 acceptance. |
 
 ## Current Reuse Points
@@ -145,10 +145,12 @@ export type BarCountInPreStartCountdownBeat = PreStartCountdownBeat & {
 };
 
 export type BarCountInPreStartCountdownPlan = PreStartCountdownPlan & {
-  beats: Array<PreStartCountdownPlan["beats"][number] & {
-    sourceMeasureNumber: number | null;
-    isPreRoll: boolean;
-  }>;
+  beats: Array<
+    PreStartCountdownPlan["beats"][number] & {
+      sourceMeasureNumber: number | null;
+      isPreRoll: boolean;
+    }
+  >;
 };
 ```
 
@@ -169,7 +171,9 @@ export function toPreStartCountdownPlan(
 Backward-compatible wrapper:
 
 ```ts
-export function scheduleBarCountIn(options: BarCountInSchedulerOptions): BarCountInSchedulerCancel {
+export function scheduleBarCountIn(
+  options: BarCountInSchedulerOptions
+): BarCountInSchedulerCancel {
   return schedulePreStartCountdown({
     ...options,
     plan: toPreStartCountdownPlan(options.plan)
@@ -245,18 +249,18 @@ If `preStartCountdown.enabled === false` or `preStartCountdown.plan === null`, i
 
 ## Behavior Matrix
 
-| Scenario | Expected behavior |
-|---|---|
-| Existing Quick Metronome with fixed `countdownBeats` | Unchanged. Existing simple countdown tests still pass. |
-| Existing Sheet Practice bar count-in | Unchanged UI and behavior; wrapper routes through generic scheduler internally if extraction is chosen. |
-| Ready `BarCountInReadyPlan` adapted to generic plan | Produces the same tick count, delays, remaining beats, and completion timing as current P4-04 scheduler. |
-| Quick beats plan, 4 beats in 4/4 at 120 BPM | Generic plan has 4 beats, 500 ms beat duration, 2000 ms total, offsets `[-2000, -1500, -1000, -500]`. |
-| Quick measures plan, 2 measures in 3/4 at 90 BPM | Generic plan has 6 beats and fractional beat duration from shared meter timing. |
-| Quick measures plan in 6/8 or 12/8 | Uses numerator beat counts and eighth-note denominator-aware timing, matching current meter policy. |
-| Invalid quick count | Throws; no scheduler starts. |
-| Generic countdown stopped before completion | Timers clear, transport returns stopped, playback does not start. |
-| Both generic pre-start countdown and bar count-in passed | Existing bar-count-in path wins for compatibility; callers should avoid this outside compatibility tests. |
-| Generic pre-start countdown disabled or plan null, fixed `countdownBeats` set | Existing fixed countdown start/tick/complete order is unchanged. |
+| Scenario                                                                      | Expected behavior                                                                                         |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Existing Quick Metronome with fixed `countdownBeats`                          | Unchanged. Existing simple countdown tests still pass.                                                    |
+| Existing Sheet Practice bar count-in                                          | Unchanged UI and behavior; wrapper routes through generic scheduler internally if extraction is chosen.   |
+| Ready `BarCountInReadyPlan` adapted to generic plan                           | Produces the same tick count, delays, remaining beats, and completion timing as current P4-04 scheduler.  |
+| Quick beats plan, 4 beats in 4/4 at 120 BPM                                   | Generic plan has 4 beats, 500 ms beat duration, 2000 ms total, offsets `[-2000, -1500, -1000, -500]`.     |
+| Quick measures plan, 2 measures in 3/4 at 90 BPM                              | Generic plan has 6 beats and fractional beat duration from shared meter timing.                           |
+| Quick measures plan in 6/8 or 12/8                                            | Uses numerator beat counts and eighth-note denominator-aware timing, matching current meter policy.       |
+| Invalid quick count                                                           | Throws; no scheduler starts.                                                                              |
+| Generic countdown stopped before completion                                   | Timers clear, transport returns stopped, playback does not start.                                         |
+| Both generic pre-start countdown and bar count-in passed                      | Existing bar-count-in path wins for compatibility; callers should avoid this outside compatibility tests. |
+| Generic pre-start countdown disabled or plan null, fixed `countdownBeats` set | Existing fixed countdown start/tick/complete order is unchanged.                                          |
 
 ## Likely Files
 

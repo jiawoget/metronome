@@ -29,13 +29,13 @@ export function SegmentTempoApplyControl({
   const segmentLabel = policy.segmentName ?? "Segment tempo";
 
   return (
-    <div className="border-border bg-muted/40 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
       <div className="min-w-0">
-        <p className="break-words text-xs font-semibold">{segmentLabel}</p>
+        <p className="text-xs font-semibold break-words">{segmentLabel}</p>
         <p
           role="status"
           aria-live="polite"
-          className="text-muted-foreground mt-0.5 text-xs"
+          className="mt-0.5 text-xs text-muted-foreground"
         >
           {getPolicyStatusText(policy)}
         </p>

@@ -22,7 +22,11 @@ function parsePageJump(value: string, totalPages: number) {
 
   const pageNumber = Number(trimmed);
 
-  if (!Number.isSafeInteger(pageNumber) || pageNumber < 1 || pageNumber > totalPages) {
+  if (
+    !Number.isSafeInteger(pageNumber) ||
+    pageNumber < 1 ||
+    pageNumber > totalPages
+  ) {
     return {
       valid: false,
       message: `Page must be between 1 and ${totalPages}.`
@@ -57,7 +61,11 @@ export function SheetPageJump({
   }
 
   return (
-    <form className="flex flex-wrap items-center gap-2" noValidate onSubmit={handleSubmit}>
+    <form
+      className="flex flex-wrap items-center gap-2"
+      noValidate
+      onSubmit={handleSubmit}
+    >
       <label className="sr-only" htmlFor={`${errorId}-input`}>
         Page number
       </label>
@@ -74,13 +82,17 @@ export function SheetPageJump({
           setValue(event.target.value);
           setError(null);
         }}
-        className="h-9 w-16 rounded-md border border-input bg-background px-2 text-center text-sm outline-none transition placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        className="border-input h-9 w-16 rounded-md border bg-background px-2 text-center text-sm transition outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
       />
       <Button type="submit" variant="secondary" className="h-9 px-3">
         Go
       </Button>
       {error ? (
-        <p id={errorId} role="alert" className="basis-full text-sm text-destructive">
+        <p
+          id={errorId}
+          role="alert"
+          className="basis-full text-sm text-destructive"
+        >
           {error}
         </p>
       ) : null}

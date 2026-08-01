@@ -56,14 +56,14 @@ Source explicit no-go list from D1-main:
 
 Mapping:
 
-| D1-main deferred item | D1-06 validation section | Decision for this slice | Primary evidence |
-| --- | --- | --- | --- |
-| Large React components | Large React Components | Not in scope for D1-06 implementation | component LOC/top-level scan and local stateful feature-hub ownership |
-| Shared Dexie `getDatabase()` abstraction | Shared Dexie `getDatabase()` | Not in scope for D1-06 implementation | seven repository-local Dexie classes with distinct schemas/versioning |
+| D1-main deferred item                                  | D1-06 validation section              | Decision for this slice               | Primary evidence                                                      |
+| ------------------------------------------------------ | ------------------------------------- | ------------------------------------- | --------------------------------------------------------------------- |
+| Large React components                                 | Large React Components                | Not in scope for D1-06 implementation | component LOC/top-level scan and local stateful feature-hub ownership |
+| Shared Dexie `getDatabase()` abstraction               | Shared Dexie `getDatabase()`          | Not in scope for D1-06 implementation | seven repository-local Dexie classes with distinct schemas/versioning |
 | DB artifact repository `normalizeRequiredString` merge | DB Artifact `normalizeRequiredString` | Not in scope for D1-06 implementation | throwing persistence validator vs null-returning UI/domain normalizer |
-| docs/v0 or historical plan deletion | `docs/v0` Or Historical Plan Deletion | Not in scope for D1-06 implementation | `docs/v0` still referenced by v1 docs and agent-index |
-| `package-lock.json` slimming | `package-lock.json` | Not in scope for D1-06 implementation | generated lockfile, not source code |
-| Broad fixture helper consolidation | Broad Fixture Helper Consolidation | Not in scope for D1-06 implementation | D1-05 audit preserved behavior-specific evidence |
+| docs/v0 or historical plan deletion                    | `docs/v0` Or Historical Plan Deletion | Not in scope for D1-06 implementation | `docs/v0` still referenced by v1 docs and agent-index                 |
+| `package-lock.json` slimming                           | `package-lock.json`                   | Not in scope for D1-06 implementation | generated lockfile, not source code                                   |
+| Broad fixture helper consolidation                     | Broad Fixture Helper Consolidation    | Not in scope for D1-06 implementation | D1-05 audit preserved behavior-specific evidence                      |
 
 ## Reproducible Scan Commands
 
@@ -102,13 +102,13 @@ with local state, event handlers, and view composition. A split would mostly
 move code between files unless a separate design identifies real duplicated
 logic or dead behavior.
 
-| Candidate | File | Current size | Top-level matches | D1-06 decision |
-| --- | --- | ---: | ---: | --- |
-| `SheetPracticeControls` | `src/components/sheet-practice/controls/sheet-practice-controls.tsx` | 842 lines | 5 | Not in scope for D1-06 implementation |
-| `PracticeSegmentSelectorPanel` | `src/components/sheet-practice/segments/practice-segment-selector-panel.tsx` | 903 lines | 16 | Not in scope for D1-06 implementation |
-| `ReferencePanel` | `src/components/sheet-practice/reference/reference-panel.tsx` | 647 lines | 5 | Not in scope for D1-06 implementation |
-| `SheetLibraryExperience` | `src/components/sheet-library/sheet-library-experience.tsx` | 616 lines | 4 | Not in scope for D1-06 implementation |
-| `RecordingsReviewExperience` | `src/components/recordings-review/recordings-review-experience.tsx` | 1492 lines | 15 | Not in scope for D1-06 implementation |
+| Candidate                      | File                                                                         | Current size | Top-level matches | D1-06 decision                        |
+| ------------------------------ | ---------------------------------------------------------------------------- | -----------: | ----------------: | ------------------------------------- |
+| `SheetPracticeControls`        | `src/components/sheet-practice/controls/sheet-practice-controls.tsx`         |    842 lines |                 5 | Not in scope for D1-06 implementation |
+| `PracticeSegmentSelectorPanel` | `src/components/sheet-practice/segments/practice-segment-selector-panel.tsx` |    903 lines |                16 | Not in scope for D1-06 implementation |
+| `ReferencePanel`               | `src/components/sheet-practice/reference/reference-panel.tsx`                |    647 lines |                 5 | Not in scope for D1-06 implementation |
+| `SheetLibraryExperience`       | `src/components/sheet-library/sheet-library-experience.tsx`                  |    616 lines |                 4 | Not in scope for D1-06 implementation |
+| `RecordingsReviewExperience`   | `src/components/recordings-review/recordings-review-experience.tsx`          |   1492 lines |                15 | Not in scope for D1-06 implementation |
 
 Technical invariant:
 

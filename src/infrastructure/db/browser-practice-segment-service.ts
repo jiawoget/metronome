@@ -2,7 +2,11 @@
 
 import Dexie, { type Table, type Transaction } from "dexie";
 
-import { parsePracticeSegment, validatePracticeSegment, type PracticeSegment } from "@/domain/practice";
+import {
+  parsePracticeSegment,
+  validatePracticeSegment,
+  type PracticeSegment
+} from "@/domain/practice";
 import { PRACTICE_SEGMENT_DB_NAME } from "@/infrastructure/storage/storage-contracts";
 import {
   createPracticeSegmentService,
@@ -29,7 +33,10 @@ type PracticeSegmentDatabaseSchema = {
 
 const MIGRATED_UNKNOWN_UPDATED_AT = "1970-01-01T00:00:00.000Z";
 
-class PracticeSegmentDexieDatabase extends Dexie implements PracticeSegmentDatabaseSchema {
+class PracticeSegmentDexieDatabase
+  extends Dexie
+  implements PracticeSegmentDatabaseSchema
+{
   segments!: Table<PersistedPracticeSegmentRecord, [string, string]>;
 
   constructor() {
@@ -60,7 +67,10 @@ function getUpdatedAtMs(updatedAt: string) {
 }
 
 function selectMigratedPracticeSegmentRecords(rows: unknown[]) {
-  const recordsBySheetAndSegment = new Map<string, Map<string, PersistedPracticeSegmentRecord>>();
+  const recordsBySheetAndSegment = new Map<
+    string,
+    Map<string, PersistedPracticeSegmentRecord>
+  >();
 
   for (const row of rows) {
     const parsedRecord = parsePersistedPracticeSegmentRecordIdentifiers(row);
@@ -74,18 +84,29 @@ function selectMigratedPracticeSegmentRecords(rows: unknown[]) {
       sheetId: parsedRecord.normalizedSheetId,
       segmentId: parsedRecord.normalizedSegmentId,
       segment: parsedRecord.parsedSegment,
-      updatedAt: typeof candidate.updatedAt === "string" ? candidate.updatedAt : MIGRATED_UNKNOWN_UPDATED_AT
+      updatedAt:
+        typeof candidate.updatedAt === "string"
+          ? candidate.updatedAt
+          : MIGRATED_UNKNOWN_UPDATED_AT
     };
-    const sheetRecords = recordsBySheetAndSegment.get(migratedRecord.sheetId) ?? new Map<string, PersistedPracticeSegmentRecord>();
+    const sheetRecords =
+      recordsBySheetAndSegment.get(migratedRecord.sheetId) ??
+      new Map<string, PersistedPracticeSegmentRecord>();
     const existingRecord = sheetRecords.get(migratedRecord.segmentId);
 
-    if (!existingRecord || getUpdatedAtMs(migratedRecord.updatedAt) >= getUpdatedAtMs(existingRecord.updatedAt)) {
+    if (
+      !existingRecord ||
+      getUpdatedAtMs(migratedRecord.updatedAt) >=
+        getUpdatedAtMs(existingRecord.updatedAt)
+    ) {
       sheetRecords.set(migratedRecord.segmentId, migratedRecord);
       recordsBySheetAndSegment.set(migratedRecord.sheetId, sheetRecords);
     }
   }
 
-  return Array.from(recordsBySheetAndSegment.values()).flatMap((sheetRecords) => Array.from(sheetRecords.values()));
+  return Array.from(recordsBySheetAndSegment.values()).flatMap((sheetRecords) =>
+    Array.from(sheetRecords.values())
+  );
 }
 
 async function migratePracticeSegmentRows(
@@ -101,22 +122,32 @@ async function migratePracticeSegmentRows(
   await targetTable.bulkPut(migratedRows);
 }
 
-async function migrateLegacySegmentsToCompoundRecords(transaction: Transaction) {
-  const legacyRows = await transaction.table<LegacyPersistedPracticeSegmentRecord, string>("segments").toArray();
+async function migrateLegacySegmentsToCompoundRecords(
+  transaction: Transaction
+) {
+  const legacyRows = await transaction
+    .table<LegacyPersistedPracticeSegmentRecord, string>("segments")
+    .toArray();
 
   // Invalid legacy rows keep the existing repository policy: they are treated as corrupt local data and filtered out.
   await migratePracticeSegmentRows(
     legacyRows,
-    transaction.table<PersistedPracticeSegmentRecord, [string, string]>("segmentRecords")
+    transaction.table<PersistedPracticeSegmentRecord, [string, string]>(
+      "segmentRecords"
+    )
   );
 }
 
 async function migrateCompoundRecordsToSegments(transaction: Transaction) {
-  const compoundRows = await transaction.table<PersistedPracticeSegmentRecord, [string, string]>("segmentRecords").toArray();
+  const compoundRows = await transaction
+    .table<PersistedPracticeSegmentRecord, [string, string]>("segmentRecords")
+    .toArray();
 
   await migratePracticeSegmentRows(
     compoundRows,
-    transaction.table<PersistedPracticeSegmentRecord, [string, string]>("segments")
+    transaction.table<PersistedPracticeSegmentRecord, [string, string]>(
+      "segments"
+    )
   );
 }
 
@@ -128,7 +159,10 @@ function getDatabase() {
   return database;
 }
 
-function parseNormalizedRowId(value: unknown, normalizer: (value: string) => string) {
+function parseNormalizedRowId(
+  value: unknown,
+  normalizer: (value: string) => string
+) {
   if (typeof value !== "string") {
     return null;
   }
@@ -150,8 +184,14 @@ function parsePersistedPracticeSegmentRecordIdentifiers(value: unknown) {
     segmentId?: unknown;
     segment?: unknown;
   };
-  const normalizedSheetId = parseNormalizedRowId(candidate.sheetId, normalizePracticeSegmentSheetId);
-  const normalizedSegmentId = parseNormalizedRowId(candidate.segmentId, normalizePracticeSegmentId);
+  const normalizedSheetId = parseNormalizedRowId(
+    candidate.sheetId,
+    normalizePracticeSegmentSheetId
+  );
+  const normalizedSegmentId = parseNormalizedRowId(
+    candidate.segmentId,
+    normalizePracticeSegmentId
+  );
   const parsedSegment = parsePracticeSegment(candidate.segment);
 
   if (!normalizedSheetId || !normalizedSegmentId || !parsedSegment) {
@@ -172,7 +212,9 @@ function parsePersistedPracticeSegmentRecordIdentifiers(value: unknown) {
   };
 }
 
-export function parsePersistedPracticeSegmentRecord(value: unknown): PracticeSegment | null {
+export function parsePersistedPracticeSegmentRecord(
+  value: unknown
+): PracticeSegment | null {
   const parsedRecord = parsePersistedPracticeSegmentRecordIdentifiers(value);
 
   return parsedRecord?.parsedSegment ?? null;
@@ -181,11 +223,15 @@ export function parsePersistedPracticeSegmentRecord(value: unknown): PracticeSeg
 export const browserPracticeSegmentRepository: PracticeSegmentRepository = {
   async listSegments(sheetId) {
     const normalizedSheetId = normalizePracticeSegmentSheetId(sheetId);
-    const records = await getDatabase().segments.where("sheetId").equals(normalizedSheetId).toArray();
+    const records = await getDatabase()
+      .segments.where("sheetId")
+      .equals(normalizedSheetId)
+      .toArray();
     const parsedSegments: PracticeSegment[] = [];
 
     for (const record of records) {
-      const parsedRecord = parsePersistedPracticeSegmentRecordIdentifiers(record);
+      const parsedRecord =
+        parsePersistedPracticeSegmentRecordIdentifiers(record);
 
       if (!parsedRecord) {
         continue;
@@ -208,7 +254,9 @@ export const browserPracticeSegmentRepository: PracticeSegmentRepository = {
 
   async saveSegment(segment) {
     const validatedSegment = validatePracticeSegment(segment);
-    const normalizedSheetId = normalizePracticeSegmentSheetId(validatedSegment.sheetId);
+    const normalizedSheetId = normalizePracticeSegmentSheetId(
+      validatedSegment.sheetId
+    );
     const normalizedSegmentId = normalizePracticeSegmentId(validatedSegment.id);
 
     await getDatabase().segments.put({
@@ -221,20 +269,28 @@ export const browserPracticeSegmentRepository: PracticeSegmentRepository = {
 
   async saveSegmentIfNoDuplicateName(segment, normalizedName) {
     const validatedSegment = validatePracticeSegment(segment);
-    const normalizedSheetId = normalizePracticeSegmentSheetId(validatedSegment.sheetId);
+    const normalizedSheetId = normalizePracticeSegmentSheetId(
+      validatedSegment.sheetId
+    );
     const normalizedSegmentId = normalizePracticeSegmentId(validatedSegment.id);
     const db = getDatabase();
     let didSave = false;
 
     await db.transaction("rw", db.segments, async () => {
-      const sameSheetRecords = await db.segments.where("sheetId").equals(normalizedSheetId).toArray();
+      const sameSheetRecords = await db.segments
+        .where("sheetId")
+        .equals(normalizedSheetId)
+        .toArray();
       const hasDuplicateName = sameSheetRecords.some((record) => {
-        const parsedRecord = parsePersistedPracticeSegmentRecordIdentifiers(record);
+        const parsedRecord =
+          parsePersistedPracticeSegmentRecordIdentifiers(record);
 
         return (
           parsedRecord !== null &&
           parsedRecord.normalizedSegmentId !== normalizedSegmentId &&
-          normalizePracticeSegmentNameForComparison(parsedRecord.parsedSegment.name) === normalizedName
+          normalizePracticeSegmentNameForComparison(
+            parsedRecord.parsedSegment.name
+          ) === normalizedName
         );
       });
 
@@ -259,20 +315,31 @@ export const browserPracticeSegmentRepository: PracticeSegmentRepository = {
     const normalizedSheetId = normalizePracticeSegmentSheetId(sheetId);
     const normalizedSegmentId = normalizePracticeSegmentId(segmentId);
 
-    await getDatabase().segments.delete([normalizedSheetId, normalizedSegmentId]);
+    await getDatabase().segments.delete([
+      normalizedSheetId,
+      normalizedSegmentId
+    ]);
   }
 };
 
-export const browserPracticeSegmentService = createPracticeSegmentService(browserPracticeSegmentRepository);
+export const browserPracticeSegmentService = createPracticeSegmentService(
+  browserPracticeSegmentRepository
+);
 
-export async function seedPracticeSegmentRecordForTests(sheetId: string, segmentId: string, value: unknown) {
+export async function seedPracticeSegmentRecordForTests(
+  sheetId: string,
+  segmentId: string,
+  value: unknown
+) {
   const normalizedSheetId = normalizePracticeSegmentSheetId(sheetId);
   const normalizedSegmentId = normalizePracticeSegmentId(segmentId);
 
   await getDatabase().segments.put({
     sheetId: normalizedSheetId,
     segmentId: normalizedSegmentId,
-    ...(value && typeof value === "object" && !Array.isArray(value) ? value : {})
+    ...(value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {})
   } as PersistedPracticeSegmentRecord);
 }
 

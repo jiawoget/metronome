@@ -149,5 +149,3 @@ verification_in_progress
 ```
 
 The planning pass may set features to `contract_ready`. Implementation and verification passes may update only their assigned feature.
-
-

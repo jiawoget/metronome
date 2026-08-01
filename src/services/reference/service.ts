@@ -98,11 +98,14 @@ export function createReferenceService({
       if (!isSupportedLocalAudioFile(input.file)) {
         return {
           ok: false,
-          message: "Choose a playable audio file such as WAV, MP3, OGG, AAC, M4A, or WebM."
+          message:
+            "Choose a playable audio file such as WAV, MP3, OGG, AAC, M4A, or WebM."
         };
       }
 
-      const inspection = await localAudioInspectionAdapter.inspectFile(input.file);
+      const inspection = await localAudioInspectionAdapter.inspectFile(
+        input.file
+      );
 
       if (!inspection.ok) {
         return inspection;
@@ -150,7 +153,8 @@ export function createReferenceService({
       if (!metadata) {
         return {
           ok: false,
-          message: "Enter a Bilibili video URL like https://www.bilibili.com/video/BV..."
+          message:
+            "Enter a Bilibili video URL like https://www.bilibili.com/video/BV..."
         };
       }
 
@@ -181,7 +185,9 @@ export function createReferenceService({
       };
     },
 
-    async saveBilibiliSearchResultReference(input: BilibiliResultReferenceInput) {
+    async saveBilibiliSearchResultReference(
+      input: BilibiliResultReferenceInput
+    ) {
       if (!input.sheetId) {
         return missingSheetResult();
       }
@@ -216,7 +222,8 @@ export function createReferenceService({
       if (normalizedQuery.length < 2) {
         return {
           ok: false,
-          message: "Enter at least two characters to search Bilibili references."
+          message:
+            "Enter at least two characters to search Bilibili references."
         };
       }
 

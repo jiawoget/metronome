@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -9,9 +15,14 @@ import {
   type MicrophonePermissionStatus,
   type UserSettings
 } from "@/domain/settings";
-import { createUserSettingsService, type SettingsRepository } from "@/services/settings";
+import {
+  createUserSettingsService,
+  type SettingsRepository
+} from "@/services/settings";
 
-function createMemorySettingsRepository(initialSettings: UserSettings): SettingsRepository {
+function createMemorySettingsRepository(
+  initialSettings: UserSettings
+): SettingsRepository {
   let settings: UserSettings | null = initialSettings;
 
   return {
@@ -78,7 +89,9 @@ describe("SettingsExperience", () => {
         storageSummaryService={storageSummaryService}
         cleanupService={{ clearAllLocalData: vi.fn() }}
         permissionService={{
-          getMicrophonePermissionStatus: vi.fn(async (): Promise<MicrophonePermissionStatus> => "denied")
+          getMicrophonePermissionStatus: vi.fn(
+            async (): Promise<MicrophonePermissionStatus> => "denied"
+          )
         }}
       />
     );
@@ -86,15 +99,29 @@ describe("SettingsExperience", () => {
     await expect(screen.findByDisplayValue("132")).resolves.toBeVisible();
     expect(screen.getByTestId("settings-time-signature")).toHaveValue("3/4");
     expect(screen.getByTestId("settings-subdivision")).toHaveValue("eighth");
-    expect(screen.getByTestId("settings-metronome-volume")).toHaveTextContent("64");
-    expect(screen.getByTestId("settings-reference-volume")).toHaveTextContent("72");
-    expect(screen.getByTestId("settings-microphone-status")).toHaveTextContent("denied");
+    expect(screen.getByTestId("settings-metronome-volume")).toHaveTextContent(
+      "64"
+    );
+    expect(screen.getByTestId("settings-reference-volume")).toHaveTextContent(
+      "72"
+    );
+    expect(screen.getByTestId("settings-microphone-status")).toHaveTextContent(
+      "denied"
+    );
     expect(screen.getByTestId("settings-count-sheets")).toHaveTextContent("2");
-    expect(screen.getByTestId("settings-count-recordings")).toHaveTextContent("3");
-    expect(screen.getByTestId("settings-count-references")).toHaveTextContent("4");
+    expect(screen.getByTestId("settings-count-recordings")).toHaveTextContent(
+      "3"
+    );
+    expect(screen.getByTestId("settings-count-references")).toHaveTextContent(
+      "4"
+    );
     expect(screen.getByTestId("settings-count-markers")).toHaveTextContent("5");
-    expect(screen.getByTestId("settings-count-sessions")).toHaveTextContent("6");
-    expect(screen.getByTestId("settings-storage-estimate")).toHaveTextContent("not available");
+    expect(screen.getByTestId("settings-count-sessions")).toHaveTextContent(
+      "6"
+    );
+    expect(screen.getByTestId("settings-storage-estimate")).toHaveTextContent(
+      "not available"
+    );
 
     const bpmInput = screen.getByTestId("settings-default-bpm");
 
@@ -102,10 +129,20 @@ describe("SettingsExperience", () => {
     fireEvent.blur(bpmInput);
     await waitFor(() => expect(screen.getByDisplayValue("144")).toBeVisible());
 
-    await userEvent.selectOptions(screen.getByTestId("settings-time-signature"), "6/8");
-    await userEvent.selectOptions(screen.getByTestId("settings-subdivision"), "triplet");
-    fireEvent.change(screen.getByLabelText("Metronome volume"), { target: { value: "55" } });
-    fireEvent.change(screen.getByLabelText("Reference default volume"), { target: { value: "45" } });
+    await userEvent.selectOptions(
+      screen.getByTestId("settings-time-signature"),
+      "6/8"
+    );
+    await userEvent.selectOptions(
+      screen.getByTestId("settings-subdivision"),
+      "triplet"
+    );
+    fireEvent.change(screen.getByLabelText("Metronome volume"), {
+      target: { value: "55" }
+    });
+    fireEvent.change(screen.getByLabelText("Reference default volume"), {
+      target: { value: "45" }
+    });
 
     await waitFor(async () => {
       await expect(settingsService.getSettings()).resolves.toMatchObject({
@@ -141,26 +178,40 @@ describe("SettingsExperience", () => {
         storageSummaryService={{ getSummary: vi.fn(async () => summary) }}
         cleanupService={{ clearAllLocalData }}
         permissionService={{
-          getMicrophonePermissionStatus: vi.fn(async (): Promise<MicrophonePermissionStatus> => "prompt")
+          getMicrophonePermissionStatus: vi.fn(
+            async (): Promise<MicrophonePermissionStatus> => "prompt"
+          )
         }}
       />
     );
 
     await expect(screen.findByDisplayValue("150")).resolves.toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Clear All Local Data" }));
+    await user.click(
+      screen.getByRole("button", { name: "Clear All Local Data" })
+    );
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(clearAllLocalData).not.toHaveBeenCalled();
     expect(screen.getByTestId("settings-count-sheets")).toHaveTextContent("2");
 
-    await user.click(screen.getByRole("button", { name: "Clear All Local Data" }));
-    await user.click(screen.getByRole("button", { name: "Confirm clear local data" }));
+    await user.click(
+      screen.getByRole("button", { name: "Clear All Local Data" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Confirm clear local data" })
+    );
 
     await waitFor(() => expect(clearAllLocalData).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.getByTestId("settings-count-sheets")).toHaveTextContent("0"));
-    expect(screen.getByDisplayValue(String(DEFAULT_USER_SETTINGS.defaultBpm))).toBeVisible();
-    await expect(settingsService.getSettings()).resolves.toEqual(DEFAULT_USER_SETTINGS);
+    await waitFor(() =>
+      expect(screen.getByTestId("settings-count-sheets")).toHaveTextContent("0")
+    );
+    expect(
+      screen.getByDisplayValue(String(DEFAULT_USER_SETTINGS.defaultBpm))
+    ).toBeVisible();
+    await expect(settingsService.getSettings()).resolves.toEqual(
+      DEFAULT_USER_SETTINGS
+    );
   });
 
   it("shows cleanup failure without hiding the error state", async () => {
@@ -168,7 +219,9 @@ describe("SettingsExperience", () => {
 
     render(
       <SettingsExperience
-        settingsService={createUserSettingsService(createMemorySettingsRepository(DEFAULT_USER_SETTINGS))}
+        settingsService={createUserSettingsService(
+          createMemorySettingsRepository(DEFAULT_USER_SETTINGS)
+        )}
         storageSummaryService={{ getSummary: vi.fn(async () => emptySummary) }}
         cleanupService={{
           clearAllLocalData: vi.fn(async () => {
@@ -176,15 +229,25 @@ describe("SettingsExperience", () => {
           })
         }}
         permissionService={{
-          getMicrophonePermissionStatus: vi.fn(async (): Promise<MicrophonePermissionStatus> => "unknown")
+          getMicrophonePermissionStatus: vi.fn(
+            async (): Promise<MicrophonePermissionStatus> => "unknown"
+          )
         }}
       />
     );
 
-    await expect(screen.findByDisplayValue(String(DEFAULT_USER_SETTINGS.defaultBpm))).resolves.toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Clear All Local Data" }));
-    await user.click(screen.getByRole("button", { name: "Confirm clear local data" }));
+    await expect(
+      screen.findByDisplayValue(String(DEFAULT_USER_SETTINGS.defaultBpm))
+    ).resolves.toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: "Clear All Local Data" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Confirm clear local data" })
+    );
 
-    expect(await screen.findByTestId("settings-cleanup-error")).toHaveTextContent("cleanup failed");
+    expect(
+      await screen.findByTestId("settings-cleanup-error")
+    ).toHaveTextContent("cleanup failed");
   });
 });

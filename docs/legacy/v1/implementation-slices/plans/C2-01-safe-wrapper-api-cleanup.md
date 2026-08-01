@@ -67,23 +67,23 @@ Known direct import sites:
 
 Replacement import targets:
 
-| Symbol | Direct module |
-| --- | --- |
-| `RecordingArtifactBody` | `@/lib/recordings-review/artifact-model` |
-| `RecordingArtifactUnavailableReason` | `@/lib/recordings-review/artifact-model` |
-| `RecordingArtifactError` | `@/lib/recordings-review/artifact-model` |
-| `dataUrlToRecordingArtifactBlob` | `@/lib/recordings-review/artifact-data-url` |
-| `derivePeaksFromSamples` | `@/lib/recordings-review/artifact-details` |
-| `getDurationWarning` | `@/lib/recordings-review/artifact-details` |
-| `hasUsablePeaks` | `@/lib/recordings-review/artifact-details` |
-| `loadRecordingArtifactDetails` | `@/lib/recordings-review/artifact-details` |
-| `RecordingArtifactMigrationResult` | `@/lib/recordings-review/artifact-migration` |
-| `migrateLegacyRecordingArtifacts` | `@/lib/recordings-review/artifact-migration` |
-| `assertRecordingArtifactCleanup` | `@/lib/recordings-review/artifact-storage` |
-| `cleanupCommittedRecordingArtifacts` | `@/lib/recordings-review/artifact-storage` |
-| `createRecordingArtifactRef` | `@/lib/recordings-review/artifact-storage` |
-| `resolveRecordingArtifactBody` | `@/lib/recordings-review/artifact-storage` |
-| `saveCapturedRecordingArtifact` | `@/lib/recordings-review/artifact-storage` |
+| Symbol                               | Direct module                                |
+| ------------------------------------ | -------------------------------------------- |
+| `RecordingArtifactBody`              | `@/lib/recordings-review/artifact-model`     |
+| `RecordingArtifactUnavailableReason` | `@/lib/recordings-review/artifact-model`     |
+| `RecordingArtifactError`             | `@/lib/recordings-review/artifact-model`     |
+| `dataUrlToRecordingArtifactBlob`     | `@/lib/recordings-review/artifact-data-url`  |
+| `derivePeaksFromSamples`             | `@/lib/recordings-review/artifact-details`   |
+| `getDurationWarning`                 | `@/lib/recordings-review/artifact-details`   |
+| `hasUsablePeaks`                     | `@/lib/recordings-review/artifact-details`   |
+| `loadRecordingArtifactDetails`       | `@/lib/recordings-review/artifact-details`   |
+| `RecordingArtifactMigrationResult`   | `@/lib/recordings-review/artifact-migration` |
+| `migrateLegacyRecordingArtifacts`    | `@/lib/recordings-review/artifact-migration` |
+| `assertRecordingArtifactCleanup`     | `@/lib/recordings-review/artifact-storage`   |
+| `cleanupCommittedRecordingArtifacts` | `@/lib/recordings-review/artifact-storage`   |
+| `createRecordingArtifactRef`         | `@/lib/recordings-review/artifact-storage`   |
+| `resolveRecordingArtifactBody`       | `@/lib/recordings-review/artifact-storage`   |
+| `saveCapturedRecordingArtifact`      | `@/lib/recordings-review/artifact-storage`   |
 
 ### `quick-metronome/artifact-controller.ts`
 

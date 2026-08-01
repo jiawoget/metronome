@@ -62,14 +62,16 @@ export function filterHomeCommandPaletteCommands(
   }
 
   return commands.filter((command) => {
-    const haystack = normalizeSearchText([
-      command.title,
-      command.subtitle,
-      command.kind,
-      command.href,
-      command.executionLabel,
-      ...command.keywords
-    ].join(" "));
+    const haystack = normalizeSearchText(
+      [
+        command.title,
+        command.subtitle,
+        command.kind,
+        command.href,
+        command.executionLabel,
+        ...command.keywords
+      ].join(" ")
+    );
 
     return terms.every((term) => haystack.includes(term));
   });
@@ -131,7 +133,9 @@ function buildContinuePracticeCommand(
       const segmentName = normalizeLabel(target.segmentName) ?? "Saved segment";
       const sheetName = normalizeLabel(target.sheetName);
       const rangeLabel = normalizeLabel(target.segmentRangeLabel);
-      const subtitleParts = [sheetName ?? "Sheet practice", rangeLabel].filter(isNonEmptyString);
+      const subtitleParts = [sheetName ?? "Sheet practice", rangeLabel].filter(
+        isNonEmptyString
+      );
 
       return {
         id: `continue:${target.targetKey}`,

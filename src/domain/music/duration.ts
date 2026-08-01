@@ -32,7 +32,9 @@ function getRequiredMusicDuration(name: string): MusicDuration {
   return duration;
 }
 
-export function getMusicDurationForDenominator(denominator: number): MusicDuration {
+export function getMusicDurationForDenominator(
+  denominator: number
+): MusicDuration {
   switch (denominator) {
     case 4:
       return getRequiredMusicDuration("quarter");

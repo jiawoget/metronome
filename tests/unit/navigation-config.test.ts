@@ -17,7 +17,9 @@ describe("topLevelNavItems", () => {
   it("maps nested and exact paths to the highlighted navigation item", () => {
     expect(getActiveNavItem("/")?.id).toBe("home");
     expect(getActiveNavItem("/quick-metronome")?.id).toBe("quick-metronome");
-    expect(getActiveNavItem("/sheet-practice/demo-sheet")?.id).toBe("sheet-practice");
+    expect(getActiveNavItem("/sheet-practice/demo-sheet")?.id).toBe(
+      "sheet-practice"
+    );
     expect(getActiveNavItem("/settings")?.id).toBe("settings");
     expect(getActiveNavItem("/unknown")).toBeUndefined();
   });

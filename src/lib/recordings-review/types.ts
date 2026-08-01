@@ -1,4 +1,7 @@
-import type { MetronomeSettings, RecordingArtifactAnalysis } from "@/lib/quick-metronome/types";
+import type {
+  MetronomeSettings,
+  RecordingArtifactAnalysis
+} from "@/lib/quick-metronome/types";
 import type {
   SheetRecordingMetadata,
   SheetRecordingSegmentContext

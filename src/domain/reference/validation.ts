@@ -79,29 +79,45 @@ const supportedLocalAudioTypes = new Set([
   "audio/webm"
 ]);
 
-export function validateSheetReference(reference: SheetReference): SheetReference {
+export function validateSheetReference(
+  reference: SheetReference
+): SheetReference {
   return sheetReferenceSchema.parse(reference);
 }
 
-export function validateLocalAudioArtifact(artifact: LocalAudioReferenceArtifact): LocalAudioReferenceArtifact {
+export function validateLocalAudioArtifact(
+  artifact: LocalAudioReferenceArtifact
+): LocalAudioReferenceArtifact {
   return localAudioArtifactSchema.parse(artifact);
 }
 
-function validateBilibiliSearchResult(result: BilibiliSearchResult): BilibiliSearchResult {
+function validateBilibiliSearchResult(
+  result: BilibiliSearchResult
+): BilibiliSearchResult {
   return bilibiliSearchResultSchema.parse(result);
 }
 
-export function isSupportedLocalAudioFile(file: Pick<File, "type" | "name" | "size">) {
+export function isSupportedLocalAudioFile(
+  file: Pick<File, "type" | "name" | "size">
+) {
   const extension = file.name.toLowerCase().split(".").pop() ?? "";
-  const knownExtension = ["mp3", "wav", "ogg", "aac", "m4a", "webm"].includes(extension);
+  const knownExtension = ["mp3", "wav", "ogg", "aac", "m4a", "webm"].includes(
+    extension
+  );
 
-  return file.size > 0 && (supportedLocalAudioTypes.has(file.type) || (file.type === "" && knownExtension));
+  return (
+    file.size > 0 &&
+    (supportedLocalAudioTypes.has(file.type) ||
+      (file.type === "" && knownExtension))
+  );
 }
 
 export function normalizeReferenceTitle(value: string, fallback: string) {
   const normalized = value.trim().replace(/\s+/g, " ");
 
-  return normalized.length > 0 ? normalized.slice(0, 180) : fallback.slice(0, 180);
+  return normalized.length > 0
+    ? normalized.slice(0, 180)
+    : fallback.slice(0, 180);
 }
 
 export function clampReferenceVolume(value: number) {
@@ -130,7 +146,9 @@ export function parseBilibiliUrl(input: string): BilibiliUrlMetadata | null {
   }
 
   const segments = parsed.pathname.split("/").filter(Boolean);
-  const videoIndex = segments.findIndex((segment) => segment.toLowerCase() === "video");
+  const videoIndex = segments.findIndex(
+    (segment) => segment.toLowerCase() === "video"
+  );
   const bvid = videoIndex >= 0 ? segments[videoIndex + 1] : null;
 
   if (!bvid || !bvidPattern.test(bvid)) {

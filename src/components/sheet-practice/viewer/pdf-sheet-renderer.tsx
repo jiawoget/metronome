@@ -29,8 +29,17 @@ export function PdfSheetRenderer({
   return (
     <Document
       file={file}
-      loading={<p className="p-5 text-sm text-muted-foreground">Rendering PDF...</p>}
-      error={<p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">PDF cannot be rendered.</p>}
+      loading={
+        <p className="p-5 text-sm text-muted-foreground">Rendering PDF...</p>
+      }
+      error={
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+        >
+          PDF cannot be rendered.
+        </p>
+      }
       onLoadSuccess={({ numPages }) => onRenderReady(numPages)}
       onLoadError={onRenderError}
       onSourceError={onRenderError}
@@ -42,7 +51,10 @@ export function PdfSheetRenderer({
         renderTextLayer={false}
         onRenderError={onRenderError}
         canvasBackground="white"
-        className={cn("overflow-hidden rounded-md bg-white shadow-soft", renderError && "hidden")}
+        className={cn(
+          "overflow-hidden rounded-md bg-white shadow-soft",
+          renderError && "hidden"
+        )}
       />
     </Document>
   );

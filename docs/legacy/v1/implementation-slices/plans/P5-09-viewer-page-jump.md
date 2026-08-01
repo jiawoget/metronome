@@ -339,12 +339,12 @@ Stop and return to planning if implementation appears to require:
 
 ## Deferred Work Register
 
-| Deferred work | Future owner |
-| --- | --- |
-| Viewer zoom-pan domain state | P5-10 |
-| Viewer zoom-pan UI controls and gestures | P5-11 |
-| Assisted/manual page turning at segment boundaries | P5-12 |
-| Persisted last-viewed page or URL deep-link page restore | Future reviewed navigation/persistence slice |
-| Page jump history, named bookmarks, or section labels | Future viewer/navigation slice |
-| Thumbnail virtualization / progressive rendering for very large PDFs | Future viewer performance slice |
-| Cloud sync, score following, automatic recognition, mistake detection | v2 or future reviewed feature |
+| Deferred work                                                         | Future owner                                 |
+| --------------------------------------------------------------------- | -------------------------------------------- |
+| Viewer zoom-pan domain state                                          | P5-10                                        |
+| Viewer zoom-pan UI controls and gestures                              | P5-11                                        |
+| Assisted/manual page turning at segment boundaries                    | P5-12                                        |
+| Persisted last-viewed page or URL deep-link page restore              | Future reviewed navigation/persistence slice |
+| Page jump history, named bookmarks, or section labels                 | Future viewer/navigation slice               |
+| Thumbnail virtualization / progressive rendering for very large PDFs  | Future viewer performance slice              |
+| Cloud sync, score following, automatic recognition, mistake detection | v2 or future reviewed feature                |

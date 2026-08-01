@@ -1,6 +1,9 @@
 "use client";
 
-import { mapPermissionState, type BrowserStorageEstimate } from "@/domain/settings";
+import {
+  mapPermissionState,
+  type BrowserStorageEstimate
+} from "@/domain/settings";
 import { sheetLibraryRepository } from "@/infrastructure/files/sheet-library-repository";
 import { practiceSessionRepository } from "@/infrastructure/db/practice-session-repository";
 import { referenceRepository } from "@/infrastructure/reference/reference-repository";
@@ -30,7 +33,8 @@ export const browserStorageSummaryService = createStorageSummaryService({
       recordings: recordingSnapshot.recordings.length,
       references,
       errorMarkers: recordingSnapshot.errorMarkers.length,
-      practiceSessions: practiceSessions.length + recordingSnapshot.sessions.length
+      practiceSessions:
+        practiceSessions.length + recordingSnapshot.sessions.length
     };
   },
 
@@ -47,7 +51,10 @@ export const browserStorageSummaryService = createStorageSummaryService({
     return {
       supported: true,
       usageBytes: Math.max(0, Math.round(estimate.usage ?? 0)),
-      quotaBytes: typeof estimate.quota === "number" ? Math.max(0, Math.round(estimate.quota)) : null
+      quotaBytes:
+        typeof estimate.quota === "number"
+          ? Math.max(0, Math.round(estimate.quota))
+          : null
     };
   }
 });
@@ -73,7 +80,9 @@ export const browserLocalDataCleanupService: LocalDataCleanupService = {
         (result) => result.status === "rejected"
       )
     ) {
-      throw new Error("Local data cleanup completed with partial storage cleanup failures.");
+      throw new Error(
+        "Local data cleanup completed with partial storage cleanup failures."
+      );
     }
   }
 };
@@ -85,7 +94,9 @@ export const browserMicrophonePermissionService: PermissionStatusService = {
     }
 
     try {
-      const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+      const status = await navigator.permissions.query({
+        name: "microphone" as PermissionName
+      });
 
       return mapPermissionState(status.state);
     } catch {
@@ -93,4 +104,3 @@ export const browserMicrophonePermissionService: PermissionStatusService = {
     }
   }
 };
-

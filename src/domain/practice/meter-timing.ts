@@ -7,11 +7,16 @@ export type MeterTimingInput = {
   timeSignature: PracticeTimeSignature;
 };
 
-export function getMeterTimeSignatureParts(timeSignature: PracticeTimeSignature) {
+export function getMeterTimeSignatureParts(
+  timeSignature: PracticeTimeSignature
+) {
   return getMusicTimeSignatureParts(timeSignature);
 }
 
-export function getMeterBeatDurationMs({ bpm, timeSignature }: MeterTimingInput) {
+export function getMeterBeatDurationMs({
+  bpm,
+  timeSignature
+}: MeterTimingInput) {
   const { denominator } = getMeterTimeSignatureParts(timeSignature);
 
   return getMusicBeatDurationMs({ bpm, denominator });
