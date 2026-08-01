@@ -8,15 +8,11 @@ import type {
 function createId(prefix: string) {
   const secureCrypto = typeof crypto === "undefined" ? undefined : crypto;
 
-  if (
-    secureCrypto &&
-    "randomUUID" in secureCrypto &&
-    typeof secureCrypto.randomUUID === "function"
-  ) {
+  if (typeof secureCrypto?.randomUUID === "function") {
     return `${prefix}_${secureCrypto.randomUUID()}`;
   }
 
-  if (secureCrypto && typeof secureCrypto.getRandomValues === "function") {
+  if (typeof secureCrypto?.getRandomValues === "function") {
     const bytes = secureCrypto.getRandomValues(new Uint8Array(16));
     const randomId = Array.from(bytes, (byte) =>
       byte.toString(16).padStart(2, "0")
