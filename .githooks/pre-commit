@@ -197,6 +197,15 @@ if staged_package_json="$(git show :package.json 2>/dev/null)" &&
         node_cmd=""
       fi
       ;;
+    [Nn][Pp][Mm])
+      npm_sibling_node_exe="${npm_candidate%/*}/node.exe"
+      npm_sibling_node="${npm_candidate%/*}/node"
+      if [ -x "$npm_sibling_node_exe" ]; then
+        node_cmd="$(cd "$(dirname "$npm_sibling_node_exe")" && pwd -P)/$(basename "$npm_sibling_node_exe")"
+      elif [ -x "$npm_sibling_node" ]; then
+        node_cmd="$(cd "$(dirname "$npm_sibling_node")" && pwd -P)/$(basename "$npm_sibling_node")"
+      fi
+      ;;
   esac
 
   if [ -n "$node_cmd" ] &&
@@ -205,8 +214,9 @@ if staged_package_json="$(git show :package.json 2>/dev/null)" &&
     node_probe_succeeded=true
   fi
 
-  if [ -n "$npm_candidate" ] &&
-    npm_version_output="$("$npm_candidate" --version 2>/dev/null)" &&
+  if [ -n "$node_cmd" ] &&
+    [ -n "$npm_candidate" ] &&
+    npm_version_output="$(PATH="${node_cmd%/*}:$PATH" "$npm_candidate" --version 2>/dev/null)" &&
     npm_version="$(normalize_stable_version npm "$npm_version_output")"; then
     npm_probe_succeeded=true
   fi
