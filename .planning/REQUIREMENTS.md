@@ -56,22 +56,22 @@ Roadmap mapping is populated by the Native OpenGSD roadmapper.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ID-01 | Unmapped | Pending |
-| ID-02 | Unmapped | Pending |
-| ID-03 | Unmapped | Pending |
-| HOOK-01 | Unmapped | Pending |
-| HOOK-02 | Unmapped | Pending |
-| HOOK-03 | Unmapped | Pending |
-| PDF-01 | Unmapped | Pending |
-| AUTH-01 | Unmapped | Pending |
-| FLOW-01 | Unmapped | Pending |
-| SCOPE-01 | Unmapped | Pending |
+| ID-01 | Phase 2 | Pending |
+| ID-02 | Phase 2 | Pending |
+| ID-03 | Phase 2 | Pending |
+| HOOK-01 | Phase 2 | Pending |
+| HOOK-02 | Phase 2 | Pending |
+| HOOK-03 | Phase 2 | Pending |
+| PDF-01 | Phase 2 | Pending |
+| AUTH-01 | Phase 2 | Pending |
+| FLOW-01 | Phase 2 | Pending |
+| SCOPE-01 | Phase 2 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 10 total
-- Mapped to phases: 0
-- Unmapped: 10
+- Mapped to phases: 10
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-08-01*
-*Last updated: 2026-08-01 after v1.2 project research*
+*Last updated: 2026-08-01 after v1.2 roadmap creation*
