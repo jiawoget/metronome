@@ -49,17 +49,19 @@ This section corrects the report's provenance boundary after final pull-request 
 
 | Evidence | Result |
 |---|---|
-| Final-review repair implementation | Commit `54468ef253bf0fbfa8750f73d9c8d3f730ac90ac`; hook blob `90a906c9058eca6f41247282f3e34454a654e9b1` |
-| Current authority boundary | At `54468ef...`, `AGENTS.md` (`5e2ace2...`), PROJECT (`2eab2d2...`), ROADMAP (`4b7af5d...`), and STATE (`f763b34...`) record archived v1.2 verification/audit with only PR #136 release exit pending |
-| Focused route/interpreter evidence | A recreated 14-case real-hook matrix passed 14/14 against that exact hook content, covering standard/custom `npm` and `npm.cmd`, compatible/old/missing runtimes, env-node shadowing, fixed and argument-bearing shebangs, Bash-function candidates, and distinct `node`/`node.exe` identities; exact arguments passed and snapshot residue was 0 |
+| Final-review repair implementation | Direct-route repair commit `54468ef253bf0fbfa8750f73d9c8d3f730ac90ac`; fallback-host repair commit `3020fd5191de8062527cf2e4ceab7a9e3a80b549`; final hook blob `8a8bd2991200bd7f4d9d2f23e533e42809157d59` |
+| Current authority boundary | At `3020fd5...`, `AGENTS.md` (`5e2ace2...`), PROJECT (`2eab2d2...`), ROADMAP (`4b7af5d...`), and STATE (`f763b34...`) record archived v1.2 verification/audit with only PR #136 release exit pending |
+| Focused route/interpreter evidence | A recreated 15-case real-hook matrix passed 15/15 against that exact hook content, covering standard/custom `npm` and `npm.cmd`, compatible/old/missing runtimes, env-node shadowing, fixed and argument-bearing shebangs, Bash-function candidates, distinct `node`/`node.exe` identities, and a repository-local PowerShell shadow; exact arguments passed and snapshot residue was 0 |
 | Real direct route | Node 24.17.0 + npm 11.17.0 in a standard installation layout passed the staged-index hook with PowerShell/pwsh absent from `PATH`; snapshot residue was 0 |
-| Local candidate gates | On `54468ef...`: `format:check`, lint, typecheck, 66 unit files / 848 tests, and production build all passed; worktree/index were clean |
-| GitHub exact-head gates | Repository CI and CodeQL passed on `54468ef...`; CodeScene separately failed its LOC quality gate on one advisory test-file rule (`quick-metronome-session.test.ts`: 1015 LOC versus the 1000 threshold) |
+| Real fallback route | Node 24.17.0 + incompatible npm 11.13.0 selected the captured absolute Windows PowerShell host and passed the staged-index hook; the focused shadow case proved a later `node_modules/.bin/powershell` prepend cannot replace that host |
+| Local candidate gates | On `3020fd5...`: `format:check`, lint, typecheck, 66 unit files / 848 tests, and production build all passed; worktree/index were clean |
+| GitHub exact-head gates | Repository CI and CodeQL passed on prior frozen head `9a0c928...`; CodeScene separately failed its LOC quality gate on one advisory test-file rule (`quick-metronome-session.test.ts`: 1015 LOC versus the 1000 threshold). Per `AGENTS.md`, the replacement final head still requires a fresh exact-head CI/review pass. |
 | Final-review provenance finding | The exact-head `@codex` review correctly found that the earlier `d693c73... equals HEAD` statement had become stale. This documentation-only correction removes that claim; per `AGENTS.md`, its replacement PR head still requires one fresh exact-head CI/review pass. |
+| Final-review fallback-host finding | The exact-head `@codex` review correctly found that a bare captured `powershell`/`pwsh` name could be shadowed after `node_modules/.bin` was prepended. Commit `3020fd5...` captures and invokes the absolute probed host; the RED→GREEN shadow regression and expanded matrix bind the repair to hook blob `8a8bd29...`. |
 
-#### Focused Matrix Aggregate for Hook Blob `90a906c...`
+#### Focused Matrix Aggregate for Hook Blob `8a8bd29...`
 
-The release-exit runner failed the command on any non-zero hook exit, route-count mismatch, unexpected argument count/order, unexpected snapshot prefix, fallback flag/script mismatch, Node-shadow execution, or snapshot residue. Every direct case asserted exactly `--prefix <snapshot> run format:check`; every fallback case additionally asserted `-NoProfile -NonInteractive -ExecutionPolicy Bypass -File <scripts/npm-local.ps1>` before that exact npm tuple.
+The release-exit runner failed the command on any non-zero hook exit, route-count mismatch, unexpected argument count/order, unexpected snapshot prefix, fallback flag/script mismatch, Node- or PowerShell-shadow execution, or snapshot residue. Every direct case asserted exactly `--prefix <snapshot> run format:check`; every fallback case additionally asserted `-NoProfile -NonInteractive -ExecutionPolicy Bypass -File <scripts/npm-local.ps1>` before that exact npm tuple.
 
 | Scenario | Expected/observed route | Direct format calls | Fallback calls | Hook exit | Snapshot residue |
 |---|---:|---:|---:|---:|---:|
@@ -77,8 +79,9 @@ The release-exit runner failed the command on any non-zero hook exit, route-coun
 | `unknown-cmd-fallback` | fallback | 0 | 1 | 0 | 0 |
 | `npm-function-fallback` | fallback | 0 | 1 | 0 | 0 |
 | `distinct-node-shim` | direct | 1 | 0 | 0 | 0 |
+| `powershell-shadow-fallback` | fallback | 0 | 1 | 0 | 0 |
 
-Aggregate result: 14/14 passed against the content committed as Git blob `90a906c9058eca6f41247282f3e34454a654e9b1`; all per-case error lists were empty.
+Aggregate result: 15/15 passed against the content committed as Git blob `8a8bd2991200bd7f4d9d2f23e533e42809157d59`; all per-case error lists were empty.
 
 ## Required Artifacts
 
@@ -161,7 +164,7 @@ Four `return null` matches in the large test owner are pre-existing test doubles
 ### Adversarial Disconfirmation Checks
 
 - A green full repository gate does not prove route selection, so it was not used as sole HOOK evidence; selector structure, helper behavior, exact blob binding, real fallback execution, no-route failure, and cleanup were checked separately.
-- The route matrix is not retained as a durable tracked test. That is intentional and required by SCOPE-01; behavior remains revision-bound, and a later hook/input change must recreate equivalent focused evidence rather than reuse the Native result. Final-review repair did recreate that focused evidence for hook blob `90a906c...`, as recorded in the non-Native release-exit section above.
+- The route matrix is not retained as a durable tracked test. That is intentional and required by SCOPE-01; behavior remains revision-bound, and a later hook/input change must recreate equivalent focused evidence rather than reuse the Native result. Final-review repair did recreate that focused evidence for hook blob `8a8bd29...`, as recorded in the non-Native release-exit section above.
 - General compound SemVer support is intentionally absent. Unsupported declarations conservatively fall back and the generalized grammar is explicitly deferred, so this is not a Phase 2 gap.
 
 ## Human Verification Required
