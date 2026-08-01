@@ -489,19 +489,15 @@ The real current fallback hook run completed `format:check` successfully when ex
 
 No user confirmation is needed for a research assumption. A future root engine change away from one simple stable `>=X.Y.Z` value is not assumed to work; it must conservatively fall back and generalized range support remains separately scoped. `[VERIFIED: REQUIREMENTS.md Future Requirements]`
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Which exact ephemeral harness layout should the executor use?**
-   - What we know: It must cover compatible, incompatible, malformed, prerelease, competing-candidate, fallback, and no-route cases; record probe/invocation provenance; retain Git utilities; and leave no tracked artifact. `[VERIFIED: HOOK requirements and environment probes]`
-   - What's unclear: Whether the executor will prefer a minimal temporary Git repository or an alternate-index arrangement. Both can remain outside tracked architecture. `[VERIFIED: available implementation options]`
-   - Recommendation: Use a minimal temporary Git repository plus PATH sentinel executables for selector cases, then the real checkout for actual `npm-local.ps1`/snapshot integration. This cleanly separates route logic from real wrapper behavior. `[VERIFIED: bounded architecture and live hook behavior]`
+1. **RESOLVED — Selector harness layout.**
+   - Selected decision: Run the route matrix from the minimal temporary Git repository and harness at `C:/tmp/metronome-phase-02-hook-matrix/**`, outside tracked architecture. It uses distinct fake candidates, provenance logs, and structured results for selector cases; the real checkout separately proves the unchanged `npm-local.ps1` and staged-snapshot integration. The harness is never staged and is removed after its durable evidence is recorded. `[VERIFIED: 02-01-PLAN.md Artifacts this phase produces and Tasks 1-2]`
 
-2. **Which expensive gates remain fresh after the final implementation revision?**
-   - What we know: Focused secure-ID and selector evidence must run after their changes; AGENTS permits reuse of unchanged exact-revision full-gate evidence. `[VERIFIED: AGENTS.md]`
-   - What's unclear: The eventual implementation revision and whether prior format/lint/typecheck/unit/build inputs remain unchanged. `[VERIFIED: phase not yet implemented]`
-   - Recommendation: Have the plan capture head/input provenance, run focused gates per task, and decide at the final integration task whether the full suite is stale, missing, changed, or contradictory. Do not pre-authorize either blind reuse or automatic repetition. `[VERIFIED: repository verification policy]`
+2. **RESOLVED — Exact-revision evidence freshness.**
+   - Selected decision: Every evidence record captures the tested revision, relevant inputs, and hook hash. Matrix evidence is reusable only when its tested hook hash matches the current raw hook bytes and the frozen `HEAD:.githooks/pre-commit` blob; any revision or relevant-input change invalidates and reruns the affected focused, matrix, or full gate. The plan therefore runs the full `format:check`, lint, typecheck, unit, and build sequence once on the frozen revision because this phase changes the test and hook inputs. `[VERIFIED: 02-01-PLAN.md Tasks 2-3 and AGENTS.md exact-revision policy]`
 
-Neither question blocks planning; both have a prescribed bounded default. `[VERIFIED: available evidence and owner scope]`
+No open research decision remains for planning or execution. `[VERIFIED: checker-selected plan decisions]`
 
 ## Environment Availability
 
