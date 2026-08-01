@@ -5,6 +5,7 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 git_dir="$(git rev-parse --absolute-git-dir)"
 npm_local_script="$repo_root/scripts/npm-local.ps1"
+node_cmd=""
 npm_cmd=""
 power_shell=""
 snapshot_dir=""
@@ -68,18 +69,155 @@ if ! git cat-file -e HEAD:.prettierignore 2>/dev/null; then
   exit 0
 fi
 
-if command -v npm >/dev/null 2>&1; then
-  npm_cmd="npm"
-elif command -v npm.cmd >/dev/null 2>&1; then
-  npm_cmd="npm.cmd"
-elif [ -f "$npm_local_script" ] && command -v powershell >/dev/null 2>&1; then
-  power_shell="powershell"
-elif [ -f "$npm_local_script" ] && command -v pwsh >/dev/null 2>&1; then
-  power_shell="pwsh"
-else
-  echo "Could not find a supported npm route for the pre-commit hook."
-  echo "Install npm on PATH or restore scripts/npm-local.ps1 with powershell/pwsh available."
-  exit 1
+extract_engine_minimum() {
+  local engine_name="$1"
+  local manifest="$2"
+  local values=""
+  local minimum_pattern='^>=[0-9]+\.[0-9]+\.[0-9]+$'
+
+  if ! values="$({
+    printf '%s\n' "$manifest" |
+      awk -v engine_name="$engine_name" '
+        BEGIN {
+          in_engines = 0
+          seen_engines = 0
+        }
+
+        /^[[:space:]]*"engines"[[:space:]]*:[[:space:]]*\{[[:space:]]*$/ {
+          if (seen_engines) {
+            exit 2
+          }
+          seen_engines = 1
+          in_engines = 1
+          next
+        }
+
+        in_engines && /^[[:space:]]*\}[,]?[[:space:]]*$/ {
+          in_engines = 0
+          next
+        }
+
+        in_engines {
+          prefix = "^[[:space:]]*\"" engine_name "\"[[:space:]]*:[[:space:]]*\""
+          if ($0 ~ prefix) {
+            value = $0
+            sub(prefix, "", value)
+            if (value !~ /\"[[:space:]]*,?[[:space:]]*$/) {
+              print "__INVALID__"
+              next
+            }
+            sub(/\"[[:space:]]*,?[[:space:]]*$/, "", value)
+            print value
+          }
+        }
+
+        END {
+          if (in_engines) {
+            exit 3
+          }
+        }
+      '
+  } 2>/dev/null)"; then
+    return 1
+  fi
+
+  if [ -z "$values" ] || [[ "$values" == *$'\n'* ]] || [[ ! "$values" =~ $minimum_pattern ]]; then
+    return 1
+  fi
+
+  printf '%s\n' "${values#>=}"
+}
+
+normalize_stable_version() {
+  local command_kind="$1"
+  local version="$2"
+  local stable_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+
+  version="${version//$'\r'/}"
+  version="${version//$'\n'/}"
+  if [ "$command_kind" = "node" ]; then
+    version="${version#v}"
+  fi
+
+  if [[ ! "$version" =~ $stable_pattern ]]; then
+    return 1
+  fi
+
+  printf '%s\n' "${version%%+*}"
+}
+
+version_at_least() {
+  local candidate="$1"
+  local minimum="$2"
+  local candidate_major candidate_minor candidate_patch
+  local minimum_major minimum_minor minimum_patch
+
+  IFS=. read -r candidate_major candidate_minor candidate_patch <<<"$candidate"
+  IFS=. read -r minimum_major minimum_minor minimum_patch <<<"$minimum"
+
+  if ((10#$candidate_major != 10#$minimum_major)); then
+    ((10#$candidate_major > 10#$minimum_major))
+  elif ((10#$candidate_minor != 10#$minimum_minor)); then
+    ((10#$candidate_minor > 10#$minimum_minor))
+  else
+    ((10#$candidate_patch >= 10#$minimum_patch))
+  fi
+}
+
+staged_package_json=""
+node_minimum=""
+npm_minimum=""
+npm_candidate=""
+node_version=""
+npm_version=""
+node_probe_succeeded=false
+npm_probe_succeeded=false
+
+if staged_package_json="$(git show :package.json 2>/dev/null)" &&
+  node_minimum="$(extract_engine_minimum node "$staged_package_json")" &&
+  npm_minimum="$(extract_engine_minimum npm "$staged_package_json")"; then
+  if node_candidate="$(command -v node 2>/dev/null)" && [ -n "$node_candidate" ]; then
+    node_cmd="$(cd "$(dirname "$node_candidate")" && pwd -P)/$(basename "$node_candidate")"
+  fi
+
+  if npm_candidate="$(command -v npm 2>/dev/null)" && [ -n "$npm_candidate" ]; then
+    npm_candidate="$(cd "$(dirname "$npm_candidate")" && pwd -P)/$(basename "$npm_candidate")"
+  elif npm_candidate="$(command -v npm.cmd 2>/dev/null)" && [ -n "$npm_candidate" ]; then
+    npm_candidate="$(cd "$(dirname "$npm_candidate")" && pwd -P)/$(basename "$npm_candidate")"
+  else
+    npm_candidate=""
+  fi
+
+  if [ -n "$node_cmd" ] &&
+    node_version_output="$("$node_cmd" --version 2>/dev/null)" &&
+    node_version="$(normalize_stable_version node "$node_version_output")"; then
+    node_probe_succeeded=true
+  fi
+
+  if [ -n "$npm_candidate" ] &&
+    npm_version_output="$("$npm_candidate" --version 2>/dev/null)" &&
+    npm_version="$(normalize_stable_version npm "$npm_version_output")"; then
+    npm_probe_succeeded=true
+  fi
+
+  if $node_probe_succeeded &&
+    $npm_probe_succeeded &&
+    version_at_least "$node_version" "$node_minimum" &&
+    version_at_least "$npm_version" "$npm_minimum"; then
+    npm_cmd="$npm_candidate"
+  fi
+fi
+
+if [ -z "$npm_cmd" ]; then
+  if [ -f "$npm_local_script" ] && command -v powershell >/dev/null 2>&1; then
+    power_shell="powershell"
+  elif [ -f "$npm_local_script" ] && command -v pwsh >/dev/null 2>&1; then
+    power_shell="pwsh"
+  else
+    echo "Could not find a supported npm route for the pre-commit hook."
+    echo "Install npm on PATH or restore scripts/npm-local.ps1 with powershell/pwsh available."
+    exit 1
+  fi
 fi
 
 run_npm() {

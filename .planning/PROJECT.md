@@ -14,7 +14,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 **Target outcomes:**
 
-- Preserve and characterize the current secure quick-recording session-ID contract: `crypto.randomUUID()` first, a `crypto.getRandomValues()` fallback, and fail-closed behavior when Web Crypto is unavailable.
+- Preserve and characterize the current secure quick-recording recording-ID contract: `crypto.randomUUID()` first, a `crypto.getRandomValues()` fallback, and fail-closed behavior when Web Crypto is unavailable.
 - Make the tracked pre-commit hook use direct Node/npm only when both satisfy the repository engine contract; otherwise reuse `scripts/npm-local.ps1` without adding another wrapper or mutating user or system `PATH`.
 - Keep the two local PDF fixtures byte-for-byte equal to their valid HEAD blobs and verify that local checks no longer depend on damaged CRLF-expanded copies.
 - Reconcile `.planning/STATE.md`, `.planning/PROJECT.md`, `.planning/ROADMAP.md`, and `AGENTS.md` with the completed v1.1 release exit and the active v1.2 assurance scope.
