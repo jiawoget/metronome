@@ -14,7 +14,7 @@ Milestone v1.2 brings the shipped v1.1 tree under coherent Native OpenGSD author
 
 ### 🚧 v1.2 Release Assurance & Workflow Closure (In Progress)
 
-- [ ] **Phase 2: Release Assurance & Workflow Closure** - Preserve secure recording identity, repair engine-aware hook routing, prove repository integrity, and close at Native verification.
+- [x] **Phase 2: Release Assurance & Workflow Closure** - Preserve secure recording identity, repair engine-aware hook routing, prove repository integrity, and close at Native verification. (completed 2026-08-01)
 
 ## Milestone v1.2 Release Assurance & Workflow Closure (Phase Details)
 
@@ -44,4 +44,4 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Repository Formatting Baseline | v1.1 | 1/1 | Complete | 2026-08-01 |
-| 2. Release Assurance & Workflow Closure | v1.2 | 1/1 | In Progress|  |
+| 2. Release Assurance & Workflow Closure | v1.2 | 1/1 | Complete    | 2026-08-01 |
