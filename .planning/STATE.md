@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Repository Formatting Baseline
-status: Awaiting next milestone
-stopped_at: v1.1 archived; release exit in progress
-last_updated: "2026-07-31T16:08:02.449Z"
+milestone: v1.2
+milestone_name: Release Assurance & Workflow Closure
+status: planning
+last_updated: "2026-08-01T03:22:09.043Z"
 last_activity: 2026-08-01
-last_activity_desc: Milestone v1.1 completed and archived
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 100
-current_phase: 1
-current_phase_name: repository-formatting-baseline
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-01)
 
 ## Current Position
 
-Phase: Milestone v1.1 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Milestone archived; release exit in progress; next milestone blocked until merge and synchronization
-Last activity: 2026-08-01 — Milestone v1.1 completed and archived
+Status: Defining requirements
+Last activity: 2026-08-01 — Milestone v1.2 started
 
 ## Performance Metrics
 
