@@ -19,13 +19,14 @@
 - Do not imitate Native research, planning, checking, execution, verification, recovery, or state transitions with repository scripts or hand-created controllers.
 - Native maps, Lumen indexes, and research caches are navigation aids only; confirm material facts against live files.
 
-## Lightweight pull requests
+## Pull requests
 
 - Do not create or modify `.planning/**` for a lightweight task, except an explicitly requested correction to living lifecycle status.
 - Keep plans, command transcripts, changing commit SHAs, check IDs, and review status out of the repository.
 - Default to one implementer, focused local checks, and no extra review agent. Use at most one narrow read-only agent when it materially reduces a specific risk.
+- For a Native milestone, let Native OpenGSD finalize its artifacts and prepare the PR, but do not treat Native verification or `$gsd-ship` as proof of release.
 - Freeze the candidate head before one final CI pass and one read-only `@codex` review. A changed head replaces both results with one fresh pass.
-- PR creation is not merge authorization. Claim completion only after an authorized merge, synchronized local `main`, and a clean worktree.
+- PR creation is not merge authorization. Claim a PR or Native milestone complete only after an authorized merge, synchronized local `main`, and a clean worktree.
 
 ## Git and verification
 

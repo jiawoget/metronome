@@ -20,7 +20,7 @@ Choose one workflow owner before doing repository work. Prefer the smallest lane
 Use `skills/metronome-small-pr/SKILL.md` when all of these are true:
 
 - The intent and acceptance result are clear.
-- The change is localized maintenance, a contained bug fix, test relocation, documentation, formatting, configuration, or a read-only review.
+- The change is localized maintenance, a contained bug fix, test relocation, documentation, formatting, configuration, or a read-only review of a diff that itself meets every lightweight criterion.
 - It does not introduce or materially expand product behavior, a public contract, architecture, storage or schema, dependencies or runtime policy, security boundaries, or a migration.
 - It is expected to touch no more than 5 behavior-bearing implementation files and add or rewrite no more than 300 behavior-bearing lines.
 - Failure is reversible and can be covered by focused checks plus existing CI.
@@ -40,6 +40,7 @@ Use Native OpenGSD when any of these are true:
 - Requirements are ambiguous enough that implementation would encode a material product decision.
 - The expected behavior-bearing scope exceeds either lightweight threshold.
 - The user explicitly requests Native OpenGSD lifecycle work.
+- A read-only review covers a diff with any Native trigger above.
 
 Then read `.planning/STATE.md` and `.planning/ROADMAP.md`. Use only the surfaced Native entrypoint that matches the state, normally `$gsd-next` or `$gsd-new-milestone`. Let Native OpenGSD own its research, planning, execution, verification, and lifecycle mutations. Apply `skills/metronome-policy/SKILL.md` when its reuse trigger is met.
 
