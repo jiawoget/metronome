@@ -8,11 +8,11 @@ Metronome is a local-first web application for musicians to run metronome practi
 
 Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
 
-## Current Milestone: v1.2 Release Assurance & Workflow Closure (Verified)
+## Current Milestone: v1.2 Release Assurance & Workflow Closure (Release Exit In Progress)
 
 **Goal:** Bring the actual merged v1.1 tree back under Native OpenGSD authority, retain the approved secure quick-recording ID behavior, correct the pre-commit runtime selection defect, reconcile stale lifecycle narratives, and verify the resulting implementation without adding a parallel workflow layer.
 
-**Status:** Phase 2 passed ordinary Native OpenGSD verification on 2026-08-01. The milestone has not been archived or shipped, and all release actions remain outside the current authorization.
+**Status:** Phase 2 passed ordinary Native OpenGSD verification on 2026-08-01. The owner subsequently authorized the bounded release exit, and PR #136 is open. Milestone archival, final-head CI/review, merge, and local-main synchronization remain pending; the milestone is not shipped until those release facts are complete.
 
 **Target outcomes:**
 
@@ -21,7 +21,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 - Keep the two local PDF fixtures byte-for-byte equal to their valid HEAD blobs and verify that local checks no longer depend on damaged CRLF-expanded copies.
 - Reconcile `.planning/STATE.md`, `.planning/PROJECT.md`, `.planning/ROADMAP.md`, and `AGENTS.md` with the completed v1.1 release exit and the active v1.2 assurance scope.
 - Run the current real implementation through Native OpenGSD research, planning, plan checking, bounded execution, and verification.
-- Stop this authorization after native verification; shipping, pull-request creation, final-head review/CI, merge, and local-main synchronization require a later explicit instruction.
+- Stop the Phase 2 implementation authorization after native verification. Any later shipping, pull-request creation, final-head review/CI, merge, and local-main synchronization require separate explicit owner authorization; that bounded release-exit authorization was granted on 2026-08-01.
 
 ## Requirements
 
@@ -33,7 +33,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ### Active
 
-- No implementation requirement remains active in v1.2. Its verified result is awaiting a separately authorized milestone-release decision; product and R01 work remain dormant.
+- No implementation requirement remains active in v1.2. Its separately authorized release exit is in progress through PR #136; product and R01 work remain dormant.
 
 ### Deferred
 
@@ -47,7 +47,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 - Reformatting the repository baseline, changing formatter ownership, or modernizing unrelated dependencies.
 - A second formatter, new runtime wrapper, custom lifecycle validator/controller, or any imitation of Native OpenGSD behavior.
 - A custom hard gate requiring another native verification specifically after final review; existing Native OpenGSD and release-exit responsibilities remain distinct.
-- Shipping, pull-request creation, final-head review/CI, merge, or local-main synchronization in the current authorization.
+- Treating shipping, pull-request creation, final-head review/CI, merge, or local-main synchronization as part of the Phase 2 implementation or verification result; those actions belong only to the separately authorized post-verification release exit.
 - Creating, planning, or integrating a fresh product or R01 milestone.
 
 ## Context
@@ -70,7 +70,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 - **Behavior boundary:** Retain the merged secure-ID semantics and their focused tests; do not expand the quick-recording product contract.
 - **Binary fixtures:** Treat PDF fixtures as raw binary bytes. Local restoration must match the committed blobs exactly and must not create a tracked content change.
 - **Quality:** Native planning and verification decide the proportional command set. The repository's existing format, lint, typecheck, unit, build, and applicable focused test contracts remain authoritative.
-- **Release boundary:** Native phase verification does not prove shipping. This milestone's current authorization stops after verification and does not authorize PR or merge actions.
+- **Release boundary:** Native phase verification does not prove shipping. Phase 2 authorization stopped after verification; the owner subsequently authorized the bounded release exit. PR creation alone is not shipping, and release truth requires final-head CI/review, merge, and synchronized local `main`.
 - **Local first:** No cloud storage or remote product dependency is introduced.
 
 ## Key Decisions
@@ -100,7 +100,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ## Evolution
 
-The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is not an active lifecycle input. Milestone v1.1 shipped on 2026-08-01 with final-head CI/review, merge, and clean local-main synchronization complete. Milestone v1.2 has reconciled the actual merged tree with Native OpenGSD authority and passed ordinary verification for the bounded assurance fixes approved by the owner; it remains unarchived and unshipped and does not activate a new product or R01 direction.
+The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is not an active lifecycle input. Milestone v1.1 shipped on 2026-08-01 with final-head CI/review, merge, and clean local-main synchronization complete. Milestone v1.2 has reconciled the actual merged tree with Native OpenGSD authority and passed ordinary verification for the bounded assurance fixes approved by the owner. Its separately authorized release exit is now in progress through PR #136; it remains unshipped until final-head CI/review, merge, and local-main synchronization complete, and it does not activate a new product or R01 direction.
 
 ---
-*Last updated: 2026-08-01 after v1.2 Native verification*
+*Last updated: 2026-08-01 after v1.2 release-exit authorization and PR #136 creation*

@@ -2,21 +2,21 @@
 
 ## Overview
 
-Milestone v1.2 brings the shipped v1.1 tree under coherent Native OpenGSD authority, preserves the approved secure quick-recording identity contract, corrects the existing pre-commit runtime-selection defect, proves the two PDF fixtures remain byte-identical to `HEAD`, and stops after Native OpenGSD verification. All 10 requirements converge on one integrated revision, so the milestone uses one bounded phase and one sequential plan.
+Milestone v1.2 brings the shipped v1.1 tree under coherent Native OpenGSD authority, preserves the approved secure quick-recording identity contract, corrects the existing pre-commit runtime-selection defect, proves the two PDF fixtures remain byte-identical to `HEAD`, and ends its implementation boundary after Native OpenGSD verification. All 10 requirements converge on one integrated revision, so the milestone uses one bounded phase and one sequential plan. The owner separately authorized the post-verification release exit on 2026-08-01.
 
 ## Milestones
 
-- 🚧 **v1.2 Release Assurance & Workflow Closure** — Phase 2 complete, 1/1 plan and 10/10 requirements verified; release exit not authorized
+- 🚧 **v1.2 Release Assurance & Workflow Closure** — Phase 2 complete, 1/1 plan and 10/10 requirements verified; separately authorized release exit in progress through PR #136
 - ✅ **v1.1 Repository Formatting Baseline** — Phase 1, 1 plan, 14/14 requirements validated and shipped 2026-08-01 ([roadmap archive](milestones/v1.1-ROADMAP.md), [requirements archive](milestones/v1.1-REQUIREMENTS.md))
 - ✅ **v1.0 Legacy Delivered Baseline** — 8 phases, 8 plans, 32 delivered capabilities archived 2026-07-20 ([roadmap archive](milestones/v1.0-ROADMAP.md), [requirements archive](milestones/v1.0-REQUIREMENTS.md))
 
 ## Phases
 
-### 🚧 v1.2 Release Assurance & Workflow Closure (Verified; Release Exit Not Authorized)
+### 🚧 v1.2 Release Assurance & Workflow Closure (Verified; Release Exit In Progress)
 
 - [x] **Phase 2: Release Assurance & Workflow Closure** - Preserve secure recording identity, repair engine-aware hook routing, prove repository integrity, and close at Native verification. (completed 2026-08-01)
 
-**Verification:** Passed ordinary Native OpenGSD verification on 2026-08-01. Milestone archival, shipping, and release-exit actions require fresh owner authorization.
+**Verification:** Passed ordinary Native OpenGSD verification on 2026-08-01. The owner then separately authorized milestone audit, archival, PR #136 final-head CI/review, merge, and local-main synchronization. PR creation alone is not shipping.
 
 ## Milestone v1.2 Release Assurance & Workflow Closure (Phase Details)
 
@@ -31,7 +31,7 @@ Milestone v1.2 brings the shipped v1.1 tree under coherent Native OpenGSD author
   2. A commit uses the exact direct Node/npm candidates only when both stable versions satisfy the staged root engine minima; every missing, malformed, prerelease, unsupported, or incompatible pair uses the existing PowerShell fallback when available and otherwise fails non-zero.
   3. The commit gate still checks the staged-index snapshot, bootstraps through existing owners, excludes `.planning/**`, cleans up safely, propagates failures, performs the whitespace check, and keeps its fast `format:check` boundary.
   4. Repository inspection shows both PDF fixtures have raw working-tree blob IDs equal to their `HEAD` blob IDs with valid committed bytes and no tracked diff, while PROJECT, STATE, ROADMAP, and AGENTS consistently identify v1.1 as shipped and v1.2 as the active Native OpenGSD assurance milestone.
-  5. Native OpenGSD verifies the integrated Phase 2 revision with no product or dormant-seed expansion, secure-ID redesign, new dependency, wrapper, controller, PDF content change, final-review-specific reverify gate, or shipping action; authorization stops at that verification result.
+  5. Native OpenGSD verifies the integrated Phase 2 revision with no product or dormant-seed expansion, secure-ID redesign, new dependency, wrapper, controller, PDF content change, final-review-specific reverify gate, or shipping action; the Phase 2 authorization stops at that verification result, and any later release exit is a separately authorized lifecycle.
 
 **Plans**: 1/1 plans executed
 

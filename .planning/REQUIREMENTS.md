@@ -23,12 +23,12 @@
 
 ### Lifecycle Authority
 
-- [x] **AUTH-01**: Active sections of PROJECT, STATE, ROADMAP, and AGENTS consistently state that v1.1 shipped, v1.2 assurance is active, product/R01 scope remains dormant, Native OpenGSD is the sole lifecycle authority, and the current authorization stops after native verification.
+- [x] **AUTH-01**: Active sections of PROJECT, STATE, ROADMAP, and AGENTS consistently state that v1.1 shipped, v1.2 assurance is active, product/R01 scope remains dormant, Native OpenGSD is the sole lifecycle authority, and Phase 2 authorization stops after native verification; any later release exit requires separate owner authorization.
 - [x] **FLOW-01**: Native OpenGSD owns and completes v1.2 research, requirements and roadmap creation, checker-approved planning, bounded execution, and verification for the resulting revision.
 
 ### Scope Integrity
 
-- [x] **SCOPE-01**: The resulting milestone contains no product expansion, dormant-seed activation, secure-ID production redesign, new dependency/runtime wrapper/lifecycle controller, PDF content change, final-review-specific reverify gate, or shipping action.
+- [x] **SCOPE-01**: The Phase 2 implementation and verification revision contains no product expansion, dormant-seed activation, secure-ID production redesign, new dependency/runtime wrapper/lifecycle controller, PDF content change, final-review-specific reverify gate, or shipping action; any later release-exit operations are outside that revision and require separate owner authorization.
 
 ## Future Requirements
 
@@ -47,7 +47,7 @@
 | New dependency, runtime manager, wrapper, formatter, checksum sidecar, or hook controller | Existing owners can satisfy the requirements without parallel infrastructure. |
 | PDF fixture rewrite or permanent fixture-check subsystem | Valid committed blobs already exist; v1.2 restores and proves local byte identity. |
 | Custom lifecycle validator/controller or final-review-specific native reverify gate | Native OpenGSD remains the sole lifecycle owner, and the owner rejected another process layer. |
-| Push, pull request, final-head CI/review, merge, tag, or local-main synchronization | Current authorization ends after Native OpenGSD verification. |
+| Push, pull request, final-head CI/review, merge, tag, or local-main synchronization as Phase 2 implementation or verification work | Phase 2 authorization ends after Native OpenGSD verification; release-exit actions require separate owner authorization, and tagging remains disabled. |
 | Reading or transforming `.planning/deprecated/**` | The directory remains an absolute historical quarantine. |
 
 ## Traceability
@@ -75,4 +75,4 @@ Roadmap mapping is populated by the Native OpenGSD roadmapper.
 
 ---
 *Requirements defined: 2026-08-01*
-*Last updated: 2026-08-01 after v1.2 roadmap creation*
+*Last updated: 2026-08-01 after separate v1.2 release-exit authorization*
