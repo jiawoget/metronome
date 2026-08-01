@@ -188,6 +188,17 @@ if staged_package_json="$(git show :package.json 2>/dev/null)" &&
     npm_candidate=""
   fi
 
+  case "${npm_candidate##*/}" in
+    [Nn][Pp][Mm].[Cc][Mm][Dd])
+      npm_sibling_node="${npm_candidate%/*}/node.exe"
+      if [ -f "$npm_sibling_node" ]; then
+        node_cmd="$(cd "$(dirname "$npm_sibling_node")" && pwd -P)/$(basename "$npm_sibling_node")"
+      else
+        node_cmd=""
+      fi
+      ;;
+  esac
+
   if [ -n "$node_cmd" ] &&
     node_version_output="$("$node_cmd" --version 2>/dev/null)" &&
     node_version="$(normalize_stable_version node "$node_version_output")"; then
