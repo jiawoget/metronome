@@ -8,11 +8,11 @@ Metronome is a local-first web application for musicians to run metronome practi
 
 Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
 
-## Latest Milestone: v1.2 Release Assurance & Workflow Closure (Archived Release Candidate)
+## Latest Milestone: v1.2 Release Assurance & Workflow Closure (Shipped)
 
 **Goal:** Bring the actual merged v1.1 tree back under Native OpenGSD authority, retain the approved secure quick-recording ID behavior, correct the pre-commit runtime selection defect, reconcile stale lifecycle narratives, and verify the resulting implementation without adding a parallel workflow layer.
 
-**Status:** Phase 2 passed ordinary Native OpenGSD verification and the Native milestone audit, and its artifacts are archived on PR #136. The archive is the release candidate: v1.2 is shipped on `main` only when PR #136 passes final-head CI/review, merges, and local `main` is synchronized. No next milestone is selected.
+**Status:** Phase 2 passed Native OpenGSD verification and milestone audit, PR #136 passed final-head CI/review and merged, and local `main` was synchronized. v1.2 is shipped; no next milestone is selected.
 
 **Target outcomes:**
 
@@ -33,7 +33,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ### Active
 
-- No implementation requirement remains active. The v1.2 release exit is carried by PR #136, and no next milestone begins before that release is complete and the owner selects its scope; product and R01 work remain dormant.
+- No implementation requirement or milestone is active. The owner must select the next milestone scope; product and R01 work remain dormant.
 
 ### Deferred
 
@@ -70,7 +70,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 - **Behavior boundary:** Retain the merged secure-ID semantics and their focused tests; do not expand the quick-recording product contract.
 - **Binary fixtures:** Treat PDF fixtures as raw binary bytes. Local restoration must match the committed blobs exactly and must not create a tracked content change.
 - **Quality:** Native planning and verification decide the proportional command set. The repository's existing format, lint, typecheck, unit, build, and applicable focused test contracts remain authoritative.
-- **Release boundary:** Native phase verification does not prove shipping. Phase 2 authorization stopped after verification; the owner subsequently authorized the bounded release exit. PR creation alone is not shipping, and release truth requires final-head CI/review, merge, and synchronized local `main`.
+- **Release boundary:** Native phase verification does not prove shipping. v1.2 shipping was established separately by final-head CI/review, merged PR #136, and synchronized local `main`; future releases require the same distinction.
 - **Local first:** No cloud storage or remote product dependency is introduced.
 
 ## Key Decisions
@@ -100,7 +100,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ## Evolution
 
-The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is not an active lifecycle input. Milestone v1.1 shipped on 2026-08-01 with final-head CI/review, merge, and clean local-main synchronization complete. Milestone v1.2 reconciled the actual merged tree with Native OpenGSD authority, passed ordinary verification and milestone audit, and was archived on the PR #136 release-candidate branch. It becomes shipped on `main` only through the successful merge and local synchronization of that final reviewed head; it does not activate a new product or R01 direction.
+The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is not an active lifecycle input. Milestones v1.1 and v1.2 both shipped on 2026-08-01 with final-head CI/review, merge, and clean local-main synchronization complete. v1.2 reconciled the actual merged tree with Native OpenGSD authority without activating a new product or R01 direction.
 
 ---
-*Last updated: 2026-08-01 after v1.2 Native audit and archival on PR #136*
+*Last updated: 2026-08-01 after v1.2 shipped through merged PR #136 and synchronized local main*

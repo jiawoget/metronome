@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Release Assurance & Workflow Closure
 status: Awaiting next milestone
-stopped_at: Completed 02-01-PLAN.md
+stopped_at: Milestone v1.2 shipped and local main synchronized
 last_updated: "2026-08-01T06:52:35.054Z"
 last_activity: 2026-08-01
-last_activity_desc: Milestone v1.2 completed and archived
+last_activity_desc: Milestone v1.2 shipped through merged PR #136 and synchronized
 progress:
   total_phases: 1
   completed_phases: 1
@@ -24,14 +24,14 @@ current_phase_name: Release Assurance & Workflow Closure
 See: .planning/PROJECT.md (updated 2026-08-01)
 
 **Core value:** Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
-**Current focus:** v1.2 Native audit and archival are complete on PR #136; release is shipped on main only after that PR merges and local main is synchronized, before any next milestone begins
+**Current focus:** v1.2 is shipped on synchronized `main`; no milestone or implementation phase is active
 
 ## Current Position
 
 Phase: Milestone v1.2 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-08-01 — Milestone v1.2 completed and archived
+Last activity: 2026-08-01 — Milestone v1.2 shipped through merged PR #136 and synchronized
 
 ## Performance Metrics
 
@@ -73,7 +73,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Reuse the existing quick-recording implementation and characterize randomUUID precedence without changing production code.
 - [Phase ?]: Authorize direct hook execution only when exact captured Node and priority npm candidates satisfy simple staged lower bounds; otherwise retain the existing PowerShell fallback.
 - [Phase ?]: Treat Native lifecycle STATE preparation separately from the four-owner implementation range while constraining both ranges explicitly.
-- [Phase Workflow]: After the verified Phase 2 authorization ended, the owner's 2026-08-01 instruction separately authorized the bounded release exit through archival, PR #136 final-head CI/review, merge, and local-main synchronization; PR creation alone is not shipping. — Keep Phase 2 evidence separate from post-verification release truth while product work, dormant-seed activation, a fresh R01, and tagging remain outside scope.
+- [Phase Workflow]: The separately authorized v1.2 release exit completed through final-head CI/review, merged PR #136, and synchronized local `main`; product work, dormant-seed activation, a fresh R01, and tagging remain outside scope.
 
 ### Pending Todos
 
@@ -93,7 +93,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-08-01T05:55:17.107Z
-Stopped at: Completed 02-01-PLAN.md
+Stopped at: Milestone v1.2 shipped and local main synchronized
 Resume file: None
 
 ## Rebuild Log
@@ -107,4 +107,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Finish or confirm the PR #136 final-head CI/review, merge, and local-main synchronization before starting a separately authorized next milestone.
+- Await owner selection of the next milestone; use Native `$gsd-new-milestone` only after that scope is authorized.
