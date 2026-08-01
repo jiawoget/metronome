@@ -8,11 +8,11 @@ Metronome is a local-first web application for musicians to run metronome practi
 
 Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
 
-## Current Milestone: v1.2 Release Assurance & Workflow Closure (Release Exit In Progress)
+## Latest Milestone: v1.2 Release Assurance & Workflow Closure (Archived Release Candidate)
 
 **Goal:** Bring the actual merged v1.1 tree back under Native OpenGSD authority, retain the approved secure quick-recording ID behavior, correct the pre-commit runtime selection defect, reconcile stale lifecycle narratives, and verify the resulting implementation without adding a parallel workflow layer.
 
-**Status:** Phase 2 passed ordinary Native OpenGSD verification on 2026-08-01. The owner subsequently authorized the bounded release exit, and PR #136 is open. Milestone archival, final-head CI/review, merge, and local-main synchronization remain pending; the milestone is not shipped until those release facts are complete.
+**Status:** Phase 2 passed ordinary Native OpenGSD verification and the Native milestone audit, and its artifacts are archived on PR #136. The archive is the release candidate: v1.2 is shipped on `main` only when PR #136 passes final-head CI/review, merges, and local `main` is synchronized. No next milestone is selected.
 
 **Target outcomes:**
 
@@ -33,7 +33,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ### Active
 
-- No implementation requirement remains active in v1.2. Its separately authorized release exit is in progress through PR #136; product and R01 work remain dormant.
+- No implementation requirement remains active. The v1.2 release exit is carried by PR #136, and no next milestone begins before that release is complete and the owner selects its scope; product and R01 work remain dormant.
 
 ### Deferred
 
@@ -100,7 +100,7 @@ Musicians can move from a score and practice target to a repeatable local practi
 
 ## Evolution
 
-The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is not an active lifecycle input. Milestone v1.1 shipped on 2026-08-01 with final-head CI/review, merge, and clean local-main synchronization complete. Milestone v1.2 has reconciled the actual merged tree with Native OpenGSD authority and passed ordinary verification for the bounded assurance fixes approved by the owner. Its separately authorized release exit is now in progress through PR #136; it remains unshipped until final-head CI/review, merge, and local-main synchronization complete, and it does not activate a new product or R01 direction.
+The shipped v1.0 archive retains 32 validated capabilities, and the remaining 32 identities stay dormant as native seeds. The superseded R01 was never implemented and is not an active lifecycle input. Milestone v1.1 shipped on 2026-08-01 with final-head CI/review, merge, and clean local-main synchronization complete. Milestone v1.2 reconciled the actual merged tree with Native OpenGSD authority, passed ordinary verification and milestone audit, and was archived on the PR #136 release-candidate branch. It becomes shipped on `main` only through the successful merge and local synchronization of that final reviewed head; it does not activate a new product or R01 direction.
 
 ---
-*Last updated: 2026-08-01 after v1.2 release-exit authorization and PR #136 creation*
+*Last updated: 2026-08-01 after v1.2 Native audit and archival on PR #136*

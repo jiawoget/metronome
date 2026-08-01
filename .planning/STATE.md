@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Release Assurance & Workflow Closure
-current_phase: 02
-status: completed
+status: Awaiting next milestone
 stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-08-01T06:40:04.728Z"
+last_updated: "2026-08-01T06:52:35.054Z"
 last_activity: 2026-08-01
+last_activity_desc: Milestone v1.2 completed and archived
 progress:
   total_phases: 1
   completed_phases: 1
   total_plans: 1
   completed_plans: 1
   percent: 100
+current_phase: 02
 current_phase_name: Release Assurance & Workflow Closure
-last_activity_desc: Phase 02 complete
 ---
 
 # Project State
@@ -24,16 +24,14 @@ last_activity_desc: Phase 02 complete
 See: .planning/PROJECT.md (updated 2026-08-01)
 
 **Core value:** Musicians can move from a score and practice target to a repeatable local practice-and-review loop without surrendering their recordings or practice data to a cloud service.
-**Current focus:** v1.2 release exit in progress — PR #136 is open; milestone archival, final-head CI/review, merge, and local-main synchronization remain pending
+**Current focus:** v1.2 Native audit and archival are complete on PR #136; release is shipped on main only after that PR merges and local main is synchronized, before any next milestone begins
 
 ## Current Position
 
-Phase: 02
-Plan: 1 of 1 complete
-Status: All phases complete
-Last activity: 2026-08-01
-
-Progress: [██████████] 100%
+Phase: Milestone v1.2 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-01 — Milestone v1.2 completed and archived
 
 ## Performance Metrics
 
@@ -106,3 +104,7 @@ Resume file: None
   before: | Phase | Plans | Total | Avg/Plan | \n |-------|-------|-------|----------| \n | 1. Repository Formatting Baseline | 1/1 | - | - | \n | 2. Release Assurance & Workflow Closure | 0/1 | - | - | \n | 02 | 1 | - | - |
   after: | Phase | Plans | Total | Avg/Plan | \n |-------|-------|-------|----------| \n | 02 | 1 | - | - |
   reason: phase dirs on disk are canonical; rows for missing phases dropped, missing phases added
+
+## Operator Next Steps
+
+- Finish or confirm the PR #136 final-head CI/review, merge, and local-main synchronization before starting a separately authorized next milestone.
