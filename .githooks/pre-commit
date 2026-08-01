@@ -70,63 +70,386 @@ if ! git cat-file -e HEAD:.prettierignore 2>/dev/null; then
   exit 0
 fi
 
-extract_engine_minimum() {
-  local engine_name="$1"
-  local manifest="$2"
+extract_engine_minima() {
   local values=""
-  local minimum_pattern='^>=[0-9]+\.[0-9]+\.[0-9]+$'
+  local node_value=""
+  local npm_value=""
+  local minimum_pattern='^>=(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 
-  if ! values="$({
-    printf '%s\n' "$manifest" |
-      awk -v engine_name="$engine_name" '
-        BEGIN {
-          in_engines = 0
-          seen_engines = 0
+  if ! values="$(
+    git show :package.json 2>/dev/null |
+      LC_ALL=C.UTF-8 awk '
+        function invalid() {
+          parse_failed = 1
+          return 0
         }
 
-        /^[[:space:]]*"engines"[[:space:]]*:[[:space:]]*\{[[:space:]]*$/ {
-          if (seen_engines) {
-            exit 2
+        function current_char() {
+          return substr(source, cursor, 1)
+        }
+
+        function is_space(c) {
+          return c == " " || c == "\t" || c == "\r" || c == "\n"
+        }
+
+        function skip_space() {
+          while (cursor <= source_len && is_space(current_char())) {
+            cursor++
           }
-          seen_engines = 1
-          in_engines = 1
-          next
         }
 
-        in_engines && /^[[:space:]]*\}[,]?[[:space:]]*$/ {
-          in_engines = 0
-          next
-        }
+        function read_string(    c, escape, hex) {
+          if (current_char() != "\"") {
+            return invalid()
+          }
 
-        in_engines {
-          prefix = "^[[:space:]]*\"" engine_name "\"[[:space:]]*:[[:space:]]*\""
-          if ($0 ~ prefix) {
-            value = $0
-            sub(prefix, "", value)
-            if (value !~ /\"[[:space:]]*,?[[:space:]]*$/) {
-              print "__INVALID__"
-              next
+          cursor++
+          string_value = ""
+          string_had_escape = 0
+
+          while (cursor <= source_len) {
+            c = current_char()
+            cursor++
+
+            if (c == "\"") {
+              return 1
             }
-            sub(/\"[[:space:]]*,?[[:space:]]*$/, "", value)
-            print value
+
+            if (c == "\\") {
+              string_had_escape = 1
+              if (cursor > source_len) {
+                return invalid()
+              }
+
+              escape = current_char()
+              cursor++
+
+              if (escape == "u") {
+                hex = substr(source, cursor, 4)
+                if (length(hex) != 4 || hex ~ /[^0-9A-Fa-f]/) {
+                  return invalid()
+                }
+                cursor += 4
+              } else if (escape != "\"" &&
+                escape != "\\" &&
+                escape != "/" &&
+                escape != "b" &&
+                escape != "f" &&
+                escape != "n" &&
+                escape != "r" &&
+                escape != "t") {
+                return invalid()
+              }
+
+              continue
+            }
+
+            if (c ~ /[[:cntrl:]]/) {
+              return invalid()
+            }
+
+            string_value = string_value c
           }
+
+          return invalid()
+        }
+
+        function parse_scalar(    start, value) {
+          start = cursor
+
+          while (cursor <= source_len &&
+            !is_space(current_char()) &&
+            current_char() != "," &&
+            current_char() != "]" &&
+            current_char() != "}") {
+            cursor++
+          }
+
+          value = substr(source, start, cursor - start)
+          if (value == "true" || value == "false" || value == "null") {
+            return 1
+          }
+          if (value ~ /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$/) {
+            return 1
+          }
+
+          return invalid()
+        }
+
+        function parse_array(    c) {
+          if (current_char() != "[") {
+            return invalid()
+          }
+
+          cursor++
+          skip_space()
+          if (current_char() == "]") {
+            cursor++
+            return 1
+          }
+
+          while (!parse_failed) {
+            if (!parse_value()) {
+              return 0
+            }
+
+            skip_space()
+            c = current_char()
+            if (c == ",") {
+              cursor++
+              skip_space()
+              continue
+            }
+            if (c == "]") {
+              cursor++
+              return 1
+            }
+
+            return invalid()
+          }
+
+          return 0
+        }
+
+        function parse_object(    key, key_escaped, c) {
+          if (current_char() != "{") {
+            return invalid()
+          }
+
+          cursor++
+          skip_space()
+          if (current_char() == "}") {
+            cursor++
+            return 1
+          }
+
+          while (!parse_failed) {
+            if (!read_string()) {
+              return 0
+            }
+
+            key = string_value
+            key_escaped = string_had_escape
+            if (key_escaped) {
+              return invalid()
+            }
+
+            skip_space()
+            if (current_char() != ":") {
+              return invalid()
+            }
+            cursor++
+
+            if (!parse_value()) {
+              return 0
+            }
+
+            skip_space()
+            c = current_char()
+            if (c == ",") {
+              cursor++
+              skip_space()
+              continue
+            }
+            if (c == "}") {
+              cursor++
+              return 1
+            }
+
+            return invalid()
+          }
+
+          return 0
+        }
+
+        function parse_value(    c) {
+          skip_space()
+          c = current_char()
+
+          if (c == "\"") {
+            return read_string()
+          }
+          if (c == "{") {
+            return parse_object()
+          }
+          if (c == "[") {
+            return parse_array()
+          }
+
+          return parse_scalar()
+        }
+
+        function parse_engines(    key, key_escaped, c, seen_node, seen_npm) {
+          if (current_char() != "{") {
+            return invalid()
+          }
+
+          cursor++
+          skip_space()
+          if (current_char() == "}") {
+            return invalid()
+          }
+
+          while (!parse_failed) {
+            if (!read_string()) {
+              return 0
+            }
+
+            key = string_value
+            key_escaped = string_had_escape
+            if (key_escaped) {
+              return invalid()
+            }
+
+            skip_space()
+            if (current_char() != ":") {
+              return invalid()
+            }
+            cursor++
+            skip_space()
+
+            if (key == "node") {
+              seen_node++
+              if (seen_node != 1 ||
+                !read_string() ||
+                string_had_escape) {
+                return invalid()
+              }
+              node_engine_value = string_value
+            } else if (key == "npm") {
+              seen_npm++
+              if (seen_npm != 1 ||
+                !read_string() ||
+                string_had_escape) {
+                return invalid()
+              }
+              npm_engine_value = string_value
+            } else if (!parse_value()) {
+              return 0
+            }
+
+            skip_space()
+            c = current_char()
+            if (c == ",") {
+              cursor++
+              skip_space()
+              continue
+            }
+            if (c == "}") {
+              cursor++
+              break
+            }
+
+            return invalid()
+          }
+
+          if (seen_node != 1 || seen_npm != 1) {
+            return invalid()
+          }
+
+          return 1
+        }
+
+        function parse_root(    key, key_escaped, c, seen_engines) {
+          skip_space()
+          if (current_char() != "{") {
+            return invalid()
+          }
+
+          cursor++
+          skip_space()
+          if (current_char() == "}") {
+            return invalid()
+          }
+
+          while (!parse_failed) {
+            if (!read_string()) {
+              return 0
+            }
+
+            key = string_value
+            key_escaped = string_had_escape
+            if (key_escaped) {
+              return invalid()
+            }
+
+            skip_space()
+            if (current_char() != ":") {
+              return invalid()
+            }
+            cursor++
+            skip_space()
+
+            if (key == "engines") {
+              seen_engines++
+              if (seen_engines != 1 || !parse_engines()) {
+                return invalid()
+              }
+            } else if (!parse_value()) {
+              return 0
+            }
+
+            skip_space()
+            c = current_char()
+            if (c == ",") {
+              cursor++
+              skip_space()
+              continue
+            }
+            if (c == "}") {
+              cursor++
+              break
+            }
+
+            return invalid()
+          }
+
+          if (seen_engines != 1) {
+            return invalid()
+          }
+
+          skip_space()
+          if (cursor <= source_len) {
+            return invalid()
+          }
+
+          return 1
+        }
+
+        {
+          source = source $0 ORS
         }
 
         END {
-          if (in_engines) {
-            exit 3
+          source_len = length(source)
+          cursor = 1
+
+          if (!parse_root() || parse_failed) {
+            exit 2
           }
+
+          print node_engine_value "\t" npm_engine_value
         }
-      '
-  } 2>/dev/null)"; then
+      ' 2>&1
+  )"; then
     return 1
   fi
 
-  if [ -z "$values" ] || [[ "$values" == *$'\n'* ]] || [[ ! "$values" =~ $minimum_pattern ]]; then
+  if [ -z "$values" ] || [[ "$values" == *$'\n'* ]] || [[ "$values" != *$'\t'* ]]; then
     return 1
   fi
 
-  printf '%s\n' "${values#>=}"
+  node_value="${values%%$'\t'*}"
+  npm_value="${values#*$'\t'}"
+  if [ -z "$node_value" ] ||
+    [ -z "$npm_value" ] ||
+    [[ "$npm_value" == *$'\t'* ]] ||
+    [[ ! "$node_value" =~ $minimum_pattern ]] ||
+    [[ ! "$npm_value" =~ $minimum_pattern ]]; then
+    return 1
+  fi
+
+  printf '%s\t%s\n' "${node_value#>=}" "${npm_value#>=}"
 }
 
 normalize_stable_version() {
@@ -147,6 +470,18 @@ normalize_stable_version() {
   printf '%s\n' "${version%%+*}"
 }
 
+numeric_component_greater_than() {
+  local candidate="$1"
+  local minimum="$2"
+  local LC_ALL=C
+
+  if [ "${#candidate}" -ne "${#minimum}" ]; then
+    [ "${#candidate}" -gt "${#minimum}" ]
+  else
+    [[ "$candidate" > "$minimum" ]]
+  fi
+}
+
 version_at_least() {
   local candidate="$1"
   local minimum="$2"
@@ -156,12 +491,13 @@ version_at_least() {
   IFS=. read -r candidate_major candidate_minor candidate_patch <<<"$candidate"
   IFS=. read -r minimum_major minimum_minor minimum_patch <<<"$minimum"
 
-  if ((10#$candidate_major != 10#$minimum_major)); then
-    ((10#$candidate_major > 10#$minimum_major))
-  elif ((10#$candidate_minor != 10#$minimum_minor)); then
-    ((10#$candidate_minor > 10#$minimum_minor))
+  if [ "$candidate_major" != "$minimum_major" ]; then
+    numeric_component_greater_than "$candidate_major" "$minimum_major"
+  elif [ "$candidate_minor" != "$minimum_minor" ]; then
+    numeric_component_greater_than "$candidate_minor" "$minimum_minor"
   else
-    ((10#$candidate_patch >= 10#$minimum_patch))
+    [ "$candidate_patch" = "$minimum_patch" ] ||
+      numeric_component_greater_than "$candidate_patch" "$minimum_patch"
   fi
 }
 
@@ -182,9 +518,9 @@ is_standard_npm_cli() {
   [ "$normalized" = $'#!/usr/bin/env node\nrequire(\'../lib/cli.js\')(process)' ]
 }
 
-staged_package_json=""
 node_minimum=""
 npm_minimum=""
+engine_minima=""
 npm_candidate=""
 npm_shebang=""
 npm_launcher_line=""
@@ -193,9 +529,10 @@ npm_version=""
 node_probe_succeeded=false
 npm_probe_succeeded=false
 
-if staged_package_json="$(git show :package.json 2>/dev/null)" &&
-  node_minimum="$(extract_engine_minimum node "$staged_package_json")" &&
-  npm_minimum="$(extract_engine_minimum npm "$staged_package_json")"; then
+if engine_minima="$(extract_engine_minima)"; then
+  node_minimum="${engine_minima%%$'\t'*}"
+  npm_minimum="${engine_minima#*$'\t'}"
+
   if node_candidate="$(command -v node 2>/dev/null)" && [ -n "$node_candidate" ]; then
     node_cmd="$(cd "$(dirname "$node_candidate")" && pwd -P)/$(basename "$node_candidate")"
     if node_exe_candidate="$(command -v node.exe 2>/dev/null)" && [ -n "$node_exe_candidate" ]; then
