@@ -3,11 +3,62 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
+git_dir="$(git rev-parse --absolute-git-dir)"
 npm_local_script="$repo_root/scripts/npm-local.ps1"
 npm_cmd=""
 power_shell=""
+snapshot_dir=""
 
 cd "$repo_root"
+
+if command -v cygpath >/dev/null 2>&1; then
+  git_dir="$(cygpath -u "$git_dir")"
+fi
+git_dir="$(cd "$git_dir" && pwd -P)"
+
+cleanup_snapshot() {
+  cleanup_status=$?
+  trap - EXIT HUP INT TERM
+
+  if [ -n "$snapshot_dir" ]; then
+    snapshot_relative="${snapshot_dir#"$git_dir"/}"
+
+    case "$snapshot_dir" in
+      /*) ;;
+      *)
+        printf 'Refusing to clean non-absolute snapshot path: %s\n' "$snapshot_dir" >&2
+        exit 1
+        ;;
+    esac
+
+    case "$snapshot_relative" in
+      pre-commit-index.?*) ;;
+      *)
+        printf 'Refusing to clean snapshot outside the Git directory prefix: %s\n' "$snapshot_dir" >&2
+        exit 1
+        ;;
+    esac
+
+    case "$snapshot_relative" in
+      */*)
+        printf 'Refusing to clean non-child snapshot path: %s\n' "$snapshot_dir" >&2
+        exit 1
+        ;;
+    esac
+
+    if ! rm -rf -- "$snapshot_dir"; then
+      printf 'Failed to clean staged-index snapshot: %s\n' "$snapshot_dir" >&2
+      exit 1
+    fi
+  fi
+
+  exit "$cleanup_status"
+}
+
+trap cleanup_snapshot EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 echo "Running: git diff --cached --check"
 git diff --cached --check
@@ -39,24 +90,17 @@ run_npm() {
   fi
 }
 
-echo "Running: staged Prettier snapshot checks"
-git diff --cached --name-only --diff-filter=ACMR -z |
-  while IFS= read -r -d '' staged_path; do
-    file_info="$(
-      run_npm exec --offline -- prettier --file-info "$staged_path"
-    )"
+node_bin="$repo_root/node_modules/.bin"
+if command -v cygpath >/dev/null 2>&1; then
+  node_bin="$(cygpath -u "$node_bin")"
+fi
+PATH="$node_bin:$PATH"
+export PATH
 
-    if printf '%s\n' "$file_info" |
-      grep -Eq '"ignored"[[:space:]]*:[[:space:]]*true|"inferredParser"[[:space:]]*:[[:space:]]*null'; then
-      continue
-    fi
+snapshot_dir="$(mktemp -d "$git_dir/pre-commit-index.XXXXXX")"
+snapshot_dir="$(cd "$snapshot_dir" && pwd -P)"
 
-    if ! git show ":$staged_path" |
-      run_npm exec --offline -- prettier --check --stdin-filepath "$staged_path"; then
-      printf 'Staged file is not formatted: %s\n' "$staged_path" >&2
-      exit 1
-    fi
-  done
-
-echo "Running: npm run format:check"
-run_npm run format:check
+echo "Running: staged-index npm run format:check"
+git ls-files -z --cached -- . ':(exclude).planning/**' |
+  git checkout-index --stdin -z --force --prefix="$snapshot_dir/"
+run_npm --prefix "$snapshot_dir" run format:check
