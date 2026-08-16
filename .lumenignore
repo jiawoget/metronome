@@ -1,4 +1,0 @@
-# Keep semantic code discovery independent from active planning and frozen history.
-.planning/
-.logs/
-docs/legacy/

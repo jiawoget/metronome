@@ -7,7 +7,6 @@ Preflight initializes the v0 engineering foundation for the local-first guitar p
 ```bash
 nvm use
 npm install
-git config --local core.hooksPath .githooks
 npm run dev
 ```
 
@@ -43,7 +42,5 @@ npm run build
 npm run playwright:install
 npm run test:e2e
 ```
-
-Pull requests run the non-E2E gate in GitHub Actions: `npm ci`, lint, typecheck, unit tests, and build. Playwright E2E remains a local/manual verification step unless a later pass stabilizes it for required CI.
 
 The initial app shell is intentionally a placeholder. Real metronome, recording, sheet, reference, and settings behavior belongs to later v0 modules after `00-preflight` is separately verified.

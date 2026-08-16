@@ -13,7 +13,6 @@ playwright-report/
 test-results/
 .audit/
 .tmp/
-.planning/
 
 # Local environment
 .env

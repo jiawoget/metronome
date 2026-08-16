@@ -1,12 +1,6 @@
 # Canonical repository text baseline
 * text=auto eol=lf
 
-# Native OpenGSD lifecycle bytes are outside the formatting baseline
-.planning/** -text
-
-# Absolute legacy content quarantine; never read or transformed
-.planning/deprecated/** -text
-
 # Dependency, generated, cache, report, and output trees
 node_modules/** -text
 .tools/** -text

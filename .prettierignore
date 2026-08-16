@@ -1,9 +1,3 @@
-# Native OpenGSD lifecycle output is outside the formatting baseline
-.planning/
-
-# Absolute legacy content quarantine; never read or transformed
-.planning/deprecated/
-
 # Dependencies, generated outputs, caches, reports, and logs
 node_modules/
 .tools/

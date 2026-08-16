@@ -1,6 +1,0 @@
-interface:
-  display_name: "Metronome Small PR"
-  short_description: "Deliver small changes without process bloat"
-  default_prompt: "Use $metronome-small-pr to implement and verify this bounded Metronome change."
-policy:
-  allow_implicit_invocation: false
